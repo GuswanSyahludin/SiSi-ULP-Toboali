@@ -1,0 +1,906 @@
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- markercluster SENGAJA TIDAK dipakai: plugin ini hanya mendukung L.Marker, tidak L.circleMarker -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet.fullscreen@3.0.0/Control.FullScreen.css"/>
+<script src="https://unpkg.com/leaflet.fullscreen@3.0.0/Control.FullScreen.js"></script>
+
+<style>
+body{ background-image:url('https://drive.google.com/thumbnail?id=1rfN5LJOjjx0t-rjuLquBe6Qsx7hfcqqV&sz=w1920'); background-size:cover; background-position:center; background-attachment:fixed; }
+[data-theme="dark"] body, body[data-theme="dark"]{ background-image:url('https://drive.google.com/thumbnail?id=1T76yS2vAnMufKEKkhQie2zZ4AYVIn1tD&sz=w1920'); }
+.ti-container{padding:16px;max-width:100%;margin:0 auto;font-family:'Segoe UI',system-ui,sans-serif;color:var(--text)}
+.ti-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.ti-header .ti-ico{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#1e3a8a,#3b82f6);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px}
+.ti-header h2{margin:0;font-size:20px;font-weight:700;color:var(--text)}
+.ti-header p{margin:2px 0 0;font-size:13px;color:var(--text-3)}
+
+/* ===== Filter bar ===== */
+.ti-filter{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:14px}
+.ti-field{display:flex;flex-direction:column;gap:4px;flex:1 1 160px;min-width:150px}
+.ti-field label{font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.03em}
+.ti-field select,.ti-field input{padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px;min-width:160px;background:var(--surface);color:var(--text);outline:none}
+.ti-field select:focus,.ti-field input:focus{border-color:var(--primary)}
+.ti-btn{border:none;border-radius:8px;padding:9px 16px;font-size:14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.ti-btn-primary{background:var(--primary);color:var(--on-primary)}
+.ti-btn-primary:hover{background:var(--primary-hover)}
+.ti-btn-reset{background:var(--surface-2);color:var(--text-2);border:1px solid var(--border)}
+
+/* ===== Filter Temuan multi-pilih ===== */
+.ti-ms{position:relative;min-width:200px;width:100%}
+.ti-ms-btn{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:14px;cursor:pointer;min-width:200px}
+.ti-ms-btn:focus{border-color:var(--primary)}
+.ti-ms-btn i{font-size:11px;color:var(--text-3)}
+.ti-ms-menu{position:absolute;top:calc(100% + 4px);left:0;right:auto;z-index:1200;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow-lg);padding:6px;display:none;width:max-content;min-width:260px;max-width:360px}
+.ti-ms.open .ti-ms-menu{display:block}
+.ti-ms-actions{display:flex;gap:6px;padding:2px 2px 6px;border-bottom:1px solid var(--border)}
+.ti-ms-actions button{flex:1;border:1px solid var(--border);background:var(--surface-2);color:var(--text-2);border-radius:6px;padding:5px 8px;font-size:12px;font-weight:600;cursor:pointer}
+.ti-ms-actions button:hover{filter:brightness(.96)}
+.ti-ms-list{max-height:260px;overflow-y:auto;overflow-x:hidden;padding-top:6px;display:flex;flex-direction:column;gap:3px}
+.ti-ms-item{display:flex;align-items:center;justify-content:flex-start;gap:6px;padding:5px 8px;border-radius:6px;font-size:13px;line-height:1.3;color:var(--text);cursor:pointer}
+.ti-ms-item:hover{background:var(--surface-2)}
+.ti-ms-item span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+.ti-ms-item input{flex:0 0 auto;appearance:none;-webkit-appearance:none;-moz-appearance:none;width:16px;height:16px;min-width:0;margin:0;padding:0;border:1.5px solid var(--border);border-radius:4px;background:var(--surface);cursor:pointer;position:relative}
+.ti-ms-item input:checked{background:var(--primary);border-color:var(--primary)}
+.ti-ms-item input:checked::after{content:'';position:absolute;left:4px;top:1px;width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.ti-ms-empty{padding:10px 8px;font-size:12px;color:var(--text-muted);text-align:center}
+
+/* ===== Filter Tier (checkbox) ===== */
+.ti-tier{display:flex;align-items:center;gap:16px;padding:0 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);min-height:38px;box-sizing:border-box}
+.ti-tier-item{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--text);cursor:pointer}
+.ti-tier-item input{flex:0 0 auto;appearance:none;-webkit-appearance:none;-moz-appearance:none;width:16px;height:16px;min-width:0;margin:0;padding:0;border:1.5px solid var(--border);border-radius:4px;background:var(--surface);cursor:pointer;position:relative}
+.ti-tier-item input:checked{background:var(--primary);border-color:var(--primary)}
+.ti-tier-item input:checked::after{content:'';position:absolute;left:4px;top:1px;width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+
+/* ===== Kartu ringkasan ===== */
+.ti-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:14px}
+.ti-card-sum{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.ti-card-sum .lbl{font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;display:flex;align-items:center;gap:6px}
+.ti-card-sum .val{font-size:26px;font-weight:700;color:var(--text)}
+.ti-card-sum.c-total{border-left:4px solid var(--primary)}
+.ti-card-sum.c-belum{border-left:4px solid var(--danger)}
+.ti-card-sum.c-proses{border-left:4px solid var(--warning)}
+.ti-card-sum.c-selesai{border-left:4px solid var(--success)}
+
+/* ===== Tab Peta / Tabel ===== */
+.ti-tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:12px}
+.ti-tab{background:transparent;border:none;border-bottom:2px solid transparent;padding:10px 16px;font-size:13px;font-weight:600;color:var(--text-3);cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+.ti-tab:hover{color:var(--text)}
+.ti-tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.ti-pane{display:none}
+.ti-pane.show{display:block}
+
+/* ===== Peta gaya Google Maps ===== */
+.ti-mapwrap{position:relative;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+#tiMap{height:620px;width:100%;background:#aadaff}
+.ti-basesw{position:absolute;top:10px;left:10px;z-index:900;display:flex;background:#fff;border-radius:3px;box-shadow:0 1px 4px rgba(0,0,0,.3);overflow:hidden}
+.ti-basesw button{border:none;background:#fff;padding:9px 20px;font-size:14px;color:#5f6368;cursor:pointer;font-weight:500}
+.ti-basesw button.on{color:#202124;font-weight:700;box-shadow:inset 0 -3px 0 #1a73e8}
+.ti-legend{position:absolute;bottom:20px;left:10px;z-index:900;background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.3);padding:8px 12px;font-size:12px;color:#3c4043;line-height:1.7}
+.ti-legend div{display:flex;align-items:center;gap:8px}
+.ti-legend i{width:11px;height:11px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:inline-block;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.25)}
+.ti-pin{background:none;border:none;filter:drop-shadow(0 2px 2px rgba(0,0,0,.35))}
+.ti-pin svg{display:block}
+.ti-mapinfo{font-size:12px;color:var(--text-3);margin:8px 2px 0}
+.ti-fsbtn{position:absolute;top:10px;right:10px;z-index:900;background:#fff;border:none;border-radius:3px;box-shadow:0 1px 4px rgba(0,0,0,.3);width:38px;height:38px;color:#5f6368;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center}
+.ti-fsbtn:hover{color:#202124}
+.ti-gisctrl{position:absolute;top:56px;left:10px;z-index:900;background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.3);padding:7px 11px;font-size:13px;color:#3c4043;display:flex;flex-direction:column;gap:2px;max-width:220px}
+.ti-gisctrl label{display:flex;align-items:center;gap:7px;cursor:pointer;font-weight:600;color:#202124}
+.ti-gisctrl input{width:15px;height:15px;cursor:pointer;flex:0 0 auto}
+.ti-gisctrl .ti-gisinfo{font-size:11px;color:#5f6368;padding-left:22px;line-height:1.3}
+.ti-mapwrap.fs{position:fixed;inset:0;z-index:9500;border-radius:0;border:none;height:100vh;width:100vw}
+.ti-mapwrap.fs #tiMap{height:100vh}
+.ti-pop{min-width:215px;font-size:13px;color:#202124}
+.ti-pop b.j{font-size:14px}
+.ti-pop .kd{color:#5f6368;font-size:11px}
+.ti-pop hr{border:none;border-top:1px solid #e0e0e0;margin:6px 0}
+.ti-pop .act{margin-top:7px;display:flex;gap:10px}
+.ti-pop .act a,.ti-pop .act button{font-size:12px;color:#1a73e8;background:none;border:none;padding:0;cursor:pointer;text-decoration:none}
+
+/* ===== Tabel ===== */
+.ti-tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:auto}
+.ti-tbl{width:100%;border-collapse:collapse;font-size:13px;color:var(--text)}
+.ti-tbl thead th{background:var(--surface-2);font-weight:700;font-size:12px;text-transform:uppercase;color:var(--text-3);border-bottom:2px solid var(--border);padding:10px 12px;white-space:nowrap;text-align:left;position:sticky;top:0}
+.ti-tbl tbody td{padding:9px 12px;vertical-align:middle;border-bottom:1px solid var(--border-2)}
+.ti-tbl tbody tr:hover{background:var(--surface-2)}
+.ti-badge{font-size:11px;padding:2px 8px;border-radius:999px;background:var(--surface-3);color:var(--primary);font-weight:600;display:inline-block}
+.ti-badge.gray{background:var(--surface-2);color:var(--text-2)}
+.ti-st{font-size:11px;padding:3px 9px;border-radius:999px;font-weight:600;white-space:nowrap}
+.ti-st-belum{background:rgba(220,38,38,.14);color:var(--danger)}
+.ti-st-tugas{background:rgba(245,166,35,.16);color:var(--warning)}
+.ti-st-proses{background:rgba(91,140,255,.16);color:var(--info)}
+.ti-st-selesai{background:rgba(34,197,94,.16);color:var(--success)}
+.ti-btn-detail{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:none;border-radius:7px;background:var(--info);color:#fff;cursor:pointer;font-size:13px}
+.ti-btn-pin{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:1px solid var(--border);border-radius:7px;background:var(--surface-2);color:var(--danger);cursor:pointer;font-size:13px;margin-right:4px}
+.ti-btn-detail:hover,.ti-btn-pin:hover{filter:brightness(.94)}
+.ti-empty{text-align:center;padding:40px 12px;color:var(--text-muted)}
+.ti-empty i{font-size:34px;margin-bottom:8px;display:block}
+.ti-loading{text-align:center;padding:32px;color:var(--text-3)}
+
+/* ===== Modal detail ===== */
+.ti-modal-bg{position:fixed;inset:0;background:var(--overlay);display:none;align-items:flex-start;justify-content:center;z-index:9800;overflow-y:auto;padding:24px 12px}
+.ti-modal-bg.show{display:flex}
+.ti-modal{background:var(--surface);border-radius:16px;width:100%;max-width:640px;box-shadow:var(--shadow-lg);overflow:hidden}
+.ti-modal-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:linear-gradient(135deg,#1e3a8a,#3b82f6);color:#fff}
+.ti-modal-head h3{margin:0;font-size:16px;font-weight:700}
+.ti-modal-head .x{cursor:pointer;font-size:22px;line-height:1;opacity:.9;background:none;border:none;color:#fff}
+.ti-modal-body{padding:18px;display:flex;flex-direction:column;gap:12px;max-height:74vh;overflow-y:auto}
+.ti-modal-foot{padding:14px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;background:var(--surface-2)}
+.ti-dtl-ctx{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--text-2)}
+.ti-dtl-ctx b{color:var(--text)}
+.ti-dtl-sec{font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;margin-top:4px}
+.ti-dtl-fotos{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+.ti-dtl-foto{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--surface-2)}
+.ti-dtl-foto .cap{font-size:11px;color:var(--text-3);padding:4px 6px;text-align:center}
+.ti-dtl-foto img{width:100%;height:120px;object-fit:cover;display:block;cursor:pointer}
+.ti-dtl-foto .none{height:120px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:12px}
+/* ===== Penugasan Tim di dalam modal detail ===== */
+.ti-assign{display:flex;flex-direction:column;gap:8px;border:1px solid var(--border);border-left:4px solid var(--warning);border-radius:10px;padding:12px 14px;background:var(--surface-2)}
+.ti-assign .ti-field{width:100%;flex:0 0 auto}
+.ti-assign textarea{min-height:96px;resize:vertical}
+.ti-assign select,.ti-assign textarea{padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:var(--surface);color:var(--text);width:100%;box-sizing:border-box;font-family:inherit}
+.ti-assign .hint{font-size:12px;color:var(--text-3)}
+.ti-assign button{align-self:flex-start}
+.ti-assign.done{flex-direction:row;align-items:center;gap:8px;border-left-color:var(--success);font-size:13px;color:var(--text-2)}
+.ti-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--text);color:var(--surface);padding:12px 18px;border-radius:10px;font-size:14px;z-index:10000;box-shadow:var(--shadow-lg);opacity:0;transition:opacity .2s,transform .2s;pointer-events:none}
+.ti-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.ti-toast.success{background:var(--success);color:#fff}
+.ti-toast.error{background:var(--danger);color:#fff}
+@media (max-width:760px){ #tiMap{height:460px} .ti-field select,.ti-field input{min-width:140px} }
+</style>
+
+<div class="ti-container">
+  <div class="ti-header">
+    <div class="ti-ico"><i class="fa-solid fa-map-location-dot"></i></div>
+    <div>
+      <h2>Temuan Inspeksi</h2>
+      <p>Peta sebaran &amp; monitoring temuan Inspeksi Jaringan &amp; Inspeksi Gardu</p>
+    </div>
+  </div>
+
+  <!-- ===== FILTER: rentang tanggal, penyulang, temuan, progress pekerjaan ===== -->
+  <div class="ti-filter">
+    <div class="ti-field"><label>Tanggal Dari</label><input type="date" id="tiTglDari"></div>
+    <div class="ti-field"><label>Tanggal Sampai</label><input type="date" id="tiTglSampai"></div>
+    <div class="ti-field">
+      <label>Penyulang</label>
+      <select id="tiPenyulang"><option value="">Semua Penyulang</option></select>
+    </div>
+    <div class="ti-field">
+      <label>Temuan</label>
+      <div class="ti-ms" id="tiTemuanMs">
+        <button type="button" class="ti-ms-btn" id="tiTemuanMsBtn" onclick="tiTemuanToggleMenu(event)">
+          <span id="tiTemuanMsLabel">Semua Temuan</span>
+          <i class="fa-solid fa-chevron-down"></i>
+        </button>
+        <div class="ti-ms-menu" id="tiTemuanMsMenu">
+          <div class="ti-ms-actions">
+            <button type="button" onclick="tiTemuanSelectAll(true)">Pilih Semua</button>
+            <button type="button" onclick="tiTemuanSelectAll(false)">Kosongkan</button>
+          </div>
+          <div class="ti-ms-list" id="tiTemuanMsList"><div class="ti-ms-empty">Memuat…</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="ti-field">
+      <label>Tier</label>
+      <div class="ti-tier">
+        <label class="ti-tier-item"><input type="checkbox" id="tiTier1" value="1" onchange="tiTierChange()"><span>Tier 1</span></label>
+        <label class="ti-tier-item"><input type="checkbox" id="tiTier2" value="2" onchange="tiTierChange()"><span>Tier 2</span></label>
+      </div>
+    </div>
+    <div class="ti-field">
+      <label>Progress Pekerjaan</label>
+      <select id="tiStatus">
+        <option value="">Semua Progress</option>
+        <option value="Belum Ada Tim">Belum Ada Tim</option>
+        <option value="Penugasan Tim">Penugasan Tim</option>
+        <option value="Progress Pekerjaan">Progress Pekerjaan</option>
+        <option value="Selesai">Selesai</option>
+      </select>
+    </div>
+    <button class="ti-btn ti-btn-primary" onclick="tiMuat()"><i class="fa-solid fa-magnifying-glass"></i> Cari</button>
+    <button class="ti-btn ti-btn-reset" onclick="tiReset()"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+  </div>
+
+  <div class="ti-cards">
+    <div class="ti-card-sum c-total"><span class="lbl"><i class="fa-solid fa-clipboard-list"></i> Total Temuan</span><span class="val" id="tiSumTotal">-</span></div>
+    <div class="ti-card-sum c-belum"><span class="lbl"><i class="fa-solid fa-user-xmark"></i> Belum Ada Tim</span><span class="val" id="tiSumBelum">-</span></div>
+    <div class="ti-card-sum c-proses"><span class="lbl"><i class="fa-solid fa-hourglass-half"></i> Dalam Proses</span><span class="val" id="tiSumProses">-</span></div>
+    <div class="ti-card-sum c-selesai"><span class="lbl"><i class="fa-solid fa-circle-check"></i> Selesai</span><span class="val" id="tiSumSelesai">-</span></div>
+  </div>
+
+  <div class="ti-tabs">
+    <button class="ti-tab active" data-tab="peta" onclick="tiTab('peta')"><i class="fa-solid fa-map-location-dot"></i> Peta Sebaran</button>
+    <button class="ti-tab" data-tab="tabel" onclick="tiTab('tabel')"><i class="fa-solid fa-table-list"></i> Tabel</button>
+  </div>
+
+  <!-- ===== TAB PETA ===== -->
+  <div class="ti-pane show" data-pane="peta">
+    <div class="ti-mapwrap">
+      <div id="tiMap"></div>
+      <button class="ti-fsbtn" id="tiFsBtn" onclick="tiFullscreen()" title="Layar penuh"><i class="fa-solid fa-expand"></i></button>
+      <div class="ti-gisctrl">
+        <label><input type="checkbox" id="tiGisChk" checked onchange="tiGisToggle()"> <i class="fa-solid fa-diagram-project"></i> GIS Jaringan</label>
+        <span class="ti-gisinfo" id="tiGisInfo"></span>
+      </div>
+      <div class="ti-basesw">
+        <button id="tiBtnPeta" class="on" onclick="tiBase('peta')">Peta</button>
+        <button id="tiBtnSat" onclick="tiBase('satelit')">Satelit</button>
+      </div>
+      <div class="ti-legend">
+        <div><i style="background:#ea4335"></i> Belum Ada Tim</div>
+        <div><i style="background:#fbbc04"></i> Penugasan Tim</div>
+        <div><i style="background:#4285f4"></i> Progress Pekerjaan</div>
+        <div><i style="background:#34a853"></i> Selesai</div>
+        <div><span style="display:inline-block;width:16px;height:0;border-top:3px solid #7c3aed"></span> Jaringan (Tiang)</div>
+      </div>
+    </div>
+    <p class="ti-mapinfo" id="tiMapInfo">Atur filter lalu klik Cari untuk menampilkan titik temuan.</p>
+  </div>
+
+  <!-- ===== TAB TABEL ===== -->
+  <div class="ti-pane" data-pane="tabel">
+    <div class="ti-tbl-wrap">
+      <table class="ti-tbl">
+        <thead><tr>
+          <th>No</th><th>Kode Pekerjaan</th><th>Tanggal</th><th>Penyulang</th><th>Section</th>
+          <th>Temuan</th><th>Lokasi</th><th>Tier</th><th>Progress</th><th style="text-align:center">Aksi</th>
+        </tr></thead>
+        <tbody id="tiBody">
+          <tr><td colspan="10"><div class="ti-empty"><i class="fa-solid fa-inbox"></i><p>Atur filter lalu klik Cari.</p></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="ti-mapinfo" id="tiTblInfo"></p>
+  </div>
+</div>
+
+<!-- ====== MODAL DETAIL TEMUAN ====== -->
+<div id="tiDetailModal" class="ti-modal-bg" onclick="if(event.target===this)tiTutupDetail()">
+  <div class="ti-modal">
+    <div class="ti-modal-head">
+      <h3><i class="fa-solid fa-circle-info"></i> Detail Temuan</h3>
+      <button class="x" onclick="tiTutupDetail()">&times;</button>
+    </div>
+    <div class="ti-modal-body" id="tiDetailBody"></div>
+    <div class="ti-modal-foot"><button class="ti-btn ti-btn-reset" onclick="tiTutupDetail()">Tutup</button></div>
+  </div>
+</div>
+
+<!-- /Temuan Inspeksi -->
+
+<script>
+(function(){
+  var TI = { sesi:null, ulp:'', isSuper:false, list:[], byKode:{},
+             map:null, layer:null, canvas:null, base:{}, markerOf:{}, tab:'peta',
+             detail:null, timOpsi:null, temuanSel:[], tierSel:[],
+             gisLayer:null, gisOn:true, gisLoaded:false };   // detail = data temuan yang sedang dibuka di modal; temuanSel = filter Temuan multi-pilih; tierSel = filter Tier (checkbox); gisLayer/gisOn/gisLoaded = overlay GIS Jaringan (garis tiang->PARENT, default nyala)
+  var MAX_ROW = 300;                       // batas baris tabel (peta tetap menampilkan semua titik)
+  var WARNA = { 'Belum Ada Tim':'#ea4335', 'Penugasan Tim':'#fbbc04',
+                'Progress Pekerjaan':'#4285f4', 'Selesai':'#34a853' };
+
+  function _el(id){ return document.getElementById(id); }
+  function _sesi(){ return window.__SISI_SESI__ || TI.sesi || {}; }
+  function _todayStr(){ var d=new Date(); return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10); }
+  function _firstOfMonthStr(){ var d=new Date(), f=new Date(d.getFullYear(),d.getMonth(),1); return new Date(f.getTime()-f.getTimezoneOffset()*60000).toISOString().slice(0,10); }
+  function _esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function _attr(s){ return _esc(s).replace(/"/g,'&quot;'); }
+  function _jsq(s){ return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+  function _toast(msg,type){
+    var t=_el('tiToast');
+    if(!t){ t=document.createElement('div'); t.id='tiToast'; t.className='ti-toast'; document.body.appendChild(t); }
+    t.className='ti-toast '+(type||''); t.textContent=msg;
+    void t.offsetWidth; t.classList.add('show');
+    clearTimeout(t._tmr); t._tmr=setTimeout(function(){ t.classList.remove('show'); },3200);
+  }
+  var _HARI=['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+  var _BLN=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  function _tglIndo(s){ if(!s) return '-'; var d=new Date(String(s).slice(0,10)+'T00:00:00'); if(isNaN(d.getTime())) return String(s); return _HARI[d.getDay()]+', '+d.getDate()+' '+_BLN[d.getMonth()]+' '+d.getFullYear(); }
+  function _stCls(s){ if(s==='Selesai') return 'ti-st ti-st-selesai'; if(s==='Progress Pekerjaan') return 'ti-st ti-st-proses'; if(s==='Penugasan Tim') return 'ti-st ti-st-tugas'; return 'ti-st ti-st-belum'; }
+
+  /* ====== BOOT ====== */
+  function tiBoot(){
+    var s=_sesi(); TI.sesi=s; TI.ulp=s.ulp||'';
+    TI.isSuper=(['Super User','Admin'].indexOf(String(s.role||'').trim())!==-1);
+    _el('tiTglDari').value=_firstOfMonthStr();
+    _el('tiTglSampai').value=_todayStr();
+    tiLoadPenyulangFilter();
+    tiLoadTemuanFilter();
+    tiInitMap();
+    if(TI.gisOn) tiLoadGis();               // muat garis GIS jaringan saat halaman dibuka
+  }
+  function _ulpAktif(){ return TI.isSuper ? (_el('tiUlp')?_el('tiUlp').value:'') : TI.ulp; }
+
+  function tiLoadUlp(){
+    google.script.run.withSuccessHandler(function(list){
+      var sel=_el('tiUlp'); if(!sel) return;
+      sel.innerHTML='<option value="">Semua ULP</option>';
+      (list||[]).forEach(function(u){ sel.innerHTML+='<option value="'+_attr(u)+'">'+_esc(u)+'</option>'; });
+    }).withFailureHandler(function(){}).getListUlpUsers();
+  }
+  function tiLoadPenyulangFilter(){
+    var sel=_el('tiPenyulang'); if(!sel) return;
+    google.script.run.withSuccessHandler(function(res){
+      var list=(res&&res.list)?res.list:[];
+      sel.innerHTML='<option value="">Semua Penyulang</option>';
+      list.forEach(function(p){ var nm=(p.nama!=null)?p.nama:p; sel.innerHTML+='<option value="'+_attr(nm)+'">'+_esc(nm)+'</option>'; });
+    }).withFailureHandler(function(){}).getDataPenyulangByUlp(_ulpAktif());
+  }
+  function tiLoadTemuanFilter(){
+    var box=_el('tiTemuanMsList'); if(!box) return;
+    box.innerHTML='<div class="ti-ms-empty">Memuat…</div>';
+    TI.temuanSel=[];
+    google.script.run.withSuccessHandler(function(res){
+      var list=(res&&res.list)?res.list:[];
+      if(!list.length){ box.innerHTML='<div class="ti-ms-empty">Belum ada temuan</div>'; tiTemuanUpdateLabel(); return; }
+      var h='';
+      list.forEach(function(nm){ h+='<label class="ti-ms-item"><input type="checkbox" value="'+_attr(nm)+'" onchange="tiTemuanItemChange()"><span>'+_esc(nm)+'</span></label>'; });
+      box.innerHTML=h;
+      tiTemuanUpdateLabel();
+    }).withFailureHandler(function(){ box.innerHTML='<div class="ti-ms-empty">Gagal memuat</div>'; }).getListTemuanTerpakaiIns(_ulpAktif());
+  }
+  function tiTemuanToggleMenu(ev){ if(ev) ev.stopPropagation(); var ms=_el('tiTemuanMs'); if(ms) ms.classList.toggle('open'); }
+  function tiTemuanItemChange(){
+    var box=_el('tiTemuanMsList'); if(!box) return;
+    var cbs=box.querySelectorAll('input[type=checkbox]'), arr=[];
+    for(var i=0;i<cbs.length;i++){ if(cbs[i].checked) arr.push(cbs[i].value); }
+    TI.temuanSel=arr; tiTemuanUpdateLabel();
+  }
+  function tiTemuanSelectAll(on){
+    var box=_el('tiTemuanMsList'); if(!box) return;
+    var cbs=box.querySelectorAll('input[type=checkbox]'); TI.temuanSel=[];
+    for(var i=0;i<cbs.length;i++){ cbs[i].checked=!!on; if(on) TI.temuanSel.push(cbs[i].value); }
+    tiTemuanUpdateLabel();
+  }
+  function tiTemuanUpdateLabel(){
+    var lbl=_el('tiTemuanMsLabel'); if(!lbl) return;
+    var n=(TI.temuanSel||[]).length;
+    lbl.textContent = (n===0) ? 'Semua Temuan' : (n===1 ? TI.temuanSel[0] : n+' temuan dipilih');
+  }
+  function tiUlpChange(){ tiLoadPenyulangFilter(); tiLoadTemuanFilter(); }
+  // Ambil angka tier dari nilai apa pun ("Tier 1" / "T1" / "1" -> "1") supaya cocok dgn checkbox.
+  function _tierNum(v){ var m=String(v==null?'':v).match(/\d+/); return m?m[0]:''; }
+  function tiTierChange(){
+    var arr=[];
+    if(_el('tiTier1') && _el('tiTier1').checked) arr.push('1');
+    if(_el('tiTier2') && _el('tiTier2').checked) arr.push('2');
+    TI.tierSel=arr;
+  }
+
+  /* ====== PETA (Leaflet + canvas renderer, siap >1000 titik) ====== */
+  function tiInitMap(){
+    if(TI.map || typeof L === 'undefined') return;
+    TI.map = L.map('tiMap', {
+      center:[-2.99,106.45], zoom:11,
+      dragging:true, inertia:true, scrollWheelZoom:true,
+      minZoom:7, maxZoom:19, zoomControl:true, preferCanvas:true,
+      fullscreenControl:false
+    });
+    // URL tile disusun terpisah agar placeholder {s}/{z}/{x}/{y} tidak ikut ter-encode.
+    var OSM  = 'https://' + '{s}' + '.tile.openstreetmap.org/' + '{z}/{x}/{y}' + '.png';
+    var ESRI = 'https://server.arcgisonline.com' + '/ArcGIS/rest/services/World_Imagery/MapServer/tile/' + '{z}/{y}/{x}';
+    TI.base.peta    = L.tileLayer(OSM,  { maxZoom:19, attribution:'&copy; OpenStreetMap' });
+    TI.base.satelit = L.tileLayer(ESRI, { maxZoom:19, attribution:'Esri, Maxar, Earthstar Geographics' });
+    TI.base.peta.addTo(TI.map);
+
+    // Canvas renderer: ribuan circleMarker tetap mulus tanpa perlu clustering.
+    // JANGAN pakai L.markerClusterGroup di sini -> plugin itu TIDAK mendukung
+    // L.circleMarker, akibatnya titik tidak pernah muncul di peta.
+    TI.canvas = L.canvas({ padding:0.5 });
+    TI.layer  = L.layerGroup().addTo(TI.map);
+
+    // Layer GIS Jaringan (garis penghubung tiang -> PARENT). Default nyala.
+    TI.gisLayer = L.layerGroup();
+    if(TI.gisOn) TI.gisLayer.addTo(TI.map);
+  }
+
+  function tiBase(nama){
+    if(!TI.map) return;
+    TI.map.removeLayer(TI.base[nama==='peta'?'satelit':'peta']);
+    TI.map.addLayer(TI.base[nama]);
+    _el('tiBtnPeta').className=(nama==='peta')?'on':'';
+    _el('tiBtnSat').className=(nama==='satelit')?'on':'';
+  }
+
+  function _popupHtml(t){
+    var warna=WARNA[t.st]||'#5f6368';
+    var lokasi=(t.g?'Gardu ':'Tiang ')+(t.n||'-');
+    return '<div class="ti-pop"><b class="j">'+_esc(t.m)+'</b><br>'
+      +'<span class="kd">'+_esc(t.k)+'</span><hr>'
+      +_esc(t.p||'-')+' / '+_esc(t.s||'-')+'<br>'
+      +_esc(lokasi)+' &bull; '+_esc(t.r||'-')+'<br>'
+      +_esc(_tglIndo(t.t))+'<br><b style="color:'+warna+'">'+_esc(t.st)+'</b>'
+      +'<div class="act">'
+      +'<button onclick="tiDetail(\''+_jsq(t.k)+'\')">Detail lengkap</button>'
+      +'<a href="https://www.google.com/maps?q='+t.a+','+t.o+'" target="_blank">Google Maps</a>'
+      +'</div></div>';
+  }
+
+  // Koordinat dari GSheet sering berupa TEKS ("-2,9891" / "-2.9891" / " 106,45 ").
+  // L.circleMarker menolak string -> titik tidak muncul. Normalkan dulu di sini.
+  function _num(v){
+    if(v===null || v===undefined || v==='') return null;
+    var n=parseFloat(String(v).trim().replace(/\s/g,'').replace(',','.'));
+    return isNaN(n) ? null : n;
+  }
+  // Batas wajar wilayah Indonesia -> tolak koordinat kacau (0,0 / tertukar lat-long).
+  function _koordSah(la,lo){ return la!==null && lo!==null && la>=-11 && la<=6 && lo>=95 && lo<=141; }
+
+  // Ambil koordinat dari SEMUA kemungkinan nama kunci yang dikirim backend, supaya
+  // titik tetap tampil walau payload memakai nama panjang atau satu sel gabungan:
+  //   ringkas  : a / o
+  //   panjang  : lat / latitude, long / lng / longitude
+  //   gabungan : c / koordinat / koord  -> "-2.9891, 106.4512" atau "-2,9891, 106,4512"
+  function _koordDari(t){
+    var la=_num(t.a!=null?t.a:(t.lat!=null?t.lat:t.latitude));
+    var lo=_num(t.o!=null?t.o:(t.long!=null?t.long:(t.lng!=null?t.lng:t.longitude)));
+    if(_koordSah(la,lo)) return [la,lo];
+    var raw=String((t.c!=null?t.c:(t.koordinat!=null?t.koordinat:t.koord))||'').trim();
+    if(raw){
+      var m=raw.match(/-?\d+(?:[.,]\d+)?/g)||[];
+      var p=null;
+      if(m.length===2)      p=[_num(m[0]), _num(m[1])];
+      else if(m.length>=4)  p=[_num(m[0]+'.'+m[1]), _num(m[2]+'.'+m[3])];  // desimal koma terpecah
+      if(p && _koordSah(p[0],p[1])) return p;
+    }
+    return null;
+  }
+
+  // Ikon PIN gaya Google Maps: SVG inline yang diwarnai sesuai status.
+  // Di-cache per warna supaya ribuan marker tetap ringan.
+  var _PIN_CACHE={};
+  function _pinIcon(st){
+    var w=WARNA[st]||'#5f6368';
+    if(_PIN_CACHE[w]) return _PIN_CACHE[w];
+    var svg='<svg xmlns="http://www.w3.org/2000/svg" width="26" height="36" viewBox="0 0 26 36">'
+      +'<path d="M13 0C5.8 0 0 5.8 0 13c0 9.6 13 23 13 23s13-13.4 13-23C26 5.8 20.2 0 13 0z" fill="'+w+'" stroke="#ffffff" stroke-width="2"/>'
+      +'<circle cx="13" cy="13" r="4.6" fill="#ffffff"/></svg>';
+    var ic=L.divIcon({ className:'ti-pin', html:svg, iconSize:[26,36], iconAnchor:[13,36], popupAnchor:[0,-32] });
+    _PIN_CACHE[w]=ic;
+    return ic;
+  }
+
+  function tiRenderPeta(){
+    if(!TI.map){ tiInitMap(); if(!TI.map) return 0; }
+    TI.layer.clearLayers();
+    TI.markerOf={};
+    var bounds=[];
+    for(var i=0;i<TI.list.length;i++){
+      var t=TI.list[i];
+      var kd=_koordDari(t);
+      if(!kd) continue;
+      var la=kd[0], lo=kd[1];
+      t.a=la; t.o=lo;                                            // simpan versi angka utk tiFokus
+      var mk=L.marker([la,lo], { icon:_pinIcon(t.st), riseOnHover:true, title:String(t.m||'') });
+      mk.bindPopup(_popupHtml.bind(null,t), { autoPan:true });   // popup dibangun saat DIKLIK
+      mk.addTo(TI.layer);
+      TI.markerOf[t.k]=mk;
+      bounds.push([la,lo]);
+    }
+    if(bounds.length) TI.map.fitBounds(bounds,{ padding:[40,40], maxZoom:15 });
+    setTimeout(function(){ TI.map.invalidateSize(); },60);
+    return bounds.length;
+  }
+
+  function tiFokus(kode){
+    tiTab('peta');
+    var t=TI.byKode[kode];
+    if(!t || t.a==null){ _toast('Temuan ini belum punya koordinat.','error'); return; }
+    var mk=TI.markerOf[kode];
+    TI.map.setView([t.a,t.o],17);
+    setTimeout(function(){ if(mk) mk.openPopup(); },250);
+  }
+
+  /* ====== GIS JARINGAN (garis MST antar titik tiang, sumber db_TiangMaster) ======
+     Default nyala. Backend: getGisJaringanLines({ulp,penyulang}) di Tek-InsJar.gs.
+     Garis dirender via canvas (siap ribuan segmen); popup = info lengkap tiang anak. */
+  function tiGisToggle(){
+    var chk=_el('tiGisChk'); TI.gisOn = chk ? !!chk.checked : true;
+    if(!TI.map || !TI.gisLayer) return;
+    if(TI.gisOn){
+      TI.gisLayer.addTo(TI.map);
+      if(!TI.gisLoaded) tiLoadGis();
+    }else{
+      TI.map.removeLayer(TI.gisLayer);
+    }
+  }
+  function tiLoadGis(){
+    if(!TI.map){ tiInitMap(); if(!TI.map) return; }
+    var info=_el('tiGisInfo'); if(info) info.textContent='Memuat jaringan…';
+    var penyulang=_el('tiPenyulang')?_el('tiPenyulang').value:'';
+    google.script.run
+      .withSuccessHandler(tiRenderGis)
+      .withFailureHandler(function(err){ if(info) info.textContent='Gagal memuat jaringan'; })
+      .getGisJaringanLines({ ulp:_ulpAktif(), penyulang:penyulang });
+  }
+  function _gisPopup(g){
+    return '<div class="ti-pop"><b class="j">Tiang '+_esc(g.s||'-')+'</b><br>'
+      +'<span class="kd">'+_esc(g.j||'-')+(g.u?(' · '+_esc(g.u)):'')+'</span><hr>'
+      +'Penyulang: <b>'+_esc(g.p||'-')+'</b><br>'
+      +'Kepemilikan: '+_esc(g.k||'-')+'<br>'
+      +(g.al?('Alamat: '+_esc(g.al)+'<br>'):'')
+      +'SLO: '+_esc(g.slo||'-')+(g.sloD?(' ('+_esc(_tglIndo(g.sloD))+')'):'')
+      +(g.d?('<br>Ket: '+_esc(g.d)):'')
+      +(g.pd?('<hr><span class="kd">Terhubung ke: '+_esc(g.pd)+'</span>'):'')
+      +'</div>';
+  }
+  function tiRenderGis(res){
+    var info=_el('tiGisInfo');
+    if(!TI.gisLayer) return;
+    TI.gisLayer.clearLayers();
+    if(!res || !res.ok){ if(info) info.textContent=(res&&res.error)?('Gagal: '+res.error):'Jaringan tidak tersedia'; TI.gisLoaded=true; return; }
+    var seg=res.segmen||[], n=0;
+    for(var i=0;i<seg.length;i++){
+      var g=seg[i];
+      if(!g.a || !g.b) continue;
+      var ln=L.polyline([g.a,g.b], { color:'#7c3aed', weight:2, opacity:0.75, renderer:TI.canvas });
+      ln.bindPopup(_gisPopup.bind(null,g), { autoPan:true });
+      ln.addTo(TI.gisLayer);
+      n++;
+    }
+    TI.gisLoaded=true;
+    if(n){
+      if(info) info.textContent = n+' segmen jaringan';
+    }else{
+      var d=res.diag||{};
+      try{ console.log('[GIS Jaringan] diagnostik:', d); }catch(eG){}
+      try{ console.log('[GIS Jaringan] diagnostik (teks, salin ini):\n'+JSON.stringify(d, null, 2)); }catch(eG2){}
+      var hint='Tidak ada segmen jaringan.';
+      if(!d.koordValid) hint='0 koordinat valid (cek LATITUDEY/LONGITUDEX).';
+      else if(!d.jumlahPenyulang) hint='Tidak ada tiang untuk penyulang terpilih.';
+      else if(d.sisiDibuangTerlaluJauh) hint='Semua sisi melebihi batas '+d.maksJarakM+' m (naikkan GIS_MAX_SEGMEN_M bila perlu).';
+      if(info) info.textContent = hint+' (detail di Console)';
+    }
+    if(TI.gisOn && TI.map && !TI.map.hasLayer(TI.gisLayer)) TI.gisLayer.addTo(TI.map);
+  }
+
+  /* ====== MUAT DATA (1 panggilan untuk peta + kartu + tabel) ====== */
+  function tiMuat(){
+    var filter={
+      ulp:_ulpAktif(),
+      tglDari:_el('tiTglDari').value,
+      tglSampai:_el('tiTglSampai').value,
+      penyulang:_el('tiPenyulang').value,
+      temuan:((TI.temuanSel&&TI.temuanSel.length===1)?TI.temuanSel[0]:''),
+      status:_el('tiStatus').value
+    };
+    _el('tiMapInfo').textContent='Memuat titik temuan...';
+    _el('tiBody').innerHTML='<tr><td colspan="10"><div class="ti-loading"><i class="fa-solid fa-spinner fa-spin"></i> Memuat temuan...</div></td></tr>';
+    if(TI.gisOn) tiLoadGis();                 // sinkronkan garis jaringan dengan filter Penyulang
+    google.script.run
+      .withSuccessHandler(tiRender)
+      .withFailureHandler(function(err){
+        var m=(err&&err.message)||err;
+        _el('tiMapInfo').textContent='Gagal memuat: '+m;
+        _el('tiBody').innerHTML='<tr><td colspan="10"><div class="ti-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>'+_esc(m)+'</p></div></td></tr>';
+      })
+      .getTitikPetaTemuanIns(filter);
+  }
+
+  function tiRender(res){
+    if(!res||!res.ok){
+      var m=(res&&res.error)||'Gagal memuat data.';
+      _el('tiMapInfo').textContent=m;
+      _el('tiBody').innerHTML='<tr><td colspan="10"><div class="ti-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>'+_esc(m)+'</p></div></td></tr>';
+      return;
+    }
+    TI.list=res.list||[];
+    if(TI.temuanSel && TI.temuanSel.length){
+      var _setT={}; TI.temuanSel.forEach(function(x){ _setT[String(x)]=1; });
+      TI.list=TI.list.filter(function(t){ return _setT[String(t.m==null?'':t.m)]; });
+    }
+    if(TI.tierSel && TI.tierSel.length){
+      var _setTier={}; TI.tierSel.forEach(function(x){ _setTier[String(x)]=1; });
+      TI.list=TI.list.filter(function(t){ return _setTier[_tierNum(t.r)]; });
+    }
+    var sm=res.summary||{};
+    if((TI.temuanSel && TI.temuanSel.length) || (TI.tierSel && TI.tierSel.length)){
+      var _b=0,_p=0,_s=0;
+      TI.list.forEach(function(x){ if(x.st==='Selesai')_s++; else if(x.st==='Belum Ada Tim')_b++; else _p++; });
+      sm={ total:TI.list.length, belum:_b, proses:_p, selesai:_s };
+    }
+    _el('tiSumTotal').textContent=sm.total||0;
+    _el('tiSumBelum').textContent=sm.belum||0;
+    _el('tiSumProses').textContent=sm.proses||0;
+    _el('tiSumSelesai').textContent=sm.selesai||0;
+
+    TI.byKode={};
+    TI.list.forEach(function(t){ TI.byKode[t.k]=t; });
+
+    var tampil=tiRenderPeta()||0;                    // gambar peta DULU, lalu laporkan hasil NYATA
+    var tanpa=TI.list.length-tampil;
+    if(!tampil && TI.list.length){
+      _toast('Data ada ('+TI.list.length+' temuan) tetapi tidak ada koordinat valid. Cek kolom Lat (W) & Long (X) di db_INS_Temuan.','error');
+    }
+    _el('tiMapInfo').textContent=tampil+' titik tampil di peta'
+      +(tanpa>0?' \u00b7 '+tanpa+' temuan tanpa koordinat valid (tidak dapat dipetakan)':'')
+      +' \u00b7 total '+TI.list.length+' temuan sesuai filter';
+
+    if(!tampil && TI.list.length){
+      _el('tiMapInfo').textContent += '  |  DIAGNOSA: '+_diagKoord();
+      try{ console.log('[TemuanInspeksi] contoh baris pertama:', TI.list[0]); }catch(eD){}
+    }
+
+    tiRenderTabel();
+  }
+
+  // Cetak nama kunci + nilai baris pertama supaya ketahuan persis kolom koordinat
+  // yang dikirim backend (a/o, lat/long, koordinat gabungan, atau memang kosong).
+  function _diagKoord(){
+    var t=TI.list[0]||{}, k=[];
+    for(var p in t){
+      if(!Object.prototype.hasOwnProperty.call(t,p)) continue;
+      k.push(p+'='+String(t[p]==null?'':t[p]).slice(0,20));
+    }
+    return k.length ? ('isi baris pertama -> '+k.join(' , ')) : 'baris pertama kosong';
+  }
+
+  function tiRenderTabel(){
+    var tbody=_el('tiBody'), info=_el('tiTblInfo');
+    if(!TI.list.length){
+      tbody.innerHTML='<tr><td colspan="10"><div class="ti-empty"><i class="fa-solid fa-inbox"></i><p>Tidak ada temuan untuk filter ini.</p></div></td></tr>';
+      info.textContent=''; return;
+    }
+    var n=Math.min(TI.list.length,MAX_ROW), h=[];
+    for(var i=0;i<n;i++){
+      var t=TI.list[i];
+      h.push('<tr>'
+        +'<td>'+(i+1)+'</td>'
+        +'<td><code style="color:var(--primary)">'+_esc(t.k)+'</code></td>'
+        +'<td>'+_esc(_tglIndo(t.t))+'</td>'
+        +'<td>'+_esc(t.p||'-')+'</td>'
+        +'<td>'+_esc(t.s||'-')+'</td>'
+        +'<td>'+_esc(t.m||'-')+'</td>'
+        +'<td>'+(t.g?'Gardu ':'Tiang ')+_esc(t.n||'-')+'</td>'
+        +'<td><span class="ti-badge gray">'+_esc(t.r||'-')+'</span></td>'
+        +'<td><span class="'+_stCls(t.st)+'">'+_esc(t.st||'-')+'</span></td>'
+        +'<td style="text-align:center;white-space:nowrap">'
+        +'<button class="ti-btn-pin" title="Lihat di peta" onclick="tiFokus(\''+_jsq(t.k)+'\')"><i class="fa-solid fa-location-dot"></i></button>'
+        +'<button class="ti-btn-detail" title="Detail" onclick="tiDetail(\''+_jsq(t.k)+'\')"><i class="fa-solid fa-eye"></i></button>'
+        +'</td></tr>');
+    }
+    tbody.innerHTML=h.join('');
+    info.textContent=(TI.list.length>MAX_ROW)
+      ? ('Menampilkan '+MAX_ROW+' baris pertama dari '+TI.list.length+' temuan \u2014 persempit filter untuk melihat sisanya. Semua titik tetap tampil di peta.')
+      : (TI.list.length+' temuan');
+  }
+
+  /* ====== TAB ====== */
+  function tiTab(nama){
+    TI.tab=nama;
+    var tabs=document.querySelectorAll('.ti-tab'), panes=document.querySelectorAll('.ti-pane'), i;
+    for(i=0;i<tabs.length;i++) tabs[i].className='ti-tab'+(tabs[i].getAttribute('data-tab')===nama?' active':'');
+    for(i=0;i<panes.length;i++) panes[i].className='ti-pane'+(panes[i].getAttribute('data-pane')===nama?' show':'');
+    if(nama==='peta' && TI.map) setTimeout(function(){ TI.map.invalidateSize(); },60);  // wajib: tab tersembunyi -> tile abu-abu
+  }
+
+  /* ====== DETAIL ====== */
+  function tiDetail(kode){
+    var bg=_el('tiDetailModal'), body=_el('tiDetailBody');
+    body.innerHTML='<div class="ti-loading"><i class="fa-solid fa-spinner fa-spin"></i> Memuat detail...</div>';
+    bg.classList.add('show');
+    google.script.run
+      .withSuccessHandler(function(res){
+        if(!res||!res.ok){ body.innerHTML='<div class="ti-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>'+_esc((res&&res.error)||'Gagal memuat')+'</p></div>'; return; }
+        TI.detail=res.data;
+        body.innerHTML=_buildDetail(res.data);
+        tiLoadTimOpsi(res.data);            // isi dropdown Tim Pelaksana (async)
+      })
+      .withFailureHandler(function(err){ body.innerHTML='<div class="ti-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>'+_esc((err&&err.message)||err)+'</p></div>'; })
+      .getMonitoringTemuanDetailIns(kode);
+  }
+  function tiTutupDetail(){ _el('tiDetailModal').classList.remove('show'); }
+
+  function _buildDetail(d){
+    d=d||{};
+    var isGardu=(String(d.objek||'').toLowerCase().indexOf('gardu')>=0);
+    var nomor=isGardu?(d.nomorGardu||'-'):(d.nomorTiang||'-');
+    function _thumb(u){
+      var s=String(u||'');
+      var m=s.match(/\/d\/([-\w]{20,})/)||s.match(/[?&]id=([-\w]{20,})/);
+      return m?('https://drive.google.com/thumbnail?id='+m[1]+'&sz=w400'):s;
+    }
+    function fotoCell(url,cap){
+      var body;
+      if(url){
+        body='<a href="'+_attr(url)+'" target="_blank"><img src="'+_attr(_thumb(url))+'" loading="lazy" onerror="this.style.display=\'none\';var n=this.parentNode.parentNode.querySelector(\'.none\');if(n)n.style.display=\'flex\'"></a><div class="none" style="display:none">Tidak tampil</div>';
+      }else{
+        body='<div class="none">Tidak ada</div>';
+      }
+      return '<div class="ti-dtl-foto">'+body+'<div class="cap">'+_esc(cap)+'</div></div>';
+    }
+    var eks='';
+    if(d.timEksekusi||d.catatan||d.jenisPekerjaan||d.tglSelesai){
+      eks='<div class="ti-dtl-sec">Eksekusi</div>'
+        +'<div class="ti-dtl-ctx">'
+        +'<div>Tim Eksekusi: <b>'+_esc(d.timEksekusi||'-')+'</b></div>'
+        +'<div>Jenis Pekerjaan: <b>'+_esc(d.jenisPekerjaan||'-')+'</b></div>'
+        +'<div>Tgl Selesai: <b>'+_esc(d.tglSelesai?_tglIndo(d.tglSelesai):'-')+'</b></div>'
+        +'<div>Catatan: <b>'+_esc(d.catatan||'-')+'</b></div>'
+        +'</div>';
+    }
+    var koordAksi=d.koordinat?(' <a href="https://www.google.com/maps?q='+_attr(d.koordinat)+'" target="_blank" style="font-size:11px">buka peta</a>'):'';
+    return '<div class="ti-dtl-ctx">'
+      +'<div>Kode: <b>'+_esc(d.kodePekerjaan||'-')+'</b></div>'
+      +'<div>Tanggal: <b>'+_esc(_tglIndo(d.tanggal))+'</b></div>'
+      +'<div>Tim Inspeksi: <b>'+_esc(d.timInspeksi||'-')+'</b></div>'
+      +'<div>Objek: <b>'+_esc(d.objek||'-')+'</b></div>'
+      +'<div>Penyulang: <b>'+_esc(d.penyulang||'-')+'</b></div>'
+      +'<div>Section: <b>'+_esc(d.section||'-')+'</b></div>'
+      +'<div>Tier: <b>'+_esc(d.tier||'-')+'</b></div>'
+      +'<div>Progress: <b>'+_esc(d.status||'-')+'</b></div>'
+      +'<div>No. '+(isGardu?'Gardu':'Tiang')+': <b>'+_esc(nomor)+'</b></div>'
+      +'<div>Segmen: <b>'+_esc(d.segmen||'-')+'</b></div>'
+      +'<div>Koordinat: <b>'+_esc(d.koordinat||'-')+'</b>'+koordAksi+'</div>'
+      +'<div>ULP: <b>'+_esc(d.ulp||'-')+'</b></div>'
+      +'</div>'
+      +'<div><div class="ti-dtl-sec">Temuan</div><div>'+_esc(d.temuan||'-')+'</div></div>'
+      +(d.deskripsi?'<div><div class="ti-dtl-sec">Deskripsi</div><div>'+_esc(d.deskripsi)+'</div></div>':'')
+      +eks
+      +_assignHtml(d)
+      +'<div class="ti-dtl-sec">Foto</div>'
+      +'<div class="ti-dtl-fotos">'
+      +fotoCell(d.fotoTemuanUrl,'Foto Temuan')
+      +fotoCell(d.fotoTiangUrl,isGardu?'Foto Gardu':'Foto Tiang')
+      +fotoCell(d.fotoPekerjaanUrl,'Foto Pekerjaan')
+      +fotoCell(d.fotoSesudahUrl,'Foto Sesudah')
+      +'</div>';
+  }
+
+  /* ====== PENUGASAN TIM (di dalam modal detail) ======
+     Backend SUDAH ADA di Tek-InsJar.gs, tidak perlu fungsi baru:
+       getListTimByUlp(ulp)   -> [{namaTim}]  (db_Tim, B=ULP, D=Nama Tim)
+       setPilihTimTemuan({kodePekerjaan,timPelaksana,catatanSpv,username})
+         -> tulis AD Tim Eksekusi, AB Diteruskan Oleh, AC Tgl Forward,
+            AA Status = 'Progress Pekerjaan', AE Catatan
+  ====================================================== */
+  function _assignHtml(d){
+    var head='<div class="ti-dtl-sec">Penugasan Tim</div>';
+    if(String(d.status||'')==='Selesai'){
+      return head+'<div class="ti-assign done"><i class="fa-solid fa-circle-check"></i> Temuan sudah <b>Selesai</b> oleh tim <b>'+_esc(d.timEksekusi||'-')+'</b>. Penugasan dikunci.</div>';
+    }
+    var sudahAda=!!String(d.timEksekusi||'').trim();
+    return head
+      +'<div class="ti-assign">'
+      +(sudahAda?'<div class="hint"><i class="fa-solid fa-circle-info"></i> Saat ini ditugaskan ke <b>'+_esc(d.timEksekusi)+'</b> &mdash; memilih tim lain akan menggantinya.</div>':'')
+      +'<div class="ti-field"><label>Tim Pelaksana</label>'
+      +'<select id="tiTimSel"><option value="">Memuat daftar tim...</option></select></div>'
+      +'<div class="ti-field"><label>Catatan untuk Tim (opsional)</label>'
+      +'<textarea id="tiTimCatatan" rows="4" placeholder="Contoh: kerjakan bersamaan dengan pemeliharaan penyulang">'+_esc(d.catatan||'')+'</textarea></div>'
+      +'<button class="ti-btn ti-btn-primary" id="tiTimBtn" onclick="tiSimpanTim()"><i class="fa-solid fa-user-plus"></i> '+(sudahAda?'Ubah Penugasan':'Tugaskan Tim')+'</button>'
+      +'</div>';
+  }
+
+  // Daftar tim di-cache per ULP supaya modal berikutnya langsung terisi.
+  function tiLoadTimOpsi(d){
+    var sel=_el('tiTimSel'); if(!sel) return;
+    var ulp=String(d.ulp||_ulpAktif()||TI.ulp||'').trim();
+    function isi(list){
+      var terpilih=String(d.timEksekusi||'').trim(), h='<option value="">-- Pilih Tim --</option>', n=0;
+      (list||[]).forEach(function(t){
+        var nm=(t&&t.namaTim!=null)?t.namaTim:t;
+        if(!nm) return;
+        n++;
+        h+='<option value="'+_attr(nm)+'"'+(String(nm)===terpilih?' selected':'')+'>'+_esc(nm)+'</option>';
+      });
+      sel.innerHTML = n ? h : '<option value="">(Belum ada tim terdaftar pada ULP ini)</option>';
+    }
+    if(TI.timOpsi && TI.timOpsi.ulp===ulp){ isi(TI.timOpsi.list); return; }
+    google.script.run
+      .withSuccessHandler(function(list){ TI.timOpsi={ ulp:ulp, list:list||[] }; isi(list); })
+      .withFailureHandler(function(){ sel.innerHTML='<option value="">Gagal memuat daftar tim</option>'; })
+      .getListTimByUlp(ulp);
+  }
+
+  function tiSimpanTim(){
+    var d=TI.detail||{}, sel=_el('tiTimSel'), btn=_el('tiTimBtn');
+    if(!sel) return;
+    var tim=String(sel.value||'').trim();
+    if(!tim){ _toast('Pilih tim pelaksana terlebih dahulu.','error'); return; }
+    var kode=String(d.kodePekerjaan||'').trim();
+    if(!kode){ _toast('Kode pekerjaan tidak dikenali.','error'); return; }
+    var catatan=_el('tiTimCatatan')?_el('tiTimCatatan').value:'';
+    var s=_sesi();
+    if(btn){ btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...'; }
+    google.script.run
+      .withSuccessHandler(function(){
+        d.timEksekusi=tim; d.catatan=catatan; d.status='Progress Pekerjaan';
+        _tandaiTertugas(kode, tim);
+        _toast('Temuan '+kode+' ditugaskan ke '+tim+'.','success');
+        tiTutupDetail();
+      })
+      .withFailureHandler(function(err){
+        if(btn){ btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-user-plus"></i> Tugaskan Tim'; }
+        _toast('Gagal menugaskan: '+((err&&err.message)||err),'error');
+      })
+      .setPilihTimTemuan({ kodePekerjaan:kode, timPelaksana:tim, catatanSpv:catatan,
+                           username:(s.userName||s.username||''), ulp:String(d.ulp||'').trim() });
+  }
+
+  // Perbarui warna titik, badge tabel, & kartu ringkasan TANPA memanggil server lagi.
+  function _tandaiTertugas(kode, tim){
+    var t=TI.byKode[kode];
+    if(t){
+      t.st='Progress Pekerjaan';
+      var mk=TI.markerOf[kode];
+      if(mk){
+        if(mk.setIcon) mk.setIcon(_pinIcon('Progress Pekerjaan'));
+        else if(mk.setStyle) mk.setStyle({ fillColor:WARNA['Progress Pekerjaan'] });
+        mk.closePopup();
+      }
+    }
+    var belum=0, proses=0, selesai=0;
+    TI.list.forEach(function(x){
+      if(x.st==='Selesai') selesai++;
+      else if(x.st==='Belum Ada Tim') belum++;
+      else proses++;
+    });
+    _el('tiSumTotal').textContent=TI.list.length;
+    _el('tiSumBelum').textContent=belum;
+    _el('tiSumProses').textContent=proses;
+    _el('tiSumSelesai').textContent=selesai;
+    tiRenderTabel();
+  }
+
+  /* ====== RESET ====== */
+  function tiReset(){
+    if(TI.isSuper && _el('tiUlp')) _el('tiUlp').value='';
+    _el('tiTglDari').value=_firstOfMonthStr();
+    _el('tiTglSampai').value=_todayStr();
+    _el('tiPenyulang').value='';
+    TI.temuanSel=[];
+    var _tms=_el('tiTemuanMs'); if(_tms) _tms.classList.remove('open');
+    TI.tierSel=[];
+    if(_el('tiTier1')) _el('tiTier1').checked=false;
+    if(_el('tiTier2')) _el('tiTier2').checked=false;
+    _el('tiStatus').value='';
+    tiLoadPenyulangFilter(); tiLoadTemuanFilter();
+    if(TI.gisOn) tiLoadGis();                 // muat ulang garis jaringan tanpa filter penyulang
+    TI.list=[]; TI.byKode={};
+    if(TI.layer) TI.layer.clearLayers();
+    if(TI.map) TI.map.setView([-2.99,106.45],11);
+    _el('tiMapInfo').textContent='Atur filter lalu klik Cari untuk menampilkan titik temuan.';
+    _el('tiTblInfo').textContent='';
+    _el('tiBody').innerHTML='<tr><td colspan="10"><div class="ti-empty"><i class="fa-solid fa-inbox"></i><p>Atur filter lalu klik Cari.</p></div></td></tr>';
+    _el('tiSumTotal').textContent='-'; _el('tiSumBelum').textContent='-';
+    _el('tiSumProses').textContent='-'; _el('tiSumSelesai').textContent='-';
+  }
+
+  /* ====== LAYAR PENUH PETA (berbasis CSS, andal di dalam iframe Apps Script) ====== */
+  function tiFullscreen(){
+    var w=document.querySelector('.ti-mapwrap'); if(!w) return;
+    var on=w.classList.toggle('fs');
+    var b=_el('tiFsBtn'); if(b) b.innerHTML='<i class="fa-solid fa-'+(on?'compress':'expand')+'"></i>';
+    if(TI.map) setTimeout(function(){ TI.map.invalidateSize(); },80);
+  }
+
+  /* ====== EXPOSE ====== */
+  window.tiMuat=tiMuat;
+  window.tiReset=tiReset;
+  window.tiUlpChange=tiUlpChange;
+  window.tiDetail=tiDetail;
+  window.tiTutupDetail=tiTutupDetail;
+  window.tiTab=tiTab;
+  window.tiBase=tiBase;
+  window.tiFokus=tiFokus;
+  window.tiSimpanTim=tiSimpanTim;
+  window.tiFullscreen=tiFullscreen;
+  window.tiGisToggle=tiGisToggle;
+  window.tiTemuanToggleMenu=tiTemuanToggleMenu;
+  window.tiTemuanItemChange=tiTemuanItemChange;
+  window.tiTemuanSelectAll=tiTemuanSelectAll;
+  window.tiTierChange=tiTierChange;
+
+  // Tutup menu multi-pilih Temuan saat klik di luar area filter.
+  document.addEventListener('click', function(ev){
+    var ms=_el('tiTemuanMs');
+    if(ms && ms.classList.contains('open') && !ms.contains(ev.target)) ms.classList.remove('open');
+  });
+  // ESC keluar dari mode layar penuh peta.
+  document.addEventListener('keydown', function(ev){
+    if(ev.key==='Escape'){ var w=document.querySelector('.ti-mapwrap.fs'); if(w) tiFullscreen(); }
+  });
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', tiBoot);
+  else tiBoot();
+})();
+</script>

@@ -1,0 +1,2167 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SiSi — ULP Toboali</title>
+    <link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet">
+    <style>
+      /* ══════════════════════════════════════════════
+        DESIGN TOKENS — Tema Light (default) & Dark (neon)
+        Diturunkan dari warna logo SiSi:
+          navy #1E3A8A · cyan #1CA0DB/#29E3FF · oranye #F5A623
+      ══════════════════════════════════════════════ */
+      :root {
+        /* Surface & teks (Light = Slate) */
+        --bg: #f1f5f9;
+        --surface: #ffffff;
+        --surface-2: #f8fafc;
+        --surface-3: #eff6ff;
+        --border: #e2e8f0;
+        --border-2: #f1f5f9;
+        --text: #0f172a;
+        --text-2: #334155;
+        --text-3: #64748b;
+        --text-muted: #94a3b8;
+        /* Brand */
+        --primary: #1E3A8A;
+        --primary-2: #2563eb;
+        --primary-hover: #1e40af;
+        --primary-contrast: #ffffff;
+        --on-primary: #ffffff;
+        --info: #1CA0DB;
+        --accent: #F5A623;
+        --success: #16a34a;
+        --warning: #d97706;
+        --danger: #dc2626;
+        /* Top bar */
+        --topbar-bg: linear-gradient(135deg, #1e3a8a, #2563eb);
+        --topbar-text: #ffffff;
+        --topbar-btn-bg: rgba(255,255,255,.15);
+        --topbar-btn-border: rgba(255,255,255,.25);
+        --topbar-btn-hover: rgba(255,255,255,.28);
+        /* Splash / overlay */
+        --splash-bg: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #2563eb 100%);
+        --overlay: rgba(15,23,42,.55);
+        --shadow-lg: 0 20px 60px rgba(0,0,0,.3);
+        --shadow-md: 0 4px 16px rgba(0,0,0,.12);
+        /* Bingkai warna (splash, kartu info, tombol notif) — sesuai tema */
+        --splash-ring: #2563eb;
+        --splash-ring-soft: #7aa5ff;
+        --splash-glow: rgba(37,99,235,.45);
+        --splash-card-bg: rgba(255,255,255,.10);
+        --info-frame-bg: #dbe6ff;
+        --topbar-card-inner: rgba(255,255,255,.15);
+        --topbar-card-inner-hover: rgba(255,255,255,.3);
+        --topbar-card-border: rgba(255,255,255,.25);
+        --topbar-card-text: #ffffff;
+        --topbar-card-text-2: rgba(255,255,255,.65);
+        --topbar-card-caret: rgba(255,255,255,.7);
+        --topbar-card-avatar-bg: rgba(255,255,255,.2);
+        --topbar-card-avatar-text: #ffffff;
+        --topbar-card-avatar-border: rgba(255,255,255,.3);
+        /* Cincin animasi kartu user (kontras di atas topbar navy) */
+        --topbar-card-ring: #7aa5ff;
+        --topbar-card-ring-soft: #e3ecff;
+      }
+      [data-theme="dark"] {
+        --bg: #0b1220;
+        --surface: #111a2e;
+        --surface-2: #0f1729;
+        --surface-3: #16233d;
+        --border: #1e2a44;
+        --border-2: #1a2540;
+        --text: #e6edf7;
+        --text-2: #c4d0e4;
+        --text-3: #93a4c0;
+        --text-muted: #6b7c9c;
+        --primary: #29E3FF;
+        --primary-2: #29E3FF;
+        --primary-hover: #5becff;
+        --primary-contrast: #06243a;
+        --on-primary: #06243a;
+        --info: #5b8cff;
+        --accent: #FFB23E;
+        --success: #22c55e;
+        --warning: #fbbf24;
+        --danger: #f87171;
+        --topbar-bg: linear-gradient(135deg, #0d1830, #112447);
+        --topbar-text: #e6edf7;
+        --topbar-btn-bg: rgba(41,227,255,.10);
+        --topbar-btn-border: rgba(41,227,255,.25);
+        --topbar-btn-hover: rgba(41,227,255,.20);
+        --splash-bg: linear-gradient(135deg, #0b1220 0%, #0d1830 55%, #112447 100%);
+        --overlay: rgba(2,8,20,.66);
+        --shadow-lg: 0 20px 60px rgba(0,0,0,.6);
+        --shadow-md: 0 4px 16px rgba(0,0,0,.45);
+        --splash-ring: #29E3FF;
+        --splash-ring-soft: #7af5f7;
+        --splash-glow: rgba(41,227,255,.5);
+        --splash-card-bg: rgba(41,227,255,.06);
+        --info-frame-bg: #16233d;
+        --topbar-card-inner: rgba(255,255,255,.15);
+        --topbar-card-inner-hover: rgba(255,255,255,.3);
+        --topbar-card-border: rgba(255,255,255,.25);
+        --topbar-card-text: #ffffff;
+        --topbar-card-text-2: rgba(255,255,255,.65);
+        --topbar-card-caret: rgba(255,255,255,.7);
+        --topbar-card-avatar-bg: rgba(255,255,255,.2);
+        --topbar-card-avatar-text: #ffffff;
+        --topbar-card-avatar-border: rgba(255,255,255,.3);
+        --topbar-card-ring: #29E3FF;
+        --topbar-card-ring-soft: #7af5f7;
+      }
+
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: 'Inter', 'Segoe UI', sans-serif;
+        background: var(--bg); color: var(--text);
+        min-height: 100vh; overflow-x: hidden;
+        transition: background .25s ease, color .25s ease;
+      }
+
+      /* ── Splash ── */
+      @keyframes spinFrame { to { transform: rotate(360deg); } }
+      #splashScreen {
+        position: fixed; inset: 0; z-index: 9000;
+        background: var(--splash-bg);
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        gap: 20px; opacity: 1; visibility: visible;
+      }
+      .splash-logo-wrap {
+        position: relative;
+        width: 110px; height: 110px;
+        border-radius: 24px; padding: 3px; overflow: hidden;
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 8px 32px rgba(0,0,0,.35), 0 0 40px var(--splash-glow);
+      }
+      .splash-logo-wrap::before {
+        content: ''; position: absolute; z-index: 0;
+        top: -50%; left: -50%; width: 200%; height: 200%;
+        background: conic-gradient(from 0deg, transparent 0 58%, var(--splash-ring-soft) 74%, var(--splash-ring) 88%, transparent 99%);
+        animation: spinFrame 2.6s linear infinite;
+      }
+      .splash-logo-inner {
+        position: relative; z-index: 1;
+        width: 100%; height: 100%; border-radius: 21px;
+        background: var(--splash-card-bg);
+        display: flex; align-items: center; justify-content: center;
+        backdrop-filter: blur(4px);
+      }
+      .splash-logo-wrap img { width: 80px; height: 80px; object-fit: contain; border-radius: 12px; }
+      .splash-title { font-size: .9rem; letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,.6); font-weight: 500; }
+      .splash-app-name { font-size: 2.8rem; font-weight: 700; color: #fff; letter-spacing: 2px; }
+      .splash-sub { font-size: .88rem; color: rgba(255,255,255,.55); letter-spacing: 1px; }
+
+      /* ── Layout ── */
+      #mainContent { display: none; flex-direction: column; min-height: 100vh; }
+      #topBar {
+        position: sticky; top: 0; z-index: 100;
+        background: var(--topbar-bg);
+        padding: 0 20px; height: 56px;
+        display: flex; align-items: center; justify-content: space-between;
+        box-shadow: 0 2px 8px rgba(30,58,138,.3); gap: 12px;
+      }
+      .topbar-brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+      .topbar-brand-logo { width: 34px; height: 34px; border-radius: 8px; object-fit: contain; background: rgba(255,255,255,.15); padding: 3px; }
+      .topbar-brand-text { display: flex; flex-direction: column; line-height: 1.2; }
+      .topbar-brand-name { font-size: .92rem; font-weight: 700; color: #fff; }
+      .topbar-brand-ulp { font-size: .7rem; color: rgba(255,255,255,.65); letter-spacing: .5px; }
+      .topbar-nav {
+        position: relative; display: flex; align-items: center; gap: 0;
+        flex: 1; max-width: 380px; margin: 0 auto; height: 42px;
+        padding: 4px; background: rgba(255,255,255,.12);
+        border: 1px solid rgba(255,255,255,.20); border-radius: 999px;
+      }
+      [data-theme="dark"] .topbar-nav {
+        background: rgba(41,227,255,.08); border-color: rgba(41,227,255,.20);
+      }
+      .nav-indicator {
+        position: absolute; top: 4px; left: 0; height: calc(100% - 8px);
+        width: 0; border-radius: 999px; background: #fff; opacity: 0;
+        box-shadow: 0 4px 14px rgba(0,0,0,.28); z-index: 0; pointer-events: none;
+        transition: transform .4s cubic-bezier(.34,1.56,.64,1),
+                    width .4s cubic-bezier(.34,1.56,.64,1), opacity .25s ease;
+      }
+      [data-theme="dark"] .nav-indicator {
+        background: linear-gradient(135deg, #29E3FF, #5b8cff);
+        box-shadow: 0 0 16px rgba(41,227,255,.55);
+      }
+      .topbar-user { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+      .topbar-user-avatar {
+        width: 34px; height: 34px; border-radius: 50%;
+        background: var(--topbar-card-avatar-bg);
+        display: flex; align-items: center; justify-content: center;
+        color: var(--topbar-card-avatar-text); font-weight: 700; font-size: .85rem;
+        border: 2px solid var(--topbar-card-avatar-border); flex-shrink: 0;
+      }
+      .topbar-user-info { display: flex; flex-direction: column; line-height: 1.2; }
+      .topbar-user-name { font-size: .82rem; font-weight: 600; color: var(--topbar-card-text); }
+      .topbar-user-role { font-size: .7rem; color: var(--topbar-card-text-2); }
+      .btn-logout {
+        background: rgba(255,255,255,.15); border: 1.5px solid rgba(255,255,255,.25);
+        color: #fff; border-radius: 8px; padding: 6px 10px;
+        cursor: pointer; font-size: .8rem; transition: background .2s;
+        display: flex; align-items: center; gap: 4px;
+      }
+      .btn-logout:hover { background: rgba(220,38,38,.5); border-color: #dc2626; }
+      .btn-akses {
+        background: rgba(255,255,255,.15); border: 1.5px solid rgba(255,255,255,.25);
+        color: #fff; border-radius: 8px; padding: 6px 10px;
+        cursor: pointer; font-size: .8rem; transition: background .2s;
+        display: flex; align-items: center; gap: 4px;
+      }
+      .btn-akses:hover { background: rgba(255,255,255,.3); border-color: rgba(255,255,255,.55); }
+      /* — Tombol ikon top bar (tema & notifikasi) — */
+      .topbar-icon-btn {
+        position: relative;
+        display: flex; align-items: center; justify-content: center;
+        width: 34px; height: 34px;
+        background: rgba(255,255,255,.15);
+        border: 1.5px solid rgba(255,255,255,.25);
+        color: #fff; border-radius: 9px; cursor: pointer;
+        font-size: .9rem; transition: background .2s, border-color .2s;
+        flex-shrink: 0;
+      }
+      .topbar-icon-btn:hover { background: rgba(255,255,255,.3); border-color: rgba(255,255,255,.55); }
+      .topbar-notif-badge {
+        position: absolute; top: -5px; right: -5px;
+        min-width: 17px; height: 17px; padding: 0 4px;
+        background: var(--danger); color: #fff;
+        border-radius: 9px; font-size: .62rem; font-weight: 700;
+        display: flex; align-items: center; justify-content: center; line-height: 1;
+        border: 1.5px solid rgba(255,255,255,.6);
+      }
+      /* — Notifikasi dropdown — */
+      .topbar-notif { position: relative; flex-shrink: 0; }
+      .notif-dropdown {
+        position: absolute; top: calc(100% + 10px); right: 0;
+        width: 340px; max-width: 86vw; background: var(--surface);
+        border: 1px solid var(--border); border-radius: 12px;
+        box-shadow: var(--shadow-lg); overflow: hidden;
+        opacity: 0; visibility: hidden; transform: translateY(-6px);
+        transition: opacity .18s ease, transform .18s ease, visibility .18s;
+        z-index: 300;
+      }
+      .topbar-notif.open .notif-dropdown { opacity: 1; visibility: visible; transform: none; }
+      .notif-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--border); font-size: .9rem; font-weight: 700; color: var(--text); }
+      .notif-refresh { background: transparent; border: 0; color: var(--text-3); cursor: pointer; font-size: .85rem; padding: 4px 6px; border-radius: 6px; }
+      .notif-refresh:hover { color: var(--primary); background: var(--surface-3); }
+      .notif-body { max-height: 380px; overflow-y: auto; }
+      .notif-empty, .notif-loading { text-align: center; padding: 28px 16px; color: var(--text-3); font-size: .85rem; }
+      .notif-item { display: flex; gap: 10px; padding: 11px 14px; cursor: pointer; border-bottom: 1px solid var(--border-2); transition: background .15s; text-align: left; }
+      .notif-item:hover { background: var(--surface-2); }
+      .notif-item:last-child { border-bottom: 0; }
+      .notif-ico { width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0; background: rgba(245,166,35,.15); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: .9rem; }
+      .notif-it-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+      .notif-it-title { font-size: .84rem; font-weight: 600; color: var(--text); }
+      .notif-it-sub { font-size: .74rem; color: var(--text-3); line-height: 1.35; }
+      .notif-it-meta { font-size: .68rem; color: var(--text-muted); }
+      .notif-foot { padding: 10px 14px; border-top: 1px solid var(--border); text-align: center; }
+      .notif-foot button { background: transparent; border: 0; color: var(--primary); font-weight: 600; font-size: .82rem; cursor: pointer; font-family: inherit; }
+      /* — Menu user gabungan (avatar + pengaturan + logout) — */
+      .topbar-usermenu { position: relative; flex-shrink: 0; }
+      .topbar-user-trigger {
+        position: relative;
+        display: flex; align-items: center; gap: 8px;
+        background: var(--topbar-card-inner);
+        border: 1.5px solid var(--topbar-card-border);
+        border-radius: 11px; padding: 5px 9px 5px 6px;
+        cursor: pointer; font-family: inherit;
+        transition: background .2s, border-color .2s;
+      }
+      .topbar-user-trigger::before { display: none; }
+      .topbar-user-trigger::after { display: none; }
+      .topbar-user-trigger:hover { background: var(--topbar-card-inner-hover); border-color: var(--topbar-card-border); }
+      .topbar-user-caret { color: var(--topbar-card-caret); font-size: .7rem; transition: transform .2s; }
+      .topbar-usermenu.open .topbar-user-caret { transform: rotate(180deg); }
+      .usermenu-dropdown {
+        position: absolute; top: calc(100% + 8px); right: 0;
+        min-width: 240px; background: var(--surface);
+        border: 1px solid var(--border); border-radius: 12px;
+        box-shadow: var(--shadow-lg); padding: 8px;
+        opacity: 0; visibility: hidden; transform: translateY(-6px);
+        transition: opacity .18s ease, transform .18s ease, visibility .18s;
+        z-index: 200;
+      }
+      .topbar-usermenu.open .usermenu-dropdown { opacity: 1; visibility: visible; transform: none; }
+      .usermenu-head { display: flex; align-items: center; gap: 12px; padding: 10px 10px 12px; }
+      .usermenu-avatar-lg {
+        width: 44px; height: 44px; border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary), var(--primary-2));
+        color: var(--on-primary); display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 1.1rem; flex-shrink: 0;
+      }
+      .usermenu-head-info { display: flex; flex-direction: column; line-height: 1.3; min-width: 0; }
+      .usermenu-name { font-size: .92rem; font-weight: 700; color: var(--text); }
+      .usermenu-role { font-size: .76rem; color: var(--text-3); }
+      .usermenu-email { font-size: .72rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .usermenu-divider { height: 1px; background: var(--border); margin: 4px 0 6px; }
+      .usermenu-item {
+        display: flex; align-items: center; gap: 10px; width: 100%;
+        padding: 10px 12px; border: 0; border-radius: 8px;
+        background: transparent; color: var(--text-2);
+        font-size: .86rem; font-weight: 600; cursor: pointer;
+        font-family: inherit; text-align: left; transition: background .15s, color .15s;
+      }
+      .usermenu-item i { width: 18px; text-align: center; font-size: .9rem; }
+      .usermenu-item:hover { background: var(--surface-3); color: var(--primary); }
+      .usermenu-item-danger { color: var(--danger); }
+      .usermenu-item-danger:hover { background: rgba(220,38,38,.12); color: var(--danger); }
+      #bodyWrap { display: flex; flex: 1; min-height: calc(100vh - 56px); }
+
+      #sidebar {
+        width: 220px; min-width: 220px; background: var(--surface);
+        border-right: 1px solid var(--border); padding: 12px 10px;
+        display: none; flex-direction: column; gap: 2px;
+        overflow: hidden;   /* ← pindahkan ke sini */
+        transition: width .25s ease, opacity .25s ease, min-width .25s ease;
+      }
+      #sidebarNav { display: flex; flex-direction: column; gap: 2px; width: 100%; }
+      #contentWrap { flex: 1; padding: 20px; overflow-y: auto; min-width: 0; }
+      #pageContent { min-height: 200px; }
+
+      /* ── Nav & Sidebar ── */
+      .top-nav-btn {
+        position: relative; z-index: 1; flex: 1;
+        display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+        padding: 0 14px; height: 100%; background: transparent;
+        color: rgba(255,255,255,.82); border: none; border-radius: 999px;
+        font-size: .84rem; font-weight: 600; cursor: pointer;
+        white-space: nowrap; font-family: inherit;
+        transition: color .25s ease, transform .25s ease;
+      }
+      .top-nav-btn i { transition: transform .25s ease; }
+      .top-nav-btn:hover { color: #fff; }
+      .top-nav-btn.active { color: #1e3a8a; transform: translateY(-1px); }
+      .top-nav-btn.active i { transform: scale(1.18); }
+      [data-theme="dark"] .top-nav-btn.active { color: #06243a; }
+      .sidebar-item {
+        display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+        border-radius: 8px; cursor: pointer; font-size: .87rem;
+        color: var(--text-2); transition: all .15s; user-select: none;
+      }
+      .sidebar-item:hover { background: var(--surface-3); color: var(--primary); }
+      .sidebar-item.active { background: var(--primary); color: var(--on-primary); }
+      .sidebar-item.active i { color: var(--on-primary); }
+      [data-theme="dark"] .sidebar-item.active { background: linear-gradient(135deg, #29E3FF, #5b8cff); color: #06243a; box-shadow: 0 0 14px rgba(41,227,255,.4); }
+      [data-theme="dark"] .sidebar-item.active i { color: #06243a; }
+      .sidebar-sub { font-size: .83rem; padding: 8px 14px 8px 32px; }
+      .sidebar-arrow { transition: transform .2s; }
+
+      @keyframes toastIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+
+      /* ── Kartu Informasi (welcome) dengan bingkai warna sesuai tema ── */
+      .info-frame {
+        position: relative; width: 100%; max-width: 460px;
+        border-radius: 22px; padding: 3px; overflow: hidden;
+        background: var(--info-frame-bg);
+        box-shadow: var(--shadow-md), 0 0 26px var(--splash-glow);
+      }
+      .info-frame::before {
+        content: ''; position: absolute; z-index: 0;
+        top: -50%; left: -50%; width: 200%; height: 200%;
+        background: conic-gradient(from 0deg, transparent 0 58%, var(--splash-ring-soft) 74%, var(--splash-ring) 88%, transparent 99%);
+        animation: spinFrame 3.4s linear infinite;
+      }
+      .info-frame-inner {
+        position: relative; z-index: 1; width: 100%;
+        border-radius: 19px; background: var(--surface);
+        padding: 34px 26px;
+        display: flex; flex-direction: column; align-items: center; text-align: center;
+      }
+
+      /* ── Cincin warna tombol notifikasi (informasi) sesuai tema ── */
+      #btnNotif {
+        border-color: var(--splash-ring);
+        box-shadow: 0 0 0 1.5px var(--splash-ring), 0 0 12px var(--splash-glow);
+      }
+      #btnNotif:hover {
+        background: var(--topbar-btn-hover);
+        box-shadow: 0 0 0 1.5px var(--splash-ring), 0 0 18px var(--splash-glow);
+      }
+
+      @media (max-width: 640px) {
+        .topbar-brand-text { display: none; }
+        .topbar-user-info  { display: none; }
+        #contentWrap { padding: 12px; }
+        #sidebar { width: 180px; min-width: 180px; }
+        .topbar-nav { max-width: 260px; height: 40px; }
+        .top-nav-btn { padding: 0 8px; font-size: .76rem; }
+      }
+
+      /* ── Sidebar toggle ── */
+      #sidebar.sidebar-hidden {
+        width: 0 !important;
+        min-width: 0 !important;
+        opacity: 0;
+        padding: 0;
+        border: none;
+      }
+
+      #contentWrap {
+        transition: flex .25s ease;
+      }
+      #btnToggleSidebar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border: none;
+        border-radius: 8px;
+        background: rgba(255,255,255,.15);
+        color: #fff;
+        cursor: pointer;
+        font-size: .95rem;
+        transition: background .2s;
+        flex-shrink: 0;
+      }
+      #btnToggleSidebar:hover { background: rgba(255,255,255,.28); }
+
+      /* ── Modal Pengaturan Akses ── */
+      .akses-modal-bg { position: fixed; inset: 0; z-index: 9400; background: var(--overlay);
+        backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 16px; }
+      .akses-modal-box { background: var(--surface); color: var(--text); border-radius: 16px; width: 100%; max-width: 880px;
+        max-height: 90vh; display: flex; flex-direction: column; box-shadow: var(--shadow-lg); overflow: hidden; }
+      .akses-modal-head { display: flex; align-items: center; justify-content: space-between;
+        padding: 18px 22px; border-bottom: 1px solid var(--border); font-size: 1.05rem; font-weight: 700; color: var(--text); }
+      .akses-modal-head .akses-x { cursor: pointer; color: var(--text-muted); font-size: 1.1rem; }
+      .akses-modal-head .akses-x:hover { color: var(--danger); }
+      .akses-modal-body { padding: 18px 22px; overflow-y: auto; }
+      .akses-loading, .akses-empty { text-align: center; padding: 36px; color: var(--text-3); font-size: .9rem; }
+      .akses-list-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; gap: 10px; flex-wrap: wrap; }
+      .akses-list-title { font-weight: 700; color: var(--text-2); font-size: .95rem; }
+      .akses-table-wrap { border: 1px solid var(--border); border-radius: 10px; overflow: auto; }
+      .akses-table { width: 100%; border-collapse: collapse; font-size: .85rem; color: var(--text); }
+      .akses-table thead th { background: var(--surface-2); text-align: left; padding: 10px 12px; font-size: .72rem;
+        text-transform: uppercase; color: var(--text-3); border-bottom: 1px solid var(--border); white-space: nowrap; }
+      .akses-table tbody td { padding: 10px 12px; border-bottom: 1px solid var(--border-2); vertical-align: middle; }
+      .akses-table tbody tr:hover { background: var(--surface-2); }
+      .akses-table .akses-sub { font-size: .72rem; color: var(--text-muted); }
+      .akses-act { display: flex; gap: 6px; }
+      .akses-act button { width: 30px; height: 30px; border: 1px solid var(--border); background: var(--surface); border-radius: 7px;
+        cursor: pointer; color: var(--text-2); transition: all .15s; }
+      .akses-act button:hover { background: var(--surface-3); color: var(--primary); border-color: var(--primary); }
+      .akses-act button.akses-del:hover { background: rgba(220,38,38,.12); color: var(--danger); border-color: var(--danger); }
+      .akses-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; margin-bottom: 16px; }
+      .akses-form-grid label, .akses-menu-title { display: block; font-size: .72rem; font-weight: 600; color: var(--text-2);
+        text-transform: uppercase; margin-bottom: 5px; }
+      .akses-form-grid input { width: 100%; padding: 9px 11px; border: 1.5px solid var(--border); border-radius: 8px;
+        font-size: .88rem; outline: none; font-family: inherit; box-sizing: border-box; background: var(--surface); color: var(--text); }
+      .akses-form-grid input:focus { border-color: var(--primary); }
+      .akses-menu-wrap { border-top: 1px dashed var(--border); padding-top: 14px; margin-bottom: 8px; }
+      .akses-menu-note { font-size: .76rem; color: var(--text-muted); margin: 0 0 10px; }
+      .akses-menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px,1fr)); gap: 8px; }
+      .akses-menu-groups { display: flex; flex-direction: column; gap: 14px; }
+      .akses-grup { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+      .akses-grup-head { display: flex; align-items: center; gap: 9px; padding: 10px 12px; background: var(--surface-2);
+        font-weight: 700; font-size: .86rem; color: var(--text); cursor: pointer; border-bottom: 1px solid var(--border); user-select: none; }
+      .akses-grup-head i { color: var(--primary); width: 16px; text-align: center; }
+      .akses-grup-head input { width: 16px; height: 16px; flex-shrink: 0; cursor: pointer; }
+      .akses-grup-body { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px,1fr)); gap: 8px; padding: 12px; }
+      .akses-subgrup { grid-column: 1 / -1; border: 1px dashed var(--border); border-radius: 9px; overflow: hidden; background: var(--surface); }
+      .akses-subgrup-head { display: flex; align-items: center; gap: 8px; padding: 8px 11px; background: var(--surface-3);
+        font-weight: 600; font-size: .82rem; color: var(--text-2); cursor: pointer; user-select: none; border-bottom: 1px solid var(--border); }
+      .akses-subgrup-head i { color: var(--info); width: 15px; text-align: center; }
+      .akses-subgrup-head input { width: 15px; height: 15px; flex-shrink: 0; cursor: pointer; }
+      .akses-subgrup-body { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px,1fr)); gap: 8px; padding: 10px; }
+      .akses-chk { display: flex; align-items: center; gap: 8px; padding: 9px 11px; border: 1px solid var(--border);
+        border-radius: 8px; font-size: .84rem; color: var(--text-2); cursor: pointer; }
+      .akses-chk:hover { background: var(--surface-2); }
+      .akses-chk input { width: 15px; height: 15px; flex-shrink: 0; }
+      .akses-chk-key { margin-left: auto; font-size: .66rem; color: var(--text-muted); font-family: monospace; }
+      .akses-form-foot { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px;
+        border-top: 1px solid var(--border); padding-top: 14px; }
+      .akses-btn-pri { background: var(--primary); color: var(--on-primary); border: 0; border-radius: 8px; padding: 9px 16px;
+        font-size: .85rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-family: inherit; }
+      .akses-btn-pri:hover { background: var(--primary-hover); }
+      .akses-btn-pri:disabled { opacity: .6; cursor: not-allowed; }
+      .akses-btn-sec { background: var(--surface-2); color: var(--text-2); border: 1.5px solid var(--border); border-radius: 8px;
+        padding: 9px 16px; font-size: .85rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-family: inherit; }
+      .akses-btn-sec:hover { background: var(--border); }
+    </style>
+  </head>
+  <body>
+
+    <!-- ── Splash ── -->
+    <div id="splashScreen">
+      <div class="splash-logo-wrap">
+        <div class="splash-logo-inner">
+          <img src="https://drive.google.com/thumbnail?id=17QGDCsqCMMvfC7O2X66o5YGbEuxFeM_y&sz=w512"
+            onerror="this.style.display='none'" alt="SiSi Logo">
+        </div>
+      </div>
+      <p class="splash-title">Sistem Informasi</p>
+      <h1 class="splash-app-name">SiSi</h1>
+      <p class="splash-sub">ULP Toboali</p>
+    </div>
+
+    <!-- ── Main Content ── -->
+    <div id="mainContent">
+      <header id="topBar">
+        <div class="topbar-brand">
+          <img class="topbar-brand-logo"
+            src="https://drive.google.com/thumbnail?id=17QGDCsqCMMvfC7O2X66o5YGbEuxFeM_y&sz=w512"
+            onerror="this.style.display='none'" alt="Logo">
+          <div class="topbar-brand-text">
+            <span class="topbar-brand-name">SiSi</span>
+            <span class="topbar-brand-ulp">ULP Toboali</span>
+          </div>
+          <button id="btnToggleSidebar" title="Sembunyikan / tampilkan sidebar">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+        </div>
+        <nav class="topbar-nav" id="topbarNav">
+          <span class="nav-indicator" id="navIndicator"></span>
+          <button class="top-nav-btn" data-nav="PP" onclick="onNavClick('PP')" title="Perencanaan & Pengembangan">
+            <i class="fa-solid fa-chart-pie"></i> PP
+          </button>
+          <button class="top-nav-btn" data-nav="Tek" onclick="onNavClick('Tek')" title="Bidang Teknik">
+            <i class="fa-solid fa-wrench"></i> Tek
+          </button>
+          <button class="top-nav-btn" data-nav="TE" onclick="onNavClick('TE')" title="Transaksi Energi">
+            <i class="fa-solid fa-bolt"></i> TE
+          </button>
+          <button class="top-nav-btn" data-nav="K3" onclick="onNavClick('K3')" title="Keselamatan & Kesehatan Kerja">
+            <i class="fa-solid fa-helmet-safety"></i> K3
+          </button>
+        </nav>
+        <div class="topbar-user">
+          <button class="topbar-icon-btn" id="btnToggleTheme" onclick="toggleTheme()" title="Mode gelap">
+            <i class="fa-solid fa-moon"></i>
+          </button>
+          <div class="topbar-notif" id="topbarNotif">
+            <button class="topbar-icon-btn" id="btnNotif" onclick="toggleNotifikasi(event)" title="Notifikasi" style="display:none">
+              <i class="fa-solid fa-bell"></i>
+              <span class="topbar-notif-badge" id="notifBadge" style="display:none">0</span>
+            </button>
+            <div class="notif-dropdown" id="notifDropdown">
+              <div class="notif-head">
+                <span><i class="fa-solid fa-bell"></i> WO Belum Diteruskan</span>
+                <button class="notif-refresh" onclick="_loadNotifikasi(false)" title="Muat ulang"><i class="fa-solid fa-rotate-right"></i></button>
+              </div>
+              <div class="notif-body" id="notifBody">
+                <div class="notif-loading"><i class="fa-solid fa-spinner fa-spin"></i> Memuat…</div>
+              </div>
+            </div>
+          </div>
+          <div class="topbar-usermenu" id="topbarUsermenu">
+            <button class="topbar-user-trigger" id="btnUserMenu" onclick="toggleUserMenu(event)" aria-haspopup="true" aria-expanded="false">
+              <span class="topbar-user-avatar" id="userAvatar">A</span>
+              <span class="topbar-user-info">
+                <span class="topbar-user-name" id="displayUsername">—</span>
+                <span class="topbar-user-role" id="displayRole">—</span>
+              </span>
+              <i class="fa-solid fa-chevron-down topbar-user-caret" id="userMenuCaret"></i>
+            </button>
+            <div class="usermenu-dropdown" id="userMenuDropdown">
+              <div class="usermenu-head">
+                <div class="usermenu-avatar-lg" id="userAvatarLg">A</div>
+                <div class="usermenu-head-info">
+                  <span class="usermenu-name" id="menuUsername">—</span>
+                  <span class="usermenu-role" id="menuRole">—</span>
+                  <span class="usermenu-email" id="menuEmail"></span>
+                </div>
+              </div>
+              <div class="usermenu-divider"></div>
+              <button class="usermenu-item" onclick="_tutupUserMenu();bukaGantiPassword()">
+                <i class="fa-solid fa-key"></i> <span>Ganti Password</span>
+              </button>
+              <button class="usermenu-item" id="menuItemAkses" onclick="_tutupUserMenu();bukaPengaturanAkses()" style="display:none">
+                <i class="fa-solid fa-user-gear"></i> <span>Pengaturan Akses</span>
+              </button>
+              <button class="usermenu-item usermenu-item-danger" onclick="_tutupUserMenu();doLogout()">
+                <i class="fa-solid fa-right-from-bracket"></i> <span>Keluar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+      <div id="bodyWrap">
+        <aside id="sidebar"><div id="sidebarNav"></div></aside>
+        <main id="contentWrap"><div id="pageContent"></div></main>
+      </div>
+    </div>
+
+    <!-- ── Login Inline ── -->
+    <div id="loginWrap" style="display:none;position:fixed;inset:0;z-index:8000;
+      background:var(--splash-bg);
+      align-items:center;justify-content:center">
+      <div style="background:var(--surface);border-radius:16px;padding:36px 32px;
+        width:90%;max-width:360px;box-shadow:var(--shadow-lg)">
+        <h2 style="font-size:1.4rem;font-weight:700;color:var(--text);
+          margin-bottom:4px;text-align:center">SiSi</h2>
+        <p style="font-size:.8rem;color:var(--text-muted);text-align:center;
+          margin-bottom:24px">ULP Toboali — Silakan masuk</p>
+        <div style="margin-bottom:12px">
+          <label style="font-size:.8rem;font-weight:600;color:var(--text-2);
+            display:block;margin-bottom:5px">Username</label>
+          <input id="loginUsername" type="text" placeholder="Username"
+            style="width:100%;padding:10px 12px;border:1.5px solid var(--border);
+            border-radius:8px;font-size:.9rem;outline:none;font-family:inherit;
+            background:var(--surface);color:var(--text)">
+        </div>
+        <div style="margin-bottom:16px">
+          <label style="font-size:.8rem;font-weight:600;color:var(--text-2);
+            display:block;margin-bottom:5px">Password</label>
+          <input id="loginPassword" type="password" placeholder="Password"
+            style="width:100%;padding:10px 12px;border:1.5px solid var(--border);
+            border-radius:8px;font-size:.9rem;outline:none;font-family:inherit;
+            background:var(--surface);color:var(--text)">
+        </div>
+        <p id="loginError" style="display:none;color:var(--danger);font-size:.82rem;
+          background:rgba(220,38,38,.12);padding:8px;border-radius:6px;margin-bottom:12px"></p>
+        <button id="btnLoginSubmit" onclick="doLoginForm()"
+          style="width:100%;padding:11px;background:var(--primary);color:var(--on-primary);
+          border:0;border-radius:8px;font-size:.92rem;font-weight:600;
+          cursor:pointer;display:flex;align-items:center;justify-content:center;
+          gap:8px;font-family:inherit">
+          <i class="fa-solid fa-right-to-bracket"></i> Masuk
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Modal Pengaturan Akses (khusus Super User) ── -->
+    <div id="modalAkses" class="akses-modal-bg" style="display:none"
+      onclick="if(event.target===this)tutupPengaturanAkses()">
+      <div class="akses-modal-box">
+        <div class="akses-modal-head">
+          <span><i class="fa-solid fa-user-gear"></i> Pengaturan Akses</span>
+          <i class="fa-solid fa-xmark akses-x" onclick="tutupPengaturanAkses()"></i>
+        </div>
+        <div id="aksesBody" class="akses-modal-body"></div>
+      </div>
+    </div>
+
+    <script>
+    /* ═══════════════════════════════════════════════
+      Main — SiSi ULP Toboali
+      Rev: 1 Jun 2026 (tema Light/Dark + toggle + notifikasi)
+    ═══════════════════════════════════════════════ */
+
+    /* ════════════════════
+      TEMA (Light / Dark)
+    ════════════════════ */
+    var THEME_KEY = 'sisiTheme';
+    function _getThemeTersimpan(){
+      try { return localStorage.getItem(THEME_KEY) || 'light'; }
+      catch(e){ return 'light'; }
+    }
+    function _syncThemeIcon(mode){
+      var btn = document.getElementById('btnToggleTheme');
+      if(!btn) return;
+      var dark = mode === 'dark';
+      btn.innerHTML = dark
+        ? '<i class="fa-solid fa-sun"></i>'
+        : '<i class="fa-solid fa-moon"></i>';
+      btn.title = dark ? 'Mode terang' : 'Mode gelap';
+    }
+    function applyTheme(mode){
+      var m = (mode === 'dark') ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', m);
+      try { localStorage.setItem(THEME_KEY, m); } catch(e){}
+      _syncThemeIcon(m);
+    }
+    function toggleTheme(){
+      var skrg = document.documentElement.getAttribute('data-theme') || _getThemeTersimpan();
+      applyTheme(skrg === 'dark' ? 'light' : 'dark');
+    }
+    /* Terapkan tema sedini mungkin untuk menghindari kedip (flash) */
+    (function(){
+      var m = _getThemeTersimpan();
+      try { document.documentElement.setAttribute('data-theme', m); } catch(e){}
+      _syncThemeIcon(m);
+    })();
+
+    /* ════════════════════
+      NOTIFIKASI — WO belum diteruskan ke Tim (akses SIE Teknik)
+    ════════════════════ */
+    var _notifCache = [];
+    var _notifTimer = null;
+
+    function setNotifBadge(jumlah){
+      var b = document.getElementById('notifBadge');
+      if(!b) return;
+      var n = parseInt(jumlah,10) || 0;
+      if(n > 0){ b.textContent = n > 99 ? '99+' : String(n); b.style.display = 'flex'; }
+      else { b.style.display = 'none'; }
+    }
+
+    function _syncNotifAkses(){
+      var btn = _el('btnNotif');
+      var boleh = _isPageAllowed('SIE-Teknik');
+      if(btn) btn.style.display = boleh ? 'flex' : 'none';
+      if(boleh){
+        _loadNotifikasi(true);
+        if(_notifTimer) clearInterval(_notifTimer);
+        _notifTimer = setInterval(function(){ _loadNotifikasi(true); }, 60000);
+      } else {
+        setNotifBadge(0);
+        if(_notifTimer){ clearInterval(_notifTimer); _notifTimer = null; }
+      }
+    }
+
+    function toggleNotifikasi(e){
+      if(e){ e.stopPropagation(); }
+      var wrap = _el('topbarNotif');
+      if(!wrap) return;
+      var open = wrap.classList.toggle('open');
+      if(open) _loadNotifikasi(false);
+    }
+    function _tutupNotifikasi(){
+      var wrap = _el('topbarNotif');
+      if(wrap) wrap.classList.remove('open');
+    }
+
+    function _loadNotifikasi(silent){
+      if(!_isPageAllowed('SIE-Teknik')) return;
+      var body = _el('notifBody');
+      if(!silent && body){
+        body.innerHTML = '<div class="notif-loading"><i class="fa-solid fa-spinner fa-spin"></i> Memuat…</div>';
+      }
+      var token = _state.token || _getToken();
+      google.script.run
+        .withSuccessHandler(function(res){
+          if(!res || !res.ok){ if(!silent) _renderNotif([]); return; }
+          _notifCache = res.list || [];
+          setNotifBadge(res.count || 0);
+          _renderNotif(_notifCache);
+        })
+        .withFailureHandler(function(err){
+          if(!silent && body){
+            body.innerHTML = '<div class="notif-empty" style="color:var(--danger)">'
+              + _escHtml((err&&err.message)||String(err)) + '</div>';
+          }
+        })
+        .getNotifikasiWOBelumDiteruskan(token);
+    }
+
+    function _renderNotif(list){
+      var body = _el('notifBody');
+      if(!body) return;
+      if(!list || !list.length){
+        body.innerHTML = '<div class="notif-empty"><i class="fa-solid fa-circle-check" '
+          + 'style="font-size:1.5rem;color:var(--success);display:block;margin-bottom:8px"></i>'
+          + 'Tidak ada WO yang menunggu diteruskan.</div>';
+        return;
+      }
+      var isSuper = _isSuperUser();
+      var html = list.map(function(w){
+        var judul = _escHtml(w.temuan || w.kodePekerjaan || 'Temuan');
+        var baris2 = [];
+        if(w.penyulang) baris2.push(_escHtml(w.penyulang));
+        if(w.section)   baris2.push(_escHtml(w.section));
+        var meta = [];
+        if(isSuper && w.ulp) meta.push(_escHtml(w.ulp));
+        if(w.tier)    meta.push(_escHtml(w.tier));
+        if(w.tanggal) meta.push(_escHtml(w.tanggal));
+        return '<div class="notif-item" onclick="_notifGoto()">'
+          + '<div class="notif-ico"><i class="fa-solid fa-clipboard-list"></i></div>'
+          + '<div class="notif-it-main">'
+          + '<span class="notif-it-title">' + judul + '</span>'
+          + (baris2.length ? '<span class="notif-it-sub">' + baris2.join(' • ') + '</span>' : '')
+          + '<span class="notif-it-meta">' + _escHtml(w.kodePekerjaan||'')
+          + (meta.length ? ' — ' + meta.join(' • ') : '') + '</span>'
+          + '</div></div>';
+      }).join('');
+      body.innerHTML = html;
+    }
+
+    function _notifGoto(){
+      _tutupNotifikasi();
+      if(!_isPageAllowed('SIE-Teknik')){ showToast('Anda tidak memiliki akses SIE Teknik','warning'); return; }
+      _state.activeNav = 'Tek';
+      _setActiveNav('Tek');
+      _buildSidebar('Tek');
+      _showSidebar();
+      _syncToggleBtn();
+      _loadPage('SIE-Teknik');
+    }
+
+    document.addEventListener('click', function(e){
+      var wrap = _el('topbarNotif');
+      if(wrap && wrap.classList.contains('open') && !wrap.contains(e.target)) _tutupNotifikasi();
+    });
+    document.addEventListener('keydown', function(e){
+      if(e.key === 'Escape') _tutupNotifikasi();
+    });
+
+    var NAV_SIDEBARS = {
+      'PP'  : ['PP-Dashboard'],
+      'Tek' : ['Tek-Dashboard','Tek-ROW','Tek-Inspeksi','Tek-Yandal','Tek-Hartek','Tek-Gangguan','SIE-Teknik'],
+      'TE'  : ['TE-Dashboard'],
+      'K3'  : ['K3-Dashboard']
+    };
+    var NAV_LABELS = {
+      'PP-Dashboard':'Dashboard PP','Tek-Dashboard':'Dashboard Teknik',
+      'Tek-ROW':'Tim ROW','Tek-Inspeksi':'Tim Inspeksi',
+      'Tek-Yandal':'Tim Yandal','Tek-Hartek':'Tim Hartek',
+      'Tek-Gangguan':'Gangguan Penyulang','TE-Dashboard':'Dashboard TE',
+      'K3-Dashboard':'Dashboard K3','Tek-InsDu':'Inspeksi Gardu',
+      'Tek-PengukuranGardu':'Pengukuran Gardu',
+      'Tek-InsJar':'Inspeksi Jaringan','Temuan-Inspeksi':'Temuan Inspeksi',
+      'SIE-Teknik':'SIE Teknik',
+      'SIE-LaporanTeknik':'Laporan Teknik',
+      'SIE-BeritaAcara':'Berita Acara',
+      'Tek-Data-Checkpoint':'Data Pendukung CheckPoint'
+    };
+    var NAV_ICONS = {
+      'PP-Dashboard':'fa-gauge','Tek-Dashboard':'fa-gauge','Tek-ROW':'fa-tree',
+      'Tek-Inspeksi':'fa-magnifying-glass','Tek-Yandal':'fa-bolt',
+      'Tek-Hartek':'fa-wrench','Tek-Gangguan':'fa-triangle-exclamation',
+      'TE-Dashboard':'fa-gauge','K3-Dashboard':'fa-helmet-safety',
+      'Tek-InsDu':'fa-building','Tek-PengukuranGardu':'fa-ruler-combined','Tek-InsJar':'fa-network-wired',
+      'Temuan-Inspeksi':'fa-clipboard-list','SIE-Teknik':'fa-people-arrows',
+      'SIE-LaporanTeknik':'fa-file-lines','SIE-BeritaAcara':'fa-file-signature',
+      'Tek-Data-Checkpoint':'fa-bolt-lightning'
+    };
+    var SUBMENUS  = {
+      'Tek-Inspeksi': ['Tek-InsDu','Tek-PengukuranGardu','Tek-InsJar','Temuan-Inspeksi'],
+      'SIE-Teknik': ['SIE-LaporanTeknik','SIE-BeritaAcara','Tek-Data-Checkpoint']
+    };
+    var PAGE_ACCESS_PARENT = {
+      'SIE-LaporanTeknik': 'SIE-Teknik',
+      'SIE-BeritaAcara': 'SIE-Teknik',
+      'Tek-Data-Checkpoint': 'SIE-Teknik'
+    };
+    var INIT_FNS  = { 'Tek-ROW': 'initROW' };
+
+    var _state = { activeNav:'', activePage:'', token:'', sesi:{} };
+
+    /* State panel Pengaturan Akses */
+    var _aksesAkunCache  = [];
+    var _aksesMenuOptions = null;
+
+    /* ── Helpers ── */
+    function _el(id){ return document.getElementById(id); }
+
+    function _escHtml(s){
+      return String(s||'')
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function _jsStr(s){ return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+    function _getSesiStorage(){
+      try{
+        var raw = sessionStorage.getItem('sisiSesi');
+        if(!raw) return null;
+        return JSON.parse(raw);
+      } catch(e){ return null; }
+    }
+
+    function _getToken(){
+      var sesi = _getSesiStorage();
+      if(sesi && sesi.token) return sesi.token;
+      var m = window.location.search.match(/[?&]token=([^&]+)/);
+      return m ? m[1] : '';
+    }
+
+    /* ════════════════════
+      AKSES MENU (filter)
+    ════════════════════ */
+    function _isSuperUser(){
+      return String((_state.sesi && _state.sesi.role) || '').trim() === 'Super User';
+    }
+    function _aksesMenuList(){
+      var sesi = _state.sesi || {};
+      return String(sesi.aksesMenu || '')
+        .split(',').map(function(s){ return s.trim(); }).filter(function(s){ return s; });
+    }
+    function _isPageAllowed(page){
+      if(!page) return false;
+      if(_isSuperUser()) return true;
+      var akses = _aksesMenuList();
+      if(akses.indexOf(page) >= 0) return true;
+      var parent = PAGE_ACCESS_PARENT[page] || '';
+      return !!parent && akses.indexOf(parent) >= 0;
+    }
+    function _isMenuItemAllowed(item){
+      if(SUBMENUS[item]) return SUBMENUS[item].some(function(c){ return _isPageAllowed(c); });
+      return _isPageAllowed(item);
+    }
+    function _navHasAccess(navKey){
+      var pages = NAV_SIDEBARS[navKey] || [];
+      for(var i=0;i<pages.length;i++){ if(_isMenuItemAllowed(pages[i])) return true; }
+      return false;
+    }
+    function _firstAllowedPage(navKey){
+      var pages = NAV_SIDEBARS[navKey] || [];
+      for(var i=0;i<pages.length;i++){
+        var p = pages[i], sub = SUBMENUS[p];
+        if(sub){
+          for(var j=0;j<sub.length;j++){ if(_isPageAllowed(sub[j])) return sub[j]; }
+        } else if(_isPageAllowed(p)){ return p; }
+      }
+      return '';
+    }
+    function _applyNavAccess(){
+      document.querySelectorAll('.top-nav-btn').forEach(function(b){
+        b.style.display = _navHasAccess(b.dataset.nav) ? '' : 'none';
+      });
+    }
+    function _syncAksesCard(){
+      var btn = _el('menuItemAkses');
+      if(btn) btn.style.display = _isSuperUser() ? 'flex' : 'none';
+    }
+
+    /* ════════════════════
+      MENU USER (dropdown gabungan)
+    ════════════════════ */
+    function toggleUserMenu(e){
+      if(e){ e.stopPropagation(); }
+      var wrap = _el('topbarUsermenu');
+      if(!wrap) return;
+      var open = wrap.classList.toggle('open');
+      var btn = _el('btnUserMenu');
+      if(btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+    function _tutupUserMenu(){
+      var wrap = _el('topbarUsermenu');
+      if(wrap) wrap.classList.remove('open');
+      var btn = _el('btnUserMenu');
+      if(btn) btn.setAttribute('aria-expanded','false');
+    }
+    document.addEventListener('click', function(e){
+      var wrap = _el('topbarUsermenu');
+      if(wrap && wrap.classList.contains('open') && !wrap.contains(e.target)) _tutupUserMenu();
+    });
+    document.addEventListener('keydown', function(e){
+      if(e.key === 'Escape') _tutupUserMenu();
+    });
+
+    /* ════════════════════
+      INIT
+    ════════════════════ */
+    function initMain(){
+      var sesi = _getSesiStorage();
+      if(!sesi || !sesi.token){ _tampilLogin(); return; }
+      _state.sesi  = sesi;
+      _state.token = sesi.token || _getToken();
+      _updateUserDisplay();
+      _tampilSplash();
+    }
+
+    /* ════════════════════
+      LOGIN
+    ════════════════════ */
+    function _tampilLogin(){
+      var splash = _el('splashScreen');
+      var main   = _el('mainContent');
+      var login  = _el('loginWrap');
+      if(splash) splash.style.display = 'none';
+      if(main)   main.style.display   = 'none';
+      if(login)  login.style.display  = 'flex';
+    }
+
+    function doLoginForm(){
+      var uEl = _el('loginUsername');
+      var pEl = _el('loginPassword');
+      var btn = _el('btnLoginSubmit');
+      var err = _el('loginError');
+      var u = uEl ? uEl.value.trim() : '';
+      var p = pEl ? pEl.value.trim() : '';
+
+      if(!u || !p){
+        if(err){ err.textContent='Username dan password wajib diisi'; err.style.display='block'; }
+        return;
+      }
+      if(btn){ btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Masuk…'; }
+      if(err) err.style.display='none';
+
+      google.script.run
+        .withSuccessHandler(function(res){
+          if(btn){ btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-right-to-bracket"></i> Masuk'; }
+          if(res && res.success){
+            sessionStorage.setItem('sisiSesi', JSON.stringify({
+              token:res.token, username:res.username, email:res.email,
+              role:res.role, ulp:res.ulp, kodeUlp:res.kodeUlp||'',
+              bidang:res.bidang||'', tim:res.tim, subTim:res.subTim||'', aksesMenu:res.aksesMenu||''
+            }));
+            _state.token = res.token;
+            _state.sesi  = _getSesiStorage();
+            var login = _el('loginWrap');
+            if(login) login.style.display = 'none';
+            _updateUserDisplay();
+            _hideSidebar();
+            _tampilSplash();
+          } else {
+            if(err){ err.textContent=(res&&res.message)||'Login gagal'; err.style.display='block'; }
+          }
+        })
+        .withFailureHandler(function(e){
+          if(btn){ btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-right-to-bracket"></i> Masuk'; }
+          if(err){ err.textContent='Error: '+((e&&e.message)||e); err.style.display='block'; }
+        })
+        .doLogin(u, p);
+    }
+
+    /* ════════════════════
+      USER DISPLAY
+    ════════════════════ */
+    function _updateUserDisplay(){
+      var sesi    = _state.sesi;
+      var tampil  = sesi.username || 'Pengguna';
+      var inisial = tampil.charAt(0).toUpperCase();
+      var role    = sesi.role  || '';
+      var email   = sesi.email || '';
+      var _set = function(id, val){ var el = _el(id); if(el) el.textContent = val; };
+      _set('displayUsername', tampil);
+      _set('displayRole', role);
+      _set('userAvatar', inisial);
+      _set('menuUsername', tampil);
+      _set('menuRole', role);
+      _set('menuEmail', email);
+      _set('userAvatarLg', inisial);
+      var elEmail = _el('menuEmail');
+      if(elEmail) elEmail.style.display = email ? 'block' : 'none';
+    }
+
+    /* ════════════════════
+      SPLASH
+    ════════════════════ */
+    function _tampilSplash(){
+      var splash = _el('splashScreen');
+      var main   = _el('mainContent');
+      if(splash){
+        splash.style.display    = 'flex';
+        splash.style.opacity    = '1';
+        splash.style.visibility = 'visible';
+        splash.style.transition = 'none';
+      }
+      if(main) main.style.display = 'none';
+      setTimeout(function(){
+        if(!splash){ _munculkanMain(); return; }
+        splash.style.transition = 'opacity .6s ease';
+        splash.style.opacity    = '0';
+        setTimeout(function(){
+          if(splash){ splash.style.display='none'; splash.style.visibility='hidden'; }
+          _munculkanMain();
+        }, 650);
+      }, 2500);
+    }
+
+    function _munculkanMain(){
+      var main = _el('mainContent');
+      if(main) main.style.display = 'flex';
+      _applyNavAccess();
+      _syncAksesCard();
+      _syncNotifAkses();
+      _tampilWelcome();
+    }
+
+    /* ════════════════════
+      WELCOME
+    ════════════════════ */
+    function _tampilWelcome(){
+      var sesi   = _state.sesi;
+      var tampil = sesi.username || 'Pengguna';
+      var role   = sesi.role  || '';
+      var tim    = sesi.tim   || '';
+      var ulp    = sesi.ulp   || 'ULP Toboali';
+      var email  = sesi.email || '';
+
+      var html =
+        '<div style="display:flex;align-items:center;justify-content:center;min-height:62vh;padding:24px 16px">'
+        +'<div class="info-frame"><div class="info-frame-inner">'
+        +'<div style="width:76px;height:76px;background:linear-gradient(135deg,var(--primary),var(--primary-2));'
+        +'border-radius:18px;display:flex;align-items:center;justify-content:center;'
+        +'margin-bottom:20px;box-shadow:0 8px 24px rgba(30,58,138,.25)">'
+        +'<i class="fa-solid fa-house-laptop" style="color:var(--on-primary);font-size:1.8rem"></i></div>'
+        +'<p style="font-size:.78rem;color:var(--text-muted);letter-spacing:1.5px;'
+        +'text-transform:uppercase;margin-bottom:8px">Selamat Datang</p>'
+        +'<h1 style="font-size:1.9rem;font-weight:700;color:var(--text);margin-bottom:6px">'
+        +_escHtml(tampil)+' <span style="font-size:1.7rem">👋</span></h1>'
+        +'<p style="font-size:.88rem;color:var(--text-muted);margin-bottom:4px">'+_escHtml(email)+'</p>'
+        +'<p style="font-size:.92rem;color:var(--text-3);margin-bottom:28px">'
+        +_escHtml(role)+(tim?' &mdash; '+_escHtml(tim):'')+'</p>'
+        +'<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:28px">'
+        +'<div style="background:var(--surface-3);border:1px solid var(--border);border-radius:10px;padding:12px 18px;min-width:110px">'
+        +'<i class="fa-solid fa-building" style="color:#3b82f6;font-size:1.1rem"></i>'
+        +'<p style="font-size:.7rem;color:var(--text-muted);margin:4px 0 2px;text-transform:uppercase;letter-spacing:.5px">ULP</p>'
+        +'<p style="font-weight:700;color:var(--text);font-size:.9rem">'+_escHtml(ulp)+'</p></div>'
+        +(tim
+          ?'<div style="background:var(--surface-3);border:1px solid var(--border);border-radius:10px;padding:12px 18px;min-width:110px">'
+          +'<i class="fa-solid fa-users" style="color:#16a34a;font-size:1.1rem"></i>'
+          +'<p style="font-size:.7rem;color:var(--text-muted);margin:4px 0 2px;text-transform:uppercase;letter-spacing:.5px">Tim</p>'
+          +'<p style="font-weight:700;color:var(--text);font-size:.9rem">'+_escHtml(tim)+'</p></div>'
+          :'')
+        +'<div style="background:var(--surface-3);border:1px solid var(--border);border-radius:10px;padding:12px 18px;min-width:110px">'
+        +'<i class="fa-solid fa-shield-halved" style="color:#d97706;font-size:1.1rem"></i>'
+        +'<p style="font-size:.7rem;color:var(--text-muted);margin:4px 0 2px;text-transform:uppercase;letter-spacing:.5px">Role</p>'
+        +'<p style="font-weight:700;color:var(--text);font-size:.9rem">'+_escHtml(role)+'</p></div>'
+        +'</div>'
+        +'<p style="font-size:.8rem;color:var(--text-muted)">'
+        +'<i class="fa-solid fa-arrow-up"></i> Pilih menu di atas untuk memulai</p>'
+        +'</div></div></div>';
+
+      var konten = _el('pageContent');
+      if(konten) konten.innerHTML = html;
+      _hideSidebar();
+      _state.activePage = '';
+      _state.activeNav  = '';
+      _clearActiveNav();
+      _syncToggleBtn();
+    }
+
+    /* ════════════════════
+      TOP NAV
+    ════════════════════ */
+    function onNavClick(navKey){
+      if(_state.activeNav === navKey){
+        _state.activeNav = '';
+        _hideSidebar();
+        _clearActiveNav();
+        _tampilWelcome();
+        _syncToggleBtn();
+        return;
+      }
+      if(!_navHasAccess(navKey)){
+        showToast('Anda tidak memiliki akses ke menu ini','warning');
+        return;
+      }
+      _state.activeNav = navKey;
+      _setActiveNav(navKey);
+      _buildSidebar(navKey);
+      _showSidebar();
+      _syncToggleBtn(); 
+      var first = _firstAllowedPage(navKey);
+      if(first) _loadPage(first);
+    }
+
+    function _moveNavIndicator(){
+      var nav = document.getElementById('topbarNav');
+      var ind = document.getElementById('navIndicator');
+      if(!nav || !ind) return;
+      var act = nav.querySelector('.top-nav-btn.active');
+      if(!act){ ind.style.opacity = '0'; ind.style.width = '0'; return; }
+      ind.style.opacity   = '1';
+      ind.style.width     = act.offsetWidth + 'px';
+      ind.style.transform = 'translateX(' + act.offsetLeft + 'px)';
+    }
+    window.addEventListener('resize', _moveNavIndicator);
+
+    function _setActiveNav(navKey){
+      document.querySelectorAll('.top-nav-btn').forEach(function(b){
+        b.classList.toggle('active', b.dataset.nav === navKey);
+      });
+      _moveNavIndicator();
+    }
+
+    function _clearActiveNav(){
+      document.querySelectorAll('.top-nav-btn').forEach(function(b){
+        b.classList.remove('active');
+      });
+      _moveNavIndicator();
+    }
+
+    /* ════════════════════
+      SIDEBAR
+    ════════════════════ */
+    function _buildSidebar(navKey){
+      var sidebar = _el('sidebarNav');
+      if(!sidebar) return;
+      var pages = NAV_SIDEBARS[navKey] || [];
+      var html  = '';
+      pages.forEach(function(page){
+        if(!_isMenuItemAllowed(page)) return;   /* filter sesuai akses akun */
+        var icon  = NAV_ICONS[page]  || 'fa-circle';
+        var label = NAV_LABELS[page] || page;
+        var sub   = SUBMENUS[page];
+        if(sub){
+          html +=
+            '<div class="sidebar-item has-sub" data-page="'+page+'" '
+            +'onclick="_toggleSubmenu(\'sub-'+page+'\',this)">'
+            +'<i class="fa-solid '+icon+'"></i><span>'+_escHtml(label)+'</span>'
+            +'<i class="fa-solid fa-chevron-right sidebar-arrow" id="arr-'+page+'"'
+            +' style="margin-left:auto;font-size:.68rem"></i></div>'
+            +'<div id="sub-'+page+'" style="display:none">';
+          sub.forEach(function(child){
+            if(!_isPageAllowed(child)) return;   /* filter submenu */
+            var ci = NAV_ICONS[child]  || 'fa-circle-dot';
+            var cl = NAV_LABELS[child] || child;
+            html +=
+              '<div class="sidebar-item sidebar-sub" data-page="'+child+'" '
+              +'onclick="_loadPage(\''+child+'\')">'
+              +'<i class="fa-solid '+ci+'"></i><span>'+_escHtml(cl)+'</span></div>';
+          });
+          html += '</div>';
+        } else {
+          html +=
+            '<div class="sidebar-item" data-page="'+page+'" '
+            +'onclick="_loadPage(\''+page+'\')">'
+            +'<i class="fa-solid '+icon+'"></i><span>'+_escHtml(label)+'</span></div>';
+        }
+      });
+      sidebar.innerHTML = html;
+    }
+
+    function _toggleSubmenu(subId, parentEl){
+      var sub = _el(subId);
+      if(!sub) return;
+      var isOpen = sub.style.display !== 'none';
+      sub.style.display = isOpen ? 'none' : 'block';
+      var arr = _el('arr-'+(parentEl.dataset.page||''));
+      if(arr) arr.style.transform = isOpen ? '' : 'rotate(90deg)';
+    }
+
+    /* ════════════════════════════════
+      SIDEBAR — kontrol terpadu
+    ════════════════════════════════ */
+    var _sidebarToggleHidden = false;
+
+    function _showSidebar(){
+      if(_sidebarToggleHidden) return;       /* toggle sedang aktif — jangan tampilkan */
+      var sb = _el('sidebar');
+      if(!sb) return;
+      sb.style.display = 'flex';
+      sb.classList.remove('sidebar-hidden');
+    }
+
+    function _hideSidebar(){
+      var sb = _el('sidebar');
+      if(!sb) return;
+      sb.style.display = 'none';
+      sb.classList.remove('sidebar-hidden');
+    }
+
+    function _setActiveSidebar(page){
+      document.querySelectorAll('.sidebar-item').forEach(function(item){
+        item.classList.toggle('active', item.dataset.page === page);
+      });
+    }
+
+    function _syncToggleBtn(){
+      var btn    = _el('btnToggleSidebar');
+      var hasNav = _state.activeNav !== '';
+      if(!btn) return;
+      btn.disabled = !hasNav;
+      btn.style.opacity = hasNav ? '1' : '0.35';
+      btn.style.cursor  = hasNav ? 'pointer' : 'not-allowed';
+    }
+    /* ════════════════════
+      LOAD PAGE
+    ════════════════════ */
+    function _loadPage(pageName){
+      if(!pageName) return;
+      _state.activePage = pageName;
+      _setActiveSidebar(pageName);
+
+      var konten = _el('pageContent');
+      if(!konten) return;
+
+      konten.innerHTML =
+        '<div style="display:flex;align-items:center;justify-content:center;'
+        +'height:40vh;flex-direction:column;gap:16px;color:#64748b">'
+        +'<i class="fa-solid fa-spinner fa-spin fa-2x" style="color:#1e3a8a"></i>'
+        +'<span style="font-size:.88rem">Memuat '
+        +_escHtml(NAV_LABELS[pageName]||pageName)+'…</span></div>';
+
+      var token = _state.token || _getToken();
+
+      google.script.run
+        .withSuccessHandler(function(res){
+          if(!res || !res.success){
+            if(res && res.redirect === 'login'){
+              sessionStorage.removeItem('sisiSesi');
+              _tampilLogin();
+              return;
+            }
+            konten.innerHTML =
+              '<div style="padding:40px;text-align:center;color:#dc2626">'
+              +'<i class="fa-solid fa-circle-exclamation fa-2x"'
+              +' style="display:block;margin-bottom:12px"></i>'
+              +_escHtml((res&&res.message)||'Gagal memuat halaman')+'</div>';
+            return;
+          }
+
+          /* Inject HTML */
+          konten.innerHTML = res.html;
+
+          /* ✅ Sesi global untuk halaman anak (mis. Temuan-Inspeksi) */
+          window.__SISI_SESI__ = res.sesi || _state.sesi;
+          window.__SISI_PAGE__ = pageName;
+
+          /* ✅ Eksekusi ulang <script> — innerHTML tidak auto-run script */
+          var scripts = konten.querySelectorAll('script');
+          for(var i = 0; i < scripts.length; i++){
+            var lama = scripts[i];
+            var baru = document.createElement('script');
+            for(var j = 0; j < lama.attributes.length; j++){
+              baru.setAttribute(lama.attributes[j].name, lama.attributes[j].value);
+            }
+            baru.textContent = lama.textContent;
+            lama.parentNode.replaceChild(baru, lama);
+          }
+
+          /* Panggil init function halaman jika ada */
+          var fn = INIT_FNS[pageName];
+          if(fn && typeof window[fn] === 'function'){
+            try{ window[fn](); } catch(e){ console.warn('[loadPage] initFn error:',e); }
+          }
+        })
+        .withFailureHandler(function(err){
+          konten.innerHTML =
+            '<div style="padding:40px;text-align:center;color:#dc2626">'
+            +'<i class="fa-solid fa-circle-exclamation fa-2x"'
+            +' style="display:block;margin-bottom:12px"></i>'
+            +'Error: '+_escHtml((err&&err.message)||String(err))+'</div>';
+        })
+        .getPageContent(token, pageName);
+    }
+
+    function loadPage(p){ _loadPage(p); }
+
+    /* ════════════════════
+      PENGATURAN AKSES (Super User)
+    ════════════════════ */
+    function bukaPengaturanAkses(){
+      if(!_isSuperUser()){ showToast('Menu ini khusus Super User','warning'); return; }
+      var modal = _el('modalAkses');
+      if(modal) modal.style.display = 'flex';
+      var body = _el('aksesBody');
+      if(body) body.innerHTML = '<div class="akses-loading"><i class="fa-solid fa-spinner fa-spin"></i> Memuat…</div>';
+      var token = _state.token || _getToken();
+      google.script.run
+        .withSuccessHandler(function(opts){ _aksesMenuOptions = opts || []; _aksesLoadList(); })
+        .withFailureHandler(function(err){
+          if(body) body.innerHTML = '<div class="akses-empty" style="color:#dc2626">'+_escHtml((err&&err.message)||err)+'</div>';
+        })
+        .getMenuOptions(token);
+    }
+
+    function tutupPengaturanAkses(){
+      var modal = _el('modalAkses');
+      if(modal) modal.style.display = 'none';
+    }
+
+    function _aksesLoadList(){
+      var body = _el('aksesBody');
+      if(body) body.innerHTML = '<div class="akses-loading"><i class="fa-solid fa-spinner fa-spin"></i> Memuat daftar akun…</div>';
+      var token = _state.token || _getToken();
+      google.script.run
+        .withSuccessHandler(function(res){
+          if(!res || !res.ok){ if(body) body.innerHTML = '<div class="akses-empty">'+_escHtml((res&&res.message)||'Gagal memuat')+'</div>'; return; }
+          _aksesAkunCache = res.rows || [];
+          _renderAksesList();
+        })
+        .withFailureHandler(function(err){
+          if(body) body.innerHTML = '<div class="akses-empty" style="color:#dc2626">'+_escHtml((err&&err.message)||err)+'</div>';
+        })
+        .getDaftarAkun(token);
+    }
+
+    function _renderAksesList(){
+      var rows = _aksesAkunCache || [];
+      var head = '<div class="akses-list-head">'
+        +'<span class="akses-list-title">Daftar Akun ('+rows.length+')</span>'
+        +'<button class="akses-btn-pri" onclick="_aksesFormBaru()"><i class="fa-solid fa-plus"></i> Tambah Akun</button>'
+        +'</div>';
+      if(rows.length === 0){ _el('aksesBody').innerHTML = head + '<div class="akses-empty">Belum ada akun terdaftar.</div>'; return; }
+      var trs = rows.map(function(a){
+        var menuTxt = (a.aksesMenu && a.aksesMenu.length)
+          ? a.aksesMenu.length + ' menu'
+          : (String(a.role).trim()==='Super User' ? 'Semua' : '—');
+        var uname = _jsStr(a.username);
+        return '<tr>'
+          +'<td><b>'+_escHtml(a.username)+'</b><div class="akses-sub">'+_escHtml(a.email||'')+'</div></td>'
+          +'<td>'+_escHtml(a.role||'—')+'</td>'
+          +'<td>'+_escHtml(a.bidang||'—')+'</td>'
+          +'<td>'+_escHtml(a.ulp||'—')+'</td>'
+          +'<td>'+_escHtml(a.tim||'—')+'</td>'
+          +'<td>'+menuTxt+'</td>'
+          +'<td><div class="akses-act">'
+            +'<button title="Edit" onclick="_aksesFormEdit(\''+uname+'\')"><i class="fa-solid fa-pen"></i></button>'
+            +'<button title="Reset Password" onclick="_aksesResetPw(\''+uname+'\')"><i class="fa-solid fa-key"></i></button>'
+            +'<button title="Hapus" class="akses-del" onclick="_aksesHapus(\''+uname+'\')"><i class="fa-solid fa-trash"></i></button>'
+          +'</div></td></tr>';
+      }).join('');
+      _el('aksesBody').innerHTML = head
+        + '<div class="akses-table-wrap"><table class="akses-table">'
+        + '<thead><tr><th>Username</th><th>Role</th><th>Bidang</th><th>ULP</th><th>Tim</th><th>Menu</th><th></th></tr></thead>'
+        + '<tbody>'+trs+'</tbody></table></div>';
+    }
+
+    /* Grup bidang untuk panel Pengaturan Akses.
+       items[] berisi string (key halaman) atau objek sub-grup { sub, label, ikon, keys[] }. */
+    var AKSES_BIDANG_GRUP = [
+      { nama:'PP',     label:'PP — Perencanaan',     ikon:'fa-chart-pie',     items:['PP-Dashboard'] },
+      { nama:'Teknik', label:'Teknik',               ikon:'fa-wrench',        items:[
+          'Tek-Dashboard','Tek-ROW',
+          { sub:'Tek-Inspeksi', label:'Tim Inspeksi', ikon:'fa-magnifying-glass', keys:['Tek-InsDu','Tek-PengukuranGardu','Tek-InsJar'] },
+          'Tek-Yandal','Tek-Hartek','Tek-Gangguan','SIE-Teknik'
+      ] },
+      { nama:'TE',     label:'TE — Transaksi Energi', ikon:'fa-bolt',          items:['TE-Dashboard'] },
+      { nama:'K3',     label:'K3',                    ikon:'fa-helmet-safety', items:['K3-Dashboard'] }
+    ];
+
+    function _aksesLeafBox(nama, sub, key, label, checked){
+      var on = checked.indexOf(key) >= 0 ? 'checked' : '';
+      var subAttr = sub ? ' data-sub="'+sub+'"' : '';
+      return '<label class="akses-chk akses-chk-sub">'
+        +'<input type="checkbox" class="akMenuSub" data-grup="'+nama+'"'+subAttr+' value="'+key+'" '+on
+        +' onchange="_aksesSyncGrup(\''+nama+'\')">'
+        +'<span>'+_escHtml(label)+'</span></label>';
+    }
+
+    function _buildAksesMenuGroups(checked){
+      var opts = _aksesMenuOptions || [];
+      var labelByKey = {};
+      opts.forEach(function(m){ labelByKey[m.key] = m.label; });
+      var assigned = {};
+      function adaKey(k){ return labelByKey.hasOwnProperty(k); }
+
+      var html = AKSES_BIDANG_GRUP.map(function(g){
+        var bodyHtml = '';
+        var adaAnak = false;
+        (g.items || []).forEach(function(it){
+          if(typeof it === 'string'){
+            if(!adaKey(it)) return;
+            assigned[it] = true; adaAnak = true;
+            bodyHtml += _aksesLeafBox(g.nama, '', it, labelByKey[it], checked);
+          } else {
+            var anak = (it.keys || []).filter(adaKey);
+            if(!anak.length) return;
+            anak.forEach(function(k){ assigned[k] = true; });
+            adaAnak = true;
+            var subLeaves = anak.map(function(k){
+              return _aksesLeafBox(g.nama, it.sub, k, labelByKey[k], checked);
+            }).join('');
+            bodyHtml += '<div class="akses-subgrup" data-grup="'+g.nama+'" data-sub="'+it.sub+'">'
+              +'<label class="akses-subgrup-head">'
+              +'<input type="checkbox" class="akMenuSubGrup" data-grup="'+g.nama+'" data-sub="'+it.sub+'"'
+              +' onchange="_aksesToggleSub(\''+g.nama+'\',\''+it.sub+'\',this.checked)">'
+              +'<i class="fa-solid '+(it.ikon||'fa-folder')+'"></i><span>'+_escHtml(it.label||it.sub)+'</span></label>'
+              +'<div class="akses-subgrup-body">'+subLeaves+'</div></div>';
+          }
+        });
+        if(!adaAnak) return '';
+        return '<div class="akses-grup" data-grup="'+g.nama+'">'
+          +'<label class="akses-grup-head">'
+          +'<input type="checkbox" class="akMenuGrup" data-grup="'+g.nama+'"'
+          +' onchange="_aksesToggleGrup(\''+g.nama+'\',this.checked)">'
+          +'<i class="fa-solid '+g.ikon+'"></i><span>'+_escHtml(g.label)+'</span></label>'
+          +'<div class="akses-grup-body">'+bodyHtml+'</div></div>';
+      }).join('');
+
+      /* Menu yang belum terpetakan ke bidang manapun */
+      var sisa = opts.filter(function(m){ return !assigned[m.key]; });
+      if(sisa.length){
+        var sisaHtml = sisa.map(function(m){
+          return _aksesLeafBox('Lainnya', '', m.key, m.label, checked);
+        }).join('');
+        html += '<div class="akses-grup" data-grup="Lainnya">'
+          +'<label class="akses-grup-head">'
+          +'<input type="checkbox" class="akMenuGrup" data-grup="Lainnya"'
+          +' onchange="_aksesToggleGrup(\'Lainnya\',this.checked)">'
+          +'<i class="fa-solid fa-ellipsis"></i><span>Lainnya</span></label>'
+          +'<div class="akses-grup-body">'+sisaHtml+'</div></div>';
+      }
+      return html;
+    }
+
+    function _aksesToggleGrup(nama, on){
+      document.querySelectorAll('#aksesBody .akMenuSub[data-grup="'+nama+'"]')
+        .forEach(function(c){ c.checked = on; });
+      _aksesSyncGrup(nama);
+    }
+
+    function _aksesToggleSub(nama, sub, on){
+      document.querySelectorAll('#aksesBody .akMenuSub[data-grup="'+nama+'"][data-sub="'+sub+'"]')
+        .forEach(function(c){ c.checked = on; });
+      _aksesSyncGrup(nama);
+    }
+
+    function _aksesSyncSub(nama, sub){
+      if(!sub) return;
+      var subs = Array.prototype.slice.call(
+        document.querySelectorAll('#aksesBody .akMenuSub[data-grup="'+nama+'"][data-sub="'+sub+'"]'));
+      var box = document.querySelector('#aksesBody .akMenuSubGrup[data-grup="'+nama+'"][data-sub="'+sub+'"]');
+      if(!box) return;
+      var total   = subs.length;
+      var dipilih = subs.filter(function(c){ return c.checked; }).length;
+      box.checked       = dipilih > 0 && dipilih === total;
+      box.indeterminate = dipilih > 0 && dipilih < total;
+    }
+
+    function _aksesSyncGrup(nama){
+      /* sinkronkan dulu sub-grup di bidang ini */
+      document.querySelectorAll('#aksesBody .akMenuSubGrup[data-grup="'+nama+'"]')
+        .forEach(function(sg){ _aksesSyncSub(nama, sg.getAttribute('data-sub')); });
+      var subs = Array.prototype.slice.call(
+        document.querySelectorAll('#aksesBody .akMenuSub[data-grup="'+nama+'"]'));
+      var grup = document.querySelector('#aksesBody .akMenuGrup[data-grup="'+nama+'"]');
+      if(!grup) return;
+      var total   = subs.length;
+      var dipilih = subs.filter(function(c){ return c.checked; }).length;
+      grup.checked       = dipilih > 0 && dipilih === total;
+      grup.indeterminate = dipilih > 0 && dipilih < total;
+    }
+
+    function _aksesSyncSemuaGrup(){
+      AKSES_BIDANG_GRUP.forEach(function(g){ _aksesSyncGrup(g.nama); });
+      _aksesSyncGrup('Lainnya');
+    }
+
+    function _aksesFormBaru(){ _renderAksesForm(null); }
+    function _aksesFormEdit(username){
+      var a = (_aksesAkunCache||[]).find(function(x){ return x.username === username; });
+      _renderAksesForm(a || { username: username });
+    }
+
+    function _renderAksesForm(akun){
+      var isEdit = !!akun;
+      akun = akun || {};
+      var checked = akun.aksesMenu || [];
+      var menuBoxes = _buildAksesMenuGroups(checked);
+      var pwLabel = isEdit ? 'Password (kosongkan jika tetap)' : 'Password *';
+      var html =
+        '<div class="akses-list-head"><span class="akses-list-title">'
+        +(isEdit ? 'Edit Akun: '+_escHtml(akun.username) : 'Tambah Akun Baru')+'</span></div>'
+        +'<div class="akses-form-grid">'
+        +'<div><label>Username *</label><input id="afUsername" value="'+_escHtml(akun.username||'')+'"></div>'
+        +'<div><label>Email</label><input id="afEmail" value="'+_escHtml(akun.email||'')+'"></div>'
+        +'<div><label>'+pwLabel+'</label><input id="afPassword" type="text" placeholder="'+(isEdit?'••••••':'Password')+'"></div>'
+        +'<div><label>Role</label><input id="afRole" value="'+_escHtml(akun.role||'')+'" placeholder="Super User / Team Leader / Staff / ..."></div>'
+        +'<div><label>Bidang</label><input id="afBidang" value="'+_escHtml(akun.bidang||'')+'" placeholder="Teknik / PP / TE / K3"></div>'
+        +'<div><label>Tim</label><input id="afTim" value="'+_escHtml(akun.tim||'')+'" placeholder="Inspeksi Jaringan / ROW / ..."></div>'
+        +'<div><label>Sub - Tim</label><input id="afSubTim" value="'+_escHtml(akun.subTim||'')+'" placeholder="mis. Inspeksi Gardu / ROW 01"></div>'
+        +'<div><label>ULP</label><input id="afUlp" value="'+_escHtml(akun.ulp||'')+'"></div>'
+        +'<div><label>Kode ULP</label><input id="afKodeUlp" value="'+_escHtml(akun.kodeUlp||'')+'"></div>'
+        +'</div>'
+        +'<div class="akses-menu-wrap">'
+        +'<label class="akses-menu-title">Menu yang dapat diakses</label>'
+        +'<p class="akses-menu-note">Super User otomatis melihat semua menu. Centang bidang untuk memilih semua sub-menunya sekaligus, atau centang sub-menu tertentu saja.</p>'
+        +'<div class="akses-menu-groups">'+menuBoxes+'</div></div>'
+        +'<input type="hidden" id="afTarget" value="'+_escHtml(akun.username||'')+'">'
+        +'<div class="akses-form-foot">'
+        +'<button class="akses-btn-sec" onclick="_aksesLoadList()"><i class="fa-solid fa-arrow-left"></i> Kembali</button>'
+        +'<button class="akses-btn-pri" id="afSimpan" onclick="_aksesSimpan('+(isEdit?'true':'false')+')"><i class="fa-solid fa-floppy-disk"></i> Simpan</button>'
+        +'</div>';
+      _el('aksesBody').innerHTML = html;
+      _aksesSyncSemuaGrup();
+    }
+
+    function _aksesSimpan(isEdit){
+      var akses = [];
+      document.querySelectorAll('#aksesBody .akMenuSub:checked')
+        .forEach(function(c){ akses.push(c.value); });
+      var data = {
+        username:  _el('afUsername').value.trim(),
+        email:     _el('afEmail').value.trim(),
+        role:      _el('afRole').value.trim(),
+        bidang:    _el('afBidang').value.trim(),
+        tim:       _el('afTim').value.trim(),
+        subTim:    _el('afSubTim').value.trim(),
+        ulp:       _el('afUlp').value.trim(),
+        kodeUlp:   _el('afKodeUlp').value.trim(),
+        aksesMenu: akses
+      };
+      var pw = _el('afPassword').value.trim();
+      if(pw) data.password = pw;
+      if(!data.username){ showToast('Username wajib diisi','error'); return; }
+      if(!isEdit && !pw){ showToast('Password wajib diisi','error'); return; }
+
+      var btn = _el('afSimpan');
+      if(btn){ btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan…'; }
+      var token = _state.token || _getToken();
+      var handler = function(res){
+        if(btn){ btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-floppy-disk"></i> Simpan'; }
+        if(res && res.ok){
+          showToast(isEdit ? 'Akun diperbarui' : 'Akun ditambahkan','success');
+          _aksesLoadList();
+        } else { showToast((res&&res.message)||'Gagal menyimpan','error'); }
+      };
+      var fail = function(err){
+        if(btn){ btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-floppy-disk"></i> Simpan'; }
+        showToast('Error: '+((err&&err.message)||err),'error');
+      };
+      if(isEdit){
+        data.targetUsername = _el('afTarget').value.trim();
+        google.script.run.withSuccessHandler(handler).withFailureHandler(fail).updateAkun(token, data);
+      } else {
+        google.script.run.withSuccessHandler(handler).withFailureHandler(fail).tambahAkun(token, data);
+      }
+    }
+
+    function _aksesHapus(username){
+      if(!confirm('Hapus akun "'+username+'"? Tindakan ini permanen.')) return;
+      var token = _state.token || _getToken();
+      google.script.run
+        .withSuccessHandler(function(res){
+          if(res && res.ok){ showToast('Akun dihapus','success'); _aksesLoadList(); }
+          else showToast((res&&res.message)||'Gagal menghapus','error');
+        })
+        .withFailureHandler(function(err){ showToast('Error: '+((err&&err.message)||err),'error'); })
+        .hapusAkun(token, username);
+    }
+
+    /* ═══════════════════════════════════════════════
+      RESET PASSWORD — Card Pop-up (pengganti prompt bawaan)
+    ═══════════════════════════════════════════════ */
+    function _aksesResetPw(username){
+      _ensureResetPwUI();
+      document.getElementById('rpwUser').textContent = username;
+      document.getElementById('rpwTarget').value     = username;
+      var inp = document.getElementById('rpwInput');
+      inp.value = '';
+      inp.type  = 'password';
+      document.getElementById('rpwShow').checked = false;
+      document.getElementById('rpwErr').style.display = 'none';
+      document.getElementById('rpwModal').classList.add('show');
+      setTimeout(function(){ inp.focus(); }, 50);
+    }
+
+    function _tutupResetPw(){
+      var m = document.getElementById('rpwModal');
+      if(m) m.classList.remove('show');
+    }
+
+    function _rpwToggle(){
+      var inp = document.getElementById('rpwInput');
+      inp.type = document.getElementById('rpwShow').checked ? 'text' : 'password';
+    }
+
+    function _submitResetPw(){
+      var username = document.getElementById('rpwTarget').value;
+      var inp = document.getElementById('rpwInput');
+      var err = document.getElementById('rpwErr');
+      var btn = document.getElementById('rpwBtn');
+      var pw  = (inp.value || '').trim();
+      if(!pw){
+        err.textContent = 'Password baru wajib diisi.';
+        err.style.display = 'block';
+        inp.focus();
+        return;
+      }
+      var lbl = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+      google.script.run
+        .withSuccessHandler(function(res){
+          btn.disabled = false; btn.innerHTML = lbl;
+          if(res && res.ok){
+            _tutupResetPw();
+            alert('Password untuk "' + username + '" berhasil direset.');
+          }else{
+            err.textContent = (res && res.message) || 'Gagal reset password.';
+            err.style.display = 'block';
+          }
+        })
+        .withFailureHandler(function(e){
+          btn.disabled = false; btn.innerHTML = lbl;
+          err.textContent = 'Error: ' + e.message;
+          err.style.display = 'block';
+        })
+        .resetPasswordAkun(_state.token, username, pw);
+    }
+
+    /* Bangun elemen modal + style sekali saja */
+    function _ensureResetPwUI(){
+      if(document.getElementById('rpwModal')) return;
+
+      if(!document.getElementById('rpwStyle')){
+        var st = document.createElement('style');
+        st.id = 'rpwStyle';
+        st.textContent =
+          '.rpw-bg{position:fixed;inset:0;background:var(--overlay);display:none;'+
+            'align-items:center;justify-content:center;z-index:9500;backdrop-filter:blur(4px)}'+
+          '.rpw-bg.show{display:flex}'+
+          '.rpw-box{background:var(--surface);border-radius:14px;padding:22px;width:90%;max-width:400px;'+
+            'box-shadow:var(--shadow-lg);animation:rpwIn .2s ease}'+
+          '@keyframes rpwIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}'+
+          '.rpw-head{display:flex;align-items:center;justify-content:space-between;'+
+            'font-size:1.05rem;font-weight:700;color:var(--text);margin-bottom:14px}'+
+          '.rpw-head .x{cursor:pointer;color:var(--text-muted)}'+
+          '.rpw-box p{margin:0 0 8px;font-size:13px;color:var(--text-2)}'+
+          '.rpw-box input[type=text],.rpw-box input[type=password]{width:100%;padding:10px 12px;'+
+            'border:1.5px solid var(--border);border-radius:9px;font-size:14px;box-sizing:border-box;outline:none;background:var(--surface);color:var(--text);font-family:inherit}'+
+          '.rpw-box input:focus{border-color:var(--primary)}'+
+          '.rpw-show{display:flex;align-items:center;gap:6px;margin-top:9px;font-size:12px;color:var(--text-3);cursor:pointer}'+
+          '.rpw-err{color:var(--danger);font-size:12px;margin-top:8px;display:none}'+
+          '.rpw-foot{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}'+
+          '.rpw-btn{padding:9px 18px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;border:0}'+
+          '.rpw-cancel{background:var(--surface-2);color:var(--text-2);border:1.5px solid var(--border)}'+
+          '.rpw-save{background:var(--primary);color:var(--on-primary)}'+
+          '.rpw-save:disabled{opacity:.6;cursor:not-allowed}';
+        document.head.appendChild(st);
+      }
+
+      var bg = document.createElement('div');
+      bg.id = 'rpwModal';
+      bg.className = 'rpw-bg';
+      bg.innerHTML =
+        '<div class="rpw-box">'+
+          '<div class="rpw-head">'+
+            '<span><i class="fa-solid fa-key" style="color:#1e3a8a"></i> Reset Password</span>'+
+            '<i class="fa-solid fa-xmark x" onclick="_tutupResetPw()"></i>'+
+          '</div>'+
+          '<input type="hidden" id="rpwTarget">'+
+          '<p>Password baru untuk <b id="rpwUser"></b>:</p>'+
+          '<input type="password" id="rpwInput" placeholder="Masukkan password baru" autocomplete="new-password">'+
+          '<label class="rpw-show"><input type="checkbox" id="rpwShow" onclick="_rpwToggle()"> Tampilkan password</label>'+
+          '<div class="rpw-err" id="rpwErr"></div>'+
+          '<div class="rpw-foot">'+
+            '<button class="rpw-btn rpw-cancel" onclick="_tutupResetPw()">Batal</button>'+
+            '<button class="rpw-btn rpw-save" id="rpwBtn" onclick="_submitResetPw()"><i class="fa-solid fa-check"></i> Simpan</button>'+
+          '</div>'+
+        '</div>';
+      document.body.appendChild(bg);
+      bg.addEventListener('click', function(e){ if(e.target === this) _tutupResetPw(); });
+      document.getElementById('rpwInput').addEventListener('keydown', function(e){
+        if(e.key === 'Enter')  _submitResetPw();
+        if(e.key === 'Escape') _tutupResetPw();
+      });
+    }
+
+    /* ════════════════════
+      GANTI PASSWORD — Semua User
+    ════════════════════ */
+    function bukaGantiPassword(){
+      _ensureGantiPwUI();
+      var f = function(id){ return document.getElementById(id); };
+      f('gpwLama').value = '';
+      f('gpwBaru').value = '';
+      f('gpwKonf').value = '';
+      f('gpwShow').checked = false;
+      _gpwToggle();
+      f('gpwErr').style.display = 'none';
+      f('gpwModal').classList.add('show');
+      setTimeout(function(){ f('gpwLama').focus(); }, 50);
+    }
+    function _tutupGantiPw(){
+      var m = document.getElementById('gpwModal');
+      if(m) m.classList.remove('show');
+    }
+    function _gpwToggle(){
+      var t = document.getElementById('gpwShow').checked ? 'text' : 'password';
+      ['gpwLama','gpwBaru','gpwKonf'].forEach(function(id){
+        var el = document.getElementById(id); if(el) el.type = t;
+      });
+    }
+    function _submitGantiPw(){
+      var f = function(id){ return document.getElementById(id); };
+      var err = f('gpwErr');
+      var btn = f('gpwBtn');
+      var lama = (f('gpwLama').value||'').trim();
+      var baru = (f('gpwBaru').value||'').trim();
+      var konf = (f('gpwKonf').value||'').trim();
+      function tampilErr(msg){ err.textContent = msg; err.style.display = 'block'; }
+      if(!lama || !baru || !konf){ tampilErr('Semua kolom wajib diisi.'); return; }
+      if(baru.length < 4){ tampilErr('Password baru minimal 4 karakter.'); return; }
+      if(baru !== konf){ tampilErr('Konfirmasi password tidak cocok.'); return; }
+      if(baru === lama){ tampilErr('Password baru tidak boleh sama dengan yang lama.'); return; }
+      err.style.display = 'none';
+      var lbl = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+      var token = _state.token || _getToken();
+      google.script.run
+        .withSuccessHandler(function(res){
+          btn.disabled = false; btn.innerHTML = lbl;
+          if(res && res.ok){
+            _tutupGantiPw();
+            showToast('Password berhasil diganti','success');
+          } else {
+            tampilErr((res && res.message) || 'Gagal mengganti password.');
+          }
+        })
+        .withFailureHandler(function(e){
+          btn.disabled = false; btn.innerHTML = lbl;
+          tampilErr('Error: ' + ((e&&e.message)||e));
+        })
+        .gantiPassword(token, lama, baru);
+    }
+    function _ensureGantiPwUI(){
+      if(document.getElementById('gpwModal')) return;
+      if(!document.getElementById('gpwStyle')){
+        var st = document.createElement('style');
+        st.id = 'gpwStyle';
+        st.textContent =
+          '.gpw-bg{position:fixed;inset:0;background:var(--overlay);display:none;'+
+            'align-items:center;justify-content:center;z-index:9500;backdrop-filter:blur(4px)}'+
+          '.gpw-bg.show{display:flex}'+
+          '.gpw-box{background:var(--surface);border-radius:14px;padding:22px;width:90%;max-width:400px;'+
+            'box-shadow:var(--shadow-lg);animation:gpwIn .2s ease}'+
+          '@keyframes gpwIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}'+
+          '.gpw-head{display:flex;align-items:center;justify-content:space-between;'+
+            'font-size:1.05rem;font-weight:700;color:var(--text);margin-bottom:14px}'+
+          '.gpw-head .x{cursor:pointer;color:var(--text-muted)}'+
+          '.gpw-field{margin-bottom:12px}'+
+          '.gpw-field label{display:block;font-size:.78rem;font-weight:600;color:var(--text-2);margin-bottom:5px}'+
+          '.gpw-field input{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:9px;'+
+            'font-size:14px;box-sizing:border-box;outline:none;background:var(--surface);color:var(--text);font-family:inherit}'+
+          '.gpw-field input:focus{border-color:var(--primary)}'+
+          '.gpw-show{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-3);cursor:pointer}'+
+          '.gpw-err{color:var(--danger);font-size:12px;margin-top:8px;display:none}'+
+          '.gpw-foot{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}'+
+          '.gpw-btn{padding:9px 18px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;border:0;font-family:inherit}'+
+          '.gpw-cancel{background:var(--surface-2);color:var(--text-2);border:1.5px solid var(--border)}'+
+          '.gpw-save{background:var(--primary);color:var(--on-primary)}'+
+          '.gpw-save:disabled{opacity:.6;cursor:not-allowed}';
+        document.head.appendChild(st);
+      }
+      var bg = document.createElement('div');
+      bg.id = 'gpwModal';
+      bg.className = 'gpw-bg';
+      bg.innerHTML =
+        '<div class="gpw-box">'+
+          '<div class="gpw-head">'+
+            '<span><i class="fa-solid fa-key" style="color:var(--primary)"></i> Ganti Password</span>'+
+            '<i class="fa-solid fa-xmark x" onclick="_tutupGantiPw()"></i>'+
+          '</div>'+
+          '<div class="gpw-field"><label>Password Lama</label>'+
+            '<input type="password" id="gpwLama" placeholder="Password saat ini" autocomplete="current-password"></div>'+
+          '<div class="gpw-field"><label>Password Baru</label>'+
+            '<input type="password" id="gpwBaru" placeholder="Minimal 4 karakter" autocomplete="new-password"></div>'+
+          '<div class="gpw-field"><label>Konfirmasi Password Baru</label>'+
+            '<input type="password" id="gpwKonf" placeholder="Ulangi password baru" autocomplete="new-password"></div>'+
+          '<label class="gpw-show"><input type="checkbox" id="gpwShow" onclick="_gpwToggle()"> Tampilkan password</label>'+
+          '<div class="gpw-err" id="gpwErr"></div>'+
+          '<div class="gpw-foot">'+
+            '<button class="gpw-btn gpw-cancel" onclick="_tutupGantiPw()">Batal</button>'+
+            '<button class="gpw-btn gpw-save" id="gpwBtn" onclick="_submitGantiPw()"><i class="fa-solid fa-check"></i> Simpan</button>'+
+          '</div>'+
+        '</div>';
+      document.body.appendChild(bg);
+      bg.addEventListener('click', function(e){ if(e.target === this) _tutupGantiPw(); });
+      ['gpwLama','gpwBaru','gpwKonf'].forEach(function(id){
+        document.getElementById(id).addEventListener('keydown', function(e){
+          if(e.key === 'Enter')  _submitGantiPw();
+          if(e.key === 'Escape') _tutupGantiPw();
+        });
+      });
+    }
+
+    /* ════════════════════
+      TOAST
+    ════════════════════ */
+    function showToast(message, type){
+      var ex = _el('globalToast');
+      if(ex) ex.remove();
+      var c = {
+        success:{bg:'rgba(34,197,94,.15)',border:'var(--success)',text:'var(--success)',icon:'fa-circle-check'},
+        error  :{bg:'rgba(220,38,38,.15)',border:'var(--danger)',text:'var(--danger)',icon:'fa-circle-xmark'},
+        info   :{bg:'rgba(41,164,219,.15)',border:'var(--info)',text:'var(--info)',icon:'fa-circle-info'},
+        warning:{bg:'rgba(245,166,35,.15)',border:'var(--warning)',text:'var(--warning)',icon:'fa-triangle-exclamation'}
+      }[type] || {bg:'rgba(41,164,219,.15)',border:'var(--info)',text:'var(--info)',icon:'fa-circle-info'};
+      var t = document.createElement('div');
+      t.id = 'globalToast';
+      t.style.cssText =
+        'position:fixed;bottom:24px;right:24px;z-index:9999;'
+        +'display:flex;align-items:center;gap:10px;background:'+c.bg+';'
+        +'border:1.5px solid '+c.border+';color:'+c.text+';padding:12px 18px;'
+        +'border-radius:10px;font-size:.87rem;font-weight:600;'
+        +'box-shadow:0 4px 16px rgba(0,0,0,.12);max-width:340px;animation:toastIn .2s ease';
+      t.innerHTML =
+        '<i class="fa-solid '+c.icon+'" style="font-size:1rem;flex-shrink:0"></i>'
+        +'<span>'+_escHtml(message)+'</span>';
+      document.body.appendChild(t);
+      setTimeout(function(){
+        t.style.transition='opacity .3s,transform .3s';
+        t.style.opacity='0'; t.style.transform='translateY(8px)';
+        setTimeout(function(){ if(t.parentNode) t.remove(); },320);
+      },3000);
+    }
+
+    /* ════════════════════
+      OVERLAY SUKSES (global) — dipakai semua modul setelah input berhasil
+    ════════════════════ */
+    function sisiSukses(desc, html){
+      _ensureSuksesUI();
+      var ov = document.getElementById('sisiOkOverlay');
+      var d  = document.getElementById('sisiOkDesc');
+      if(d){
+        if(html){ d.innerHTML = html; }
+        else { d.textContent = desc || 'Data telah diinput'; }
+      }
+      var c = ov.querySelector('.sisi-ok-circle');
+      if(c){ c.style.animation='none'; void c.offsetWidth; c.style.animation=''; }
+      ov.classList.add('show');
+      clearTimeout(ov._h); ov._h = setTimeout(_tutupSukses, html ? 3200 : 1900);
+    }
+    function _tutupSukses(){
+      var ov = document.getElementById('sisiOkOverlay');
+      if(ov) ov.classList.remove('show');
+    }
+    function _ensureSuksesUI(){
+      if(document.getElementById('sisiOkOverlay')) return;
+      if(!document.getElementById('sisiOkStyle')){
+        var st = document.createElement('style');
+        st.id = 'sisiOkStyle';
+        st.textContent =
+          '.sisi-ok-bg{position:fixed;inset:0;z-index:11000;display:flex;align-items:center;justify-content:center;'+
+            'background:rgba(15,23,42,.55);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);'+
+            'opacity:0;pointer-events:none;transition:opacity .25s}'+
+          '.sisi-ok-bg.show{opacity:1;pointer-events:auto}'+
+          '.sisi-ok-card{display:flex;flex-direction:column;align-items:center;gap:16px;padding:34px 30px;'+
+            'max-width:340px;text-align:center;transform:scale(.85);transition:transform .3s cubic-bezier(.2,.8,.3,1.2)}'+
+          '.sisi-ok-bg.show .sisi-ok-card{transform:scale(1)}'+
+          '.sisi-ok-circle{width:104px;height:104px;border-radius:50%;background:#16a34a;display:flex;'+
+            'align-items:center;justify-content:center;box-shadow:0 12px 36px rgba(22,163,74,.45);animation:sisiOkPop .45s ease}'+
+          '.sisi-ok-circle i{color:#fff;font-size:54px}'+
+          '@keyframes sisiOkPop{0%{transform:scale(0)}60%{transform:scale(1.15)}100%{transform:scale(1)}}'+
+          '.sisi-ok-title{font-size:22px;font-weight:800;color:#fff;margin:0}'+
+          '.sisi-ok-desc{font-size:14px;color:rgba(255,255,255,.88);margin:0;line-height:1.5}';
+        document.head.appendChild(st);
+      }
+      var ov = document.createElement('div');
+      ov.id = 'sisiOkOverlay';
+      ov.className = 'sisi-ok-bg';
+      ov.innerHTML =
+        '<div class="sisi-ok-card">'+
+          '<div class="sisi-ok-circle"><i class="fa-solid fa-check"></i></div>'+
+          '<p class="sisi-ok-title">Berhasil</p>'+
+          '<p class="sisi-ok-desc" id="sisiOkDesc"></p>'+
+        '</div>';
+      ov.addEventListener('click', _tutupSukses);
+      document.body.appendChild(ov);
+    }
+    window.sisiSukses = sisiSukses;
+
+    /* ════════════════════
+      LIGHTBOX FOTO (global) — tampilkan foto penuh di dalam aplikasi (tidak pindah ke Drive)
+    ════════════════════ */
+    function _sisiDriveId(u){
+      var s=String(u||'');
+      var m=s.match(/\/file\/d\/([\w-]+)/)||s.match(/[?&]id=([\w-]+)/)||s.match(/googleusercontent\.com\/d\/([\w-]+)/)||s.match(/\/d\/([\w-]+)/);
+      return m?m[1]:'';
+    }
+    function _sisiDriveImg(u,size){
+      var id=_sisiDriveId(u);
+      if(!id) return String(u||'');
+      return 'https://drive.google.com/thumbnail?id='+id+'&sz='+(size||'w1000');
+    }
+    function _isDriveFileUrl(u){
+      return /drive\.google\.com\/(file\/d\/|open\?id=|uc\?|thumbnail\?id=)|googleusercontent\.com\/d\//.test(String(u||''));
+    }
+    window._sisiDriveId=_sisiDriveId;
+    window._sisiDriveImg=_sisiDriveImg;
+
+    function sisiLightbox(u){
+      _ensureLightboxUI();
+      var ov=document.getElementById('sisiLbOverlay');
+      var img=document.getElementById('sisiLbImg');
+      var spin=document.getElementById('sisiLbSpin');
+      var id=_sisiDriveId(u);
+      var full=id?('https://drive.google.com/thumbnail?id='+id+'&sz=w1920'):String(u||'');
+      if(spin) spin.style.display='block';
+      img.style.display='none';
+      img.onload=function(){ if(spin) spin.style.display='none'; img.style.display='block'; };
+      img.onerror=function(){
+        if(id && img.src.indexOf('googleusercontent')===-1){ img.src='https://lh3.googleusercontent.com/d/'+id+'=w1920'; }
+        else { if(spin) spin.style.display='none'; }
+      };
+      img.src=full;
+      ov.classList.add('show');
+    }
+    function _tutupLightbox(){
+      var ov=document.getElementById('sisiLbOverlay');
+      if(ov){ ov.classList.remove('show'); var img=document.getElementById('sisiLbImg'); if(img) img.src=''; }
+    }
+    function _ensureLightboxUI(){
+      if(document.getElementById('sisiLbOverlay')) return;
+      if(!document.getElementById('sisiLbStyle')){
+        var st=document.createElement('style');
+        st.id='sisiLbStyle';
+        st.textContent=
+          '.sisi-lb-bg{position:fixed;inset:0;z-index:12000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.9);opacity:0;pointer-events:none;transition:opacity .2s;padding:24px}'+
+          '.sisi-lb-bg.show{opacity:1;pointer-events:auto}'+
+          '.sisi-lb-img{max-width:96vw;max-height:90vh;border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.6);display:none;object-fit:contain;background:#111}'+
+          '.sisi-lb-spin{color:#fff;font-size:30px;position:absolute}'+
+          '.sisi-lb-x{position:fixed;top:18px;right:20px;width:44px;height:44px;border-radius:50%;border:0;background:rgba(255,255,255,.16);color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s;z-index:12001}'+
+          '.sisi-lb-x:hover{background:rgba(255,255,255,.32)}';
+        document.head.appendChild(st);
+      }
+      var ov=document.createElement('div');
+      ov.id='sisiLbOverlay';
+      ov.className='sisi-lb-bg';
+      ov.innerHTML=
+        '<button class="sisi-lb-x" onclick="_tutupLightbox()" title="Tutup"><i class="fa-solid fa-xmark"></i></button>'+
+        '<i class="fa-solid fa-spinner fa-spin sisi-lb-spin" id="sisiLbSpin"></i>'+
+        '<img class="sisi-lb-img" id="sisiLbImg" alt="Foto">';
+      ov.addEventListener('click', function(e){ if(e.target===ov) _tutupLightbox(); });
+      document.body.appendChild(ov);
+    }
+    window.sisiLightbox=sisiLightbox;
+    window._tutupLightbox=_tutupLightbox;
+
+    /* Interseptor klik global: foto Drive dibuka di lightbox, bukan tab Drive */
+    document.addEventListener('keydown', function(e){ if(e.key==='Escape') _tutupLightbox(); });
+    document.addEventListener('click', function(e){
+      var t=e.target;
+      var img=(t&&t.closest)?t.closest('img.sisi-foto, img[data-full]'):null;
+      if(img){ e.preventDefault(); e.stopPropagation(); sisiLightbox(img.getAttribute('data-full')||img.src); return; }
+      var a=(t&&t.closest)?t.closest('a'):null;
+      if(a&&a.href&&_isDriveFileUrl(a.href)){ e.preventDefault(); e.stopPropagation(); sisiLightbox(a.href); }
+    }, true);
+    /* Override window.open: URL file Drive -> lightbox dalam aplikasi */
+    (function(){
+      var _origOpen=window.open;
+      window.open=function(u){
+        if(u&&_isDriveFileUrl(u)){ try{ sisiLightbox(u); }catch(e){} return null; }
+        return _origOpen.apply(window, arguments);
+      };
+    })();
+
+    /* ════════════════════
+      LOGOUT
+    ════════════════════ */
+    function doLogout(){ _tampilKonfirmasiLogout(); }
+
+    function _tampilKonfirmasiLogout(){
+      var lama = document.getElementById('modalLogout');
+      if(lama) lama.remove();
+      var sesi   = _state.sesi;
+      var tampil = sesi.username || 'Pengguna';
+      var modal  = document.createElement('div');
+      modal.id   = 'modalLogout';
+      modal.style.cssText =
+        'position:fixed;inset:0;z-index:9500;display:flex;align-items:center;'
+        +'justify-content:center;background:var(--overlay);'
+        +'backdrop-filter:blur(4px);animation:toastIn .2s ease';
+      modal.innerHTML =
+        '<div style="background:var(--surface);border-radius:16px;padding:32px 28px;'
+        +'width:90%;max-width:360px;box-shadow:var(--shadow-lg);text-align:center">'
+        +'<div style="width:60px;height:60px;border-radius:50%;background:rgba(220,38,38,.15);'
+        +'display:flex;align-items:center;justify-content:center;margin:0 auto 16px">'
+        +'<i class="fa-solid fa-right-from-bracket" style="color:var(--danger);font-size:1.4rem"></i></div>'
+        +'<h3 style="font-size:1.15rem;font-weight:700;color:var(--text);margin-bottom:6px">Konfirmasi Logout</h3>'
+        +'<p style="font-size:.88rem;color:var(--text-3);margin-bottom:4px">Halo, <b>'+_escHtml(tampil)+'</b></p>'
+        +'<p style="font-size:.85rem;color:var(--text-muted);margin-bottom:24px">Apakah Anda yakin ingin keluar dari SiSi?</p>'
+        +'<div style="display:flex;gap:10px;justify-content:center">'
+        +'<button id="btnBatalLogout" style="flex:1;padding:11px;background:var(--surface-2);color:var(--text-2);'
+        +'border:1.5px solid var(--border);border-radius:10px;font-size:.9rem;font-weight:600;'
+        +'cursor:pointer;font-family:inherit"><i class="fa-solid fa-xmark"></i> Batal</button>'
+        +'<button id="btnKonfirmasiLogout" style="flex:1;padding:11px;background:var(--danger);color:#fff;'
+        +'border:0;border-radius:10px;font-size:.9rem;font-weight:600;'
+        +'cursor:pointer;font-family:inherit">'
+        +'<i class="fa-solid fa-right-from-bracket"></i> Keluar</button>'
+        +'</div></div>';
+      document.body.appendChild(modal);
+      document.getElementById('btnBatalLogout').onclick    = _tutupModalLogout;
+      document.getElementById('btnKonfirmasiLogout').onclick = _prosesLogout;
+      modal.addEventListener('click', function(e){ if(e.target===modal) _tutupModalLogout(); });
+      document._logoutEscHandler = function(e){ if(e.key==='Escape') _tutupModalLogout(); };
+      document.addEventListener('keydown', document._logoutEscHandler);
+    }
+
+    function _tutupModalLogout(){
+      var modal = document.getElementById('modalLogout');
+      if(modal){
+        modal.style.transition='opacity .2s'; modal.style.opacity='0';
+        setTimeout(function(){ if(modal.parentNode) modal.remove(); },220);
+      }
+      if(document._logoutEscHandler){
+        document.removeEventListener('keydown', document._logoutEscHandler);
+        document._logoutEscHandler = null;
+      }
+    }
+
+    function _prosesLogout(){
+      var btn = document.getElementById('btnKonfirmasiLogout');
+      if(btn){ btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Keluar…'; }
+      var token     = _state.token || _getToken();
+      var scriptUrl = sessionStorage.getItem('sisiScriptUrl') || '';
+      sessionStorage.removeItem('sisiSesi');
+      sessionStorage.removeItem('sisiScriptUrl');
+      localStorage.removeItem('sisiSesi');
+      _state.token = ''; _state.sesi = {};
+      try{ google.script.run.doLogout(token); } catch(e){}
+      setTimeout(function(){ _selesaiLogout(scriptUrl); }, 300);
+    }
+
+    function _selesaiLogout(scriptUrl){
+      _tutupModalLogout();
+      if(!scriptUrl){
+        var hdn = document.getElementById('hdnScriptUrl');
+        if(hdn && hdn.value) scriptUrl = hdn.value;
+      }
+      /* Paksa refresh halaman: navigasi ulang ke URL aplikasi (tanpa token) */
+      try{
+        if(scriptUrl){ window.top.location.href = scriptUrl; }
+        else { window.top.location.reload(); }
+        return;
+      }catch(e1){}
+      try{
+        if(scriptUrl){ window.location.href = scriptUrl; }
+        else { window.location.reload(); }
+        return;
+      }catch(e2){}
+      /* Fallback terakhir bila navigasi diblokir sandbox */
+      document.body.innerHTML =
+        '<div style="position:fixed;inset:0;background:linear-gradient(135deg,#0f172a,#1e3a8a);'
+        +'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">'
+        +'<i class="fa-solid fa-circle-check fa-2x" style="color:#4ade80"></i>'
+        +'<p style="color:#fff;font-size:1rem;font-weight:600;margin:0">Logout berhasil</p>'
+        +(scriptUrl
+          ?'<a href="'+scriptUrl+'" target="_top" style="margin-top:8px;padding:12px 28px;'
+          +'background:#fff;color:#1e3a8a;border-radius:10px;font-weight:700;'
+          +'text-decoration:none;font-size:.95rem">'
+          +'<i class="fa-solid fa-right-to-bracket"></i> Kembali ke Login</a>'
+          :'<p style="color:rgba(255,255,255,.6);font-size:.85rem">Tutup tab dan buka ulang URL aplikasi.</p>'
+        )+'</div>';
+    }
+
+    /* ════════════════════
+      KEYBOARD SHORTCUT
+    ════════════════════ */
+    document.addEventListener('keydown', function(e){
+      if(e.key==='Enter'){
+        var login = _el('loginWrap');
+        if(login && login.style.display !== 'none') doLoginForm();
+      }
+    });
+
+    /* ════════════════════
+      START
+    ════════════════════ */
+    if(document.readyState === 'loading'){
+      document.addEventListener('DOMContentLoaded', initMain);
+    } else {
+      initMain();
+    }
+
+    /* ════════════════════════════════
+   TOGGLE SIDEBAR
+    ════════════════════════════════ */
+    (function(){
+      var STORAGE_KEY = 'sisiSidebarHidden';
+      var btn     = document.getElementById('btnToggleSidebar');
+      var sidebar = document.getElementById('sidebar');
+      if(!btn) return;
+
+      _sidebarToggleHidden = sessionStorage.getItem(STORAGE_KEY) === '1';
+      _syncIcon();
+      _syncToggleBtn();
+
+      btn.addEventListener('click', function(){
+        _sidebarToggleHidden = !_sidebarToggleHidden;
+        sessionStorage.setItem(STORAGE_KEY, _sidebarToggleHidden ? '1' : '0');
+        if(!sidebar) return;
+        if(_sidebarToggleHidden){
+          sidebar.classList.add('sidebar-hidden');
+        } else {
+          sidebar.style.display = 'flex';
+          void sidebar.offsetWidth;   /* paksa reflow agar animasi berjalan */
+          sidebar.classList.remove('sidebar-hidden');
+        }
+        _syncIcon();
+      });
+
+      function _syncIcon(){
+        btn.innerHTML = _sidebarToggleHidden
+          ? '<i class="fa-solid fa-chevron-right"></i>'
+          : '<i class="fa-solid fa-bars"></i>';
+        btn.title = _sidebarToggleHidden ? 'Tampilkan sidebar' : 'Sembunyikan sidebar';
+      }
+    })();
+    </script>
+  </body>
+</html>

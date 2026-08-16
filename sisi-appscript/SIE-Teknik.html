@@ -1,0 +1,2973 @@
+<style>
+  :root{ --primary-lt:#eff6ff; --gray:#64748b; --radius:10px; }
+  [data-theme="dark"]{ --primary-lt:#16233d; --gray:#93a4c0; }
+
+  body{ background-color:var(--bg); background-image:url('https://drive.google.com/thumbnail?id=1rfN5LJOjjx0t-rjuLquBe6Qsx7hfcqqV&sz=w1920'); background-size:cover; background-position:center; background-attachment:fixed; color:var(--text); font-family:'Segoe UI',sans-serif; font-size:14px; }
+  [data-theme="dark"] body, body[data-theme="dark"]{ background-image:url('https://drive.google.com/thumbnail?id=1T76yS2vAnMufKEKkhQie2zZ4AYVIn1tD&sz=w1920'); }
+
+  .st-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;}
+  .st-header h2{margin:0;font-size:20px;font-weight:700;color:var(--text);}
+
+  .st-container{padding:16px;}
+
+  /* Tabs */
+  .st-tabs{position:relative;display:inline-flex;gap:0;margin-bottom:16px;
+    background:var(--surface-2);border:1px solid var(--border);border-radius:999px;
+    padding:4px;max-width:100%;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-ms-overflow-style:none;}
+  .st-tabs::-webkit-scrollbar{display:none;}
+  .st-tab-indicator{position:absolute;top:4px;left:0;height:calc(100% - 8px);width:0;
+    border-radius:999px;background:var(--surface);opacity:0;
+    box-shadow:0 2px 8px rgba(0,0,0,.12);z-index:0;pointer-events:none;
+    transition:transform .4s cubic-bezier(.34,1.56,.64,1),width .4s cubic-bezier(.34,1.56,.64,1),opacity .25s ease;}
+  [data-theme="dark"] .st-tab-indicator{background:linear-gradient(135deg,#29E3FF,#5b8cff);box-shadow:0 0 14px rgba(41,227,255,.5);}
+  .st-tab{position:relative;z-index:1;padding:8px 16px;font-size:.88rem;font-weight:600;color:var(--text-3);cursor:pointer;
+    border-radius:999px;border:none;background:none;
+    display:inline-flex;align-items:center;gap:6px;white-space:nowrap;transition:color .25s ease,transform .25s ease;}
+  .st-tab:hover{color:var(--primary);}
+  .st-tab.active{color:var(--primary);transform:translateY(-1px);}
+  [data-theme="dark"] .st-tab.active{color:#06243a;}
+  .st-tab.active i{transform:scale(1.12);}
+  .st-tab-content{display:none;}
+  .st-tab-content.active{display:block;}
+
+  /* Filter bar */
+  .filter-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    padding:12px 16px;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;}
+  .filter-bar .filter-group{display:flex;flex-direction:column;gap:4px;}
+  .filter-bar label{font-size:11px;font-weight:600;color:var(--gray);text-transform:uppercase;}
+  .filter-bar input,.filter-bar select{border:1px solid var(--border);border-radius:6px;padding:5px 10px;
+    font-size:13px;min-width:130px;background:var(--surface);color:var(--text);}
+  .btn-filter{background:var(--primary);color:var(--on-primary);border:none;border-radius:6px;
+    padding:6px 16px;font-size:13px;font-weight:600;cursor:pointer;}
+  .btn-reset{background:var(--surface-2);color:var(--gray);border:1px solid var(--border);
+    border-radius:6px;padding:6px 14px;font-size:13px;cursor:pointer;}
+
+  /* Table */
+  .tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:auto;}
+  .tbl-wrap table{margin:0;font-size:13px;width:100%;border-collapse:collapse;color:var(--text);}
+  .tbl-wrap thead th{background:var(--surface-2);font-weight:700;font-size:12px;text-transform:uppercase;
+    color:var(--gray);border-bottom:2px solid var(--border);padding:10px 12px;white-space:nowrap;text-align:left;}
+  .tbl-wrap tbody td{padding:9px 12px;vertical-align:middle;border-bottom:1px solid var(--border-2);}
+  .tbl-wrap tbody tr:hover{background:var(--surface-2);}
+
+  /* Badges */
+  .ins-badge{display:inline-block;padding:3px 8px;border-radius:6px;font-size:.75rem;font-weight:600;}
+  .badge-regu{background:rgba(245,166,35,.15);color:var(--warning);padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;}
+  .badge-proses{background:rgba(91,140,255,.15);color:var(--info);padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;}
+  .badge-selesai{background:rgba(34,197,94,.15);color:var(--success);padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;}
+
+  .btn-pilih-tim{background:var(--primary-lt);color:var(--primary);border:1px solid var(--primary);
+    border-radius:6px;padding:4px 12px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;}
+  .foto-link{color:var(--primary);text-decoration:underline;font-size:12px;cursor:pointer;}
+
+  .empty-state{text-align:center;padding:40px;color:var(--gray);}
+  .empty-state i{font-size:32px;margin-bottom:8px;display:block;}
+  .loading-wrap{text-align:center;padding:30px;color:var(--gray);}
+
+  /* Modal */
+  .ins-modal-bg{position:fixed;inset:0;background:var(--overlay);display:none;align-items:center;justify-content:center;z-index:7000;}
+  .ins-modal-bg.show{display:flex;}
+  .ins-modal-box{background:var(--surface);color:var(--text);border-radius:12px;padding:24px;width:90%;max-width:460px;max-height:90vh;overflow-y:auto;}
+  .ins-modal-box h3{color:var(--text);margin:0 0 18px;font-size:1.05rem;font-weight:700;}
+  .ins-form-field{margin-bottom:14px;}
+  .ins-form-field label{display:block;font-size:.82rem;font-weight:600;color:var(--text-2);margin-bottom:5px;}
+  .ins-form-field select,.ins-form-field textarea,.ins-form-field input{width:100%;padding:9px 12px;border:1.5px solid var(--border);
+    border-radius:8px;font-size:.9rem;outline:none;box-sizing:border-box;font-family:'Segoe UI',sans-serif;background:var(--surface);color:var(--text);}
+  .ins-modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;}
+  .ins-btn-batal{padding:9px 18px;background:var(--surface-2);color:var(--text-2);border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-weight:600;}
+  /* Disabled state saat proses approve/reject berjalan (12 Agu 2026) */
+  #stApModal button:disabled, #stApRejectModal button:disabled, #stApEditModal button:disabled{opacity:.55;cursor:not-allowed;}
+  .ins-btn-simpan{padding:9px 18px;background:var(--primary);color:var(--on-primary);border:0;border-radius:8px;cursor:pointer;font-weight:600;}
+  .ins-btn-simpan:disabled{opacity:.6;cursor:not-allowed;}
+
+  /* Detail temuan modal */
+  .st-detail-box{max-width:540px;}
+  .st-detail-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .st-detail-head h3{margin:0;font-size:1.05rem;font-weight:700;color:var(--text);}
+  .st-detail-close{background:none;border:none;font-size:18px;color:var(--text-muted);cursor:pointer;line-height:1;}
+  .st-detail-close:hover{color:var(--danger);}
+  .st-d-row{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--border-2);font-size:13px;}
+  .st-d-row:last-child{border-bottom:none;}
+  .st-d-label{flex:0 0 130px;font-weight:600;color:var(--gray);}
+  .st-d-val{flex:1;color:var(--text);word-break:break-word;}
+  .st-detail-divider{height:1px;background:var(--border);margin:16px 0;}
+  .st-detail-subttl{margin:0 0 12px;font-size:.95rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;}
+  .btn-detail-temuan{background:var(--primary-lt);color:var(--primary);border:1px solid var(--primary);
+    border-radius:6px;padding:5px 11px;font-size:13px;cursor:pointer;line-height:1;}
+  .btn-detail-temuan:hover{background:var(--primary);color:var(--on-primary);}
+  .st-foto-grid{display:flex;flex-wrap:wrap;gap:10px;}
+  .st-foto-thumb{display:flex;flex-direction:column;align-items:center;gap:4px;text-decoration:none;}
+  .st-foto-thumb img{width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid var(--border);
+    background:var(--surface-2);transition:transform .15s,box-shadow .15s;}
+  .st-foto-thumb img:hover{transform:scale(1.04);box-shadow:var(--shadow-md);}
+  .st-foto-broken{width:96px;height:96px;border-radius:8px;border:1px dashed var(--border);
+    background:var(--surface-2);color:var(--text-muted);font-size:22px;align-items:center;justify-content:center;}
+  .st-foto-cap{font-size:11px;color:var(--gray);font-weight:600;}
+  .st-foto-thumb-sm{display:inline-block;line-height:0;}
+  .st-foto-thumb-sm img{width:46px;height:46px;object-fit:cover;border-radius:6px;border:1px solid var(--border);
+    background:var(--surface-2);transition:transform .15s,box-shadow .15s;cursor:pointer;}
+  .st-foto-thumb-sm img:hover{transform:scale(1.6);box-shadow:var(--shadow-md);position:relative;z-index:5;}
+  .st-thumb-broken{display:inline-flex;align-items:center;gap:5px;color:var(--primary);text-decoration:underline;font-size:12px;}
+
+  /* Toast */
+  .ins-toast-wrap{position:fixed;top:18px;right:18px;z-index:9000;display:flex;flex-direction:column;gap:10px;max-width:360px;}
+  .ins-toast{display:flex;align-items:flex-start;gap:10px;background:var(--surface);border-left:4px solid var(--success);
+    border-radius:10px;padding:12px 14px;box-shadow:var(--shadow-md);}
+  .ins-toast.error{border-left-color:var(--danger);}
+  .ins-toast .ic{font-size:18px;color:var(--success);margin-top:1px;}
+  .ins-toast.error .ic{color:var(--danger);}
+  .ins-toast .tx{font-size:13px;color:var(--text);line-height:1.4;}
+  .ins-toast .cls{margin-left:auto;color:var(--text-muted);cursor:pointer;font-size:14px;}
+
+  /* Coming soon cards (Tab 2) */
+  .st-soon-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;}
+  .st-soon-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;}
+  .st-soon-card-head{display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--surface-2);border-bottom:1px solid var(--border);}
+  .st-soon-card-head i{font-size:18px;color:var(--primary);}
+  .st-soon-card-head .ttl{font-weight:700;color:var(--text);font-size:14px;}
+  .st-soon-body{padding:22px 16px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;flex:1;}
+  .st-soon-body .sub{font-size:12.5px;color:var(--text-3);line-height:1.5;}
+  .st-soon-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(245,166,35,.15);color:var(--warning);
+    border:1px dashed var(--warning);border-radius:999px;padding:5px 14px;font-size:12px;font-weight:700;}
+  .st-soon-foot{display:flex;gap:8px;flex-wrap:wrap;padding:12px 16px;border-top:1px solid var(--border);}
+  .st-soon-btn{display:inline-flex;align-items:center;gap:6px;border:none;border-radius:8px;padding:8px 14px;
+    font-size:13px;font-weight:600;cursor:not-allowed;opacity:.55;}
+  .st-soon-btn-wa{background:#25D366;color:#fff;}
+  .st-soon-btn-sync{background:var(--primary);color:var(--on-primary);}
+
+  /* Laporan UP3 (Tab 2 Card 2) */
+  .st-up3-body{padding:16px;display:flex;flex-direction:column;gap:12px;flex:1;}
+  .st-up3-manual{display:flex;flex-direction:column;gap:8px;}
+  .st-up3-field{display:flex;flex-direction:column;gap:4px;}
+  .st-up3-field label{font-size:11px;font-weight:600;color:var(--gray);text-transform:uppercase;}
+  .st-up3-field input,.st-up3-field select{border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:13px;background:var(--surface);color:var(--text);}
+  .st-up3-hint{font-size:12.5px;color:var(--text-3);line-height:1.5;text-align:center;padding:6px 0;}
+  .st-up3-result{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:12px;max-height:360px;overflow:auto;}
+  .st-up3-pre{margin:0;white-space:pre-wrap;word-break:break-word;font-family:'Segoe UI',sans-serif;font-size:12.5px;line-height:1.55;color:var(--text);}
+  .st-up3-btn-live{cursor:pointer !important;opacity:1 !important;}
+  .st-up3-c4a-row{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);padding:10px 12px;}
+  .st-up3-c4a-info{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);min-width:0;}
+  .st-up3-c4a-info i{color:var(--primary);}
+  .st-up3-c4a-info .lbl{font-weight:700;text-transform:uppercase;font-size:12px;}
+  .st-up3-c4a-status{font-size:12.5px;color:var(--text-muted);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .st-up3-c4a-status.filled{color:var(--success);}
+  .st-up3-c4a-status.warn{color:var(--warning);}
+  .st-up3-c4a-info.stack2{flex-direction:column;align-items:flex-start;gap:4px;}
+  .st-up3-c4a-info.stack2 .ln1{display:flex;align-items:center;gap:8px;}
+  .st-up3-c4a-info.stack2 .st-up3-c4a-status{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.35;}
+  .st-up3-c4a-edit{flex-shrink:0;width:32px;height:32px;border-radius:8px;border:1px solid var(--primary);background:var(--primary-lt);color:var(--primary);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .15s;}
+  .st-up3-c4a-edit:hover{background:var(--primary);color:var(--on-primary);}
+  .st-ggn-sum{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px;}
+  .st-ggn-chip{font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--surface-2);border:1px solid var(--border);color:var(--text);}
+  .st-ggn-list{display:flex;flex-direction:column;gap:10px;max-height:46vh;overflow:auto;}
+  .st-ggn-item{border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:var(--surface-2);display:flex;flex-direction:column;gap:6px;}
+  .st-ggn-item .hd{font-size:13px;color:var(--text);}
+  .st-ggn-item .hd b{color:var(--primary);}
+  .st-ggn-item .mt{font-size:12px;color:var(--text-3);}
+  .st-ggn-item .st-ggn-tl{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;box-sizing:border-box;background:var(--surface);color:var(--text);font-family:'Segoe UI',sans-serif;}
+  .st-ggn-empty{font-size:12.5px;color:var(--text-3);text-align:center;padding:14px;}
+
+  /* ===== Tab 3: Temuan Inspeksi (eks modul Temuan-Inspeksi) ===== */
+  .ti-container{padding:16px;max-width:1100px;margin:0 auto;font-family:'Segoe UI',system-ui,sans-serif;color:var(--text)}
+  .ti-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+  .ti-header .ti-ico{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#1e3a8a,#3b82f6);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px}
+  .ti-header h2{margin:0;font-size:20px;font-weight:700;color:var(--primary)}
+  .ti-header p{margin:2px 0 0;font-size:13px;color:var(--text-3)}
+  .ti-filter{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:16px}
+  .ti-field{display:flex;flex-direction:column;gap:4px}
+  .ti-field label{font-size:12px;font-weight:600;color:var(--text-2)}
+  .ti-field select,.ti-field input{padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px;min-width:160px;background:var(--surface);color:var(--text)}
+  /* Filter Temuan multi-select (checkbox dropdown) */
+  .ti-ms{position:relative;min-width:200px;}
+  .ti-ms-btn{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-width:200px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:14px;cursor:pointer;}
+  .ti-ms-btn i{font-size:11px;color:var(--text-3);transition:transform .2s;}
+  .ti-ms.open .ti-ms-btn i{transform:rotate(180deg);}
+  .ti-ms-menu{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:60;display:none;flex-direction:column;min-width:220px;max-height:280px;overflow:auto;padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow-lg);}
+  .ti-ms.open .ti-ms-menu{display:flex;}
+  .ti-ms-actions{display:flex;gap:6px;padding:2px 2px 6px;border-bottom:1px solid var(--border-2);margin-bottom:4px;}
+  .ti-ms-actions button{flex:1;font-size:12px;padding:5px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface-2);color:var(--text-2);cursor:pointer;}
+  .ti-ms-actions button:hover{background:var(--primary-lt);color:var(--primary);border-color:var(--primary);}
+  .ti-ms-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;font-size:13px;color:var(--text);cursor:pointer;}
+  .ti-ms-item:hover{background:var(--surface-2);}
+  .ti-ms-item input{width:auto;min-width:0;margin:0;}
+  .ti-ms-empty{padding:10px;font-size:12.5px;color:var(--text-3);text-align:center;}
+  .ti-btn{border:none;border-radius:8px;padding:9px 14px;font-size:14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .ti-btn-primary{background:var(--primary);color:var(--on-primary)}
+  .ti-btn-primary:hover{background:var(--primary-hover)}
+  .ti-btn-add{background:var(--success);color:#fff;margin-left:auto}
+  .ti-btn-add:hover{filter:brightness(.92)}
+  .ti-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+  .ti-card{border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--surface);box-shadow:var(--shadow-md);display:flex;flex-direction:column}
+  .ti-card .ti-photo{height:160px;background:var(--surface-2) center/cover no-repeat;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:28px}
+  .ti-card .ti-body{padding:12px;display:flex;flex-direction:column;gap:6px}
+  .ti-card .ti-kode{font-size:11px;color:var(--text-3);font-family:monospace}
+  .ti-card .ti-temuan{font-weight:700;color:var(--primary);font-size:15px}
+  .ti-card .ti-meta{display:flex;flex-wrap:wrap;gap:4px}
+  .ti-badge{font-size:11px;padding:2px 8px;border-radius:999px;background:var(--primary-lt);color:var(--primary);font-weight:600}
+  .ti-badge.gray{background:var(--surface-2);color:var(--text-2)}
+  .ti-empty{grid-column:1/-1;text-align:center;padding:48px 12px;color:var(--text-muted)}
+  .ti-empty i{font-size:36px;margin-bottom:8px;display:block}
+  .ti-loading{grid-column:1/-1;text-align:center;padding:36px;color:var(--text-3)}
+  .ti-modal-bg{position:fixed;inset:0;background:var(--overlay);display:none;align-items:flex-start;justify-content:center;z-index:9000;overflow-y:auto;padding:24px 12px}
+  .ti-modal-bg.show{display:flex}
+  .ti-modal{background:var(--surface);border-radius:16px;width:100%;max-width:620px;box-shadow:var(--shadow-lg);overflow:hidden}
+  .ti-modal-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:linear-gradient(135deg,#1e3a8a,#3b82f6);color:#fff}
+  .ti-modal-head h3{margin:0;font-size:16px;font-weight:700}
+  .ti-modal-head .x{cursor:pointer;font-size:22px;line-height:1;opacity:.9;background:none;border:none;color:#fff}
+  .ti-modal-body{padding:18px;display:flex;flex-direction:column;gap:12px;max-height:70vh;overflow-y:auto}
+  .ti-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .ti-grid .full{grid-column:1/-1}
+  .ti-modal-body label{font-size:12px;font-weight:600;color:var(--text-2);display:block;margin-bottom:4px}
+  .ti-modal-body input,.ti-modal-body select,.ti-modal-body textarea{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px;box-sizing:border-box;background:var(--surface);color:var(--text)}
+  .ti-modal-body textarea{resize:vertical;min-height:60px}
+  .ti-foto-prev{max-height:120px;border-radius:8px;margin-top:6px;display:none}
+  .ti-modal-foot{padding:14px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;background:var(--surface-2)}
+  .ti-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--text);color:var(--surface);padding:12px 18px;border-radius:10px;font-size:14px;z-index:10000;box-shadow:var(--shadow-lg);opacity:0;transition:opacity .2s,transform .2s;pointer-events:none}
+  .ti-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .ti-toast.success{background:var(--success);color:#fff}
+  .ti-toast.error{background:var(--danger);color:#fff}
+  .ti-toast .sub{display:block;font-size:12px;opacity:.85;margin-top:2px}
+
+  /* ===== Tab 3: Rekap table beautify + Detail ===== */
+  .ti-rekap-stats{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+  .ti-stat{flex:1 1 150px;display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px}
+  .ti-stat .ti-stat-ic{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+  .ti-stat .ti-stat-meta{display:flex;flex-direction:column;line-height:1.2}
+  .ti-stat .ti-stat-num{font-size:18px;font-weight:800;color:var(--text)}
+  .ti-stat .ti-stat-lbl{font-size:11px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.02em}
+  .ti-stat.all .ti-stat-ic{background:var(--primary-lt);color:var(--primary)}
+  .ti-stat.penugasan .ti-stat-ic{background:rgba(245,166,35,.16);color:var(--warning)}
+  .ti-stat.proses .ti-stat-ic{background:rgba(91,140,255,.16);color:var(--info)}
+  .ti-stat.selesai .ti-stat-ic{background:rgba(34,197,94,.16);color:var(--success)}
+
+  #tiList .tbl-wrap tbody tr{transition:background .12s}
+  .ti-peny{font-weight:600;color:var(--text)}
+  .ti-cnt{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:24px;padding:0 8px;border-radius:999px;font-size:12.5px;font-weight:700;line-height:1}
+  .ti-cnt.zero{background:var(--surface-2);color:var(--text-muted);font-weight:600}
+  .ti-cnt.penugasan{background:rgba(245,166,35,.16);color:var(--warning)}
+  .ti-cnt.proses{background:rgba(91,140,255,.16);color:var(--info)}
+  .ti-cnt.selesai{background:rgba(34,197,94,.16);color:var(--success)}
+  .ti-detail-btn{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;border:1px solid var(--primary);background:var(--primary-lt);color:var(--primary);cursor:pointer;transition:all .15s}
+  .ti-detail-btn:hover{background:var(--primary);color:var(--on-primary);transform:translateY(-1px)}
+
+  .ti-det-group{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;color:var(--primary);padding-bottom:10px;margin-bottom:6px;border-bottom:1px solid var(--border)}
+  .ti-det-sum{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px;color:var(--gray);margin-bottom:4px}
+  #tiDetailBody{display:flex;flex-direction:column;gap:10px}
+  .ti-det-item{border:1px solid var(--border);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;background:var(--surface)}
+  .ti-det-row{display:flex;align-items:flex-start;gap:12px}
+  .ti-det-foto{width:84px;height:84px;border-radius:10px;object-fit:cover;border:1px solid var(--border);background:var(--surface-2);flex-shrink:0;cursor:pointer;transition:transform .15s}
+  .ti-det-foto:hover{transform:scale(1.05)}
+  .ti-det-noto{width:84px;height:84px;border-radius:10px;border:1px dashed var(--border);background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:24px;flex-shrink:0}
+  .ti-det-info{flex:1;display:flex;flex-direction:column;gap:5px;min-width:0}
+  .ti-det-kode{font-family:monospace;font-size:11px;color:var(--text-3)}
+  .ti-det-tags{display:flex;flex-wrap:wrap;gap:5px}
+  .ti-det-tag{font-size:11px;padding:2px 8px;border-radius:6px;background:var(--surface-2);color:var(--text-2);font-weight:600}
+  .ti-badge{font-size:11px;padding:3px 9px;border-radius:999px;font-weight:700;display:inline-flex;align-items:center;gap:4px;width:fit-content}
+  .ti-badge.penugasan{background:rgba(245,166,35,.16);color:var(--warning)}
+  .ti-badge.proses{background:rgba(91,140,255,.16);color:var(--info)}
+  .ti-badge.selesai{background:rgba(34,197,94,.16);color:var(--success)}
+  .ti-det-more{align-self:flex-start;background:none;border:none;color:var(--primary);font-size:12.5px;font-weight:600;cursor:pointer;padding:2px 0;display:inline-flex;align-items:center;gap:6px}
+  .ti-det-more:hover{text-decoration:underline}
+  .ti-det-actions{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+  .ti-det-fwd{align-self:flex-start;background:none;border:none;color:var(--warning);font-size:12.5px;font-weight:600;cursor:pointer;padding:2px 0;display:inline-flex;align-items:center;gap:6px}
+  .ti-det-fwd:hover{text-decoration:underline}
+  .ti-det-full{border-top:1px dashed var(--border);padding-top:10px;margin-top:2px}
+  .ti-det-frow{display:flex;gap:10px;padding:5px 0;font-size:12.5px;border-bottom:1px solid var(--border-2)}
+  .ti-det-frow:last-child{border-bottom:none}
+  .ti-det-flbl{flex:0 0 112px;color:var(--gray);font-weight:600}
+  .ti-det-fval{flex:1;color:var(--text);word-break:break-word}
+  .ti-det-fotos{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .ti-det-fcell{display:flex;flex-direction:column;align-items:center;gap:3px;text-decoration:none}
+  .ti-det-fcell img{width:88px;height:88px;object-fit:cover;border-radius:8px;border:1px solid var(--border)}
+  .ti-det-fcap{font-size:10.5px;color:var(--gray);font-weight:600}
+  .ti-det-loading,.ti-det-err{padding:12px;text-align:center;color:var(--gray);font-size:13px}
+  .ti-det-err{color:var(--danger)}
+
+  /* ===== Tab 5: GASPOL UP3 (tabel lebar + freeze 3 kolom) ===== */
+  .gs-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:auto;max-height:70vh;}
+  .gs-table{border-collapse:separate;border-spacing:0;font-size:12.5px;color:var(--text);white-space:nowrap;width:max-content;}
+  .gs-table th,.gs-table td{border-bottom:1px solid var(--border-2);border-right:1px solid var(--border-2);padding:8px 10px;text-align:center;}
+  .gs-table thead th{position:sticky;background:var(--surface-2);font-size:11px;font-weight:700;text-transform:uppercase;color:var(--gray);}
+  .gs-table thead tr.gs-grp th{top:0;z-index:4;}
+  .gs-table thead tr.gs-sub th{top:35px;z-index:3;}
+  .gs-grp-id{background:var(--primary-lt) !important;color:var(--primary) !important;}
+  .gs-grp-sutm{background:linear-gradient(rgba(34,197,94,.14),rgba(34,197,94,.14)),var(--surface-2) !important;color:var(--success) !important;}
+  .gs-grp-row{background:linear-gradient(rgba(132,204,22,.16),rgba(132,204,22,.16)),var(--surface-2) !important;color:#65a30d !important;}
+  .gs-grp-harkom{background:linear-gradient(rgba(91,140,255,.14),rgba(91,140,255,.14)),var(--surface-2) !important;color:var(--info) !important;}
+  .gs-grp-harkons{background:linear-gradient(rgba(245,166,35,.14),rgba(245,166,35,.14)),var(--surface-2) !important;color:var(--warning) !important;}
+  .gs-grp-gardu{background:linear-gradient(rgba(168,85,247,.16),rgba(168,85,247,.16)),var(--surface-2) !important;color:#a855f7 !important;}
+  .gs-grp-sutr{background:linear-gradient(rgba(6,182,212,.16),rgba(6,182,212,.16)),var(--surface-2) !important;color:#0891b2 !important;}
+  .gs-grp-lain{background:linear-gradient(rgba(239,68,68,.14),rgba(239,68,68,.14)),var(--surface-2) !important;color:var(--danger) !important;}
+  .gs-table tbody td{background:var(--surface);}
+  .gs-table tbody tr:hover td{background:var(--surface-2);}
+  /* Freeze kolom A,B,C,D (No, Tgl, Section, ULP) */
+  .gs-c1{position:sticky;left:0;z-index:2;min-width:44px;}
+  .gs-c2{position:sticky;left:44px;z-index:2;min-width:96px;}
+  .gs-c3{position:sticky;left:140px;z-index:2;min-width:140px;text-align:left;}
+  .gs-c4{position:sticky;left:280px;z-index:2;min-width:70px;}
+  .gs-table thead tr.gs-grp th.gs-c1,.gs-table thead tr.gs-grp th.gs-c2,.gs-table thead tr.gs-grp th.gs-c3,.gs-table thead tr.gs-grp th.gs-c4{z-index:7;}
+  .gs-table tbody td.gs-c1,.gs-table tbody td.gs-c2,.gs-table tbody td.gs-c3,.gs-table tbody td.gs-c4{background:var(--surface);}
+  .gs-table tbody tr:hover td.gs-c1,.gs-table tbody tr:hover td.gs-c2,.gs-table tbody tr:hover td.gs-c3,.gs-table tbody tr:hover td.gs-c4{background:var(--surface-2);}
+  .gs-table tbody .gs-num{font-variant-numeric:tabular-nums;}
+  .gs-table tbody .gs-zero{color:var(--text-muted);}
+
+  /* ===== Data Pendukung CheckPoint: seluruh CSS .dpg-* DIPINDAH ke Tek-Data-Checkpoint.html (Rev 11 Agu 2026) ===== */
+</style>
+
+<div class="st-header">
+  <h2><i class="fa-solid fa-people-arrows" style="color:var(--primary)"></i> SIE Teknik</h2>
+</div>
+
+<div class="st-container">
+
+  <div class="st-tabs" id="stTabs">
+    <span class="st-tab-indicator" id="stTabIndicator"></span>
+    <button class="st-tab active" id="stTab-penugasan" onclick="_stSwitchTab('penugasan')">
+      <i class="fa-solid fa-list-check"></i> Monitoring Tindak Lanjut Temuan Inspeksi
+    </button>
+    <button class="st-tab" id="stTab-laporan" onclick="_stSwitchTab('laporan')">
+      <i class="fa-solid fa-file-lines"></i> Laporan Harian
+    </button>
+    <button class="st-tab" id="stTab-temuan" onclick="_stSwitchTab('temuan')">
+      <i class="fa-solid fa-clipboard-list"></i> Rekap Temuan Inspeksi
+    </button>
+    <button class="st-tab" id="stTab-approval" onclick="_stSwitchTab('approval')">
+      <i class="fa-solid fa-clipboard-check"></i> Approval P0
+    </button>
+    <button class="st-tab" id="stTab-vcc" onclick="_stSwitchTab('vcc')">
+      <i class="fa-solid fa-gauge-simple-high"></i> Input Pencapaian VCC Yandal
+    </button>
+    <button class="st-tab" id="stTab-gaspol" onclick="_stSwitchTab('gaspol')">
+      <i class="fa-solid fa-gauge-high"></i> GASPOL UP3
+    </button>
+    <!-- Tab "Data Pendukung CheckPoint" DIPINDAH ke file Tek-Data-Checkpoint.html (sub-menu SIE Teknik, Rev 11 Agu 2026) -->
+  </div>
+
+  <!-- TAB 1: MONITORING TINDAK LANJUT TEMUAN INSPEKSI (rename dari "Penugasan Tim", 14 Agu 2026) -->
+  <div class="st-tab-content active" id="sttab-penugasan">
+    <div id="stScopeNote" style="display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--gray);">
+      <i class="fa-solid fa-circle-info" style="color:var(--primary)"></i>
+      <span>Monitoring tindak lanjut temuan inspeksi (WO).</span>
+    </div>
+    <div class="filter-bar">
+      <div class="filter-group" id="stWrapUlp" style="display:none">
+        <label>ULP</label>
+        <select id="st_ulp" onchange="_stLoadPenugasan()"><option value="">Semua ULP</option></select>
+      </div>
+      <div class="filter-group">
+        <label>Tgl Dari</label>
+        <input type="date" id="st_tglDari"/>
+      </div>
+      <div class="filter-group">
+        <label>Tgl Sampai</label>
+        <input type="date" id="st_tglSampai"/>
+      </div>
+      <div class="filter-group">
+        <label>Status WO</label>
+        <div class="ti-ms" id="stStatusMs">
+          <button type="button" class="ti-ms-btn" id="stStatusMsBtn" onclick="_stToggleStatusMenu(event)">
+            <span id="stStatusMsLabel">Semua Status</span>
+            <i class="fa-solid fa-chevron-down"></i>
+          </button>
+          <div class="ti-ms-menu" id="stStatusMsMenu">
+            <label class="ti-ms-item"><input type="checkbox" value="Penugasan Tim" checked onchange="_stStatusToggle()"><span>Penugasan Tim</span></label>
+            <label class="ti-ms-item"><input type="checkbox" value="Progress Pekerjaan" checked onchange="_stStatusToggle()"><span>Progress Pekerjaan</span></label>
+            <label class="ti-ms-item"><input type="checkbox" value="Selesai" checked onchange="_stStatusToggle()"><span>Selesai</span></label>
+          </div>
+        </div>
+      </div>
+      <button class="btn-filter" onclick="_stLoadPenugasan()"><i class="fa-solid fa-magnifying-glass"></i> Muat</button>
+      <button class="btn-reset" onclick="_stResetPenugasan()">Reset</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>No</th><th>Kode Temuan</th><th>ULP</th><th>Tanggal</th>
+          <th>Penyulang</th><th>Section</th><th>Temuan</th><th>Status</th><th>Aksi</th>
+        </tr></thead>
+        <tbody id="stBodyPenugasan"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB 2: LAPORAN HARIAN (filter + coming soon) -->
+  <div class="st-tab-content" id="sttab-laporan">
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label>Tanggal Laporan</label>
+        <input type="date" id="stl_tanggal" onchange="_stOnTanggalLaporanChange()"/>
+      </div>
+      <div class="filter-group" id="stlWrapUlp" style="display:none">
+        <label>ULP</label>
+        <select id="stl_ulp" onchange="_stOnUlpLaporanChange()"><option value="">Semua ULP</option></select>
+      </div>
+      <button class="btn-filter" onclick="_stCariLaporan()"><i class="fa-solid fa-magnifying-glass"></i> Cari</button>
+      <button class="btn-reset" onclick="_stResetLaporan()">Reset</button>
+    </div>
+
+    <div id="stLapReadonly" style="display:none;align-items:center;gap:8px;background:rgba(245,166,35,.12);border:1px solid var(--warning);color:var(--warning);border-radius:10px;padding:9px 14px;margin-bottom:12px;font-size:13px;font-weight:600">
+      <i class="fa-solid fa-lock"></i><span></span>
+    </div>
+
+    <div class="st-soon-grid">
+      <div class="st-soon-card" id="stUp3Card">
+        <div class="st-soon-card-head">
+          <i class="fa-solid fa-building-flag"></i>
+          <span class="ttl">Laporan UP3</span>
+        </div>
+        <div class="st-up3-body">
+          <div class="st-up3-c4a-row">
+            <div class="st-up3-c4a-info">
+              <i class="fa-solid fa-seedling"></i>
+              <span class="lbl">E. C4A</span>
+              <span class="st-up3-c4a-status" id="stC4aStatus">Belum diisi</span>
+            </div>
+            <button class="st-up3-c4a-edit" onclick="_stBukaC4a()" title="Edit C4A"><i class="fa-solid fa-pencil"></i></button>
+          </div>
+          <div class="st-up3-c4a-row">
+            <div class="st-up3-c4a-info stack2">
+              <div class="ln1">
+                <i class="fa-solid fa-bolt"></i>
+                <span class="lbl">G. Tindak Lanjut Gangguan Penyulang</span>
+              </div>
+              <span class="st-up3-c4a-status" id="stGgnStatus">Belum dimuat</span>
+            </div>
+            <button class="st-up3-c4a-edit" onclick="_stBukaGangguan()" title="Gangguan & Tindak Lanjut"><i class="fa-solid fa-pencil"></i></button>
+          </div>
+          <button class="btn-filter" id="stUp3SaveBtn" style="width:100%;justify-content:center" onclick="_stBuatLaporanUP3()"><i class="fa-solid fa-floppy-disk"></i> Simpan &amp; Buat Laporan UP3</button>
+          <div id="stUp3Result" class="st-up3-result" style="display:none">
+            <pre id="stUp3Text" class="st-up3-pre"></pre>
+          </div>
+          <div id="stUp3Empty" class="st-up3-hint">Atur <strong>Tanggal</strong> &amp; <strong>ULP</strong> di atas, isi C4A / Tindak Lanjut bila perlu, lalu klik <strong>Buat Laporan UP3</strong>.</div>
+        </div>
+        <div class="st-soon-foot" id="stUp3Foot" style="display:none">
+          <button class="st-soon-btn st-soon-btn-wa st-up3-btn-live" id="stUp3BtnWa" onclick="_stKirimWaUP3()"><i class="fa-brands fa-whatsapp"></i> Kirim WA</button>
+          <button class="st-soon-btn st-soon-btn-sync st-up3-btn-live" id="stUp3BtnCopy" onclick="_stSalinUP3()"><i class="fa-solid fa-copy"></i> Salin Teks</button>
+        </div>
+      </div>
+
+      <div class="st-soon-card" id="stWilCard">
+        <div class="st-soon-card-head">
+          <i class="fa-solid fa-map-location-dot"></i>
+          <span class="ttl">Laporan Wilayah</span>
+        </div>
+        <div class="st-up3-body">
+          <div class="st-up3-field">
+            <label>Cuaca</label>
+            <input type="text" id="stl_cuaca" placeholder="cth: Cerah" value="Cerah"/>
+          </div>
+          <button class="btn-filter" id="stWilSaveBtn" style="width:100%;justify-content:center" onclick="_stBuatLaporanWilayah()"><i class="fa-solid fa-floppy-disk"></i> Simpan &amp; Buat Laporan Wilayah</button>
+          <div id="stWilResult" class="st-up3-result" style="display:none">
+            <pre id="stWilText" class="st-up3-pre"></pre>
+          </div>
+          <div id="stWilEmpty" class="st-up3-hint">Atur <strong>Tanggal</strong> &amp; <strong>ULP</strong> di atas, isi <strong>Cuaca</strong>, lalu klik <strong>Buat Laporan Wilayah</strong>.</div>
+        </div>
+        <div class="st-soon-foot" id="stWilFoot" style="display:none">
+          <button class="st-soon-btn st-soon-btn-wa st-up3-btn-live" id="stWilBtnWa" onclick="_stKirimWaWilayah()"><i class="fa-brands fa-whatsapp"></i> Kirim WA</button>
+          <button class="st-soon-btn st-soon-btn-sync st-up3-btn-live" id="stWilBtnCopy" onclick="_stSalinWilayah()"><i class="fa-solid fa-copy"></i> Salin Teks</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: TEMUAN INSPEKSI (dipindahkan dari modul Temuan-Inspeksi) -->
+  <div class="st-tab-content" id="sttab-temuan">
+    <div class="ti-container">
+      <div class="ti-filter">
+        <div class="ti-field" id="tiUlpWrap" style="display:none">
+          <label>ULP</label>
+          <select id="tiUlp" onchange="tiOnUlpChange()"><option value="">Semua ULP</option></select>
+        </div>
+        <div class="ti-field">
+          <label>Tgl Dari</label>
+          <input type="date" id="tiTglDari">
+        </div>
+        <div class="ti-field">
+          <label>Tgl Sampai</label>
+          <input type="date" id="tiTglSampai">
+        </div>
+        <div class="ti-field">
+          <label>Penyulang</label>
+          <select id="tiPenyulang" onchange="tiFilter()"><option value="">Semua Penyulang</option></select>
+        </div>
+        <div class="ti-field">
+          <label>Temuan</label>
+          <div class="ti-ms" id="tiTemuanMs">
+            <button type="button" class="ti-ms-btn" id="tiTemuanMsBtn" onclick="tiToggleTemuanMenu(event)">
+              <span id="tiTemuanMsLabel">Semua Temuan</span>
+              <i class="fa-solid fa-chevron-down"></i>
+            </button>
+            <div class="ti-ms-menu" id="tiTemuanMsMenu">
+              <div class="ti-ms-empty">Klik Muat untuk memuat daftar temuan.</div>
+            </div>
+          </div>
+        </div>
+        <button class="ti-btn ti-btn-primary" onclick="tiMuat()"><i class="fa-solid fa-magnifying-glass"></i> Muat</button>
+        <button class="ti-btn ti-btn-add" onclick="tiBukaTambah()"><i class="fa-solid fa-plus"></i> Tambah Temuan</button>
+      </div>
+
+      <div id="tiList" class="ti-list">
+        <div class="ti-empty"><i class="fa-solid fa-inbox"></i><p>Pilih tanggal lalu klik Muat untuk menampilkan temuan.</p></div>
+      </div>
+    </div>
+
+    <!-- ====== MODAL TAMBAH TEMUAN ====== -->
+    <div id="tiModal" class="ti-modal-bg">
+      <div class="ti-modal">
+        <div class="ti-modal-head">
+          <h3><i class="fa-solid fa-plus"></i> Tambah Temuan Inspeksi</h3>
+          <button class="x" onclick="tiTutupTambah()">&times;</button>
+        </div>
+        <div class="ti-modal-body">
+          <div class="ti-grid">
+            <div>
+              <label>Tanggal</label>
+              <input type="date" id="tifTanggal">
+            </div>
+            <div>
+              <label>Tier</label>
+              <select id="tifTier">
+                <option value="">- Pilih Tier -</option>
+                <option value="Tier 1">Tier 1</option>
+                <option value="Tier 2">Tier 2</option>
+                <option value="Tier 3">Tier 3</option>
+              </select>
+            </div>
+            <div>
+              <label>Penyulang</label>
+              <select id="tifPenyulang" onchange="tiSetSection()"><option value="">- Pilih Penyulang -</option></select>
+            </div>
+            <div>
+              <label>Section</label>
+              <select id="tifSection"><option value="">- Pilih Penyulang dulu -</option></select>
+            </div>
+            <div>
+              <label>Objek Inspeksi</label>
+              <select id="tifObjek" onchange="tiToggleNomor();tiLoadTemuan()">
+                <option value="Jaringan">Jaringan</option>
+                <option value="Gardu">Gardu</option>
+              </select>
+            </div>
+            <div>
+              <label>Temuan</label>
+              <select id="tifTemuan"><option value="">- Pilih Tier dulu -</option></select>
+            </div>
+            <div id="tifTiangWrap">
+              <label>Nomor Tiang</label>
+              <input type="text" id="tifNomorTiang">
+            </div>
+            <div id="tifGarduWrap" style="display:none">
+              <label>Nomor Gardu</label>
+              <input type="text" id="tifNomorGardu">
+            </div>
+            <div>
+              <label>Segmen</label>
+              <input type="text" id="tifSegmen">
+            </div>
+            <div>
+              <label>Koordinat</label>
+              <input type="text" id="tifKoordinat" placeholder="lat, long">
+            </div>
+            <div class="full">
+              <label>Deskripsi</label>
+              <textarea id="tifDeskripsi"></textarea>
+            </div>
+            <div>
+              <label>Foto Temuan</label>
+              <input type="file" accept="image/*" id="tifFotoTemuan" onchange="tiPreview(this,'tiPrevTemuan')">
+              <img id="tiPrevTemuan" class="ti-foto-prev" alt="">
+            </div>
+            <div>
+              <label>Foto Tiang / Gardu</label>
+              <input type="file" accept="image/*" id="tifFotoTiang" onchange="tiPreview(this,'tiPrevTiang')">
+              <img id="tiPrevTiang" class="ti-foto-prev" alt="">
+            </div>
+          </div>
+        </div>
+        <div class="ti-modal-foot">
+          <button class="ti-btn" style="background:var(--surface-2);color:var(--text-2)" onclick="tiTutupTambah()">Batal</button>
+          <button class="ti-btn ti-btn-primary" id="tiBtnSimpan" onclick="tiSimpan()"><i class="fa-solid fa-floppy-disk"></i> Simpan Temuan</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 4: APPROVAL P0 (db_Yandal_P0) -->
+  <div class="st-tab-content" id="sttab-approval">
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label>Tanggal</label>
+        <input type="date" id="stap_tanggal" onchange="_stLoadApprovalP0()"/>
+      </div>
+      <div class="filter-group" id="stapWrapUlp" style="display:none">
+        <label>ULP</label>
+        <select id="stap_ulp" onchange="_stLoadApprovalP0()"><option value="">Semua ULP</option></select>
+      </div>
+      <div class="filter-group">
+        <label>Status</label>
+        <select id="stap_status" onchange="_stLoadApprovalP0()">
+          <option value="Menunggu" selected>Menunggu Approval</option>
+          <option value="Approved">Approved</option>
+          <option value="Rejected">Rejected</option>
+        </select>
+      </div>
+      <button class="btn-filter" onclick="_stLoadApprovalP0()"><i class="fa-solid fa-magnifying-glass"></i> Muat</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>No</th><th>Kode P0</th><th>ULP</th><th>Tanggal</th>
+          <th>Penyulang</th><th>Pekerjaan</th><th>Tim / Petugas</th>
+          <th>Jarak Antar P0 Sebelumnya</th><th>Jarak Closing P0</th><th>Lampiran</th><th>Aksi</th>
+        </tr></thead>
+        <tbody id="stApBody">
+          <tr><td colspan="11"><div class="empty-state"><i class="fa-solid fa-inbox"></i><p>Atur filter lalu klik Muat.</p></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB: INPUT PENCAPAIAN VCC YANDAL (db_Yandal_Rank kolom P & Q) -->
+  <div class="st-tab-content" id="sttab-vcc">
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label>Periode</label>
+        <input type="month" id="stvcc_periode" onchange="_stLoadVcc()"/>
+      </div>
+      <div class="filter-group" id="stvccWrapUlp" style="display:none">
+        <label>ULP</label>
+        <select id="stvcc_ulp" onchange="_stLoadVcc()"><option value="">Semua ULP</option></select>
+      </div>
+      <button class="btn-filter" onclick="_stLoadVcc()"><i class="fa-solid fa-magnifying-glass"></i> Muat</button>
+      <button class="btn-reset" onclick="_stLoadVcc(true)" title="Hitung ulang seluruh nilai rank periode ini"><i class="fa-solid fa-arrows-rotate"></i> Segarkan</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>No</th><th>Kode Rank</th><th>Tim</th><th>Petugas</th>
+          <th style="text-align:center">Persentase VCC</th><th>Tanggal Capai 100% VCC</th>
+          <th style="text-align:center">Aksi</th>
+        </tr></thead>
+        <tbody id="stVccBody">
+          <tr><td colspan="7"><div class="empty-state"><i class="fa-solid fa-inbox"></i><p>Pilih periode lalu klik Muat.</p></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB 5: GASPOL UP3 -->
+  <div class="st-tab-content" id="sttab-gaspol">
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label>Tgl Dari</label>
+        <input type="date" id="stgs_tglDari"/>
+      </div>
+      <div class="filter-group">
+        <label>Tgl Sampai</label>
+        <input type="date" id="stgs_tglSampai"/>
+      </div>
+      <div class="filter-group" id="stgsWrapUlp" style="display:none">
+        <label>ULP</label>
+        <select id="stgs_ulp"><option value="">Semua ULP</option></select>
+      </div>
+      <button class="btn-filter" id="stGsCariBtn" onclick="_stLoadGaspol()"><i class="fa-solid fa-magnifying-glass"></i> Cari</button>
+      <button class="btn-reset" onclick="_stResetGaspol()">Reset</button>
+      <button class="ti-btn ti-btn-add" style="margin-left:auto" onclick="_stBukaInputGaspol()"><i class="fa-solid fa-paper-plane"></i> Input Laporan ke GASPOL</button>
+    </div>
+    <div class="gs-wrap">
+      <table class="gs-table">
+        <thead>
+          <tr class="gs-grp">
+            <th class="gs-c1 gs-grp-id" rowspan="2">No</th>
+            <th class="gs-c2 gs-grp-id" rowspan="2">Tanggal</th>
+            <th class="gs-c3 gs-grp-id" rowspan="2">Section</th>
+            <th class="gs-c4 gs-grp-id" rowspan="2">ULP</th>
+            <th class="gs-grp-sutm" colspan="3">Inspeksi Jaringan</th>
+            <th class="gs-grp-row" colspan="3">ROW</th>
+            <th class="gs-grp-harkom" colspan="3">HARKOM</th>
+            <th class="gs-grp-harkons" colspan="10">HARKONS SUTM</th>
+            <th class="gs-grp-gardu" colspan="9">Gardu</th>
+            <th class="gs-grp-sutr" colspan="4">SUTR / SR</th>
+            <th class="gs-grp-lain" colspan="2">Lainnya</th>
+          </tr>
+          <tr class="gs-sub">
+            <th>Inspeksi SUTM (kmS)</th>
+            <th>Inspeksi SUTM Tier 1 (Gwg)</th>
+            <th>Inspeksi SUTM Tier 2 (Gwg)</th>
+            <th>ROW 5 / Rabas (Gwg)</th>
+            <th>Tebang Sedang (Btg)</th>
+            <th>Tebang Besar (Btg)</th>
+            <th>Harkom Isolator (Titik)</th>
+            <th>Harkom Arrester (Titik)</th>
+            <th>Harkom FCO (Titik)</th>
+            <th>Harkons Tiang (Titik)</th>
+            <th>Harkons SUTM (Titik)</th>
+            <th>Harkons GW (Titik)</th>
+            <th>Harkons GSW (Titik)</th>
+            <th>Perbaikan Grounding TM (Titik)</th>
+            <th>Harkeypoint (Titik)</th>
+            <th>Penghalang Hewan (Titik)</th>
+            <th>Rekonektor SUTM (Titik)</th>
+            <th>Rehabilitasi / Pemberatan SUTM (kmS)</th>
+            <th>Penyulang Baru SUTM - Pecah Beban (kmS)</th>
+            <th>No Gardu</th>
+            <th>Inspeksi Gardu Tier 1 (Bh)</th>
+            <th>Inspeksi Gardu Tier 2 (Bh)</th>
+            <th>Manajemen Gardu (Bh)</th>
+            <th>Tap Changer (Bh)</th>
+            <th>Penyeimbangan Beban (Bh)</th>
+            <th>Perbaikan Grounding Gardu (Titik)</th>
+            <th>Cover Gardu (Set)</th>
+            <th>Lost Contact PHB-TR (Bh)</th>
+            <th>Jurusan Baru Pecah Beban (kmS)</th>
+            <th>Rekonektor SUTR (Titik)</th>
+            <th>SR Seri (kmS)</th>
+            <th>Rekonektor SR (Titik)</th>
+            <th>Care For Asset / CFA (Gwg)</th>
+            <th>Pemasangan AVR (Bh)</th>
+          </tr>
+        </thead>
+        <tbody id="stGsBody">
+          <tr><td colspan="38"><div class="empty-state"><i class="fa-solid fa-inbox"></i><p>Isi tanggal filter lalu klik Cari.</p></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB "Data Pendukung CheckPoint" (sttab-dpg): markup DIPINDAH ke Tek-Data-Checkpoint.html (Rev 11 Agu 2026) -->
+
+</div>
+
+<!-- ====== MODAL DETAIL TEMUAN (rekap per kelompok) ====== -->
+<div id="tiDetailModal" class="ti-modal-bg" onclick="if(event.target===this)tiTutupDetail()">
+  <div class="ti-modal" style="max-width:680px">
+    <div class="ti-modal-head">
+      <h3><i class="fa-solid fa-clipboard-list"></i> Detail Temuan</h3>
+      <button class="x" onclick="tiTutupDetail()">&times;</button>
+    </div>
+    <div class="ti-modal-body">
+      <div class="ti-det-group"><i class="fa-solid fa-bolt"></i> <span id="tiDetailTitle"></span></div>
+      <div class="ti-det-sum" id="tiDetailSum"></div>
+      <div id="tiDetailBody"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL TERUSKAN KE TIM (Tab 3: Rekap Temuan Inspeksi) -->
+<div id="tiForwardModal" class="ti-modal-bg" onclick="if(event.target===this)tiTutupForward()">
+  <div class="ti-modal" style="max-width:460px">
+    <div class="ti-modal-head" style="background:linear-gradient(135deg,#b45309,#f59e0b)">
+      <h3><i class="fa-solid fa-paper-plane"></i> Teruskan ke Tim</h3>
+      <button class="x" onclick="tiTutupForward()">&times;</button>
+    </div>
+    <div class="ti-modal-body">
+      <input type="hidden" id="tiFwdKode">
+      <div>
+        <label>Kode Pekerjaan</label>
+        <input type="text" id="tiFwdKodeView" readonly>
+      </div>
+      <div>
+        <label>Tim Pelaksana</label>
+        <select id="tiFwdTim"><option value="">- Pilih Tim -</option></select>
+      </div>
+      <div>
+        <label>Catatan TL</label>
+        <textarea id="tiFwdCatatan" placeholder="Instruksi untuk tim..."></textarea>
+      </div>
+    </div>
+    <div class="ti-modal-foot">
+      <button class="ti-btn" style="background:var(--surface-2);color:var(--text-2)" onclick="tiTutupForward()">Batal</button>
+      <button class="ti-btn ti-btn-primary" id="tiFwdBtn" onclick="tiSubmitForward()"><i class="fa-solid fa-paper-plane"></i> Teruskan</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETAIL TEMUAN + PILIH TIM -->
+<div class="ins-modal-bg" id="stModalDetail">
+  <div class="ins-modal-box st-detail-box">
+    <div class="st-detail-head">
+      <h3><i class="fa-solid fa-clipboard-list" style="color:var(--primary)"></i> Detail Temuan</h3>
+      <button class="st-detail-close" onclick="_stTutupDetail()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <input type="hidden" id="stModalKodePekerjaan"/>
+
+    <div id="stDetailBody"></div>
+
+    <div id="stPilihTimWrap" style="display:none">
+      <div class="st-detail-divider"></div>
+      <h4 class="st-detail-subttl"><i class="fa-solid fa-users"></i> Pemilihan Tim Pelaksana</h4>
+      <div class="ins-form-field">
+        <label>Tim Pelaksana</label>
+        <select id="stSelectTim"><option value="">-- Pilih Tim --</option></select>
+      </div>
+      <div class="ins-form-field">
+        <label>Catatan SPV</label>
+        <textarea id="stInputCatatanSpv" rows="3" placeholder="Instruksi untuk tim..."></textarea>
+      </div>
+    </div>
+
+    <div class="ins-modal-actions">
+      <button class="ins-btn-batal" onclick="_stTutupDetail()">Tutup</button>
+      <button class="ins-btn-simpan" id="stBtnSimpanTim" onclick="_stSimpanPilihTim()" style="display:none">
+        <i class="fa-solid fa-paper-plane"></i> Teruskan ke Tim
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETAIL P0 (Tab 4: Approval P0) -->
+<div class="ins-modal-bg" id="stApModal" onclick="if(event.target===this)_stApTutupDetail()">
+  <div class="ins-modal-box st-detail-box">
+    <div class="st-detail-head">
+      <h3><i class="fa-solid fa-clipboard-check" style="color:var(--primary)"></i> Detail Pekerjaan P0</h3>
+      <button class="st-detail-close" onclick="_stApTutupDetail()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <input type="hidden" id="stApModalKodeP0"/>
+    <div id="stApDetailBody"></div>
+    <div class="ins-modal-actions" id="stApDetailActions"></div>
+  </div>
+</div>
+
+<!-- MODAL LAMPIRAN PENGECEKAN (Tab 4: Approval P0 — hanya utk Pengecekan Gardu / Pengecekan Switching) -->
+<div class="ins-modal-bg" id="stApLampiranModal" onclick="if(event.target===this)_stApTutupLampiran()">
+  <div class="ins-modal-box st-detail-box" style="max-width:720px">
+    <div class="st-detail-head">
+      <h3><i class="fa-solid fa-eye" style="color:var(--primary)"></i> Lampiran Pengecekan — <code style="color:var(--primary)" id="stApLampiranTitle"></code></h3>
+      <button class="st-detail-close" onclick="_stApTutupLampiran()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="stApLampiranBody"></div>
+    <div class="ins-modal-actions">
+      <button class="ins-btn-batal" onclick="_stApTutupLampiran()">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL REJECT P0 (Tab 4: Approval P0) — konfirmasi + alasan penolakan (12 Agu 2026) -->
+<div class="ins-modal-bg" id="stApRejectModal" onclick="if(event.target===this)_stApTutupReject()">
+  <div class="ins-modal-box st-detail-box" style="max-width:460px">
+    <div class="st-detail-head">
+      <h3><i class="fa-solid fa-circle-xmark" style="color:var(--danger)"></i> Tolak P0 — <code style="color:var(--danger)" id="stApRejectKode"></code></h3>
+      <button class="st-detail-close" onclick="_stApTutupReject()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div style="padding:16px">
+      <div style="font-size:13px;color:var(--text-2);margin-bottom:10px">P0 ini akan ditandai <b style="color:var(--danger)">Rejected</b> dan nilai Point-nya dikosongkan.</div>
+      <label style="display:block;font-size:12px;font-weight:700;color:var(--text-2);margin-bottom:6px">Alasan Penolakan <span style="color:var(--danger)">*</span></label>
+      <textarea id="stApRejectAlasan" rows="3" placeholder="Mis. foto sesudah blur, koordinat tidak sesuai, pekerjaan belum selesai..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:10px;font:inherit;font-size:13px;resize:vertical;box-sizing:border-box"></textarea>
+      <div id="stApRejectErr" style="display:none;color:var(--danger);font-size:12px;margin-top:6px"></div>
+    </div>
+    <div class="ins-modal-actions">
+      <button class="ins-btn-batal" onclick="_stApTutupReject()">Batal</button>
+      <button class="ti-btn" style="background:var(--danger);color:#fff;padding:9px 18px" onclick="_stApSubmitReject(this)"><i class="fa-solid fa-ban"></i> Tolak P0</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDIT NAMA PEKERJAAN P0 (Tab 4: Approval P0) — 12 Agu 2026 -->
+<div class="ins-modal-bg" id="stApEditModal" onclick="if(event.target===this)_stApTutupEdit()">
+  <div class="ins-modal-box st-detail-box" style="max-width:460px">
+    <div class="st-detail-head">
+      <h3><i class="fa-solid fa-pen-to-square" style="color:var(--primary)"></i> Edit Pekerjaan — <code style="color:var(--primary)" id="stApEditKode"></code></h3>
+      <button class="st-detail-close" onclick="_stApTutupEdit()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div style="padding:16px">
+      <label style="display:block;font-size:12px;font-weight:700;color:var(--text-2);margin-bottom:6px">Nama Pekerjaan <span style="color:var(--danger)">*</span></label>
+      <select id="stApEditNama" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:10px;font:inherit;font-size:13px;background:var(--surface-2);box-sizing:border-box"></select>
+      <div id="stApEditErr" style="display:none;color:var(--danger);font-size:12px;margin-top:6px"></div>
+    </div>
+    <div class="ins-modal-actions">
+      <button class="ins-btn-batal" onclick="_stApTutupEdit()">Batal</button>
+      <button class="ti-btn" style="background:var(--primary);color:#fff;padding:9px 18px" onclick="_stApSubmitEdit(this)"><i class="fa-solid fa-floppy-disk"></i> Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDIT PENCAPAIAN VCC (tab Input Pencapaian VCC Yandal) -->
+<div class="ins-modal-bg" id="stVccModal" onclick="if(event.target===this)_stVccTutup()">
+  <div class="ins-modal-box st-detail-box">
+    <div class="st-detail-head">
+      <h3><i class="fa-solid fa-gauge-simple-high" style="color:var(--primary)"></i> Edit Pencapaian VCC</h3>
+      <button class="st-detail-close" onclick="_stVccTutup()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <input type="hidden" id="stVccKode"/>
+    <div class="st-d-row"><div class="st-d-label">Kode Rank</div><div class="st-d-val"><code style="color:var(--primary)" id="stVccKodeView"></code></div></div>
+    <div class="st-d-row"><div class="st-d-label">Petugas</div><div class="st-d-val" id="stVccPetugasView"></div></div>
+    <div class="st-d-row"><div class="st-d-label">Periode</div><div class="st-d-val" id="stVccPeriodeView"></div></div>
+    <div style="height:12px"></div>
+    <div class="ins-form-field">
+      <label>Persentase VCC (0 &ndash; 100)</label>
+      <input type="number" id="stVccPersen" min="0" max="100" step="0.01" placeholder="0">
+    </div>
+    <div class="ins-form-field">
+      <label>Tanggal Capai 100% VCC</label>
+      <input type="date" id="stVccTanggal">
+      <div style="font-size:11.5px;color:var(--gray);margin-top:5px">Wajib diisi bila persentase sudah 100%. Shift diambil otomatis dari jadwal petugas pada tanggal tersebut.</div>
+    </div>
+    <div class="ins-modal-actions">
+      <button class="ins-btn-batal" onclick="_stVccTutup()">Batal</button>
+      <button class="ins-btn-simpan" id="stVccBtnSimpan" onclick="_stVccSimpan()"><i class="fa-solid fa-floppy-disk"></i> Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PENGISIAN C4A (Tab 2: Laporan UP3) -->
+<div class="ins-modal-bg" id="stC4aModal" onclick="if(event.target===this)_stTutupC4a()">
+  <div class="ins-modal-box st-detail-box">
+    <div class="st-detail-head">
+      <h3><i class="fa-solid fa-seedling" style="color:var(--primary)"></i> Isi C4A</h3>
+      <button class="st-detail-close" onclick="_stTutupC4a()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="ins-form-field">
+      <label>Penyulang</label>
+      <select id="stl_c4a_peny"><option value="">- Pilih Penyulang -</option></select>
+    </div>
+    <div class="ins-form-field">
+      <label>Realisasi (kmS)</label>
+      <input type="text" id="stl_c4a_rlz" inputmode="decimal" placeholder="cth: 4,6">
+    </div>
+    <div class="ins-form-field">
+      <label>Temuan</label>
+      <input type="text" id="stl_c4a_temuan" placeholder="cth: Sawit">
+    </div>
+    <div class="ins-form-field">
+      <label>Eksekusi</label>
+      <select id="stl_c4a_eksekusi"><option value="">- Pilih Tim -</option></select>
+    </div>
+    <div class="ins-modal-actions">
+      <button class="ins-btn-batal" onclick="_stResetC4a()">Kosongkan</button>
+      <button class="ins-btn-simpan" onclick="_stSimpanC4a()"><i class="fa-solid fa-check"></i> Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL GANGGUAN & TINDAK LANJUT (Tab 2: Laporan UP3) -->
+<div class="ins-modal-bg" id="stGgnModal" onclick="if(event.target===this)_stTutupGangguan()">
+  <div class="ins-modal-box st-detail-box">
+    <div class="st-detail-head">
+      <h3><i class="fa-solid fa-bolt" style="color:var(--primary)"></i> Gangguan & Tindak Lanjut</h3>
+      <button class="st-detail-close" onclick="_stTutupGangguan()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="st-ggn-sum" id="stGgnSum"></div>
+    <div class="st-ggn-list" id="stGgnList">
+      <div class="st-ggn-empty">Memuat gangguan...</div>
+    </div>
+    <div class="ins-modal-actions">
+      <button class="ins-btn-batal" onclick="_stMuatGangguan()">Muat Ulang</button>
+      <button class="ins-btn-simpan" onclick="_stSimpanGangguan()"><i class="fa-solid fa-check"></i> Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL INPUT LAPORAN KE GASPOL (Tab 5: GASPOL UP3) -->
+<div class="ins-modal-bg" id="stGsModal" onclick="if(event.target===this)_stTutupInputGaspol()">
+  <div class="ins-modal-box st-detail-box">
+    <div class="st-detail-head">
+      <h3><i class="fa-solid fa-paper-plane" style="color:var(--primary)"></i> Input Laporan ke GASPOL</h3>
+      <button class="st-detail-close" onclick="_stTutupInputGaspol()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <p style="font-size:13px;color:var(--text-2);line-height:1.6;margin:0 0 12px">Rekap otomatis pada periode terpilih akan dikirim ke GASPOL. Angka direkap dari modul dan tidak dapat diedit manual.</p>
+    <div class="st-up3-c4a-row">
+      <div class="st-up3-c4a-info stack2">
+        <div class="ln1"><i class="fa-solid fa-calendar-day"></i> <span class="lbl">Periode &amp; ULP</span></div>
+        <span class="st-up3-c4a-status" id="stGsSubmitInfo">-</span>
+      </div>
+    </div>
+    <div class="ins-modal-actions">
+      <button class="ins-btn-batal" onclick="_stTutupInputGaspol()">Batal</button>
+      <button class="ins-btn-simpan" onclick="_stSimpanGaspol()"><i class="fa-solid fa-paper-plane"></i> Kirim ke GASPOL</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// STATE
+var _stSession = {};
+var _stIsSuperAdmin = false;
+var _stDataPenugasan = {};
+function _stEl(id){ return document.getElementById(id); }
+
+function _stBoot(){
+  var _sesiInj = (typeof window !== 'undefined' && window.__SISI_SESI__) ? window.__SISI_SESI__ : null;
+  if(_sesiInj && _sesiInj.role){
+    _stInitSession(_sesiInj);
+  } else if(typeof google !== 'undefined'){
+    google.script.run.withSuccessHandler(_stInitSession).getSessionUser();
+  }
+  var today   = new Date();
+  var tglAwal = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+  var tglAkhr = today.toISOString().split('T')[0];
+  if(_stEl('st_tglDari'))   _stEl('st_tglDari').value   = tglAwal;
+  if(_stEl('st_tglSampai')) _stEl('st_tglSampai').value = tglAkhr;
+  if(_stEl('stl_tanggal'))  _stEl('stl_tanggal').value  = tglAkhr;
+  if(_stEl('stap_tanggal')) _stEl('stap_tanggal').value = tglAkhr;
+  if(_stEl('stgs_tglDari'))   _stEl('stgs_tglDari').value   = tglAwal;
+  if(_stEl('stgs_tglSampai')) _stEl('stgs_tglSampai').value = tglAkhr;
+  if(_stEl('stvcc_periode'))  _stEl('stvcc_periode').value  = tglAkhr.slice(0, 7);   // periode VCC = bulan berjalan
+
+  var bg = _stEl('stModalDetail');
+  if(bg) bg.addEventListener('click', function(e){ if(e.target === this) _stTutupDetail(); });
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') _stTutupDetail(); });
+
+  /* Jika dibuka dari submenu sidebar Laporan Teknik, langsung aktifkan
+     tab Laporan tanpa menghapus tab SIE Teknik lainnya. */
+  if(window.__SISI_PAGE__ === 'SIE-LaporanTeknik'){
+    _stSwitchTab('laporan');
+  }
+
+  setTimeout(_stMoveTabIndicator, 60);
+}
+
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', _stBoot);
+}else{
+  _stBoot();
+}
+
+function _stInitSession(user){
+  _stSession = user || {};
+  _stIsSuperAdmin = (['Super User','Admin'].indexOf(String(_stSession.role || '').trim()) !== -1);
+  ['stWrapUlp','stlWrapUlp','stapWrapUlp','stgsWrapUlp','stvccWrapUlp'].forEach(function(id){
+    var el = _stEl(id);
+    if(el) el.style.display = _stIsSuperAdmin ? 'flex' : 'none';
+  });
+  var note = _stEl('stScopeNote');
+  if(note){
+    var scope = _stIsSuperAdmin ? 'semua ULP' : ('ULP ' + (_stSession.ulp || 'Anda'));
+    var sp = note.querySelector('span');
+    if(sp) sp.innerHTML = 'Monitoring tindak lanjut temuan inspeksi (WO) untuk <strong style="color:var(--text)">' + scope + '</strong>.';
+  }
+  if(_stIsSuperAdmin) _stLoadListUlp();
+  _stLoadListPenyulang('');
+  _stLoadPenugasan();
+  _stLoadC4aPenyulang();
+  _stLoadC4aTim();
+  _stMuatGangguan(true); // muat jumlah gangguan langsung walau card belum dibuka
+  _stLoadLaporanHarianRow();
+}
+
+// TAB SWITCHING
+function _stMoveTabIndicator(){
+  var nav = _stEl('stTabs'), ind = _stEl('stTabIndicator');
+  if(!nav || !ind) return;
+  var act = nav.querySelector('.st-tab.active');
+  if(!act){ ind.style.opacity='0'; ind.style.width='0'; return; }
+  ind.style.opacity   = '1';
+  ind.style.width     = act.offsetWidth + 'px';
+  ind.style.transform = 'translateX(' + act.offsetLeft + 'px)';
+}
+window.addEventListener('resize', _stMoveTabIndicator);
+
+function _stSwitchTab(tabId){
+  document.querySelectorAll('.st-tab').forEach(function(t){
+    t.classList.toggle('active', t.id === 'stTab-'+tabId);
+  });
+  document.querySelectorAll('.st-tab-content').forEach(function(c){
+    c.classList.toggle('active', c.id === 'sttab-'+tabId);
+  });
+  _stMoveTabIndicator();
+  if(tabId === 'penugasan') _stLoadPenugasan();
+  if(tabId === 'approval') _stLoadApprovalP0();
+  if(tabId === 'vcc') _stLoadVcc();
+}
+
+// LIST ULP & PENYULANG
+function _stLoadListUlp(){
+  google.script.run.withSuccessHandler(function(data){
+    ['st_ulp','stl_ulp','stap_ulp','stgs_ulp','stvcc_ulp'].forEach(function(id){
+      var sel = _stEl(id); if(!sel) return;
+      sel.innerHTML = '<option value="">Semua ULP</option>';
+      (data||[]).forEach(function(u){ sel.innerHTML += '<option value="'+u+'">'+u+'</option>'; });
+    });
+  }).getListUlpIns();
+}
+function _stLoadListPenyulang(ulp){
+  var ulpParam = _stIsSuperAdmin ? (ulp||'') : (_stSession.ulp||'');
+  google.script.run.withSuccessHandler(function(data){
+    var sel = _stEl('st_penyulang'); if(!sel) return;
+    sel.innerHTML = '<option value="">Semua Penyulang</option>';
+    (data||[]).forEach(function(p){ sel.innerHTML += '<option value="'+p+'">'+p+'</option>'; });
+  }).getListPenyulangIns(ulpParam);
+}
+
+// TAB 1: MONITORING TINDAK LANJUT TEMUAN INSPEKSI (rename dari "Penugasan Tim", 14 Agu 2026)
+// Filter: ULP (khusus Super User/Admin; lainnya dipaksa ULP-nya — diverifikasi backend via db_Users),
+// rentang tanggal, dan Status WO multi-pilihan (Penugasan Tim / Progress Pekerjaan / Selesai).
+function _stStatusTerpilih(){
+  var cbs = document.querySelectorAll('#stStatusMsMenu input[type="checkbox"]');
+  var out = [];
+  Array.prototype.forEach.call(cbs, function(cb){ if(cb.checked) out.push(cb.value); });
+  return out;
+}
+function _stUpdateStatusLabel(){
+  var lbl = _stEl('stStatusMsLabel'); if(!lbl) return;
+  var sel = _stStatusTerpilih();
+  if(sel.length === 0 || sel.length === 3) lbl.textContent = 'Semua Status';
+  else if(sel.length === 1) lbl.textContent = sel[0];
+  else lbl.textContent = sel.length + ' status dipilih';
+}
+function _stToggleStatusMenu(e){
+  if(e && e.stopPropagation) e.stopPropagation();
+  var box = _stEl('stStatusMs');
+  if(box) box.classList.toggle('open');
+}
+function _stStatusToggle(){ _stUpdateStatusLabel(); }
+// Tutup dropdown Status WO saat klik di luar area.
+document.addEventListener('click', function(e){
+  var box = _stEl('stStatusMs');
+  if(box && box.classList.contains('open') && !box.contains(e.target)) box.classList.remove('open');
+});
+
+function _stLoadPenugasan(){
+  var dari = _stEl('st_tglDari') ? _stEl('st_tglDari').value : '';
+  var sd   = _stEl('st_tglSampai') ? _stEl('st_tglSampai').value : '';
+  if(dari && sd && dari > sd){ _stToast('Tgl Dari tidak boleh melebihi Tgl Sampai.', 'error'); return; }
+  var statusList = _stStatusTerpilih();
+  if(!statusList.length){ _stToast('Pilih minimal 1 Status WO.', 'error'); return; }
+  var params = {
+    username  : _stSession.username || '',   // diverifikasi backend terhadap db_Users (role + ULP)
+    ulp       : _stIsSuperAdmin ? (_stEl('st_ulp') ? _stEl('st_ulp').value : '') : (_stSession.ulp || ''),
+    tglDari   : dari,
+    tglSampai : sd,
+    statusList: statusList
+  };
+  _stEl('stBodyPenugasan').innerHTML = _stLoadingRow(9);
+  google.script.run
+    .withSuccessHandler(_stRenderPenugasan)
+    .withFailureHandler(function(err){ _stShowError('stBodyPenugasan', 9, err); })
+    .getMonitoringTlTemuan(params);
+}
+function _stRenderPenugasan(res){
+  var tbody = _stEl('stBodyPenugasan');
+  _stDataPenugasan = {};
+  if(!res || !res.ok){
+    tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state" style="color:var(--danger)"><i class="fa-solid fa-triangle-exclamation"></i><p>' + ((res && res.error) || 'Gagal memuat data') + '</p></div></td></tr>';
+    return;
+  }
+  var data = res.list || [];
+  if(!data.length){ tbody.innerHTML = _stEmptyRow(9); return; }
+  tbody.innerHTML = data.map(function(r, i){
+    _stDataPenugasan[r.kodePekerjaan] = r;
+    function _td(x){ return (x != null && String(x).trim()) ? String(x) : '-'; }
+    var aksi = '<button class="btn-detail-temuan" onclick="_stBukaDetail(&quot;'+r.kodePekerjaan+'&quot;)" title="Lihat detail temuan"><i class="fa-solid fa-eye"></i></button>'
+      + ' <button class="btn-detail-temuan" style="color:#25D366;border-color:#25D366" onclick="_stShareWaTemuan(&quot;'+r.kodePekerjaan+'&quot;)" title="Share temuan via WA"><i class="fa-brands fa-whatsapp"></i></button>';
+    return '<tr><td>'+(i+1)+'</td>'
+      +'<td><code style="color:var(--primary)">'+_td(r.kodePekerjaan)+'</code></td>'
+      +'<td>'+_td(r.ulp)+'</td><td>'+_stFmtTgl(r.tanggal)+'</td>'
+      +'<td>'+_td(r.penyulang)+'</td><td>'+_td(r.section)+'</td><td>'+_td(r.temuan)+'</td>'
+      +'<td>'+_stBadgeStatus(r.statusPenerusan)+'</td>'
+      +'<td style="white-space:nowrap">'+aksi+'</td></tr>';
+  }).join('');
+}
+
+// Tombol Share WA per baris (14 Agu 2026) — format teks siap kirim.
+function _stShareWaTemuan(kode){
+  var r = _stDataPenugasan[kode];
+  if(!r){ _stToast('Data temuan tidak ditemukan.', 'error'); return; }
+  function _v(x){ return (x != null && String(x).trim()) ? String(x).trim() : '-'; }
+  var ko = String(r.koordinat || '').trim();
+  var lokasi = ko ? ('https://www.google.com/maps?q=' + ko.replace(/\s+/g, '')) : '-';
+  var foto = String(r.fotoTemuanUrl || '').trim() || '-';
+  var teks = '*Temuan Inspeksi*\n\n'
+    + 'Kode Temuan : *' + _v(r.kodePekerjaan) + '*\n'
+    + 'Penyulang : ' + _v(r.penyulang) + '\n'
+    + 'Section : ' + _v(r.section) + '\n'
+    + 'Segmen : ' + _v(r.segmen) + '\n'
+    + 'Temuan : ' + _v(r.temuan) + '\n\n'
+    + 'Lokasi : ' + lokasi + '\n\n'
+    + 'Foto Temuan : ' + foto + '\n\n'
+    + '*Segera Tindak Lanjut🔥🔥🔥*';
+  window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(teks), '_blank');
+}
+
+function _stResetPenugasan(){
+  var today   = new Date();
+  var tglAwal = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+  var tglAkhr = today.toISOString().split('T')[0];
+  if(_stEl('st_tglDari'))   _stEl('st_tglDari').value   = tglAwal;
+  if(_stEl('st_tglSampai')) _stEl('st_tglSampai').value = tglAkhr;
+  if(_stEl('st_ulp'))       _stEl('st_ulp').value = '';
+  var cbs = document.querySelectorAll('#stStatusMsMenu input[type="checkbox"]');
+  Array.prototype.forEach.call(cbs, function(cb){ cb.checked = true; });
+  _stUpdateStatusLabel();
+  _stLoadPenugasan();
+}
+
+// TAB 2: LAPORAN HARIAN — Laporan UP3
+var _stUp3WaText = '';
+
+// Tombol "Cari" di filter bar memicu pembuatan Laporan UP3 (Card aktif satu-satunya)
+function _stCariLaporan(){ _stBuatLaporanUP3(); }
+
+// ULP acuan untuk C4A (Super User pakai pilihan stl_ulp; lainnya pakai ULP sesi)
+function _stC4aUlp(){
+  return _stIsSuperAdmin ? (_stEl('stl_ulp') ? _stEl('stl_ulp').value : '') : (_stSession.ulp || '');
+}
+// Dropdown Penyulang C4A dari db_penyulang sesuai ULP
+function _stLoadC4aPenyulang(){
+  var sel = _stEl('stl_c4a_peny'); if(!sel) return;
+  sel.innerHTML = '<option value="">- Memuat... -</option>';
+  google.script.run
+    .withSuccessHandler(function(res){
+      var list = (res && res.list) ? res.list : [];
+      sel.innerHTML = '<option value="">- Pilih Penyulang -</option>'
+        + list.map(function(p){ return '<option value="'+p.nama+'">'+p.nama+'</option>'; }).join('');
+    })
+    .withFailureHandler(function(){ sel.innerHTML = '<option value="">- Pilih Penyulang -</option>'; })
+    .getDataPenyulangByUlp(_stC4aUlp());
+}
+// Dropdown Eksekusi C4A dari db_Tim sesuai ULP
+function _stLoadC4aTim(){
+  var sel = _stEl('stl_c4a_eksekusi'); if(!sel) return;
+  sel.innerHTML = '<option value="">- Memuat... -</option>';
+  google.script.run
+    .withSuccessHandler(function(list){
+      sel.innerHTML = '<option value="">- Pilih Tim -</option>';
+      (list||[]).forEach(function(t){
+        var nm = (t && t.namaTim != null) ? t.namaTim : t;
+        sel.innerHTML += '<option value="'+nm+'">'+nm+'</option>';
+      });
+    })
+    .withFailureHandler(function(){ sel.innerHTML = '<option value="">- Pilih Tim -</option>'; })
+    .getListTimByUlp(_stC4aUlp());
+}
+// Super User mengganti ULP laporan -> muat ulang Penyulang & Tim C4A
+function _stOnUlpLaporanChange(){
+  _stLoadC4aPenyulang();
+  _stLoadC4aTim();
+  _stGgnTL = [];
+  _stMuatGangguan(true);
+  _stLoadLaporanHarianRow();
+}
+// Tanggal laporan berubah -> muat ulang gangguan langsung (tanpa buka card)
+function _stOnTanggalLaporanChange(){
+  _stGgnTL = [];
+  _stMuatGangguan(true);
+  _stLoadLaporanHarianRow();
+}
+
+// ===== Popup pengisian C4A =====
+function _stBukaC4a(){ var m = _stEl('stC4aModal'); if(m) m.classList.add('show'); }
+function _stTutupC4a(){ var m = _stEl('stC4aModal'); if(m) m.classList.remove('show'); }
+function _stSimpanC4a(){ _stUpdateC4aStatus(); _stTutupC4a(); }
+function _stResetC4a(){
+  if(_stEl('stl_c4a_peny'))     _stEl('stl_c4a_peny').value = '';
+  if(_stEl('stl_c4a_rlz'))      _stEl('stl_c4a_rlz').value = '';
+  if(_stEl('stl_c4a_temuan'))   _stEl('stl_c4a_temuan').value = '';
+  if(_stEl('stl_c4a_eksekusi')) _stEl('stl_c4a_eksekusi').value = '';
+  _stUpdateC4aStatus();
+}
+// Perbarui baris status C4A di card Laporan UP3
+function _stUpdateC4aStatus(){
+  var el = _stEl('stC4aStatus'); if(!el) return;
+  var p = _stEl('stl_c4a_peny')     ? _stEl('stl_c4a_peny').value.trim()     : '';
+  var r = _stEl('stl_c4a_rlz')      ? _stEl('stl_c4a_rlz').value.trim()      : '';
+  var t = _stEl('stl_c4a_temuan')   ? _stEl('stl_c4a_temuan').value.trim()   : '';
+  var e = _stEl('stl_c4a_eksekusi') ? _stEl('stl_c4a_eksekusi').value.trim() : '';
+  if(p || r || t || e){
+    el.className = 'st-up3-c4a-status filled';
+    el.innerHTML = '<i class="fa-solid fa-circle-check"></i> ' + (p || 'Sudah diisi');
+  } else {
+    el.className = 'st-up3-c4a-status';
+    el.textContent = 'Belum diisi';
+  }
+}
+
+// ===== Popup Gangguan & Tindak Lanjut (Bagian A & G) =====
+var _stGgnData = null;   // { pmt, section, list:[{penyulang,temuan}], kom:{pmt,section} }
+var _stGgnTL   = [];     // teks tindak lanjut per indeks gangguan (selaras urutan server)
+
+function _stBukaGangguan(){ var m = _stEl('stGgnModal'); if(m) m.classList.add('show'); _stMuatGangguan(); }
+function _stTutupGangguan(){ var m = _stEl('stGgnModal'); if(m) m.classList.remove('show'); }
+
+function _stGgnParams(){
+  var tgl = _stEl('stl_tanggal') ? _stEl('stl_tanggal').value : '';
+  var ulp = _stIsSuperAdmin ? (_stEl('stl_ulp') ? _stEl('stl_ulp').value : '') : (_stSession.ulp || '');
+  return { tanggal: tgl, ulp: ulp };
+}
+
+function _stMuatGangguan(silent){
+  var p = _stGgnParams();
+  if(!p.tanggal){ if(!silent) _stToast('Pilih Tanggal Laporan dulu.', 'error'); return; }
+  if(!p.ulp){ if(!silent) _stToast('Pilih ULP dulu.', 'error'); return; }
+  var list = _stEl('stGgnList'), sum = _stEl('stGgnSum');
+  if(sum) sum.innerHTML = '';
+  if(list) list.innerHTML = '<div class="st-ggn-empty"><i class="fa-solid fa-spinner fa-spin"></i> Memuat gangguan...</div>';
+  google.script.run
+    .withSuccessHandler(_stRenderGangguan)
+    .withFailureHandler(function(err){
+      if(list) list.innerHTML = '<div class="st-ggn-empty">Gagal memuat: ' + ((err && err.message) || err) + '</div>';
+    })
+    .getGangguanList(p);
+}
+
+function _stRenderGangguan(res){
+  var list = _stEl('stGgnList'), sum = _stEl('stGgnSum');
+  if(!res || !res.ok){
+    if(list) list.innerHTML = '<div class="st-ggn-empty">' + ((res && res.message) || 'Gagal memuat gangguan.') + '</div>';
+    return;
+  }
+  var d = res.daily || { pmt:0, section:0, list:[] };
+  var k = res.komulatif || { pmt:0, section:0 };
+  _stGgnData = { pmt:d.pmt, section:d.section, list:(d.list||[]), kom:{ pmt:k.pmt, section:k.section } };
+  if(!_stGgnTL || _stGgnTL.length !== _stGgnData.list.length) _stGgnTL = _stGgnData.list.map(function(){ return ''; });
+  if(sum){
+    sum.innerHTML =
+      '<span class="st-ggn-chip">Hari ini: PMT ' + d.pmt + ' / Section ' + d.section + '</span>' +
+      '<span class="st-ggn-chip">Komulatif: PMT ' + k.pmt + ' / Section ' + k.section + '</span>';
+  }
+  if(list){
+    if(!_stGgnData.list.length){
+      list.innerHTML = '<div class="st-ggn-empty">Tidak ada gangguan pada hari laporan ini.</div>';
+    } else {
+      list.innerHTML = _stGgnData.list.map(function(g, i){
+        var peny = g.penyulang || '-';
+        var tmn  = g.temuan || '-';
+        var val  = _stGgnTL[i] ? String(_stGgnTL[i]).replace(/"/g,'&quot;') : '';
+        return '<div class="st-ggn-item">' +
+          '<div class="hd"><b>' + peny + '</b></div>' +
+          '<div class="mt">Temuan: ' + tmn + '</div>' +
+          '<input type="text" class="st-ggn-tl" data-idx="' + i + '" placeholder="Tindak lanjut..." value="' + val + '" oninput="_stOnGgnTLInput(' + i + ', this.value)">' +
+          '</div>';
+      }).join('');
+    }
+  }
+  _stUpdateGangguanStatus();
+}
+
+function _stOnGgnTLInput(i, val){ if(!_stGgnTL) _stGgnTL = []; _stGgnTL[i] = val; _stUpdateGangguanStatus(); }
+
+function _stSimpanGangguan(){
+  var inputs = document.querySelectorAll('#stGgnList .st-ggn-tl');
+  Array.prototype.forEach.call(inputs, function(inp){ _stGgnTL[Number(inp.getAttribute('data-idx'))] = inp.value; });
+  _stUpdateGangguanStatus();
+  _stTutupGangguan();
+}
+
+function _stUpdateGangguanStatus(){
+  var el = _stEl('stGgnStatus'); if(!el) return;
+  if(!_stGgnData){ el.className = 'st-up3-c4a-status'; el.textContent = 'Belum dimuat'; return; }
+  var n = _stGgnData.list.length;
+  var terisi = 0;
+  for(var i=0;i<n;i++){ if(_stGgnTL[i] && String(_stGgnTL[i]).trim()) terisi++; }
+  if(n === 0){
+    el.className = 'st-up3-c4a-status filled';
+    el.innerHTML = '<i class="fa-solid fa-circle-check"></i> Tidak ada gangguan';
+    return;
+  }
+  var lengkap = (terisi >= n);
+  el.className = 'st-up3-c4a-status ' + (lengkap ? 'filled' : 'warn');
+  el.innerHTML = '<i class="fa-solid ' + (lengkap ? 'fa-circle-check' : 'fa-triangle-exclamation') + '"></i> ' +
+    n + ' gangguan (PMT ' + _stGgnData.pmt + '/Sec ' + _stGgnData.section + ') • TL ' + terisi + '/' + n;
+}
+
+function _stBuatLaporanUP3(){
+  var tgl = _stEl('stl_tanggal') ? _stEl('stl_tanggal').value : '';
+  if(!tgl){ _stToast('Pilih Tanggal Laporan dulu.', 'error'); return; }
+  var ulp = _stIsSuperAdmin ? (_stEl('stl_ulp') ? _stEl('stl_ulp').value : '') : (_stSession.ulp || '');
+  if(!ulp){ _stToast('Pilih ULP dulu.', 'error'); return; }
+  if(!_stLapEditable){ _stToast('Tanggal ini hanya dapat dilihat (bukan hari ini).', 'error'); return; }
+  var c4a = {
+    penyulang : _stEl('stl_c4a_peny')     ? _stEl('stl_c4a_peny').value.trim()     : '',
+    realisasi : _stEl('stl_c4a_rlz')      ? _stEl('stl_c4a_rlz').value.trim()      : '',
+    temuan    : _stEl('stl_c4a_temuan')   ? _stEl('stl_c4a_temuan').value.trim()   : '',
+    eksekusi  : _stEl('stl_c4a_eksekusi') ? _stEl('stl_c4a_eksekusi').value.trim() : ''
+  };
+  var cuaca = _stEl('stl_cuaca') ? _stEl('stl_cuaca').value.trim() : '';
+  var hint = _stEl('stUp3Empty'), resBox = _stEl('stUp3Result'), foot = _stEl('stUp3Foot');
+  if(hint) hint.style.display = 'none';
+  if(foot) foot.style.display = 'none';
+  if(resBox) resBox.style.display = 'block';
+  if(_stEl('stUp3Text')) _stEl('stUp3Text').textContent = 'Menyimpan & membuat laporan...';
+
+  google.script.run
+    .withSuccessHandler(_stRenderLaporanHarian)
+    .withFailureHandler(function(err){
+      if(_stEl('stUp3Text')) _stEl('stUp3Text').textContent = '';
+      if(resBox) resBox.style.display = 'none';
+      if(hint) hint.style.display = 'block';
+      _stToast('Gagal membuat laporan: ' + ((err && err.message) || err), 'error');
+    })
+    .simpanLaporanHarianWeb({ tanggal: tgl, ulp: ulp, c4a: c4a, cuaca: cuaca, tindakLanjutGangguan: _stGgnTL });
+}
+
+function _stRenderUP3(res){
+  var resBox = _stEl('stUp3Result'), hint = _stEl('stUp3Empty'), foot = _stEl('stUp3Foot');
+  if(!res || !res.ok){
+    if(_stEl('stUp3Text')) _stEl('stUp3Text').textContent = '';
+    if(resBox) resBox.style.display = 'none';
+    if(hint) hint.style.display = 'block';
+    _stToast((res && res.error) ? res.error : 'Laporan gagal dibuat.', 'error');
+    return;
+  }
+  _stUp3WaText = res.waText || '';
+  if(_stEl('stUp3Text')) _stEl('stUp3Text').textContent = _stUp3WaText;
+  if(resBox) resBox.style.display = 'block';
+  if(foot) foot.style.display = 'flex';
+}
+
+function _stKirimWaUP3(){
+  if(!_stUp3WaText){ _stToast('Buat laporan dulu.', 'error'); return; }
+  window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(_stUp3WaText), '_blank');
+}
+
+function _stSalinUP3(){
+  if(!_stUp3WaText){ _stToast('Buat laporan dulu.', 'error'); return; }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(_stUp3WaText).then(
+      function(){ _stToast('Teks laporan disalin.', 'info'); },
+      function(){ _stFallbackCopyUP3(_stUp3WaText); }
+    );
+  } else { _stFallbackCopyUP3(_stUp3WaText); }
+}
+function _stFallbackCopyUP3(txt){
+  var ta = document.createElement('textarea');
+  ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  try { document.execCommand('copy'); _stToast('Teks laporan disalin.', 'info'); }
+  catch(e){ _stToast('Tidak dapat menyalin otomatis.', 'error'); }
+  document.body.removeChild(ta);
+}
+
+function _stResetLaporan(){
+  if(_stEl('stl_tanggal')) _stEl('stl_tanggal').value = '';
+  if(_stEl('stl_ulp'))     _stEl('stl_ulp').value = '';
+  if(_stEl('stl_c4a_peny'))     _stEl('stl_c4a_peny').value = '';
+  if(_stEl('stl_c4a_rlz'))      _stEl('stl_c4a_rlz').value = '';
+  if(_stEl('stl_c4a_temuan'))   _stEl('stl_c4a_temuan').value = '';
+  if(_stEl('stl_c4a_eksekusi')) _stEl('stl_c4a_eksekusi').value = '';
+  _stGgnData = null;
+  _stGgnTL = [];
+  _stUpdateC4aStatus();
+  _stUpdateGangguanStatus();
+  _stUp3WaText = '';
+  var rb = _stEl('stUp3Result'); if(rb) rb.style.display = 'none';
+  var foot = _stEl('stUp3Foot'); if(foot) foot.style.display = 'none';
+  var h = _stEl('stUp3Empty'); if(h) h.style.display = 'block';
+  _stWilWaText = '';
+  var wrb = _stEl('stWilResult'); if(wrb) wrb.style.display = 'none';
+  var wfoot = _stEl('stWilFoot'); if(wfoot) wfoot.style.display = 'none';
+  var wh = _stEl('stWilEmpty'); if(wh) wh.style.display = 'block';
+  _stLapEditable = true;
+  if(typeof _stSetLaporanEditable === 'function') _stSetLaporanEditable(true, '');
+}
+
+// ===== TAB 2: Laporan Wilayah =====
+var _stWilWaText = '';
+function _stBuatLaporanWilayah(){
+  var tgl = _stEl('stl_tanggal') ? _stEl('stl_tanggal').value : '';
+  if(!tgl){ _stToast('Pilih Tanggal Laporan dulu.', 'error'); return; }
+  var ulp = _stIsSuperAdmin ? (_stEl('stl_ulp') ? _stEl('stl_ulp').value : '') : (_stSession.ulp || '');
+  if(!ulp){ _stToast('Pilih ULP dulu.', 'error'); return; }
+  if(!_stLapEditable){ _stToast('Tanggal ini hanya dapat dilihat (bukan hari ini).', 'error'); return; }
+  var cuaca = _stEl('stl_cuaca') ? _stEl('stl_cuaca').value.trim() : '';
+  var c4a = {
+    penyulang : _stEl('stl_c4a_peny')     ? _stEl('stl_c4a_peny').value.trim()     : '',
+    realisasi : _stEl('stl_c4a_rlz')      ? _stEl('stl_c4a_rlz').value.trim()      : '',
+    temuan    : _stEl('stl_c4a_temuan')   ? _stEl('stl_c4a_temuan').value.trim()   : '',
+    eksekusi  : _stEl('stl_c4a_eksekusi') ? _stEl('stl_c4a_eksekusi').value.trim() : ''
+  };
+  var hint = _stEl('stWilEmpty'), resBox = _stEl('stWilResult'), foot = _stEl('stWilFoot');
+  if(hint) hint.style.display = 'none';
+  if(foot) foot.style.display = 'none';
+  if(resBox) resBox.style.display = 'block';
+  if(_stEl('stWilText')) _stEl('stWilText').textContent = 'Menyimpan & membuat laporan...';
+  google.script.run
+    .withSuccessHandler(_stRenderLaporanHarian)
+    .withFailureHandler(function(err){
+      if(_stEl('stWilText')) _stEl('stWilText').textContent = '';
+      if(resBox) resBox.style.display = 'none';
+      if(hint) hint.style.display = 'block';
+      _stToast('Gagal membuat laporan: ' + ((err && err.message) || err), 'error');
+    })
+    .simpanLaporanHarianWeb({ tanggal: tgl, ulp: ulp, c4a: c4a, cuaca: cuaca, tindakLanjutGangguan: _stGgnTL });
+}
+function _stRenderWilayah(res){
+  var resBox = _stEl('stWilResult'), hint = _stEl('stWilEmpty'), foot = _stEl('stWilFoot');
+  if(!res || !res.ok){
+    if(_stEl('stWilText')) _stEl('stWilText').textContent = '';
+    if(resBox) resBox.style.display = 'none';
+    if(hint) hint.style.display = 'block';
+    _stToast((res && (res.message || res.error)) ? (res.message || res.error) : 'Laporan gagal dibuat.', 'error');
+    return;
+  }
+  _stWilWaText = res.waText || '';
+  if(_stEl('stWilText')) _stEl('stWilText').textContent = _stWilWaText;
+  if(resBox) resBox.style.display = 'block';
+  if(foot) foot.style.display = 'flex';
+}
+function _stKirimWaWilayah(){
+  if(!_stWilWaText){ _stToast('Buat laporan dulu.', 'error'); return; }
+  window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(_stWilWaText), '_blank');
+}
+function _stSalinWilayah(){
+  if(!_stWilWaText){ _stToast('Buat laporan dulu.', 'error'); return; }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(_stWilWaText).then(
+      function(){ _stToast('Teks laporan disalin.', 'info'); },
+      function(){ _stFallbackCopyUP3(_stWilWaText); }
+    );
+  } else { _stFallbackCopyUP3(_stWilWaText); }
+}
+
+// ===== TAB 2: Persistensi sheet "Teknik_Laporan Harian" (web + AppSheet sinkron) =====
+var _stLapEditable = true;
+
+// Sukses simpan: tampilkan UP3 & UIW dari hasil generate (sumber: sheet).
+function _stRenderLaporanHarian(res){
+  if(!res || !res.ok){
+    _stToast((res && res.message) ? res.message : 'Laporan gagal dibuat.', 'error');
+    return;
+  }
+  _stUp3WaText = res.waText || '';
+  if(_stEl('stUp3Text')) _stEl('stUp3Text').textContent = _stUp3WaText;
+  if(_stEl('stUp3Result')) _stEl('stUp3Result').style.display = 'block';
+  if(_stEl('stUp3Foot')) _stEl('stUp3Foot').style.display = 'flex';
+  if(_stEl('stUp3Empty')) _stEl('stUp3Empty').style.display = 'none';
+  _stWilWaText = res.waTextUiw || '';
+  if(_stEl('stWilText')) _stEl('stWilText').textContent = _stWilWaText;
+  if(_stEl('stWilResult')) _stEl('stWilResult').style.display = 'block';
+  if(_stEl('stWilFoot')) _stEl('stWilFoot').style.display = 'flex';
+  if(_stEl('stWilEmpty')) _stEl('stWilEmpty').style.display = 'none';
+  _stToast('Laporan tersimpan & teks WA diperbarui.', 'info');
+}
+
+// Muat baris sheet utk tanggal terpilih: isi C4A tersimpan, tampilkan teks WA,
+// set status editable (today() saja yang bisa diedit).
+function _stLoadLaporanHarianRow(){
+  var tgl = _stEl('stl_tanggal') ? _stEl('stl_tanggal').value : '';
+  if(!tgl) return;
+  var ulp = _stIsSuperAdmin ? (_stEl('stl_ulp') ? _stEl('stl_ulp').value : '') : (_stSession.ulp || '');
+  google.script.run
+    .withSuccessHandler(function(res){
+      if(!res || !res.ok) return;
+      _stLapEditable = !!res.editable;
+      var c = res.c4a || {};
+      if(_stEl('stl_c4a_peny'))     _stEl('stl_c4a_peny').value     = c.penyulang || '';
+      if(_stEl('stl_c4a_rlz'))      _stEl('stl_c4a_rlz').value      = c.realisasi || '';
+      if(_stEl('stl_c4a_temuan'))   _stEl('stl_c4a_temuan').value   = c.temuan || '';
+      if(_stEl('stl_c4a_eksekusi')) _stEl('stl_c4a_eksekusi').value = c.eksekusi || '';
+      _stUpdateC4aStatus();
+      _stUp3WaText = res.waText || '';
+      _stWilWaText = res.waTextUiw || '';
+      if(_stUp3WaText){
+        if(_stEl('stUp3Text')) _stEl('stUp3Text').textContent = _stUp3WaText;
+        if(_stEl('stUp3Result')) _stEl('stUp3Result').style.display = 'block';
+        if(_stEl('stUp3Empty')) _stEl('stUp3Empty').style.display = 'none';
+        if(_stEl('stUp3Foot')) _stEl('stUp3Foot').style.display = 'flex';
+      }
+      if(_stWilWaText){
+        if(_stEl('stWilText')) _stEl('stWilText').textContent = _stWilWaText;
+        if(_stEl('stWilResult')) _stEl('stWilResult').style.display = 'block';
+        if(_stEl('stWilEmpty')) _stEl('stWilEmpty').style.display = 'none';
+        if(_stEl('stWilFoot')) _stEl('stWilFoot').style.display = 'flex';
+      }
+      _stSetLaporanEditable(_stLapEditable, res.tanggal);
+    })
+    .withFailureHandler(function(){})
+    .getLaporanHarianRow({ tanggal: tgl, ulp: ulp });
+}
+
+// Aktif/nonaktifkan input C4A, Cuaca, dan tombol simpan sesuai status editable.
+function _stSetLaporanEditable(editable, tgl){
+  var dis = !editable;
+  var pencils = document.querySelectorAll('#stUp3Card .st-up3-c4a-edit');
+  Array.prototype.forEach.call(pencils, function(b){
+    b.disabled = dis; b.style.opacity = dis ? '0.5' : ''; b.style.cursor = dis ? 'not-allowed' : 'pointer';
+  });
+  var cuaca = _stEl('stl_cuaca'); if(cuaca) cuaca.disabled = dis;
+  ['stUp3SaveBtn','stWilSaveBtn'].forEach(function(id){
+    var b = _stEl(id);
+    if(b){ b.disabled = dis; b.style.opacity = dis ? '0.5' : ''; b.style.cursor = dis ? 'not-allowed' : 'pointer'; }
+  });
+  var note = _stEl('stLapReadonly');
+  if(note){
+    if(dis){
+      note.style.display = 'flex';
+      var sp = note.querySelector('span');
+      if(sp) sp.textContent = 'Tanggal ' + (tgl || '') + ' hanya dapat dilihat. Pengeditan hanya untuk hari ini.';
+    } else {
+      note.style.display = 'none';
+    }
+  }
+}
+
+// ===== TAB 4: APPROVAL P0 (db_Yandal_P0) =====
+var _stApData = {};
+function _stApUlp(){
+  return _stIsSuperAdmin ? (_stEl('stap_ulp') ? _stEl('stap_ulp').value : '') : (_stSession.ulp || '');
+}
+function _stLoadApprovalP0(){
+  if(_stEl('stap_tanggal') && !_stEl('stap_tanggal').value){
+    _stEl('stap_tanggal').value = new Date().toISOString().split('T')[0];
+  }
+  var tgl = _stEl('stap_tanggal') ? _stEl('stap_tanggal').value : '';
+  var ulp = _stApUlp();
+  var status = _stEl('stap_status') ? _stEl('stap_status').value : '';
+  var body = _stEl('stApBody');
+  if(body) body.innerHTML = _stLoadingRow(11);
+  google.script.run
+    .withSuccessHandler(_stRenderApprovalP0)
+    .withFailureHandler(function(err){ _stShowError('stApBody', 11, err); })
+    .getApprovalP0List({ tanggal: tgl, ulp: ulp, status: status });
+}
+function _stRenderApprovalP0(res){
+  var body = _stEl('stApBody');
+  if(!body) return;
+  if(!res || !res.ok){
+    body.innerHTML = '<tr><td colspan="11"><div class="empty-state" style="color:var(--danger)"><i class="fa-solid fa-triangle-exclamation"></i><p>' + ((res && res.error) || 'Gagal memuat data P0') + '</p></div></td></tr>';
+    return;
+  }
+  var list = res.list || [];
+  if(!list.length){ body.innerHTML = _stEmptyRow(11); return; }
+  _stApData = {};
+  body.innerHTML = list.map(function(r, i){
+    _stApData[r.kodeP0] = r;
+    function _v(x){ return (x != null && String(x).trim()) ? String(x) : '-'; }
+    var timPet = _v(r.tim) + (r.petugas ? '<br><small style="color:var(--gray)">' + r.petugas + '</small>' : '');
+    return '<tr>'
+      + '<td>' + (i + 1) + '</td>'
+      + '<td><code style="color:var(--primary)">' + _v(r.kodeP0) + '</code></td>'
+      + '<td>' + _v(r.ulp) + '</td>'
+      + '<td>' + _stFmtTgl(r.tanggal) + '</td>'
+      + '<td>' + _v(r.penyulang) + '</td>'
+      + '<td>' + _v(r.namaPekerjaan) + '</td>'
+      + '<td>' + timPet + '</td>'
+      + '<td>' + _v(r.jarakAntarP0) + '</td>'
+      + '<td>' + _v(r.jarakClosing) + '</td>'
+      + '<td style="text-align:center">' + _stApLampiranCell(r) + '</td>'
+      + '<td>' + _stApAksi(r) + '</td>'
+      + '</tr>';
+  }).join('');
+}
+function _stApFotoCell(r){
+  var items = [
+    { f: r.fotoSebelum,   c: 'Sebelum' },
+    { f: r.fotoPekerjaan, c: 'Pekerjaan' },
+    { f: r.fotoSesudah,   c: 'Sesudah' }
+  ];
+  var html = '<div style="display:flex;gap:4px;flex-wrap:wrap">';
+  items.forEach(function(it){
+    if(it.f && it.f.has){
+      html += '<a class="st-foto-thumb-sm" href="' + it.f.full + '" target="_blank" title="Foto ' + it.c + '"><img src="' + it.f.thumb + '" alt="' + it.c + '" loading="lazy" onerror="this.style.display=&quot;none&quot;"></a>';
+    } else {
+      html += '<span class="st-thumb-broken" title="Foto ' + it.c + ' belum ada"><i class="fa-solid fa-image"></i></span>';
+    }
+  });
+  html += '</div>';
+  return html;
+}
+function _stApBadge(status){
+  var s = status || 'Menunggu';
+  if(s === 'Approved') return '<span class="badge-selesai">&#10003; Approved</span>';
+  if(s === 'Rejected') return '<span class="ins-badge" style="background:rgba(239,68,68,.15);color:var(--danger)">&#10007; Rejected</span>';
+  return '<span class="badge-regu">Waiting Approval</span>';
+}
+function _stApAksi(r){
+  // Aksi = ikon pensil untuk membuka detail lengkap P0 (Approve/Reject ada di dalam pop up).
+  return '<button class="btn-detail-temuan" onclick="_stApBukaDetail(&quot;' + r.kodeP0 + '&quot;)" title="Lihat detail P0"><i class="fa-solid fa-pencil"></i></button>';
+}
+
+// ===== KOLOM LAMPIRAN (Approval P0) =====
+// Tombol eye HANYA muncul utk jenis pekerjaan "Pengecekan Gardu" / "Pengecekan Switching".
+function _stApIsPengecekan(r){
+  var jp = String((r && r.namaPekerjaan) || '').toLowerCase();
+  return jp.indexOf('pengecekan gardu') >= 0 || jp.indexOf('pengecekan switching') >= 0;
+}
+function _stApLampiranCell(r){
+  if(!_stApIsPengecekan(r)) return '<span style="color:var(--text-muted)">-</span>';
+  return '<button class="btn-detail-temuan" onclick="_stApBukaLampiran(&quot;' + r.kodeP0 + '&quot;)" title="Lihat lampiran pengecekan"><i class="fa-solid fa-eye"></i></button>';
+}
+
+// Modal Lampiran Pengecekan: isi = 3 foto P0 + seluruh baris anak db_Yandal_Pengecekan_Switching
+// (dimuat live via getLampiranPengecekanP0 di Tek-Yandal-Code.gs).
+function _stApBukaLampiran(kodeP0){
+  var m = _stEl('stApLampiranModal'); if(!m) return;
+  var ttl = _stEl('stApLampiranTitle'); if(ttl) ttl.textContent = kodeP0;
+  var body = _stEl('stApLampiranBody');
+  if(body) body.innerHTML = '<div class="ti-det-loading"><i class="fa-solid fa-spinner fa-spin"></i> Memuat lampiran...</div>';
+  m.classList.add('show');
+  google.script.run
+    .withSuccessHandler(_stApRenderLampiran)
+    .withFailureHandler(function(err){
+      if(body) body.innerHTML = '<div class="ti-det-err">Gagal memuat lampiran: ' + ((err && err.message) || err) + '</div>';
+    })
+    .getLampiranPengecekanP0({ kodeP0: kodeP0 });
+}
+function _stApTutupLampiran(){ var m = _stEl('stApLampiranModal'); if(m) m.classList.remove('show'); }
+
+// 1 slot foto lampiran: thumbnail (klik membuka file) atau placeholder bila belum ada.
+function _stApLampiranFoto(f, cap){
+  if(f && f.has){
+    return '<a class="st-foto-thumb" href="' + f.full + '" target="_blank" title="Foto ' + cap + '">'
+      + '<img src="' + f.thumb + '" alt="' + cap + '" loading="lazy" onerror="this.style.display=&quot;none&quot;;var b=this.parentNode.querySelector(&quot;.st-foto-broken&quot;);if(b)b.style.display=&quot;flex&quot;;"/>'
+      + '<span class="st-foto-broken" style="display:none"><i class="fa-solid fa-image"></i></span>'
+      + '<span class="st-foto-cap">' + cap + '</span></a>';
+  }
+  return '<div class="st-foto-thumb"><div class="st-foto-broken" style="display:flex"><i class="fa-solid fa-image"></i></div><span class="st-foto-cap">' + cap + ' (tidak ada)</span></div>';
+}
+
+function _stApRenderLampiran(res){
+  var body = _stEl('stApLampiranBody'); if(!body) return;
+  if(!res || !res.ok){
+    body.innerHTML = '<div class="ti-det-err">' + ((res && res.error) || 'Lampiran gagal dimuat.') + '</div>';
+    return;
+  }
+  var p0 = res.p0 || {};
+  var sw = res.switching || [];
+  function _rowL(lbl, val){
+    return '<div class="st-d-row"><div class="st-d-label">' + lbl + '</div><div class="st-d-val">' + ((val != null && String(val).trim()) ? String(val) : '-') + '</div></div>';
+  }
+  var html = _rowL('Pekerjaan', p0.namaPekerjaan)
+    + _rowL('Penyulang', p0.penyulang)
+    + _rowL('Daerah', p0.daerah)
+    + '<div class="st-detail-divider"></div>'
+    + '<h4 class="st-detail-subttl"><i class="fa-solid fa-camera"></i> Foto P0</h4>'
+    + '<div class="st-foto-grid">'
+    + _stApLampiranFoto(p0.fotoSebelum, 'Sebelum')
+    + _stApLampiranFoto(p0.fotoPekerjaan, 'Pekerjaan')
+    + _stApLampiranFoto(p0.fotoSesudah, 'Sesudah')
+    + '</div>';
+
+  html += '<div class="st-detail-divider"></div>'
+    + '<h4 class="st-detail-subttl"><i class="fa-solid fa-toggle-on"></i> Pengecekan Switching (' + sw.length + ')</h4>';
+  if(!sw.length){
+    html += '<div class="ti-det-loading">Tidak ada baris pengecekan switching untuk P0 ini.</div>';
+  } else {
+    var cards = sw.map(function(s){
+      var arusBits = [];
+      if(String(s.arusR||'').trim()) arusBits.push('R ' + s.arusR);
+      if(String(s.arusS||'').trim()) arusBits.push('S ' + s.arusS);
+      if(String(s.arusT||'').trim()) arusBits.push('T ' + s.arusT);
+      return '<div class="ti-det-item">'
+        + '<div class="ti-det-kode">' + (s.kodeSwitching || '-') + '</div>'
+        + _rowL('Penyulang', s.penyulang)
+        + _rowL('Nama Switching', s.namaSwitching)
+        + _rowL('Jam Pengecekan', s.jamPengecekan)
+        + _rowL('Indikator', 'Remote: ' + (s.indikatorRemote || '-') + ' · Local: ' + (s.indikatorLocal || '-') + ' · Protection: ' + (s.indicatorProtection || '-') + ' · Reclose: ' + (s.indicatorReclose || '-'))
+        + _rowL('Arus (R/S/T)', arusBits.length ? (arusBits.join(' / ') + ' A') : '-')
+        + '<div class="st-foto-grid" style="margin-top:8px">'
+        + _stApLampiranFoto(s.fotoArus, 'Arus')
+        + _stApLampiranFoto(s.fotoG1, 'Gangguan 1')
+        + _stApLampiranFoto(s.fotoG2, 'Gangguan 2')
+        + _stApLampiranFoto(s.fotoG3, 'Gangguan 3')
+        + _stApLampiranFoto(s.fotoG4, 'Gangguan 4')
+        + _stApLampiranFoto(s.fotoG5, 'Gangguan 5')
+        + '</div>'
+        + '</div>';
+    }).join('');
+    html += '<div style="display:flex;flex-direction:column;gap:10px">' + cards + '</div>';
+  }
+
+  // Pengecekan Gardu: hasil pengukuran dari sheet "Pengukuran Gardu" (spreadsheet terpisah) — 12 Agu 2026.
+  var gd = res.gardu || [];
+  html += '<div class="st-detail-divider"></div>'
+    + '<h4 class="st-detail-subttl"><i class="fa-solid fa-building"></i> Pengukuran Gardu (' + gd.length + ')</h4>';
+  if(!gd.length){
+    html += '<div class="ti-det-loading">Tidak ada baris pengukuran gardu untuk P0 ini.</div>';
+  } else {
+    var gCards = gd.map(function(g){
+      var bbits = [];
+      if(String(g.bebanR||'').trim()) bbits.push('R ' + g.bebanR);
+      if(String(g.bebanS||'').trim()) bbits.push('S ' + g.bebanS);
+      if(String(g.bebanT||'').trim()) bbits.push('T ' + g.bebanT);
+      if(String(g.bebanN||'').trim()) bbits.push('N ' + g.bebanN);
+      var tff = [], tfn = [];
+      if(String(g.tegRS||'').trim()) tff.push('R-S ' + g.tegRS);
+      if(String(g.tegRT||'').trim()) tff.push('R-T ' + g.tegRT);
+      if(String(g.tegST||'').trim()) tff.push('S-T ' + g.tegST);
+      if(String(g.tegRN||'').trim()) tfn.push('R-N ' + g.tegRN);
+      if(String(g.tegSN||'').trim()) tfn.push('S-N ' + g.tegSN);
+      if(String(g.tegTN||'').trim()) tfn.push('T-N ' + g.tegTN);
+      return '<div class="ti-det-item">'
+        + '<div class="ti-det-kode">' + (g.kodeUkur || '-') + '</div>'
+        + _rowL('Penyulang', g.penyulang)
+        + _rowL('Section', g.section)
+        + _rowL('No Gardu', g.noGardu)
+        + _rowL('Alamat', g.alamat)
+        + _rowL('Jam Ukur', g.jamUkur)
+        + _rowL('Beban Utama', bbits.length ? (bbits.join(' / ') + ' A') : '-')
+        + _rowL('Tegangan Fasa-Fasa', tff.length ? (tff.join(' / ') + ' V') : '-')
+        + _rowL('Tegangan Fasa-Netral', tfn.length ? (tfn.join(' / ') + ' V') : '-')
+        + _rowL('Petugas', g.petugas)
+        + '</div>';
+    }).join('');
+    html += '<div style="display:flex;flex-direction:column;gap:10px">' + gCards + '</div>';
+  }
+  body.innerHTML = html;
+}
+// ===== SPINNER + KUNCI TOMBOL saat proses Approve/Reject (12 Agu 2026) =====
+// Selama google.script.run berjalan: tombol yang diklik berganti spinner "Memproses..."
+// dan SEMUA tombol di modal detail & modal reject ikut ter-disable (anti double-klik).
+var _stApBusyBtn = null;
+function _stApBusyStart(btn){
+  _stApBusyBtn = btn || null;
+  var btns = document.querySelectorAll('#stApModal button, #stApRejectModal button, #stApEditModal button');
+  for(var i=0;i<btns.length;i++) btns[i].disabled = true;
+  if(btn){
+    btn.dataset.origHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
+  }
+}
+function _stApBusyEnd(){
+  _stApRejectOpenerRestore();   // pulihkan juga spinner tombol Reject pembuka modal
+  var btns = document.querySelectorAll('#stApModal button, #stApRejectModal button, #stApEditModal button');
+  for(var i=0;i<btns.length;i++) btns[i].disabled = false;
+  if(_stApBusyBtn && _stApBusyBtn.dataset.origHtml != null){
+    _stApBusyBtn.innerHTML = _stApBusyBtn.dataset.origHtml;
+  }
+  _stApBusyBtn = null;
+}
+
+function _stApApprove(kodeP0, btn){ _stApSet(kodeP0, 'Approved', '', btn); }
+// Spinner kecil pada tombol "Reject" (modal detail) SELAMA modal reject terbuka (12 Agu 2026).
+var _stApRejectOpener = null;
+function _stApRejectOpenerRestore(){
+  if(_stApRejectOpener){
+    if(_stApRejectOpener.dataset.origHtml != null) _stApRejectOpener.innerHTML = _stApRejectOpener.dataset.origHtml;
+    _stApRejectOpener.disabled = false;
+    _stApRejectOpener = null;
+  }
+}
+// REJECT via modal khusus (bukan window.confirm) — wajib isi alasan penolakan (12 Agu 2026).
+function _stApReject(kodeP0, btn){
+  var m = _stEl('stApRejectModal'); if(!m) return;
+  // Spinner di tombol Reject yang diklik — berputar selama modal reject terbuka.
+  _stApRejectOpenerRestore();
+  if(btn){
+    _stApRejectOpener = btn;
+    btn.dataset.origHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    btn.disabled = true;
+  }
+  var k = _stEl('stApRejectKode'); if(k) k.textContent = kodeP0;
+  var ta = _stEl('stApRejectAlasan'); if(ta) ta.value = '';
+  var e0 = _stEl('stApRejectErr'); if(e0) e0.style.display = 'none';
+  m.dataset.kodeP0 = kodeP0;
+  m.classList.add('show');
+  if(ta) setTimeout(function(){ ta.focus(); }, 50);
+}
+function _stApTutupReject(){
+  var m = _stEl('stApRejectModal'); if(m) m.classList.remove('show');
+  _stApRejectOpenerRestore();
+}
+function _stApSubmitReject(btn){
+  var m = _stEl('stApRejectModal'); if(!m) return;
+  var ta = _stEl('stApRejectAlasan');
+  var alasan = ta ? String(ta.value || '').trim() : '';
+  if(!alasan){
+    var e = _stEl('stApRejectErr');
+    if(e){ e.textContent = 'Alasan penolakan wajib diisi.'; e.style.display = 'block'; }
+    if(ta) ta.focus();
+    return;
+  }
+  var kodeP0 = m.dataset.kodeP0 || '';
+  // Modal reject TETAP terbuka selama proses (spinner tampak di tombol); ditutup saat sukses.
+  _stApSet(kodeP0, 'Rejected', alasan, btn);
+}
+function _stApSet(kodeP0, keputusan, alasan, btn){
+  if(!kodeP0) return;
+  if(_stApBusyBtn) return;   // sedang ada proses approve/reject lain — abaikan klik ganda
+  _stApBusyStart(btn);
+  google.script.run
+    .withSuccessHandler(function(res){
+      _stApBusyEnd();
+      if(!res || !res.ok){ _stToast((res && res.error) || 'Gagal menyimpan keputusan.', 'error'); return; }
+      _stToast('P0 ' + kodeP0 + ' → ' + keputusan + '.', 'info');
+      _stApTutupReject();
+      _stApTutupDetail();
+      _stLoadApprovalP0();
+    })
+    .withFailureHandler(function(err){ _stApBusyEnd(); _stToast('Gagal: ' + ((err && err.message) || err), 'error'); })
+    .setApprovalP0({ kodeP0: kodeP0, keputusan: keputusan, username: _stSession.username || '', alasan: String(alasan || '') });
+}
+
+// ===== MODAL EDIT NAMA PEKERJAAN P0 (12 Agu 2026) =====
+// Dropdown diisi dari master db_Yandal_List_P0 (di-cache sekali per sesi halaman).
+var _stApListPekerjaan = null;
+function _stApBukaEdit(kodeP0){
+  var m = _stEl('stApEditModal'); if(!m) return;
+  var r = _stApData[kodeP0] || {};
+  var k = _stEl('stApEditKode'); if(k) k.textContent = kodeP0;
+  var e0 = _stEl('stApEditErr'); if(e0) e0.style.display = 'none';
+  m.dataset.kodeP0 = kodeP0;
+  m.classList.add('show');
+  var sel = _stEl('stApEditNama');
+  if(sel) sel.innerHTML = '<option value="">Memuat daftar pekerjaan...</option>';
+  var isi = function(list){
+    if(!sel) return;
+    var cur = String(r.namaPekerjaan || '');
+    var html = '<option value="">— pilih pekerjaan —</option>', ada = false;
+    for(var i=0;i<list.length;i++){
+      var nm = list[i];
+      var seld = (nm === cur) ? ' selected' : '';
+      if(seld) ada = true;
+      html += '<option value="' + String(nm).replace(/"/g, '&quot;') + '"' + seld + '>' + nm + '</option>';
+    }
+    // Nilai lama yang tidak ada di master tetap ditampilkan agar tidak hilang.
+    if(cur && !ada) html += '<option value="' + cur.replace(/"/g, '&quot;') + '" selected>' + cur + ' (saat ini — tidak ada di master)</option>';
+    sel.innerHTML = html;
+  };
+  if(_stApListPekerjaan){ isi(_stApListPekerjaan); return; }
+  google.script.run
+    .withSuccessHandler(function(res){
+      if(res && res.ok){ _stApListPekerjaan = res.list || []; isi(_stApListPekerjaan); }
+      else if(sel) sel.innerHTML = '<option value="">Gagal memuat daftar</option>';
+    })
+    .withFailureHandler(function(){ if(sel) sel.innerHTML = '<option value="">Gagal memuat daftar</option>'; })
+    .getListPekerjaanP0();
+}
+function _stApTutupEdit(){ var m = _stEl('stApEditModal'); if(m) m.classList.remove('show'); }
+function _stApSubmitEdit(btn){
+  var m = _stEl('stApEditModal'); if(!m) return;
+  var sel = _stEl('stApEditNama');
+  var nama = sel ? String(sel.value || '').trim() : '';
+  if(!nama){
+    var e = _stEl('stApEditErr');
+    if(e){ e.textContent = 'Nama pekerjaan wajib dipilih.'; e.style.display = 'block'; }
+    return;
+  }
+  var kodeP0 = m.dataset.kodeP0 || '';
+  if(_stApBusyBtn) return;   // sedang ada proses lain — abaikan klik ganda
+  _stApBusyStart(btn);
+  google.script.run
+    .withSuccessHandler(function(res){
+      _stApBusyEnd();
+      if(!res || !res.ok){ _stToast((res && res.error) || 'Gagal menyimpan perubahan.', 'error'); return; }
+      _stToast('Nama pekerjaan P0 ' + kodeP0 + ' → "' + res.namaPekerjaan + '"' + (res.point != null ? ' (Point: ' + res.point + ')' : '') + '.', 'info');
+      _stApTutupEdit();
+      _stApTutupDetail();
+      _stLoadApprovalP0();
+    })
+    .withFailureHandler(function(err){ _stApBusyEnd(); _stToast('Gagal: ' + ((err && err.message) || err), 'error'); })
+    .updateNamaPekerjaanP0({ kodeP0: kodeP0, namaPekerjaan: nama, username: _stSession.username || '' });
+}
+
+// ===== POP UP DETAIL P0 (Tab 4: Approval) =====
+function _stApBukaDetail(kodeP0){
+  var r = _stApData[kodeP0];
+  if(!r){ _stToast('Data P0 tidak ditemukan.', 'error'); return; }
+  _stEl('stApModalKodeP0').value = kodeP0;
+  _stEl('stApDetailBody').innerHTML = _stApBuildDetailHtml(r);
+  var act = _stEl('stApDetailActions');
+  if(act){
+    if(r.status === 'Approved' || r.status === 'Rejected'){
+      act.innerHTML = '<button class="ins-btn-batal" onclick="_stApTutupDetail()">Tutup</button>';
+    } else {
+      act.innerHTML = '<button class="ins-btn-batal" onclick="_stApTutupDetail()">Tutup</button>'
+        + '<button class="ti-btn" style="background:var(--danger);color:#fff;padding:9px 18px" onclick="_stApReject(&quot;' + r.kodeP0 + '&quot;, this)"><i class="fa-solid fa-xmark"></i> Reject</button>'
+        + '<button class="ti-btn" style="background:var(--success);color:#fff;padding:9px 18px" onclick="_stApApprove(&quot;' + r.kodeP0 + '&quot;, this)"><i class="fa-solid fa-check"></i> Approve</button>';
+    }
+  }
+  var m = _stEl('stApModal'); if(m) m.classList.add('show');
+}
+function _stApTutupDetail(){ var m = _stEl('stApModal'); if(m) m.classList.remove('show'); }
+function _stApBuildDetailHtml(r){
+  function _v(x){ return (x != null && String(x).trim()) ? String(x) : '-'; }
+  function _row(label, val){
+    return '<div class="st-d-row"><div class="st-d-label">'+label+'</div><div class="st-d-val">'+val+'</div></div>';
+  }
+  function _koordLink(val){
+    var s = (val != null) ? String(val).trim() : '';
+    if(!s) return '-';
+    return '<a href="https://maps.google.com/?q='+encodeURIComponent(s)+'" target="_blank" class="foto-link">'+s+'</a>';
+  }
+  var html = '';
+  html += _row('Kode P0', '<code style="color:var(--primary)">'+_v(r.kodeP0)+'</code>');
+  html += _row('Status', _stApBadge(r.status));
+  html += _row('ULP', _v(r.ulp));
+  html += _row('Hari / Tanggal', (r.hari ? r.hari+', ' : '') + _stFmtTgl(r.tanggal));
+  html += _row('Penyulang', _v(r.penyulang));
+  html += _row('Section', _v(r.section));
+  html += _row('Daerah', _v(r.daerah));
+  // Ikon edit kecil tepat di samping Nama Pekerjaan — hanya utk status Menunggu (12 Agu 2026).
+  var editBtn = (r.status === 'Approved' || r.status === 'Rejected') ? '' :
+    ' <button class="btn-detail-temuan" style="margin-left:6px" title="Edit nama pekerjaan" onclick="_stApBukaEdit(&quot;' + r.kodeP0 + '&quot;)"><i class="fa-solid fa-pen-to-square"></i></button>';
+  html += _row('Pekerjaan', _v(r.namaPekerjaan) + editBtn);
+  html += _row('Tim / Petugas', (r.petugas && String(r.petugas).trim()) ? (_v(r.tim) + ' (' + r.petugas + ')') : _v(r.tim));
+  html += _row('Durasi', _v(r.durasi));
+  html += _row('Jarak Antar P0 Sebelumnya', _v(r.jarakAntarP0));
+  html += _row('Jarak Closing P0', _v(r.jarakClosing));
+  html += _row('Koordinat Pekerjaan', _koordLink(r.koordinat));
+  html += _row('Koordinat Closing', _koordLink(r.koordinatClosing));
+  if(r.approvedBy && String(r.approvedBy).trim()) html += _row('Diputuskan Oleh', _v(r.approvedBy));
+  if(r.timestampApprove && String(r.timestampApprove).trim()) html += _row('Waktu Keputusan', _v(r.timestampApprove));
+  html += '<div class="st-detail-divider"></div>';
+  html += '<h4 class="st-detail-subttl"><i class="fa-solid fa-camera"></i> Foto P0</h4>';
+  html += '<div class="st-foto-grid">'
+    + _stApFotoSlot(r.fotoSebelum, 'Sebelum')
+    + _stApFotoSlot(r.fotoPekerjaan, 'Pekerjaan')
+    + _stApFotoSlot(r.fotoSesudah, 'Sesudah')
+    + '</div>';
+  return html;
+}
+function _stApFotoSlot(f, label){
+  if(f && f.has){
+    return '<a href="'+f.full+'" target="_blank" class="st-foto-thumb" title="Foto '+label+'">'
+      + '<img src="'+f.thumb+'" alt="'+label+'" loading="lazy" onerror="this.style.display=&quot;none&quot;;var b=this.parentNode.querySelector(&quot;.st-foto-broken&quot;);if(b)b.style.display=&quot;flex&quot;;"/>'
+      + '<span class="st-foto-broken" style="display:none"><i class="fa-solid fa-image"></i></span>'
+      + '<span class="st-foto-cap">'+label+'</span></a>';
+  }
+  return '<div class="st-foto-thumb"><div class="st-foto-broken" style="display:flex"><i class="fa-solid fa-image"></i></div><span class="st-foto-cap">'+label+' (tidak ada)</span></div>';
+}
+
+// MODAL DETAIL TEMUAN + PILIH TIM
+function _stBukaDetail(kodePekerjaan){
+  var r = _stDataPenugasan[kodePekerjaan];
+  if(!r){ _stToast('Data temuan tidak ditemukan.', 'error'); return; }
+  _stEl('stModalKodePekerjaan').value = kodePekerjaan;
+  _stEl('stDetailBody').innerHTML = _stBuildDetailHtml(r);
+
+  // Pemilihan tim hanya untuk Super User/Admin & status masih "Penugasan Tim"
+  var bolehPilih = _stIsSuperAdmin && r.statusPenerusan === 'Penugasan Tim';
+  _stEl('stPilihTimWrap').style.display = bolehPilih ? 'block' : 'none';
+  _stEl('stBtnSimpanTim').style.display = bolehPilih ? 'inline-flex' : 'none';
+
+  if(bolehPilih){
+    _stEl('stInputCatatanSpv').value = r.catatanSpv || '';
+    var sel = _stEl('stSelectTim');
+    sel.innerHTML = '<option value="">-- Pilih Tim --</option>';
+    google.script.run.withSuccessHandler(function(data){
+      (data||[]).forEach(function(t){ sel.innerHTML += '<option value="'+t.namaTim+'">'+t.namaTim+'</option>'; });
+    }).getListTimByUlp(_stIsSuperAdmin ? (r.ulp||'') : (_stSession.ulp||''));
+  }
+
+  _stEl('stModalDetail').classList.add('show');
+}
+function _stBuildDetailHtml(r){
+  function _v(x){ return (x != null && String(x).trim()) ? String(x) : '-'; }
+  function _row(label, val){
+    return '<div class="st-d-row"><div class="st-d-label">'+label+'</div><div class="st-d-val">'+val+'</div></div>';
+  }
+  var html = '';
+  html += _row('Kode Pekerjaan', '<code style="color:var(--primary)">'+_v(r.kodePekerjaan)+'</code>');
+  html += _row('Status', _stBadgeStatus(r.statusPenerusan));
+  html += _row('ULP', _v(r.ulp));
+  html += _row('Hari / Tanggal', (r.hari ? r.hari+', ' : '') + _stFmtTgl(r.tanggal));
+  html += _row('Tim Inspeksi', _v(r.timInspeksi));
+  html += _row('Objek Inspeksi', _v(r.objek));
+  html += _row('Penyulang', _v(r.penyulang));
+  html += _row('Section', _v(r.section));
+  html += _row('Segmen', _v(r.segmen));
+  html += _row('Tier', _v(r.tier));
+  if(r.nomorTiang && String(r.nomorTiang).trim()) html += _row('Nomor Tiang', _v(r.nomorTiang));
+  if(r.nomorGardu && String(r.nomorGardu).trim()) html += _row('Nomor Gardu', _v(r.nomorGardu));
+  html += _row('Temuan', _v(r.temuan));
+  html += _row('Deskripsi', _v(r.deskripsi));
+  if(r.koordinat && String(r.koordinat).trim())
+    html += _row('Koordinat', '<a href="https://maps.google.com/?q='+encodeURIComponent(r.koordinat)+'" target="_blank" class="foto-link">'+r.koordinat+'</a>');
+  if(r.timEksekusi && String(r.timEksekusi).trim()) html += _row('Tim Pelaksana', _v(r.timEksekusi));
+  if(r.catatanSpv && String(r.catatanSpv).trim())   html += _row('Catatan SPV', _v(r.catatanSpv));
+
+  // Foto Temuan & Foto Tiang (selalu tampil, beri placeholder bila kosong)
+  var fotoTemuan = r.fotoSblUrl || r.fotoTemuanUrl || '';
+  var fotoTiang  = r.fotoTiangUrl || '';
+  html += '<div class="st-detail-divider"></div>';
+  html += '<h4 class="st-detail-subttl"><i class="fa-solid fa-camera"></i> Dokumentasi Foto</h4>';
+  html += '<div class="st-foto-grid">'
+    + _stFotoSlot(fotoTemuan, 'Foto Temuan')
+    + _stFotoSlot(fotoTiang, 'Foto Tiang')
+    + '</div>';
+
+  return html;
+}
+function _stThumbUrl(url){
+  var s = String(url||'');
+  var m = s.match(/\/d\/([-\w]{20,})/) || s.match(/[?&]id=([-\w]{20,})/);
+  return m ? ('https://drive.google.com/thumbnail?id='+m[1]+'&sz=w320') : s;
+}
+function _stFotoThumb(url, label){
+  var s = String(url||'');
+  var m = s.match(/\/d\/([-\w]{20,})/) || s.match(/[?&]id=([-\w]{20,})/);
+  var thumb = m ? ('https://drive.google.com/thumbnail?id='+m[1]+'&sz=w320') : s;
+  return '<a href="'+s+'" target="_blank" class="st-foto-thumb" title="'+label+'">'
+    + '<img src="'+thumb+'" alt="'+label+'" loading="lazy" onerror="this.style.display=&quot;none&quot;;var f=this.parentNode.querySelector(&quot;.st-foto-broken&quot;);if(f)f.style.display=&quot;flex&quot;;"/>'
+    + '<span class="st-foto-broken" style="display:none"><i class="fa-solid fa-image"></i></span>'
+    + '<span class="st-foto-cap">'+label+'</span></a>';
+}
+function _stFotoSlot(url, label){
+  if(url && String(url).trim()) return _stFotoThumb(url, label);
+  return '<div class="st-foto-thumb"><div class="st-foto-broken" style="display:flex"><i class="fa-solid fa-image"></i></div><span class="st-foto-cap">'+label+' (tidak ada)</span></div>';
+}
+function _stTutupDetail(){
+  var bg = _stEl('stModalDetail');
+  if(bg) bg.classList.remove('show');
+}
+function _stSimpanPilihTim(){
+  var kodePekerjaan = _stEl('stModalKodePekerjaan').value;
+  var timPelaksana  = _stEl('stSelectTim').value;
+  var catatanSpv    = _stEl('stInputCatatanSpv').value;
+  if(!timPelaksana){ _stToast('Pilih tim terlebih dahulu.', 'error'); return; }
+  var btn = _stEl('stBtnSimpanTim');
+  btn.disabled  = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+  google.script.run
+    .withSuccessHandler(function(){
+      _stTutupDetail();
+      btn.disabled  = false;
+      btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Teruskan ke Tim';
+      sisiSukses('Tim pelaksana berhasil diteruskan.');
+      _stLoadPenugasan();
+    })
+    .withFailureHandler(function(err){
+      _stToast('Gagal menyimpan: '+((err && err.message) || err), 'error');
+      btn.disabled  = false;
+      btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Teruskan ke Tim';
+    })
+    .setPilihTimTemuan({
+      kodePekerjaan : kodePekerjaan,
+      timPelaksana  : timPelaksana,
+      catatanSpv    : catatanSpv,
+      username      : _stSession.username
+    });
+}
+
+// ===== TAB 5: GASPOL UP3 =====
+// Angka GASPOL direkap otomatis dari modul (read-only), per tanggal.
+var _stGsData = {};
+function _stGsUlp(){
+  return _stIsSuperAdmin ? (_stEl('stgs_ulp') ? _stEl('stgs_ulp').value : '') : (_stSession.ulp || '');
+}
+function _stGsSetCariLoading(on){
+  var btn = _stEl('stGsCariBtn');
+  if(!btn) return;
+  if(on){ btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memuat data...'; }
+  else  { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Cari'; }
+}
+function _stLoadGaspol(){
+  var body = _stEl('stGsBody');
+  if(!body) return;
+  var dari = _stEl('stgs_tglDari') ? _stEl('stgs_tglDari').value : '';
+  var sd   = _stEl('stgs_tglSampai') ? _stEl('stgs_tglSampai').value : '';
+  if(!dari || !sd){ _stToast('Isi Tgl Dari & Tgl Sampai dulu, lalu klik Cari.', 'error'); return; }
+  if(dari > sd){ _stToast('Tgl Dari tidak boleh melebihi Tgl Sampai.', 'error'); return; }
+  var ulp  = _stGsUlp();
+  _stGsSetCariLoading(true);
+  body.innerHTML = '<tr><td colspan="38"><div class="loading-wrap"><i class="fa-solid fa-spinner fa-spin"></i> Memuat data...</div></td></tr>';
+  google.script.run
+    .withSuccessHandler(_stRenderGaspol)
+    .withFailureHandler(function(err){ _stGsSetCariLoading(false); _stShowError('stGsBody', 38, err); })
+    .getGaspolRekap({ tglDari: dari, tglSampai: sd, ulp: ulp });
+}
+function _stRenderGaspol(res){
+  var body = _stEl('stGsBody');
+  _stGsSetCariLoading(false);
+  if(!body) return;
+  if(!res || !res.ok){
+    body.innerHTML = '<tr><td colspan="38"><div class="empty-state" style="color:var(--danger)"><i class="fa-solid fa-triangle-exclamation"></i><p>' + ((res && res.error) || 'Gagal memuat rekap GASPOL') + '</p></div></td></tr>';
+    return;
+  }
+  var rows = res.rows || [];
+  if(!rows.length){
+    body.innerHTML = '<tr><td colspan="38"><div class="empty-state"><i class="fa-solid fa-inbox"></i><p>Tidak ada data pada periode/filter ini.</p></div></td></tr>';
+    return;
+  }
+  body.innerHTML = rows.map(function(r){
+    var tds = '';
+    for(var c=0;c<38;c++){
+      var v = r[c];
+      if(c === 0){ tds += '<td class="gs-c1 gs-num">' + ((v!=null && v!=='') ? v : '') + '</td>'; }
+      else if(c === 1){ tds += '<td class="gs-c2">' + _stFmtTgl(r[1]) + '</td>'; }
+      else if(c === 2){ tds += '<td class="gs-c3">' + ((v!=null && String(v).trim()) ? v : '-') + '</td>'; }
+      else if(c === 3){ tds += '<td class="gs-c4">' + ((v!=null && String(v).trim()) ? v : '-') + '</td>'; }
+      else if(c === 23){ tds += '<td style="text-align:left">' + ((v!=null && String(v).trim()) ? v : '-') + '</td>'; }
+      else {
+        var num = Number(v) || 0;
+        tds += '<td class="gs-num' + (num === 0 ? ' gs-zero' : '') + '">' + num + '</td>';
+      }
+    }
+    return '<tr>' + tds + '</tr>';
+  }).join('');
+}
+function _stResetGaspol(){
+  var today   = new Date();
+  var tglAwal = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+  var tglAkhr = today.toISOString().split('T')[0];
+  if(_stEl('stgs_tglDari'))   _stEl('stgs_tglDari').value   = tglAwal;
+  if(_stEl('stgs_tglSampai')) _stEl('stgs_tglSampai').value = tglAkhr;
+  if(_stEl('stgs_ulp'))       _stEl('stgs_ulp').value = '';
+  _stLoadGaspol();
+}
+// ===== Modal Input Laporan ke GASPOL (kirim rekap terpilih ke GASPOL) =====
+function _stBukaInputGaspol(){
+  var dari = _stEl('stgs_tglDari') ? _stEl('stgs_tglDari').value : '';
+  var sd   = _stEl('stgs_tglSampai') ? _stEl('stgs_tglSampai').value : '';
+  var ulp  = _stGsUlp() || 'Semua ULP';
+  var info = _stEl('stGsSubmitInfo');
+  if(info) info.innerHTML = 'Periode <b>' + _stFmtTgl(dari) + '</b> s/d <b>' + _stFmtTgl(sd) + '</b><br>ULP: <b>' + ulp + '</b>';
+  var m = _stEl('stGsModal'); if(m) m.classList.add('show');
+}
+function _stTutupInputGaspol(){ var m = _stEl('stGsModal'); if(m) m.classList.remove('show'); }
+function _stSimpanGaspol(){
+  var dari = _stEl('stgs_tglDari') ? _stEl('stgs_tglDari').value : '';
+  var sd   = _stEl('stgs_tglSampai') ? _stEl('stgs_tglSampai').value : '';
+  var ulp  = _stGsUlp();
+  if(!dari || !sd){ _stToast('Atur periode (Tgl Dari & Tgl Sampai) dulu.', 'error'); return; }
+  if(dari > sd){ _stToast('Tgl Dari tidak boleh melebihi Tgl Sampai.', 'error'); return; }
+  var btn = document.querySelector('#stGsModal .ins-btn-simpan');
+  if(btn){ btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim...'; }
+  google.script.run
+    .withSuccessHandler(function(res){
+      if(btn){ btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Kirim ke GASPOL'; }
+      if(!res || !res.ok){ _stToast((res && res.error) || 'Gagal mengirim ke GASPOL.', 'error'); return; }
+      _stToast('Terkirim ke GASPOL: ' + res.total + ' baris (' + res.appended + ' baru, ' + res.replaced + ' diperbarui).', 'info');
+      _stTutupInputGaspol();
+      _stLoadGaspol();
+    })
+    .withFailureHandler(function(err){
+      if(btn){ btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Kirim ke GASPOL'; }
+      _stToast('Gagal mengirim: ' + ((err && err.message) || err), 'error');
+    })
+    .submitGaspolToInputTbl({ tglDari: dari, tglSampai: sd, ulp: ulp });
+}
+
+// ===== TAB: INPUT PENCAPAIAN VCC YANDAL (db_Yandal_Rank kolom P & Q) =====
+// Hanya Persentase VCC & Tanggal Capai 100% yang diinput manual; kolom lain dihitung server.
+var _stVccData = {};
+function _stVccUlp(){
+  return _stIsSuperAdmin ? (_stEl('stvcc_ulp') ? _stEl('stvcc_ulp').value : '') : (_stSession.ulp || '');
+}
+function _stLoadVcc(sinkron){
+  var body = _stEl('stVccBody');
+  if(!body) return;
+  if(_stEl('stvcc_periode') && !_stEl('stvcc_periode').value){
+    _stEl('stvcc_periode').value = new Date().toISOString().slice(0, 7);
+  }
+  var periode = _stEl('stvcc_periode') ? _stEl('stvcc_periode').value : '';
+  body.innerHTML = _stLoadingRow(7);
+  google.script.run
+    .withSuccessHandler(_stRenderVcc)
+    .withFailureHandler(function(err){ _stShowError('stVccBody', 7, err); })
+    .getVccYandalList({ periode: periode, ulp: _stVccUlp(), sinkron: (sinkron === true) });
+}
+function _stRenderVcc(res){
+  var body = _stEl('stVccBody');
+  if(!body) return;
+  if(!res || !res.ok){
+    body.innerHTML = '<tr><td colspan="7"><div class="empty-state" style="color:var(--danger)"><i class="fa-solid fa-triangle-exclamation"></i><p>' + ((res && res.error) || 'Gagal memuat data VCC') + '</p></div></td></tr>';
+    return;
+  }
+  var list = res.list || [];
+  if(!list.length){ body.innerHTML = _stEmptyRow(7); return; }
+  _stVccData = {};
+  body.innerHTML = list.map(function(r){
+    _stVccData[r.kodeRank] = r;
+    function _v(x){ return (x != null && String(x).trim()) ? String(x) : '-'; }
+    var p = Number(r.persenVCC) || 0;
+    var warna = (p >= 100) ? 'badge-selesai' : (p > 0 ? 'badge-proses' : 'badge-regu');
+    var tgl = r.tglVCCStr ? _v(r.tglVCCStr) : '<span style="color:var(--text-muted)">Belum tercapai</span>';
+    var aksi = '<button class="btn-detail-temuan" onclick="_stVccBuka(&quot;' + r.kodeRank + '&quot;)" title="Edit pencapaian VCC"><i class="fa-solid fa-pencil"></i></button>';
+    return '<tr>'
+      + '<td>' + r.no + '</td>'
+      + '<td><code style="color:var(--primary)">' + _v(r.kodeRank) + '</code></td>'
+      + '<td>' + _v(r.tim) + '</td>'
+      + '<td>' + _v(r.petugas) + '</td>'
+      + '<td style="text-align:center"><span class="' + warna + '">' + p + '%</span></td>'
+      + '<td>' + tgl + '</td>'
+      + '<td style="text-align:center">' + aksi + '</td>'
+      + '</tr>';
+  }).join('');
+}
+function _stVccBuka(kodeRank){
+  var r = _stVccData[kodeRank];
+  if(!r){ _stToast('Baris rank tidak ditemukan.', 'error'); return; }
+  _stEl('stVccKode').value = kodeRank;
+  _stEl('stVccKodeView').textContent = kodeRank;
+  _stEl('stVccPetugasView').textContent = (r.petugas || '-') + (r.tim ? ' — ' + r.tim : '');
+  _stEl('stVccPeriodeView').textContent = r.periode || '-';
+  // Nilai 0 / kosong tampil sebagai placeholder samar, bukan angka nyata,
+// supaya user langsung mengetik tanpa perlu menghapus "0" lebih dulu.
+var _pv = Number(r.persenVCC);
+_stEl('stVccPersen').value = (isFinite(_pv) && _pv > 0) ? _pv : '';
+  _stEl('stVccTanggal').value = r.tglVCC || '';
+  var m = _stEl('stVccModal'); if(m) m.classList.add('show');
+}
+function _stVccTutup(){ var m = _stEl('stVccModal'); if(m) m.classList.remove('show'); }
+function _stVccSimpan(){
+  var kodeRank = _stEl('stVccKode').value;
+  var persen   = _stEl('stVccPersen').value;
+  var tanggal  = _stEl('stVccTanggal').value;
+  if(persen === ''){ _stToast('Isi Persentase VCC dulu.', 'error'); return; }
+  var p = Number(persen);
+  if(isNaN(p) || p < 0 || p > 100){ _stToast('Persentase VCC harus 0 sampai 100.', 'error'); return; }
+  if(p >= 100 && !tanggal){ _stToast('Persentase 100% wajib disertai tanggal pencapaian.', 'error'); return; }
+  var btn = _stEl('stVccBtnSimpan');
+  btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+  google.script.run
+    .withSuccessHandler(function(res){
+      btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Simpan';
+      if(!res || !res.ok){ _stToast((res && res.error) || 'Gagal menyimpan pencapaian VCC.', 'error'); return; }
+      _stVccTutup();
+      _stToast('Pencapaian VCC ' + kodeRank + ' tersimpan & nilai rank dihitung ulang.', 'info');
+      _stLoadVcc();
+    })
+    .withFailureHandler(function(err){
+      btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Simpan';
+      _stToast('Gagal: ' + ((err && err.message) || err), 'error');
+    })
+    .setVccYandal({ kodeRank: kodeRank, persenVCC: p, tanggal: tanggal, username: _stSession.username || '' });
+}
+
+// HELPER
+function _stToast(msg, type){
+  var wrap = _stEl('stToastWrap');
+  if(!wrap){
+    wrap = document.createElement('div');
+    wrap.id = 'stToastWrap'; wrap.className = 'ins-toast-wrap';
+    document.body.appendChild(wrap);
+  }
+  var t = document.createElement('div');
+  t.className = 'ins-toast' + (type === 'error' ? ' error' : '');
+  var icon = type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-info';
+  t.innerHTML = '<i class="fa-solid '+icon+' ic"></i><div class="tx">'+msg+'</div><i class="fa-solid fa-xmark cls"></i>';
+  t.querySelector('.cls').addEventListener('click', function(){ if(t.parentNode) t.parentNode.removeChild(t); });
+  wrap.appendChild(t);
+  setTimeout(function(){ if(t.parentNode) t.parentNode.removeChild(t); }, 4500);
+}
+function _stFmtTgl(tgl){
+  if(!tgl) return '-';
+  var d = new Date(tgl);
+  if(isNaN(d)) return tgl;
+  return d.toLocaleDateString('id-ID', { day:'2-digit', month:'long', year:'numeric' });
+}
+function _stBadgeStatus(status){
+  if(!status) return '-';
+  if(status === 'Penugasan Tim')      return '<span class="badge-regu">'+status+'</span>';
+  if(status === 'Progress Pekerjaan') return '<span class="badge-proses">'+status+'</span>';
+  if(status === 'Selesai')            return '<span class="badge-selesai">&#10003; '+status+'</span>';
+  return '<span class="ins-badge" style="background:var(--text-3);color:#fff">'+status+'</span>';
+}
+function _stLoadingRow(cols){
+  return '<tr><td colspan="'+cols+'"><div class="loading-wrap"><i class="fa-solid fa-spinner fa-spin"></i> Memuat data...</div></td></tr>';
+}
+function _stEmptyRow(cols){
+  return '<tr><td colspan="'+cols+'"><div class="empty-state"><i class="fa-solid fa-inbox"></i><p>Tidak ada data</p></div></td></tr>';
+}
+function _stShowError(bodyId, cols, err){
+  _stEl(bodyId).innerHTML = '<tr><td colspan="'+cols+'"><div class="empty-state" style="color:var(--danger)"><i class="fa-solid fa-triangle-exclamation"></i><p>'+((err && err.message) || 'Terjadi kesalahan')+'</p></div></td></tr>';
+}
+</script>
+
+<!-- ====== SCRIPT TAB 3: TEMUAN INSPEKSI ====== -->
+<script>
+(function(){
+  var TI = { sesi:null, ulp:'', isSuper:false, penyCache:[], temuanSel:[] };
+
+  function _el(id){ return document.getElementById(id); }
+
+  // Sesi: utamakan window.__SISI_SESI__ (di-set Main saat _loadPage), fallback getSessionUser
+  function _sesi(){ return window.__SISI_SESI__ || TI.sesi || {}; }
+
+  function _todayStr(){
+    var d = new Date();
+    return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+  }
+  function _esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function _attr(s){ return _esc(s).replace(/"/g,'&quot;'); }
+
+  function _toast(msg, type, sub){
+    var t = _el('tiToast');
+    if(!t){ t = document.createElement('div'); t.id = 'tiToast'; t.className = 'ti-toast'; document.body.appendChild(t); }
+    t.className = 'ti-toast ' + (type || '');
+    t.innerHTML = _esc(msg) + (sub ? '<span class="sub">' + _esc(sub) + '</span>' : '');
+    void t.offsetWidth;
+    t.classList.add('show');
+    clearTimeout(t._tmr);
+    t._tmr = setTimeout(function(){ t.classList.remove('show'); }, 3200);
+  }
+
+  var _HARI = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+  var _BLN  = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  function _tglIndo(s){
+    if(!s) return '-';
+    var d = new Date(String(s).slice(0,10) + 'T00:00:00');
+    if(isNaN(d.getTime())) return String(s);
+    return _HARI[d.getDay()] + ', ' + d.getDate() + ' ' + _BLN[d.getMonth()] + ' ' + d.getFullYear();
+  }
+
+  // ====== BOOT ======
+  function tiBoot(){
+    var s = _sesi();
+    TI.sesi = s;
+    TI.ulp = s.ulp || '';
+    TI.isSuper = (String(s.role || '').trim() === 'Super User');
+    TI.canForward = (['Super User','Admin'].indexOf(String(s.role || '').trim()) !== -1);
+
+    var today = _todayStr();
+    var monthStart = today.slice(0, 8) + '01';
+    // Default rentang: awal bulan berjalan s/d hari ini (user bisa ubah lalu klik Muat)
+    if(_el('tiTglDari'))   _el('tiTglDari').value   = monthStart;
+    if(_el('tiTglSampai')) _el('tiTglSampai').value = today;
+    if(_el('tifTanggal'))  _el('tifTanggal').value  = today;
+
+    if(TI.isSuper){
+      _el('tiUlpWrap').style.display = '';
+      tiLoadUlp();
+    }
+
+    // Filter Penyulang langsung dapat dipakai (diisi dari master), tanpa menunggu hasil filter tanggal
+    tiLoadPenyulangFilter();
+
+    // Jangan auto-muat: tampilkan prompt agar user mengatur rentang tanggal lalu klik Muat
+    _el('tiList').innerHTML = '<div class="ti-empty"><i class="fa-solid fa-calendar-day"></i><p>Atur rentang tanggal lalu klik Muat untuk menampilkan temuan.</p></div>';
+  }
+
+  function tiLoadUlp(){
+    google.script.run
+      .withSuccessHandler(function(list){
+        var sel = _el('tiUlp');
+        sel.innerHTML = '<option value="">Semua ULP</option>';
+        (list || []).forEach(function(u){ sel.innerHTML += '<option value="' + _attr(u) + '">' + _esc(u) + '</option>'; });
+      })
+      .withFailureHandler(function(){})
+      .getListUlpUsers();
+  }
+
+  // Isi dropdown filter Penyulang dari master ULP (langsung bisa dipakai, independen dari Muat)
+  function tiLoadPenyulangFilter(){
+    var ulp = TI.isSuper ? (_el('tiUlp') ? _el('tiUlp').value : '') : TI.ulp;
+    var sel = _el('tiPenyulang');
+    if(!sel) return;
+    sel.disabled = true;
+    sel.innerHTML = '<option value="">Memuat penyulang...</option>';
+    google.script.run
+      .withSuccessHandler(function(res){
+        var list = (res && res.list) ? res.list : [];
+        sel.innerHTML = '<option value="">Semua Penyulang</option>'
+          + list.map(function(p){ return '<option value="' + _attr(p.nama) + '">' + _esc(p.nama) + '</option>'; }).join('');
+        sel.disabled = false;
+      })
+      .withFailureHandler(function(){
+        sel.innerHTML = '<option value="">Semua Penyulang</option>';
+        sel.disabled = false;
+      })
+      .getDataPenyulangByUlp(ulp);
+  }
+
+  // Super User ganti ULP -> muat ulang daftar penyulang (lalu redraw bila data sudah ada)
+  function tiOnUlpChange(){
+    tiLoadPenyulangFilter();
+    if(TI._allList) tiDraw();
+  }
+
+  // ====== LIST / REKAP ======
+  function tiMuat(){
+    var ulp = TI.isSuper ? (_el('tiUlp').value || '') : TI.ulp;
+    var tglDari   = _el('tiTglDari').value;
+    var tglSampai = _el('tiTglSampai').value;
+    var box = _el('tiList');
+    if(!tglDari && !tglSampai){ _toast('Atur rentang tanggal dulu.', 'error'); return; }
+    if(tglDari && tglSampai && tglDari > tglSampai){ _toast('Tgl Dari tidak boleh melebihi Tgl Sampai.', 'error'); return; }
+    box.innerHTML = '<div class="ti-loading"><i class="fa-solid fa-spinner fa-spin"></i> Memuat temuan...</div>';
+    google.script.run
+      .withSuccessHandler(tiRender)
+      .withFailureHandler(function(err){
+        box.innerHTML = '<div class="ti-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>' + _esc((err && err.message) || err) + '</p></div>';
+      })
+      .getTemuanByUlpTanggal(ulp, tglDari, tglSampai);
+  }
+
+  function tiRender(res){
+    var box = _el('tiList');
+    box.classList.remove('ti-list');
+    if(!res || !res.ok){
+      TI._allList = [];
+      box.innerHTML = '<div class="ti-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>' + _esc((res && res.error) || 'Gagal memuat') + '</p></div>';
+      return;
+    }
+    // Dropdown Penyulang diisi dari master (tiLoadPenyulangFilter), bukan dari hasil tanggal.
+    // Pilihan penyulang user dipertahankan; tiDraw menyaring data sesuai pilihan tsb.
+    TI._allList = res.list || [];
+    tiDraw();
+  }
+
+  // Dipanggil saat filter Penyulang berubah (hanya redraw bila data sudah dimuat)
+  function tiFilter(){ if(TI._allList) tiDraw(); }
+
+  // Agregasi + render tabel berdasar data (terfilter Penyulang bila dipilih)
+  function tiDraw(){
+    var box = _el('tiList');
+    box.classList.remove('ti-list');
+    var all = TI._allList || [];
+    var selP = _el('tiPenyulang') ? _el('tiPenyulang').value : '';
+    if(!all.length){
+      box.innerHTML = '<div class="ti-empty"><i class="fa-solid fa-inbox"></i><p>Belum ada temuan pada rentang ini.</p></div>';
+      return;
+    }
+    if(TI._msBuiltList !== all){ tiBuildTemuanFilter(); TI._msBuiltList = all; }
+    var selT = TI.temuanSel || [];
+    var list = all.filter(function(t){
+      if(selP && String(t.penyulang || '').trim() !== selP) return false;
+      if(selT.length && selT.indexOf((String(t.temuan || '').trim()) || '-') === -1) return false;
+      return true;
+    });
+    if(!list.length){
+      box.innerHTML = '<div class="ti-empty"><i class="fa-solid fa-inbox"></i><p>Tidak ada temuan sesuai filter yang dipilih.</p></div>';
+      return;
+    }
+    // Agregasi per (Penyulang + Temuan): hitung jumlah per status + simpan detail item
+    var map = {}, order = [];
+    list.forEach(function(t){
+      var peny = (String(t.penyulang || '').trim()) || '-';
+      var tem  = (String(t.temuan || '').trim()) || '-';
+      var key  = peny + '||' + tem;
+      if(!map[key]){ map[key] = { penyulang: peny, temuan: tem, penugasan: 0, proses: 0, selesai: 0, items: [] }; order.push(key); }
+      var st = String(t.status || '').trim();
+      if(st === 'Selesai') map[key].selesai++;
+      else if(st === 'Progress Pekerjaan') map[key].proses++;
+      else map[key].penugasan++;
+      map[key].items.push(t);
+    });
+    order.sort(function(a, b){
+      var x = map[a], y = map[b];
+      return x.penyulang.localeCompare(y.penyulang) || x.temuan.localeCompare(y.temuan);
+    });
+    TI._groups = map;
+    TI._order = order;
+    var totN = list.length, totP = 0, totPr = 0, totS = 0;
+    order.forEach(function(k){ totP += map[k].penugasan; totPr += map[k].proses; totS += map[k].selesai; });
+    var stats = '<div class="ti-rekap-stats">'
+      + _statChip('fa-layer-group', 'Total Temuan', totN, 'all')
+      + _statChip('fa-user-clock', 'Penugasan Tim', totP, 'penugasan')
+      + _statChip('fa-person-digging', 'Proses Eksekusi', totPr, 'proses')
+      + _statChip('fa-circle-check', 'Selesai', totS, 'selesai')
+      + '</div>';
+    var rows = order.map(function(key, i){
+      var r = map[key];
+      return '<tr>'
+        + '<td>' + (i + 1) + '</td>'
+        + '<td><span class="ti-peny">' + _esc(r.penyulang) + '</span></td>'
+        + '<td>' + _esc(r.temuan) + '</td>'
+        + '<td style="text-align:center">' + _cntPill(r.penugasan, 'penugasan') + '</td>'
+        + '<td style="text-align:center">' + _cntPill(r.proses, 'proses') + '</td>'
+        + '<td style="text-align:center">' + _cntPill(r.selesai, 'selesai') + '</td>'
+        + '<td style="text-align:center"><button class="ti-detail-btn" onclick="tiBukaDetail(' + i + ')" title="Lihat detail temuan"><i class="fa-solid fa-eye"></i></button></td>'
+        + '</tr>';
+    }).join('');
+    box.innerHTML = stats + '<div class="tbl-wrap"><table>'
+      + '<thead><tr><th>No</th><th>Penyulang</th><th>Temuan</th>'
+      + '<th style="text-align:center">Penugasan Tim</th>'
+      + '<th style="text-align:center">Proses Eksekusi</th>'
+      + '<th style="text-align:center">Selesai</th>'
+      + '<th style="text-align:center">Detail</th></tr></thead>'
+      + '<tbody>' + rows + '</tbody></table></div>';
+  }
+
+  // ====== Helper tampilan rekap ======
+  function _tiThumb(url){
+    var s = String(url || '');
+    var m = s.match(/\/d\/([-\w]{20,})/) || s.match(/[?&]id=([-\w]{20,})/);
+    return m ? ('https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w320') : s;
+  }
+  function _cntPill(n, cls){
+    n = Number(n) || 0;
+    return '<span class="ti-cnt ' + (n === 0 ? 'zero' : cls) + '">' + n + '</span>';
+  }
+  function _statChip(icon, label, num, cls){
+    return '<div class="ti-stat ' + cls + '"><div class="ti-stat-ic"><i class="fa-solid ' + icon + '"></i></div>'
+      + '<div class="ti-stat-meta"><span class="ti-stat-num">' + (Number(num) || 0) + '</span>'
+      + '<span class="ti-stat-lbl">' + label + '</span></div></div>';
+  }
+  function _tiBadge(status){
+    var st = String(status || '').trim() || 'Penugasan Tim';
+    if(st === 'Selesai') return '<span class="ti-badge selesai"><i class="fa-solid fa-circle-check"></i> Selesai</span>';
+    if(st === 'Progress Pekerjaan') return '<span class="ti-badge proses"><i class="fa-solid fa-person-digging"></i> Proses Eksekusi</span>';
+    return '<span class="ti-badge penugasan"><i class="fa-solid fa-user-clock"></i> Penugasan Tim</span>';
+  }
+
+  // ====== MODAL DETAIL (daftar temuan individual per kelompok) ======
+  function tiBukaDetail(idx){
+    var key = (TI._order || [])[idx];
+    var g = key ? (TI._groups || {})[key] : null;
+    if(!g){ _toast('Detail tidak ditemukan.', 'error'); return; }
+    _el('tiDetailTitle').innerHTML = _esc(g.penyulang) + ' &middot; ' + _esc(g.temuan);
+    _el('tiDetailSum').innerHTML = _cntPill(g.penugasan, 'penugasan') + ' Penugasan Tim &nbsp;&middot;&nbsp; '
+      + _cntPill(g.proses, 'proses') + ' Proses Eksekusi &nbsp;&middot;&nbsp; '
+      + _cntPill(g.selesai, 'selesai') + ' Selesai';
+    var items = (g.items || []).map(function(t, n){
+      var foto = t.fotoUrl && String(t.fotoUrl).trim();
+      var fotoHtml = foto
+        ? '<a href="' + _attr(t.fotoUrl) + '" target="_blank"><img class="ti-det-foto" src="' + _attr(_tiThumb(t.fotoUrl)) + '" alt="Foto" loading="lazy" onerror="this.style.display=&quot;none&quot;"></a>'
+        : '<div class="ti-det-noto"><i class="fa-solid fa-image"></i></div>';
+      var tags = '';
+      if(t.objek && String(t.objek).trim())   tags += '<span class="ti-det-tag">' + _esc(t.objek) + '</span>';
+      if(t.tier && String(t.tier).trim())      tags += '<span class="ti-det-tag">' + _esc(t.tier) + '</span>';
+      if(t.segmen && String(t.segmen).trim())  tags += '<span class="ti-det-tag">Segmen: ' + _esc(t.segmen) + '</span>';
+      return '<div class="ti-det-item">'
+        + '<div class="ti-det-row">'
+        + fotoHtml
+        + '<div class="ti-det-info">'
+        + '<span class="ti-det-kode">' + _esc(t.kodePekerjaan || '-') + '</span>'
+        + _tiBadge(t.status)
+        + '<div class="ti-det-tags">' + (tags || '<span class="ti-det-tag">-</span>') + '</div>'
+        + '<div class="ti-det-actions">'
+        + '<button class="ti-det-more" onclick="tiDetailFull(&quot;' + _attr(t.kodePekerjaan) + '&quot;,' + n + ')"><i class="fa-solid fa-circle-info"></i> Detail lengkap</button>'
+        + ((TI.canForward && String(t.status || '').trim() !== 'Selesai' && String(t.status || '').trim() !== 'Progress Pekerjaan') ? '<button class="ti-det-fwd" onclick="tiForward(&quot;' + _attr(t.kodePekerjaan) + '&quot;)"><i class="fa-solid fa-paper-plane"></i> Teruskan ke Tim</button>' : '')
+        + '</div>'
+        + '</div></div>'
+        + '<div class="ti-det-full" id="tiDetFull_' + n + '" style="display:none"></div>'
+        + '</div>';
+    }).join('');
+    _el('tiDetailBody').innerHTML = items;
+    _el('tiDetailModal').classList.add('show');
+  }
+  function tiTutupDetail(){ var m = _el('tiDetailModal'); if(m) m.classList.remove('show'); }
+
+  function tiDetailFull(kode, n){
+    var wrap = _el('tiDetFull_' + n);
+    if(!wrap) return;
+    if(wrap.getAttribute('data-loaded') === '1'){
+      wrap.style.display = (wrap.style.display === 'none') ? 'block' : 'none';
+      return;
+    }
+    wrap.style.display = 'block';
+    wrap.innerHTML = '<div class="ti-det-loading"><i class="fa-solid fa-spinner fa-spin"></i> Memuat detail...</div>';
+    google.script.run
+      .withSuccessHandler(function(res){
+        if(!res || !res.ok){ wrap.innerHTML = '<div class="ti-det-err">' + _esc((res && res.error) || 'Gagal memuat detail') + '</div>'; return; }
+        wrap.innerHTML = _tiBuildFull(res.data);
+        wrap.setAttribute('data-loaded', '1');
+      })
+      .withFailureHandler(function(err){ wrap.innerHTML = '<div class="ti-det-err">' + _esc((err && err.message) || err) + '</div>'; })
+      .getTemuanByKodePekerjaan(kode);
+  }
+  function _tiBuildFull(d){
+    d = d || {};
+    function _v(x){ return (x != null && String(x).trim()) ? _esc(String(x)) : '-'; }
+    function _row(lbl, val){ return '<div class="ti-det-frow"><div class="ti-det-flbl">' + lbl + '</div><div class="ti-det-fval">' + val + '</div></div>'; }
+    var html = '';
+    html += _row('Hari / Tanggal', (d.hari ? _esc(d.hari) + ', ' : '') + _v(d.tanggal));
+    html += _row('Tim Inspeksi', _v(d.timInspeksi));
+    html += _row('Objek', _v(d.objek));
+    html += _row('Section', _v(d.section));
+    if(d.nomorTiang && String(d.nomorTiang).trim()) html += _row('Nomor Tiang', _v(d.nomorTiang));
+    if(d.nomorGardu && String(d.nomorGardu).trim()) html += _row('Nomor Gardu', _v(d.nomorGardu));
+    html += _row('Deskripsi', _v(d.deskripsi));
+    if(d.koordinat && String(d.koordinat).trim())
+      html += _row('Koordinat', '<a href="https://maps.google.com/?q=' + encodeURIComponent(d.koordinat) + '" target="_blank" style="color:var(--primary)">' + _esc(d.koordinat) + '</a>');
+    if(d.timEksekusi && String(d.timEksekusi).trim())       html += _row('Tim Pelaksana', _v(d.timEksekusi));
+    if(d.catatan && String(d.catatan).trim())               html += _row('Catatan SPV', _v(d.catatan));
+    if(d.jenisPekerjaan && String(d.jenisPekerjaan).trim()) html += _row('Jenis Pekerjaan', _v(d.jenisPekerjaan));
+    if(d.tglSelesai && String(d.tglSelesai).trim())         html += _row('Tgl Selesai', _v(d.tglSelesai));
+    var fotos = [
+      { url: d.fotoTemuanUrl,    cap: 'Foto Temuan' },
+      { url: d.fotoTiangUrl,     cap: 'Foto Tiang' },
+      { url: d.fotoPekerjaanUrl, cap: 'Foto Pekerjaan' },
+      { url: d.fotoSesudahUrl,   cap: 'Foto Sesudah' }
+    ].filter(function(f){ return f.url && String(f.url).trim(); });
+    var fhtml = '';
+    if(fotos.length){
+      fhtml = '<div class="ti-det-fotos">' + fotos.map(function(f){
+        return '<a class="ti-det-fcell" href="' + _attr(f.url) + '" target="_blank"><img src="' + _attr(_tiThumb(f.url)) + '" alt="' + _attr(f.cap) + '" loading="lazy" onerror="this.style.display=&quot;none&quot;"><span class="ti-det-fcap">' + _esc(f.cap) + '</span></a>';
+      }).join('') + '</div>';
+    }
+    return html + fhtml;
+  }
+
+
+  // ====== MODAL TAMBAH TEMUAN ======
+  function tiBukaTambah(){
+    _el('tifTanggal').value   = _el('tiTglSampai').value || _el('tiTglDari').value || _todayStr();
+    _el('tifTier').value      = '';
+    _el('tifObjek').value     = 'Jaringan';
+    _el('tifTemuan').innerHTML = '<option value="">- Pilih Objek Inspeksi dulu -</option>';
+    _el('tifSection').innerHTML = '<option value="">- Pilih Penyulang dulu -</option>';
+    _el('tifNomorTiang').value = '';
+    _el('tifNomorGardu').value = '';
+    _el('tifSegmen').value    = '';
+    _el('tifKoordinat').value = '';
+    _el('tifDeskripsi').value = '';
+    _el('tifFotoTemuan').value = '';
+    _el('tifFotoTiang').value  = '';
+    _el('tiPrevTemuan').style.display = 'none';
+    _el('tiPrevTiang').style.display  = 'none';
+    tiToggleNomor();
+    tiLoadTemuan();
+    tiLoadPenyulang();
+    _el('tiModal').classList.add('show');
+  }
+  function tiTutupTambah(){ _el('tiModal').classList.remove('show'); }
+
+  function tiLoadPenyulang(){
+    var ulp = TI.isSuper ? (_el('tiUlp').value || '') : TI.ulp;
+    var sel = _el('tifPenyulang');
+    sel.innerHTML = '<option value="">- Memuat... -</option>';
+    google.script.run
+      .withSuccessHandler(function(res){
+        TI.penyCache = (res && res.list) ? res.list : [];
+        sel.innerHTML = '<option value="">- Pilih Penyulang -</option>';
+        TI.penyCache.forEach(function(p){ sel.innerHTML += '<option value="' + _attr(p.nama) + '">' + _esc(p.nama) + '</option>'; });
+      })
+      .withFailureHandler(function(){ sel.innerHTML = '<option value="">- Gagal memuat -</option>'; })
+      .getDataPenyulangByUlp(ulp);
+  }
+
+  function tiSetSection(){
+    var nama = _el('tifPenyulang').value;
+    var sel  = _el('tifSection');
+    if(!sel) return;
+    if(!nama){ sel.innerHTML = '<option value="">- Pilih Penyulang dulu -</option>'; return; }
+    var found = TI.penyCache.filter(function(p){ return p.nama === nama; })[0];
+    var def = found ? (found.section || '') : '';
+    sel.innerHTML = '<option value="">- Memuat... -</option>';
+    google.script.run
+      .withSuccessHandler(function(res){
+        var list = (res && res.list) ? res.list.slice() : [];
+        if(def && list.indexOf(def) === -1) list.unshift(def);
+        if(!list.length){ sel.innerHTML = '<option value="">- Tidak ada section -</option>'; return; }
+        sel.innerHTML = '<option value="">- Pilih Section -</option>';
+        list.forEach(function(s){ sel.innerHTML += '<option value="' + _attr(s) + '"' + (s === def ? ' selected' : '') + '>' + _esc(s) + '</option>'; });
+      })
+      .withFailureHandler(function(){
+        sel.innerHTML = '<option value="">- Pilih Section -</option>';
+        if(def) sel.innerHTML += '<option value="' + _attr(def) + '" selected>' + _esc(def) + '</option>';
+      })
+      .getSectionByPenyulang(nama);
+  }
+
+  function tiLoadTemuan(){
+    var objek = _el('tifObjek').value;
+    var sel = _el('tifTemuan');
+    if(!objek){ sel.innerHTML = '<option value="">- Pilih Objek Inspeksi dulu -</option>'; return; }
+    sel.innerHTML = '<option value="">- Memuat... -</option>';
+    google.script.run
+      .withSuccessHandler(function(res){
+        sel.innerHTML = '<option value="">- Pilih Temuan -</option>';
+        ((res && res.list) ? res.list : []).forEach(function(n){ sel.innerHTML += '<option value="' + _attr(n) + '">' + _esc(n) + '</option>'; });
+      })
+      .withFailureHandler(function(){ sel.innerHTML = '<option value="">- Gagal memuat -</option>'; })
+      .getListTemuanByObjek(objek);
+  }
+
+  function tiToggleNomor(){
+    var isJar = _el('tifObjek').value.toLowerCase() === 'jaringan';
+    _el('tifTiangWrap').style.display = isJar ? '' : 'none';
+    _el('tifGarduWrap').style.display = isJar ? 'none' : '';
+  }
+
+  // Kompres gambar -> JPEG (maxDim 1280, kualitas 0.7) -> cb({b64, mime})
+  function _kompres(file, cb){
+    if(!file){ cb(null); return; }
+    var rd = new FileReader();
+    rd.onload = function(e){
+      var img = new Image();
+      img.onload = function(){
+        var max = 1280, w = img.width, h = img.height;
+        if(w > max || h > max){ if(w >= h){ h = Math.round(h*max/w); w = max; } else { w = Math.round(w*max/h); h = max; } }
+        var c = document.createElement('canvas'); c.width = w; c.height = h;
+        c.getContext('2d').drawImage(img, 0, 0, w, h);
+        cb({ b64: (c.toDataURL('image/jpeg', 0.7).split(',')[1] || ''), mime: 'image/jpeg' });
+      };
+      img.onerror = function(){ cb(null); };
+      img.src = e.target.result;
+    };
+    rd.onerror = function(){ cb(null); };
+    rd.readAsDataURL(file);
+  }
+
+  function tiPreview(input, imgId){
+    var img = _el(imgId); if(!img) return;
+    var f = input.files && input.files[0];
+    if(!f){ img.style.display = 'none'; img.src = ''; return; }
+    var rd = new FileReader();
+    rd.onload = function(e){ img.src = e.target.result; img.style.display = 'block'; };
+    rd.readAsDataURL(f);
+  }
+
+  function tiSimpan(){
+    var penyulang = _el('tifPenyulang').value;
+    var tier = _el('tifTier').value;
+    var temuan = _el('tifTemuan').value;
+    if(!penyulang){ _toast('Pilih penyulang dulu.', 'error'); return; }
+    if(!tier){ _toast('Pilih tier dulu.', 'error'); return; }
+    if(!temuan){ _toast('Pilih temuan dulu.', 'error'); return; }
+
+    var btn = _el('tiBtnSimpan');
+    btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+    var fTem = (_el('tifFotoTemuan').files || [])[0] || null;
+    var fTia = (_el('tifFotoTiang').files  || [])[0] || null;
+    var s = _sesi();
+
+    _kompres(fTem, function(foTem){
+      _kompres(fTia, function(foTia){
+        var payload = {
+          kodeHeader: '',
+          kodePekerjaanPeny: '',
+          penyulang: penyulang,
+          section: _el('tifSection').value,
+          objekInspeksi: _el('tifObjek').value,
+          temuan: temuan,
+          tanggal: _el('tifTanggal').value,
+          tier: tier,
+          segmen: _el('tifSegmen').value.trim(),
+          nomorTiang: _el('tifNomorTiang').value.trim(),
+          nomorGardu: _el('tifNomorGardu').value.trim(),
+          koordinat: _el('tifKoordinat').value.trim(),
+          deskripsi: _el('tifDeskripsi').value.trim(),
+          username: s.username || '',
+          fotoTemuanB64: foTem ? foTem.b64 : '', fotoTemuanMime: foTem ? foTem.mime : '',
+          fotoTiangB64:  foTia ? foTia.b64 : '', fotoTiangMime:  foTia ? foTia.mime : ''
+        };
+        google.script.run
+          .withSuccessHandler(function(res){
+            btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Simpan Temuan';
+            if(res && res.ok){
+              tiTutupTambah();
+              sisiSukses('Temuan telah diinput.');
+              tiMuat();
+            } else {
+              _toast('Gagal menyimpan: ' + ((res && res.error) || 'tidak diketahui'), 'error');
+            }
+          })
+          .withFailureHandler(function(err){
+            btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Simpan Temuan';
+            _toast('Error: ' + ((err && err.message) || err), 'error');
+          })
+          .simpanTemuanInsJar(payload);
+      });
+    });
+  }
+
+  // ====== TERUSKAN KE TIM (untuk temuan berstatus "Penugasan Tim") ======
+  function tiForward(kode){
+    kode = String(kode || '').trim();
+    if(!kode){ _toast('Kode pekerjaan kosong.', 'error'); return; }
+    _el('tiFwdKode').value = kode;
+    _el('tiFwdKodeView').value = kode;
+    _el('tiFwdCatatan').value = '';
+    var sel = _el('tiFwdTim');
+    sel.innerHTML = '<option value="">- Memuat... -</option>';
+    var ulp = TI.isSuper ? (_el('tiUlp').value || '') : TI.ulp;
+    google.script.run
+      .withSuccessHandler(function(list){
+        sel.innerHTML = '<option value="">- Pilih Tim -</option>';
+        (list || []).forEach(function(t){
+          var nm = (t && t.namaTim != null) ? t.namaTim : t;
+          sel.innerHTML += '<option value="' + _attr(nm) + '">' + _esc(nm) + '</option>';
+        });
+      })
+      .withFailureHandler(function(){ sel.innerHTML = '<option value="">- Gagal memuat -</option>'; })
+      .getListTimByUlp(ulp);
+    _el('tiForwardModal').classList.add('show');
+  }
+  function tiTutupForward(){ var m = _el('tiForwardModal'); if(m) m.classList.remove('show'); }
+  function tiSubmitForward(){
+    var kode = _el('tiFwdKode').value;
+    var tim  = _el('tiFwdTim').value;
+    if(!tim){ _toast('Pilih tim dulu.', 'error'); return; }
+    var btn = _el('tiFwdBtn');
+    btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+    var s = _sesi();
+    google.script.run
+      .withSuccessHandler(function(){
+        btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Teruskan';
+        tiTutupForward();
+        tiTutupDetail();
+        sisiSukses('Temuan telah diteruskan ke tim.');
+        tiMuat();
+      })
+      .withFailureHandler(function(err){
+        btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Teruskan';
+        _toast('Gagal meneruskan: ' + ((err && err.message) || err), 'error');
+      })
+      .setPilihTimTemuan({ kodePekerjaan: kode, timPelaksana: tim, catatanSpv: _el('tiFwdCatatan').value.trim(), username: s.username || '' });
+  }
+
+  // ====== FILTER TEMUAN (multi-select) ======
+  // Bangun daftar checkbox temuan unik dari data termuat
+  function tiBuildTemuanFilter(){
+    var menu = _el('tiTemuanMsMenu');
+    if(!menu) return;
+    var all = TI._allList || [];
+    var seen = {}, opts = [];
+    all.forEach(function(t){
+      var tm = (String(t.temuan || '').trim()) || '-';
+      if(!seen[tm]){ seen[tm] = 1; opts.push(tm); }
+    });
+    opts.sort(function(a, b){ return a.localeCompare(b); });
+    // Pertahankan hanya pilihan yang masih tersedia pada data baru
+    TI.temuanSel = (TI.temuanSel || []).filter(function(v){ return seen[v]; });
+    if(!opts.length){
+      menu.innerHTML = '<div class="ti-ms-empty">Belum ada temuan untuk dipilih.</div>';
+      tiUpdateTemuanLabel();
+      return;
+    }
+    var actions = '<div class="ti-ms-actions">'
+      + '<button type="button" onclick="tiTemuanSelectAll(true)">Pilih Semua</button>'
+      + '<button type="button" onclick="tiTemuanSelectAll(false)">Hapus</button>'
+      + '</div>';
+    var items = opts.map(function(tm){
+      var checked = (TI.temuanSel.indexOf(tm) !== -1) ? ' checked' : '';
+      return '<label class="ti-ms-item"><input type="checkbox" value="' + _attr(tm) + '"' + checked + ' onchange="tiTemuanToggle(this)"><span>' + _esc(tm) + '</span></label>';
+    }).join('');
+    menu.innerHTML = actions + items;
+    tiUpdateTemuanLabel();
+  }
+  function tiUpdateTemuanLabel(){
+    var lbl = _el('tiTemuanMsLabel');
+    if(!lbl) return;
+    var n = (TI.temuanSel || []).length;
+    if(!n) lbl.textContent = 'Semua Temuan';
+    else if(n === 1) lbl.textContent = TI.temuanSel[0];
+    else lbl.textContent = n + ' temuan dipilih';
+  }
+  function tiToggleTemuanMenu(e){
+    if(e && e.stopPropagation) e.stopPropagation();
+    var box = _el('tiTemuanMs');
+    if(box) box.classList.toggle('open');
+  }
+  function tiTemuanToggle(cb){
+    if(!TI.temuanSel) TI.temuanSel = [];
+    var i = TI.temuanSel.indexOf(cb.value);
+    if(cb.checked){ if(i === -1) TI.temuanSel.push(cb.value); }
+    else if(i !== -1){ TI.temuanSel.splice(i, 1); }
+    tiUpdateTemuanLabel();
+    if(TI._allList) tiDraw();
+  }
+  function tiTemuanSelectAll(sel){
+    var menu = _el('tiTemuanMsMenu');
+    if(!menu) return;
+    var cbs = menu.querySelectorAll('input[type="checkbox"]');
+    TI.temuanSel = [];
+    Array.prototype.forEach.call(cbs, function(cb){
+      cb.checked = !!sel;
+      if(sel) TI.temuanSel.push(cb.value);
+    });
+    tiUpdateTemuanLabel();
+    if(TI._allList) tiDraw();
+  }
+
+  // ====== EXPOSE HANDLER (dipakai oleh atribut onclick/onchange) ======
+  window.tiMuat = tiMuat;
+  window.tiBukaTambah = tiBukaTambah;
+  window.tiTutupTambah = tiTutupTambah;
+  window.tiSetSection = tiSetSection;
+  window.tiLoadTemuan = tiLoadTemuan;
+  window.tiToggleNomor = tiToggleNomor;
+  window.tiPreview = tiPreview;
+  window.tiSimpan = tiSimpan;
+  window.tiBukaDetail = tiBukaDetail;
+  window.tiTutupDetail = tiTutupDetail;
+  window.tiDetailFull = tiDetailFull;
+  window.tiFilter = tiFilter;
+  window.tiOnUlpChange = tiOnUlpChange;
+  window.tiForward = tiForward;
+  window.tiTutupForward = tiTutupForward;
+  window.tiSubmitForward = tiSubmitForward;
+  window.tiToggleTemuanMenu = tiToggleTemuanMenu;
+  window.tiTemuanToggle = tiTemuanToggle;
+  window.tiTemuanSelectAll = tiTemuanSelectAll;
+
+  // Tutup dropdown filter Temuan saat klik di luar area dropdown
+  document.addEventListener('click', function(e){
+    var box = _el('tiTemuanMs');
+    if(box && box.classList.contains('open') && !box.contains(e.target)) box.classList.remove('open');
+  });
+
+  // Fragment di-inject setelah DOM siap -> jalankan boot segera (atau saat DOM siap)
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tiBoot);
+  else tiBoot();
+})();
+</script>
+
+<!-- MODAL dpgCoverModal & dpgRekapModal: DIPINDAH ke Tek-Data-Checkpoint.html (Rev 11 Agu 2026) -->
+
+<!-- ====== SCRIPT TAB "DATA PENDUKUNG CHECKPOINT" (seluruh JS dpg*): DIPINDAH ke Tek-Data-Checkpoint.html (Rev 11 Agu 2026) ====== -->

@@ -1,0 +1,955 @@
+<style>
+  :root{ --primary-lt:#eff6ff; --gray:#64748b; --radius:10px; }
+  [data-theme="dark"]{ --primary-lt:#16233d; --gray:#93a4c0; }
+
+  body{ background-color:var(--bg); background-image:url('https://drive.google.com/thumbnail?id=1rfN5LJOjjx0t-rjuLquBe6Qsx7hfcqqV&sz=w1920'); background-size:cover; background-position:center; background-attachment:fixed; color:var(--text); font-family:'Segoe UI',sans-serif; font-size:14px; }
+  [data-theme="dark"] body, body[data-theme="dark"]{ background-image:url('https://drive.google.com/thumbnail?id=1T76yS2vAnMufKEKkhQie2zZ4AYVIn1tD&sz=w1920'); }
+
+  .st-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;}
+  .st-header h2{margin:0;font-size:20px;font-weight:700;color:var(--text);}
+
+  .st-container{padding:16px;}
+
+  /* Filter bar */
+  .filter-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    padding:12px 16px;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;}
+  .filter-bar .filter-group{display:flex;flex-direction:column;gap:4px;}
+  .filter-bar label{font-size:11px;font-weight:600;color:var(--gray);text-transform:uppercase;}
+  .filter-bar input,.filter-bar select{border:1px solid var(--border);border-radius:6px;padding:5px 10px;
+    font-size:13px;min-width:130px;background:var(--surface);color:var(--text);}
+  .btn-filter{background:var(--primary);color:var(--on-primary);border:none;border-radius:6px;
+    padding:6px 16px;font-size:13px;font-weight:600;cursor:pointer;}
+  .btn-reset{background:var(--surface-2);color:var(--gray);border:1px solid var(--border);
+    border-radius:6px;padding:6px 14px;font-size:13px;cursor:pointer;}
+
+  /* Table */
+  .tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:auto;}
+  .tbl-wrap table{margin:0;font-size:13px;width:100%;border-collapse:collapse;color:var(--text);}
+  .tbl-wrap thead th{background:var(--surface-2);font-weight:700;font-size:12px;text-transform:uppercase;
+    color:var(--gray);border-bottom:2px solid var(--border);padding:10px 12px;white-space:nowrap;text-align:left;}
+  .tbl-wrap tbody td{padding:9px 12px;vertical-align:middle;border-bottom:1px solid var(--border-2);}
+  .tbl-wrap tbody tr:hover{background:var(--surface-2);}
+
+  .empty-state{text-align:center;padding:40px;color:var(--gray);}
+  .empty-state i{font-size:32px;margin-bottom:8px;display:block;}
+  .loading-wrap{text-align:center;padding:30px;color:var(--gray);}
+
+  /* Modal (dipakai 2 modal drill-down DPG) */
+  .ti-modal-bg{position:fixed;inset:0;background:var(--overlay);display:none;align-items:flex-start;justify-content:center;z-index:9000;overflow-y:auto;padding:24px 12px}
+  .ti-modal-bg.show{display:flex}
+  .ti-modal{background:var(--surface);border-radius:16px;width:100%;max-width:620px;box-shadow:var(--shadow-lg);overflow:hidden}
+  .ti-modal-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:linear-gradient(135deg,#1e3a8a,#3b82f6);color:#fff}
+  .ti-modal-head h3{margin:0;font-size:16px;font-weight:700}
+  .ti-modal-head .x{cursor:pointer;font-size:22px;line-height:1;opacity:.9;background:none;border:none;color:#fff}
+  .ti-modal-body{padding:18px;display:flex;flex-direction:column;gap:12px;max-height:70vh;overflow-y:auto}
+
+  /* ===== TAB: Data Pendukung Gangguan ===== */
+  .dpg-subtabs{display:inline-flex;gap:4px;background:var(--surface-2);border:1px solid var(--border);border-radius:999px;padding:4px;margin-bottom:14px;flex-wrap:wrap;}
+  .dpg-subtab{border:none;background:none;border-radius:999px;padding:7px 16px;font-size:.86rem;font-weight:600;color:var(--text-3);cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
+  .dpg-subtab:hover{color:var(--primary);}
+  .dpg-subtab.active{background:var(--surface);color:var(--primary);box-shadow:0 2px 8px rgba(0,0,0,.1);}
+  .dpg-pane{display:none;}
+  .dpg-pane.active{display:block;}
+  .dpg-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+  .dpg-chip{font-size:12.5px;font-weight:600;padding:5px 12px;border-radius:999px;background:var(--surface-2);border:1px solid var(--border);color:var(--text);}
+  .dpg-chip b{color:var(--primary);}
+  /* KPI cards (Total / PMT / Section) */
+  .dpg-kpis{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:14px;}
+  .dpg-kpi{flex:1 1 180px;display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow-md);}
+  .dpg-kpi-ic{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+  .dpg-kpi.total .dpg-kpi-ic{background:var(--primary-lt);color:var(--primary);}
+  .dpg-kpi.pmt .dpg-kpi-ic{background:rgba(239,68,68,.15);color:var(--danger);}
+  .dpg-kpi.sec .dpg-kpi-ic{background:rgba(245,166,35,.15);color:var(--warning);}
+  .dpg-kpi-meta{display:flex;flex-direction:column;line-height:1.15;}
+  .dpg-kpi-num{font-size:28px;font-weight:800;color:var(--text);}
+  .dpg-kpi-lbl{font-size:12px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.03em;}
+  /* Paginasi rekap temuan */
+  .dpg-pager{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:14px;flex-wrap:wrap;}
+  .dpg-pg-btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;}
+  .dpg-pg-btn:hover:not(:disabled){background:var(--primary-lt);color:var(--primary);border-color:var(--primary);}
+  .dpg-pg-btn:disabled{opacity:.45;cursor:not-allowed;}
+  .dpg-pg-info{font-size:12.5px;font-weight:600;color:var(--gray);}
+  .dpg-badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;}
+  .dpg-badge.pmt{background:rgba(239,68,68,.15);color:var(--danger);}
+  .dpg-badge.sec{background:rgba(245,166,35,.15);color:var(--warning);}
+  .dpg-left{text-align:left!important;white-space:normal;min-width:200px;}
+  .dpg-empty,.dpg-loading{padding:40px;text-align:center;color:var(--gray,#64748b);}
+  .dpg-empty i,.dpg-loading i{font-size:30px;margin-bottom:8px;display:block;}
+  /* Matriks Har: kriteria vertikal x bulan+minggu, freeze 2 kolom kiri */
+  .dpg-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:auto;max-height:70vh;}
+  .dpg-table{border-collapse:separate;border-spacing:0;font-size:12.5px;color:var(--text);white-space:nowrap;width:max-content;}
+  .dpg-table th,.dpg-table td{border-bottom:1px solid var(--border-2);border-right:1px solid var(--border-2);padding:7px 10px;text-align:center;}
+  .dpg-table thead th{position:sticky;background:var(--surface-2);font-size:11px;font-weight:700;text-transform:uppercase;color:var(--gray,#64748b);}
+  .dpg-table thead tr.dpg-grp th{top:0;z-index:4;}
+  .dpg-table thead tr.dpg-sub th{top:34px;z-index:3;}
+  .dpg-c1{position:sticky;left:0;z-index:2;min-width:120px;text-align:left;}
+  .dpg-c2{position:sticky;left:120px;z-index:2;min-width:200px;text-align:left;}
+  .dpg-table thead tr th.dpg-c1,.dpg-table thead tr th.dpg-c2{z-index:7;background:var(--surface-2)!important;}
+  .dpg-table tbody td{background:var(--surface);}
+  .dpg-table tbody td.dpg-c1,.dpg-table tbody td.dpg-c2{background:var(--surface);}
+  .dpg-grp-cell{font-weight:700;color:var(--primary);background:var(--primary-lt,#eff6ff)!important;vertical-align:middle;}
+  .dpg-total{position:sticky;right:0;z-index:2;font-weight:700;background:var(--surface-2)!important;}
+  .dpg-table thead tr th.dpg-total{z-index:6;}
+  .dpg-val{font-variant-numeric:tabular-nums;}
+  .dpg-zero{color:var(--text-muted);}
+  .dpg-month-alt{background:linear-gradient(rgba(91,140,255,.06),rgba(91,140,255,.06)),var(--surface-2);}
+  .dpg-table tbody tr:hover td{background:var(--surface-2);}
+  .dpg-table tbody tr.dpg-grp-start td{border-top:2px solid var(--border);}
+  /* Cover Gardu (2 tabel + drill-down) */
+  .dpg-cover-ttl{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--text);margin:6px 0 10px;}
+  .dpg-cover-ttl i{color:var(--primary);}
+  .dpg-badge.full{background:rgba(34,197,94,.15);color:var(--success);}
+  .dpg-badge.belum{background:rgba(239,68,68,.15);color:var(--danger);}
+  .dpg-count{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:26px;padding:0 10px;border-radius:999px;font-size:13px;font-weight:700;border:1px solid var(--primary);background:var(--primary-lt);color:var(--primary);cursor:pointer;line-height:1;transition:all .15s;}
+  .dpg-count:hover{background:var(--primary);color:var(--on-primary);}
+  .dpg-count.zero{border-color:var(--border);background:var(--surface-2);color:var(--text-muted);cursor:default;font-weight:600;}
+  .dpg-count.dpg-count-full{border-color:var(--success);background:rgba(34,197,94,.12);color:var(--success);}
+  .dpg-count.dpg-count-full:hover{background:var(--success);color:#fff;}
+  .dpg-count.dpg-count-pmt{border-color:var(--danger);background:rgba(239,68,68,.12);color:var(--danger);}
+  .dpg-count.dpg-count-pmt:hover{background:var(--danger);color:#fff;}
+  /* Rekap Temuan drill-down: kartu detail per baris */
+  .dpg-det-list{display:flex;flex-direction:column;gap:10px;}
+  .dpg-det-card{border:1px solid var(--border);border-radius:12px;padding:12px 14px;background:var(--surface);display:flex;flex-direction:column;gap:10px;}
+  .dpg-det-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+  .dpg-det-kode{font-family:monospace;font-size:12px;font-weight:700;color:var(--primary);}
+  .dpg-det-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:2px 16px;}
+  .dpg-det-row{display:flex;gap:8px;font-size:12.5px;padding:3px 0;border-bottom:1px solid var(--border-2);}
+  .dpg-det-lbl{flex:0 0 74px;color:var(--gray);font-weight:600;}
+  .dpg-det-val{flex:1;color:var(--text);word-break:break-word;}
+  .dpg-det-fotos{display:flex;flex-wrap:wrap;gap:8px;margin-top:2px;}
+  .dpg-det-fcell{display:flex;flex-direction:column;align-items:center;gap:3px;text-decoration:none;}
+  .dpg-det-fcell img{width:88px;height:88px;object-fit:cover;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);transition:transform .15s;}
+  .dpg-det-fcell img:hover{transform:scale(1.05);}
+  .dpg-det-fcap{font-size:10.5px;color:var(--gray);font-weight:600;}
+  .dpg-det-nofoto{font-size:12px;color:var(--text-muted);display:inline-flex;align-items:center;gap:6px;}
+  .dpg-gardu-grid{display:flex;flex-wrap:wrap;gap:8px;}
+  .dpg-gardu-chip{font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:8px;background:var(--surface-2);border:1px solid var(--border);color:var(--text);font-family:monospace;}
+  .dpg-mat-chip{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 8px;margin:2px 3px 2px 0;border-radius:6px;background:rgba(239,68,68,.12);color:var(--danger);border:1px solid rgba(239,68,68,.3);}
+  /* Cover Gardu drill-down: perlebar & beri ruang antar kolom agar tidak berdempetan */
+  #dpgCoverModalBody .tbl-wrap{overflow:auto;}
+  #dpgCoverModalBody table{width:100%;}
+  #dpgCoverModalBody th,#dpgCoverModalBody td{vertical-align:top;}
+  #dpgCoverModalBody th:nth-child(1),#dpgCoverModalBody td:nth-child(1),
+  #dpgCoverModalBody th:nth-child(2),#dpgCoverModalBody td:nth-child(2),
+  #dpgCoverModalBody th:nth-child(3),#dpgCoverModalBody td:nth-child(3){white-space:nowrap;}
+  #dpgCoverModalBody th:nth-child(4),#dpgCoverModalBody td:nth-child(4){white-space:normal;min-width:220px;}
+  #dpgCoverModalBody td.dpg-left{white-space:normal;min-width:220px;}
+  /* Pop-up detail Cover Gardu: perlebar card agar tabel & chip material leluasa */
+  #dpgCoverModal .ti-modal{max-width:1400px !important;width:98% !important;}
+  #dpgCoverModal .ti-modal-body{max-height:48vh;}
+  /* Header tabel pop-up freeze saat digulir */
+  #dpgCoverModalBody .tbl-wrap thead th{position:sticky;top:0;z-index:5;box-shadow:0 2px 0 var(--border);}
+  /* Sub-header Section ikut freeze bertingkat: Section berikutnya menggantikan Section sebelumnya */
+  #dpgCoverModalBody td.dpg-sec-hd{position:sticky;top:34px;z-index:4;box-shadow:inset 0 1px 0 var(--border);}
+  /* Header tabel komulatif juga freeze */
+  #dpgCoverModalFoot .tbl-wrap thead th{position:sticky;top:0;z-index:5;box-shadow:0 2px 0 var(--border);}
+  /* Tabel Belum Full Cover: satu kolom per komponen (nilai sesuai data master) */
+  #dpgCoverModalBody table.dpg-tbl-belum th,#dpgCoverModalBody table.dpg-tbl-belum td{white-space:nowrap !important;text-align:center;min-width:0 !important;}
+  #dpgCoverModalBody table.dpg-tbl-belum th:nth-child(2),#dpgCoverModalBody table.dpg-tbl-belum td:nth-child(2){text-align:left;}
+  #dpgCoverModalBody table.dpg-tbl-belum td.dpg-left{white-space:normal !important;min-width:180px !important;text-align:left;}
+  #dpgCoverModalBody tr.dpg-kum-row td{background:var(--surface-2);font-weight:700;color:var(--text);border-top:2px solid var(--border);}
+  /* Rapatkan tabel Belum Full Cover agar muat tanpa scroll ke samping */
+  #dpgCoverModalBody table.dpg-tbl-belum th,#dpgCoverModalBody table.dpg-tbl-belum td{padding:7px 8px;font-size:12px;}
+  #dpgCoverModalBody table.dpg-tbl-belum .dpg-mat-chip{font-size:10.5px;padding:1px 6px;margin:1px;}
+  #dpgCoverModalBody table.dpg-tbl-belum td.dpg-left{min-width:150px !important;}
+  /* Tabel komulatif menempel di bawah pop-up (tidak ikut tergulir) */
+  #dpgCoverModalFoot{padding:12px 18px 16px;border-top:2px solid var(--border);background:var(--surface-2);max-height:32vh;overflow:auto;border-radius:0 0 16px 16px;}
+  #dpgCoverModalFoot .dpg-cover-ttl{margin-top:0 !important;}
+  /* Grafik Gangguan Penyulang (Google Charts) */
+  .dpg-charts{display:flex;flex-direction:column;gap:14px;margin-bottom:16px;}
+  .dpg-chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;display:flex;flex-direction:column;gap:8px;}
+  .dpg-chart-ttl{font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;}
+  .dpg-chart-ttl i{color:var(--primary);}
+  .dpg-chart-box{width:100%;min-height:280px;}
+  .dpg-fgtm-seg{display:inline-flex;gap:4px;background:var(--surface-2);border:1px solid var(--border);border-radius:999px;padding:3px;flex-wrap:wrap;align-self:flex-start;}
+  .dpg-fgtm-seg button{border:none;background:none;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:600;color:var(--text-3);cursor:pointer;}
+  .dpg-fgtm-seg button:hover{color:var(--primary);}
+  .dpg-fgtm-seg button.active{background:var(--primary);color:var(--on-primary);}
+  /* FGTM: pie + bar + indikator list lengkap */
+  .dpg-fgtm-wrap{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;margin-top:4px;}
+  .dpg-fgtm-charts{display:flex;flex-wrap:wrap;gap:10px;flex:1 1 340px;min-width:280px;}
+  .dpg-fgtm-charts .dpg-chart-box{flex:1 1 240px;min-width:230px;min-height:260px;}
+  .dpg-fgtm-legend{flex:0 0 250px;max-width:320px;display:flex;flex-direction:column;gap:12px;}
+  .dpg-fgtm-lg-grp{display:flex;flex-direction:column;gap:5px;}
+  .dpg-fgtm-lg-ttl{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--gray);display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid var(--border);padding-bottom:4px;}
+  .dpg-fgtm-lg-ttl .tot{color:var(--primary);}
+  .dpg-fgtm-lg-item{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text);}
+  .dpg-fgtm-lg-item .sw{width:12px;height:12px;border-radius:3px;flex-shrink:0;}
+  .dpg-fgtm-lg-item .cd{font-family:monospace;font-weight:700;color:var(--text-2);flex-shrink:0;min-width:22px;}
+  .dpg-fgtm-lg-item .lb{flex:1;min-width:0;}
+  .dpg-fgtm-lg-item .ct{font-weight:700;color:var(--text);}
+</style>
+
+<div class="st-header">
+  <h2><i class="fa-solid fa-bolt-lightning" style="color:var(--primary)"></i> Data Pendukung CheckPoint</h2>
+</div>
+
+<div class="st-container">
+    <div class="filter-bar">
+      <div class="filter-group" style="flex:0 0 auto">
+        <label>Penyulang</label>
+        <select id="dpgPenyulang" onchange="dpgOnPenyulangChange()" style="width:200px"><option value="">Semua Penyulang</option></select>
+      </div>
+      <div class="filter-group" style="flex:0 0 auto">
+        <label>Section</label>
+        <select id="dpgSection" style="width:240px"><option value="">Semua Section</option></select>
+      </div>
+      <div class="filter-group" style="flex:0 0 auto">
+        <label>Tahun</label>
+        <select id="dpgTahun" style="width:130px"></select>
+      </div>
+      <button class="btn-filter" onclick="dpgMuat()"><i class="fa-solid fa-magnifying-glass"></i> Muat</button>
+      <button class="btn-reset" onclick="dpgReset()">Reset</button>
+    </div>
+
+    <div class="dpg-subtabs">
+      <button class="dpg-subtab active" id="dpgSub-har" onclick="dpgSwitchInner('har')"><i class="fa-solid fa-table-cells-large"></i> Har</button>
+      <button class="dpg-subtab" id="dpgSub-cover" onclick="dpgSwitchInner('cover')"><i class="fa-solid fa-helmet-safety"></i> Cover Gardu</button>
+      <button class="dpg-subtab" id="dpgSub-gangguan" onclick="dpgSwitchInner('gangguan')"><i class="fa-solid fa-bolt"></i> Gangguan Penyulang</button>
+      <button class="dpg-subtab" id="dpgSub-rekap" onclick="dpgSwitchInner('rekap')"><i class="fa-solid fa-clipboard-list"></i> Rekap Temuan Inspeksi</button>
+    </div>
+
+    <div class="dpg-pane active" id="dpgpane-har">
+      <div class="dpg-wrap" id="dpgHarWrap">
+        <div class="dpg-empty"><i class="fa-solid fa-table-cells"></i><p>Pilih Penyulang &amp; Tahun lalu klik Muat.</p></div>
+      </div>
+    </div>
+    <div class="dpg-pane" id="dpgpane-cover">
+      <div id="dpgCoverWrap">
+        <div class="dpg-empty"><i class="fa-solid fa-table-cells"></i><p>Pilih Penyulang &amp; Tahun lalu klik Muat.</p></div>
+      </div>
+    </div>
+    <div class="dpg-pane" id="dpgpane-gangguan">
+      <div id="dpgGgnWrap">
+        <div class="dpg-empty"><i class="fa-solid fa-table-cells"></i><p>Pilih Penyulang &amp; Tahun lalu klik Muat.</p></div>
+      </div>
+    </div>
+    <div class="dpg-pane" id="dpgpane-rekap">
+      <div class="filter-bar" style="margin-bottom:12px">
+        <div class="filter-group">
+          <label>Temuan</label>
+          <select id="dpgRekapTemuan" onchange="dpgRekapFilter()"><option value="">Semua Temuan</option></select>
+        </div>
+      </div>
+      <div id="dpgRekapWrap">
+        <div class="dpg-empty"><i class="fa-solid fa-table-cells"></i><p>Pilih Penyulang &amp; Tahun lalu klik Muat.</p></div>
+      </div>
+    </div>
+</div>
+
+<!-- MODAL DAFTAR GARDU (Cover Gardu drill-down) -->
+<div id="dpgCoverModal" class="ti-modal-bg" onclick="if(event.target===this)dpgCoverCloseModal()">
+  <div class="ti-modal">
+    <div class="ti-modal-head" style="background:linear-gradient(135deg,#7c3aed,#a855f7)">
+      <h3><i class="fa-solid fa-helmet-safety"></i> <span id="dpgCoverModalTitle"></span></h3>
+      <button class="x" onclick="dpgCoverCloseModal()">&times;</button>
+    </div>
+    <div class="ti-modal-body" id="dpgCoverModalBody"></div>
+    <div id="dpgCoverModalFoot" style="display:none"></div>
+  </div>
+</div>
+
+<!-- MODAL DETAIL REKAP TEMUAN (drill-down Jumlah / Selesai / Belum Tindak Lanjut) -->
+<div id="dpgRekapModal" class="ti-modal-bg" onclick="if(event.target===this)dpgRekapCloseModal()">
+  <div class="ti-modal" style="max-width:760px">
+    <div class="ti-modal-head" style="background:linear-gradient(135deg,#1e3a8a,#3b82f6)">
+      <h3><i class="fa-solid fa-clipboard-list"></i> <span id="dpgRekapModalTitle"></span></h3>
+      <button class="x" onclick="dpgRekapCloseModal()">&times;</button>
+    </div>
+    <div class="ti-modal-body" id="dpgRekapModalBody"></div>
+  </div>
+</div>
+
+<!-- ====== SCRIPT: DATA PENDUKUNG CHECKPOINT (dipindah dari SIE-Teknik.html, Rev 11 Agu 2026) ====== -->
+<script>
+(function(){
+  var DPG = { sesi:null, ulp:'', isSuper:false, tab:'har' };
+  function _el(id){ return document.getElementById(id); }
+  function _sesi(){ return (typeof window!=='undefined' && window.__SISI_SESI__) ? window.__SISI_SESI__ : (DPG.sesi||{}); }
+  function _esc(s){ s=(s==null)?'':String(s); return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function _num(v){ v=Math.round((Number(v)||0)*100)/100; return String(v); }
+  var BULAN_SHORT=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  var BULAN_FULL=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  function _dpgTglLong(s){ s=(s==null)?'':String(s).trim(); var m=s.match(/^(\d{4})-(\d{2})-(\d{2})/); if(!m) return _esc(s); return ('0'+parseInt(m[3],10)).slice(-2)+' '+(BULAN_FULL[parseInt(m[2],10)-1]||m[2])+' '+m[1]; }
+  function _weeksInMonth(tahun,b0){ return Math.ceil(new Date(tahun,b0+1,0).getDate()/7); }
+
+  // Kriteria Har = Inspeksi + ROW + kriteria Hartek. key = properti kolom GASPOL.
+  var KRITERIA=[
+    { grup:'Inspeksi', items:[
+      { key:'insSutmKms', label:'Inspeksi SUTM (kmS)' },
+      { key:'insSutmTier1', label:'Inspeksi SUTM Tier 1' },
+      { key:'insSutmTier2', label:'Inspeksi SUTM Tier 2' },
+      { key:'insGarduTier1', label:'Inspeksi Gardu Tier 1' },
+      { key:'insGarduTier2', label:'Inspeksi Gardu Tier 2' }
+    ]},
+    { grup:'ROW', items:[
+      { key:'rowRabas', label:'ROW 5 / Rabas' },
+      { key:'rowSedang', label:'Tebang Sedang' },
+      { key:'rowBesar', label:'Tebang Besar' }
+    ]},
+    { grup:'HARKOM', items:[
+      { key:'harkomIsolator', label:'Isolator' },
+      { key:'harkomArrester', label:'Arrester' },
+      { key:'harkomFco', label:'FCO' }
+    ]},
+    { grup:'HARKONS SUTM', items:[
+      { key:'harkonsTiang', label:'Tiang' },
+      { key:'harkonsSutm', label:'SUTM' },
+      { key:'harkonsGw', label:'GW' },
+      { key:'harkonsGsw', label:'GSW' },
+      { key:'groundingTm', label:'Grounding TM' },
+      { key:'harkeypoint', label:'Harkeypoint' },
+      { key:'penghalangHewan', label:'Penghalang Hewan' },
+      { key:'rekonektorSutm', label:'Rekonektor SUTM' },
+      { key:'rehabSutm', label:'Rehab SUTM' },
+      { key:'penyulangBaruSutm', label:'Penyulang Baru SUTM' }
+    ]},
+    { grup:'Gardu', items:[
+      { key:'manajemenGardu', label:'Manajemen Gardu' },
+      { key:'tapChanger', label:'Tap Changer' },
+      { key:'penyeimbanganBeban', label:'Penyeimbangan Beban' },
+      { key:'groundingGardu', label:'Grounding Gardu' },
+      { key:'coverGardu', label:'Cover Gardu' },
+      { key:'lostContactPhbTr', label:'Lost Contact PHB-TR' }
+    ]},
+    { grup:'SUTR / SR', items:[
+      { key:'jurusanBaruPecahBeban', label:'Jurusan Baru / Pecah Beban' },
+      { key:'rekonektorSutr', label:'Rekonektor SUTR' },
+      { key:'srSeri', label:'SR Seri' },
+      { key:'rekonektorSr', label:'Rekonektor SR' }
+    ]}
+  ];
+
+  function dpgBoot(){
+    var s=_sesi();
+    if((!s || !s.role) && typeof google!=='undefined'){
+      google.script.run.withSuccessHandler(function(u){ DPG.sesi=u||{}; _dpgAfterSesi(); }).withFailureHandler(_dpgAfterSesi).getSessionUser();
+    } else { DPG.sesi=s; _dpgAfterSesi(); }
+  }
+  function _dpgAfterSesi(){
+    var s=_sesi(); DPG.ulp=s.ulp||'';
+    DPG.isSuper=(['Super User','Admin'].indexOf(String(s.role||'').trim())!==-1);
+    var thn=(new Date()).getFullYear();
+    var selT=_el('dpgTahun');
+    if(selT){ selT.innerHTML=''; for(var y=thn;y>=thn-3;y--){ selT.innerHTML+='<option value="'+y+'">'+y+'</option>'; } selT.value=thn; }
+    dpgLoadPenyulang();
+    dpgLoadSection();
+  }
+  function dpgUlpVal(){ return DPG.ulp; }
+  function dpgLoadPenyulang(){
+    var sel=_el('dpgPenyulang'); if(!sel) return;
+    sel.disabled=true; sel.innerHTML='<option value="">Memuat penyulang...</option>';
+    if(typeof google==='undefined'){ sel.innerHTML='<option value="">Semua Penyulang</option>'; sel.disabled=false; return; }
+    google.script.run
+      .withSuccessHandler(function(res){
+        var list=(res&&res.list)?res.list:[];
+        sel.innerHTML='<option value="">Semua Penyulang</option>'+list.map(function(p){ var nm=(p&&p.nama!=null)?p.nama:p; return '<option value="'+nm+'">'+nm+'</option>'; }).join('');
+        sel.disabled=false;
+      })
+      .withFailureHandler(function(){ sel.innerHTML='<option value="">Semua Penyulang</option>'; sel.disabled=false; })
+      .getDataPenyulangByUlp(dpgUlpVal());
+  }
+  // Dropdown Section: sumber db_Penyulang (getSectionByPenyulang) — daftar section MILIK penyulang terpilih.
+  function dpgLoadSection(){
+    var sel=_el('dpgSection'); if(!sel) return;
+    if(typeof google==='undefined'){ sel.innerHTML='<option value="">Semua Section</option>'; return; }
+    var cur=sel.value;
+    google.script.run
+      .withSuccessHandler(function(res){
+        var list=(res&&res.list)?res.list:[];
+        sel.innerHTML='<option value="">Semua Section</option>'+list.map(function(s){ return '<option value="'+_esc(s)+'">'+_esc(s)+'</option>'; }).join('');
+        if(cur){ sel.value=cur; if(sel.value!==cur) sel.value=''; }
+      })
+      .withFailureHandler(function(){ sel.innerHTML='<option value="">Semua Section</option>'; })
+      .getSectionByPenyulang(_el('dpgPenyulang')?_el('dpgPenyulang').value:'');
+  }
+  // Penyulang berubah -> muat ulang daftar Section (reset pilihan section).
+  function dpgOnPenyulangChange(){ var s=_el('dpgSection'); if(s) s.value=''; dpgLoadSection(); }
+
+  function dpgSwitchInner(tab){
+    DPG.tab=tab;
+    ['har','cover','gangguan','rekap'].forEach(function(t){
+      var b=_el('dpgSub-'+t), c=_el('dpgpane-'+t);
+      if(b) b.classList.toggle('active', t===tab);
+      if(c) c.classList.toggle('active', t===tab);
+    });
+    dpgMuat();
+  }
+  function dpgMuat(){
+    var tahun=parseInt(_el('dpgTahun').value,10)||(new Date()).getFullYear();
+    var penyulang=_el('dpgPenyulang')?_el('dpgPenyulang').value:'';
+    var ulp=dpgUlpVal();
+    var section=_el('dpgSection')?_el('dpgSection').value:'';
+    if(DPG.tab==='har') dpgLoadHar(penyulang, tahun, ulp, section);
+    else if(DPG.tab==='cover') dpgLoadCover(penyulang, tahun, ulp, section);
+    else if(DPG.tab==='rekap') dpgLoadRekapTemuan(penyulang, tahun, ulp, section);
+    else dpgLoadGangguan(penyulang, tahun, ulp);
+  }
+  function dpgReset(){
+    if(_el('dpgPenyulang')) _el('dpgPenyulang').value='';
+    if(_el('dpgSection')) _el('dpgSection').value='';
+    if(_el('dpgTahun')) _el('dpgTahun').value=(new Date()).getFullYear();
+    dpgMuat();
+  }
+
+  // ===== Sub-tab 1: HAR (matriks kriteria vertikal x bulan+minggu) =====
+  function dpgLoadHar(penyulang, tahun, ulp, section){
+    var wrap=_el('dpgHarWrap');
+    wrap.innerHTML='<div class="dpg-loading"><i class="fa-solid fa-spinner fa-spin"></i><p>Memuat rekap...</p></div>';
+    if(typeof google==='undefined'){ dpgRenderHar({ ok:true, tahun:tahun, data:{}, totalPerKriteria:{} }); return; }
+    google.script.run
+      .withSuccessHandler(dpgRenderHar)
+      .withFailureHandler(function(err){ wrap.innerHTML='<div class="dpg-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>'+((err&&err.message)||err)+'</p></div>'; })
+      .getDpgHarMatrix({ penyulang:penyulang, tahun:tahun, ulp:ulp, section:section });
+  }
+  function dpgRenderHar(res){
+    var wrap=_el('dpgHarWrap');
+    if(!res||!res.ok){ wrap.innerHTML='<div class="dpg-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>'+((res&&res.message)||'Gagal memuat data.')+'</p></div>'; return; }
+    var tahun=res.tahun||(new Date()).getFullYear();
+    var data=res.data||{}, totKrit=res.totalPerKriteria||{};
+    var weeks=[]; for(var m=0;m<12;m++) weeks.push(_weeksInMonth(tahun,m));
+    var h1='<tr class="dpg-grp"><th class="dpg-c1" rowspan="2">Grup</th><th class="dpg-c2" rowspan="2">Kriteria Pekerjaan</th>';
+    var h2='<tr class="dpg-sub">';
+    for(var mm=0;mm<12;mm++){
+      var alt=(mm%2===1)?' dpg-month-alt':'';
+      h1+='<th class="'+alt.trim()+'" colspan="'+weeks[mm]+'">'+BULAN_SHORT[mm]+'</th>';
+      for(var wk=1;wk<=weeks[mm];wk++){ h2+='<th class="'+alt.trim()+'">M'+wk+'</th>'; }
+    }
+    h1+='<th class="dpg-total" rowspan="2">Total '+tahun+'</th></tr>'; h2+='</tr>';
+    var body='';
+    KRITERIA.forEach(function(g){
+      g.items.forEach(function(it, idx){
+        body+='<tr'+(idx===0?' class="dpg-grp-start"':'')+'>';
+        if(idx===0){ body+='<td class="dpg-c1 dpg-grp-cell" rowspan="'+g.items.length+'">'+g.grup+'</td>'; }
+        body+='<td class="dpg-c2">'+it.label+'</td>';
+        var cells=data[it.key]||{};
+        for(var m2=0;m2<12;m2++){
+          var alt2=(m2%2===1)?' dpg-month-alt':'';
+          for(var wk2=1;wk2<=weeks[m2];wk2++){
+            var v=cells[m2+'-'+wk2]||0;
+            body+='<td class="dpg-val'+alt2+(v?'':' dpg-zero')+'">'+(v?_num(v):'&middot;')+'</td>';
+          }
+        }
+        var t=totKrit[it.key]||0;
+        body+='<td class="dpg-total dpg-val'+(t?'':' dpg-zero')+'">'+(t?_num(t):'&middot;')+'</td></tr>';
+      });
+    });
+    wrap.innerHTML='<table class="dpg-table"><thead>'+h1+h2+'</thead><tbody>'+body+'</tbody></table>';
+  }
+
+  // ===== Sub-tab 2: COVER GARDU =====
+  function dpgLoadCover(penyulang, tahun, ulp, section){
+    var wrap=_el('dpgCoverWrap');
+    wrap.innerHTML='<div class="dpg-loading"><i class="fa-solid fa-spinner fa-spin"></i><p>Memuat Cover Gardu...</p></div>';
+    if(typeof google==='undefined'){ dpgRenderCover({ ok:true, rows:[], total:0 }); return; }
+    google.script.run
+      .withSuccessHandler(dpgRenderCover)
+      .withFailureHandler(function(err){ wrap.innerHTML='<div class="dpg-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>'+((err&&err.message)||err)+'</p></div>'; })
+      .getDpgCoverGardu({ penyulang:penyulang, tahun:tahun, ulp:ulp, section:section });
+  }
+  function dpgRenderCover(res){
+    var wrap=_el('dpgCoverWrap');
+    if(!res||!res.ok){ wrap.innerHTML='<div class="dpg-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>'+((res&&res.message)||'Gagal memuat data.')+'</p></div>'; return; }
+    DPG._cover=res;
+    var total=res.total||0;
+    var full=res.full||{count:0,gardu:[]};
+    var belum=res.belum||{count:0,gardu:[]};
+    var komp=res.komponen||[];
+
+    var chips='<div class="dpg-chips"><span class="dpg-chip">Total Gardu: <b>'+total+'</b></span><span class="dpg-chip">Full Cover: <b>'+(full.count||0)+'</b></span><span class="dpg-chip">Belum Full Cover: <b>'+(belum.count||0)+'</b></span></div>';
+
+    var _tbTotal=(res.totalTanpaBts!=null)?res.totalTanpaBts:total;      // fallback bila backend lama
+    var _tbFull=(full.tanpaBts!=null)?full.tanpaBts:(full.count||0);
+    var _tbBelum=(belum.tanpaBts!=null)?belum.tanpaBts:(belum.count||0);
+
+    var t1='<div class="dpg-cover-ttl"><i class="fa-solid fa-helmet-safety"></i> Jumlah Gardu sudah Full Cover dan Belum Full Cover</div>'
+      +'<div class="tbl-wrap"><table><thead><tr><th>Status</th><th style="text-align:center">Jumlah Gardu Seluruh</th><th style="text-align:center">Jumlah Gardu Tanpa BTS</th></tr></thead><tbody>'
+      +'<tr><td><span class="dpg-badge full">Full Cover</span></td><td style="text-align:center">'+_dpgCoverCell('full','',full.count)+'</td><td style="text-align:center">'+_dpgCoverCell('full','tb',_tbFull)+'</td></tr>'
+      +'<tr><td><span class="dpg-badge belum">Belum Full Cover</span></td><td style="text-align:center">'+_dpgCoverCell('belum','',belum.count)+'</td><td style="text-align:center">'+_dpgCoverCell('belum','tb',_tbBelum)+'</td></tr>'
+      +'<tr><td><b>Total Gardu</b></td><td style="text-align:center"><b>'+total+'</b></td><td style="text-align:center"><b>'+_tbTotal+'</b></td></tr>'
+      +'</tbody></table></div>';
+
+    wrap.innerHTML=chips+t1;
+  }
+  function _dpgCoverCell(bucket,arg,count){
+    count=Number(count)||0;
+    if(!count) return '<span class="dpg-count zero">0</span>';
+    return '<button type="button" class="dpg-count" onclick="dpgCoverDetail(&quot;'+bucket+'&quot;,&quot;'+arg+'&quot;)">'+count+'</button>';
+  }
+  function dpgCoverDetail(bucket,arg){
+    var res=DPG._cover; if(!res) return;
+    var title='', gardu=[];
+    if(bucket==='full'){ title='Gardu Sudah Full Cover'; gardu=(res.full||{}).gardu||[]; }
+    else if(bucket==='belum'){ title='Gardu Belum Full Cover'; gardu=(res.belum||{}).gardu||[]; }
+    else {
+      var k=(res.komponen||[])[parseInt(arg,10)]; if(!k) return;
+      if(bucket==='kl'){ title=k.label+' — Sudah Lengkap'; gardu=(k.lengkap||{}).gardu||[]; }
+      else { title=k.label+' — Belum Lengkap'; gardu=(k.belum||{}).gardu||[]; }
+    }
+    // Kolom "Jumlah Gardu Tanpa BTS": saring hanya gardu non-BTS (alamat kolom D tidak mengandung kata "BTS").
+    if(arg==='tb'){ gardu=gardu.filter(function(g){ return g && !g.bts; }); title+=' — Tanpa BTS'; }
+    if(_el('dpgCoverModalTitle')) _el('dpgCoverModalTitle').textContent=title+' ('+gardu.length+' Gardu)';
+    var body=_el('dpgCoverModalBody');
+    if(body){
+      if(!gardu.length){
+        body.innerHTML='<div class="dpg-empty"><i class="fa-solid fa-inbox"></i><p>Tidak ada gardu.</p></div>';
+      } else {
+        var isBelum=(bucket==='belum');
+        var _labels=(res.komponen||[]).map(function(k){ return k.label; });
+        // Kelompokkan gardu per Section (grouping) lalu render sub-header Section + baris gardu.
+        var _grpSec={}, _urutSec=[];
+        gardu.forEach(function(g){
+          if(g==null || typeof g!=='object') g={ nomorGardu:g };
+          var _sec=(g.section!=null && String(g.section).trim()) ? String(g.section).trim() : '(Tanpa Section)';
+          if(!_grpSec[_sec]){ _grpSec[_sec]=[]; _urutSec.push(_sec); }
+          _grpSec[_sec].push(g);
+        });
+        _urutSec.sort(function(a,b){ return String(a).localeCompare(String(b)); });
+        function _v(x){ return (x!=null && String(x).trim()) ? _esc(String(x)) : '-'; }
+        var _colspan=isBelum?(3+_labels.length):5;
+        var _no=0, rowsHtml='';
+        _urutSec.forEach(function(sec){
+          var _list=_grpSec[sec];
+          _no=0;   // nomor urut direset tiap ganti Section
+          rowsHtml+='<tr><td class="dpg-sec-hd" colspan="'+_colspan+'" style="background:var(--surface-2);font-weight:700;color:var(--primary)"><i class="fa-solid fa-diagram-project"></i> Section: '+_esc(sec)+' ('+_list.length+' gardu)</td></tr>';
+          _list.forEach(function(g){
+            _no++;
+            if(isBelum){
+              // Nilai tiap komponen sesuai data master; yang belum lengkap ditandai chip merah.
+              var _kur=(g.kurang && g.kurang.length) ? g.kurang : [];
+              var _nil=(g.nilai && g.nilai.length) ? g.nilai : [];
+              var _compTds=_labels.map(function(lb,ci){
+                var _raw=(_nil[ci]!=null && String(_nil[ci]).trim()) ? String(_nil[ci]).trim() : '-';
+                return (_kur.indexOf(lb)!==-1) ? '<td><span class="dpg-mat-chip">'+_esc(_raw)+'</span></td>' : '<td>'+_esc(_raw)+'</td>';
+              }).join('');
+              rowsHtml+='<tr><td style="text-align:center">'+_no+'</td><td>'+_v(g.nomorGardu)+'</td><td class="dpg-left">'+_v(g.alamat)+'</td>'+_compTds+'</tr>';
+            } else {
+              rowsHtml+='<tr><td style="text-align:center">'+_no+'</td><td>'+_v(g.nomorGardu)+'</td><td>'+_v(g.penyulang)+'</td><td>'+_v(g.section)+'</td><td class="dpg-left">'+_v(g.alamat)+'</td></tr>';
+            }
+          });
+          if(isBelum){
+            // Baris "Jumlah Keperluan Material" per grup: hitung (ala COUNTA) gardu yang belum lengkap per komponen.
+            var _cntTds=_labels.map(function(lb){
+              var n=0;
+              _list.forEach(function(g){ if((g.kurang||[]).indexOf(lb)!==-1) n++; });
+              return '<td style="text-align:center">'+(n||'-')+'</td>';
+            }).join('');
+            rowsHtml+='<tr class="dpg-kum-row"><td colspan="3" style="text-align:center">Jumlah Keperluan Material</td>'+_cntTds+'</tr>';
+          }
+        });
+        var _headCols, _tblCls='';
+        if(isBelum){
+          _tblCls=' class="dpg-tbl-belum"';
+          _headCols='<th style="text-align:center">No</th><th>Nomor Gardu</th><th>Alamat</th>'+_labels.map(function(lb){ return '<th style="text-align:center">'+_esc(lb)+'</th>'; }).join('');
+        } else {
+          _headCols='<th style="text-align:center">No</th><th>Nomor Gardu</th><th>Penyulang</th><th>Section</th><th>Alamat</th>';
+        }
+        var _tableHtml='<div class="tbl-wrap"><table'+_tblCls+'><thead><tr>'+_headCols+'</tr></thead><tbody>'+rowsHtml+'</tbody></table></div>';
+        var _kumHtml='';
+        if(isBelum){
+          var _tally={}, _order=[];
+          (res.komponen||[]).forEach(function(k){ _tally[k.label]=0; _order.push(k.label); });
+          gardu.forEach(function(g){ (g.kurang||[]).forEach(function(lb){ if(_tally[lb]==null){ _tally[lb]=0; _order.push(lb); } _tally[lb]++; }); });
+          var _rowsK=_order.filter(function(lb){ return _tally[lb]>0; }).map(function(lb){ return '<tr><td>'+_esc(lb)+'</td><td style="text-align:center"><b>'+_tally[lb]+'</b></td></tr>'; }).join('');
+          if(_rowsK){
+            _kumHtml='<div class="dpg-cover-ttl" style="margin-top:18px"><i class="fa-solid fa-boxes-stacked"></i> Komulatif Kebutuhan Material</div>'
+              +'<div class="tbl-wrap"><table><thead><tr><th>Komponen Cover</th><th style="text-align:center">Jumlah Gardu</th></tr></thead><tbody>'+_rowsK+'</tbody></table></div>';
+          }
+        }
+        body.innerHTML=_tableHtml;
+        var _foot=_el('dpgCoverModalFoot');
+        if(_foot){ _foot.innerHTML=_kumHtml||''; _foot.style.display=_kumHtml?'block':'none'; }
+      }
+    }
+    var m=_el('dpgCoverModal'); if(m) m.classList.add('show');
+  }
+  function dpgCoverCloseModal(){ var m=_el('dpgCoverModal'); if(m) m.classList.remove('show'); }
+
+  // ===== Sub-tab 3: GANGGUAN PENYULANG =====
+  function dpgLoadGangguan(penyulang, tahun, ulp){
+    DPG._ggn={ penyulang:penyulang, tahun:tahun, ulp:ulp };
+    var wrap=_el('dpgGgnWrap');
+    wrap.innerHTML='<div class="dpg-loading"><i class="fa-solid fa-spinner fa-spin"></i><p>Memuat gangguan...</p></div>';
+    if(typeof google==='undefined'){ dpgRenderGangguan({ ok:true, tahun:tahun, rows:[], total:0, pmt:0, section:0 }); return; }
+    google.script.run
+      .withSuccessHandler(dpgRenderGangguan)
+      .withFailureHandler(function(err){ wrap.innerHTML='<div class="dpg-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>'+((err&&err.message)||err)+'</p></div>'; })
+      .getDpgGangguanPenyulang({ penyulang:penyulang, tahun:tahun, ulp:ulp });
+  }
+  function dpgRenderGangguan(res){
+    var wrap=_el('dpgGgnWrap');
+    if(!res||!res.ok){ wrap.innerHTML='<div class="dpg-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>'+((res&&res.message)||'Gagal memuat data.')+'</p></div>'; return; }
+    var rows=res.rows||[];
+    var tahun=res.tahun||(DPG._ggn&&DPG._ggn.tahun)||(new Date()).getFullYear();
+    var penyLbl=(DPG._ggn&&DPG._ggn.penyulang)?DPG._ggn.penyulang:'Semua Penyulang';
+    var chips='<div class="dpg-kpis">'
+      +'<div class="dpg-kpi total"><div class="dpg-kpi-ic"><i class="fa-solid fa-bolt-lightning"></i></div><div class="dpg-kpi-meta"><div class="dpg-kpi-num">'+(res.total||0)+'</div><div class="dpg-kpi-lbl">Total Gangguan</div></div></div>'
+      +'<div class="dpg-kpi pmt"><div class="dpg-kpi-ic"><i class="fa-solid fa-tower-broadcast"></i></div><div class="dpg-kpi-meta"><div class="dpg-kpi-num">'+(res.pmt||0)+'</div><div class="dpg-kpi-lbl">PMT</div></div></div>'
+      +'<div class="dpg-kpi sec"><div class="dpg-kpi-ic"><i class="fa-solid fa-diagram-project"></i></div><div class="dpg-kpi-meta"><div class="dpg-kpi-num">'+(res.section||0)+'</div><div class="dpg-kpi-lbl">Section</div></div></div>'
+      +'</div>';
+    var charts='<div class="dpg-charts">'
+      +_dpgChartCard('dpgChart1','fa-chart-column','Gangguan per Bulan — 3 Tahun Terakhir')
+      +_dpgChartCard('dpgChart2','fa-chart-column','Gangguan '+_esc(penyLbl)+' Tahun '+tahun)
+      +_dpgChartCard('dpgChart3','fa-chart-simple','Kali Gangguan 3 Tahun Terakhir')
+      +_dpgFgtmCard()
+      +'</div>';
+    var tableHtml;
+    if(!rows.length){
+      tableHtml='<div class="dpg-empty"><i class="fa-solid fa-inbox"></i><p>Tidak ada gangguan pada tahun '+tahun+'.</p></div>';
+    } else {
+      var b=rows.map(function(r,i){
+        var badge=(r.kategori==='PMT')?'<span class="dpg-badge pmt">PMT</span>':'<span class="dpg-badge sec">Section</span>';
+        var fg=r.kodeFgtm?('<b>'+_esc(r.kodeFgtm)+'</b>'+(r.labelFgtm?' <span style="color:var(--text-3)">'+_esc(r.labelFgtm)+'</span>':'')):'<span class="dpg-zero">-</span>';
+        return '<tr><td>'+(i+1)+'</td><td>'+_dpgTglLong(r.tanggal)+'</td><td>'+_esc(r.penyulang)+'</td><td>'+badge+'</td><td>'+fg+'</td><td class="dpg-left">'+_esc(r.temuan)+'</td></tr>';
+      }).join('');
+      tableHtml='<div class="tbl-wrap"><table><thead><tr><th>No</th><th>Tanggal</th><th>Penyulang</th><th>Kategori</th><th>Kode FGTM</th><th>Temuan / Penyebab</th></tr></thead><tbody>'+b+'</tbody></table></div>';
+    }
+    wrap.innerHTML=chips+charts+tableHtml;
+    dpgLoadGgnCharts();
+  }
+
+  // ===== Grafik Gangguan (Google Charts) =====
+  var _gchartReady=false, _gchartLoading=false, _gchartCbs=[];
+  function _dpgEnsureCharts(cb){
+    if(_gchartReady){ if(cb) cb(); return; }
+    if(cb) _gchartCbs.push(cb);
+    if(_gchartLoading) return;
+    _gchartLoading=true;
+    function _init(){
+      google.charts.load('current', { packages:['corechart'] });
+      google.charts.setOnLoadCallback(function(){
+        _gchartReady=true;
+        var cbs=_gchartCbs.slice(); _gchartCbs=[];
+        cbs.forEach(function(f){ try{ f(); }catch(e){} });
+      });
+    }
+    if(typeof google!=='undefined' && google.charts){ _init(); return; }
+    var s=document.createElement('script');
+    s.src='https://www.gstatic.com/charts/loader.js';
+    s.onload=_init;
+    s.onerror=function(){ _gchartLoading=false; };
+    document.head.appendChild(s);
+  }
+  function dpgLoadGgnCharts(){
+    if(typeof google==='undefined') return;
+    var p=DPG._ggn||{};
+    google.script.run
+      .withSuccessHandler(function(res){ DPG._charts=res; _dpgEnsureCharts(dpgDrawCharts); })
+      .withFailureHandler(function(){})
+      .getDpgGangguanCharts({ penyulang:p.penyulang, tahun:p.tahun, ulp:p.ulp });
+  }
+  function _dpgChartCard(id, icon, title){
+    return '<div class="dpg-chart-card"><div class="dpg-chart-ttl"><i class="fa-solid '+icon+'"></i> '+title+'</div>'
+      +'<div class="dpg-chart-box" id="'+id+'"><div class="dpg-loading" style="padding:20px"><i class="fa-solid fa-spinner fa-spin"></i></div></div></div>';
+  }
+  function _dpgFgtmCard(){
+    var v=DPG._fgtmVar||'keseluruhan';
+    function _btn(id,lbl){ return '<button id="dpgFgtmBtn-'+id+'" class="'+(v===id?'active':'')+'" onclick="dpgFgtmVar(&quot;'+id+'&quot;)">'+lbl+'</button>'; }
+    return '<div class="dpg-chart-card">'
+      +'<div class="dpg-chart-ttl"><i class="fa-solid fa-chart-pie"></i> Kode FGTM Gangguan Tahun Terpilih</div>'
+      +'<div class="dpg-fgtm-seg">'+_btn('keseluruhan','Keseluruhan')+_btn('internal','Internal')+_btn('external','External')+'</div>'
+      +'<div class="dpg-fgtm-wrap">'
+        +'<div class="dpg-fgtm-charts">'
+          +'<div class="dpg-chart-box" id="dpgFgtmPie"><div class="dpg-loading" style="padding:20px"><i class="fa-solid fa-spinner fa-spin"></i></div></div>'
+          +'<div class="dpg-chart-box" id="dpgFgtmBar"></div>'
+        +'</div>'
+      +'</div>'
+      +'</div>';
+  }
+  // Sisipkan kolom anotasi (label nilai) setelah tiap kolom seri numerik,
+  // agar tiap batang menampilkan angkanya. Kolom {role:...} (style/tooltip) dilewati.
+  function _dpgBarLabels(arr){
+    if(!arr || !arr.length) return arr;
+    var head=arr[0], isSeri=[];
+    for(var c=0;c<head.length;c++){
+      var h=head[c];
+      isSeri.push(c!==0 && !(h && typeof h==='object' && h.role));
+    }
+    var out=[];
+    for(var r=0;r<arr.length;r++){
+      var row=arr[r], nrow=[];
+      for(var c2=0;c2<row.length;c2++){
+        nrow.push(row[c2]);
+        if(isSeri[c2]){
+          if(r===0) nrow.push({role:'annotation'});
+          else { var v=row[c2]; nrow.push((v===0||v==null||v==='')?'':String(v)); }
+        }
+      }
+      out.push(nrow);
+    }
+    return out;
+  }
+  function _dpgColumn(id, arr, opts){
+    var el=_el(id); if(!el) return;
+    el.innerHTML='';
+    var base={ height:280, backgroundColor:'transparent', chartArea:{width:'78%',height:'66%'}, bar:{groupWidth:'72%'}, vAxis:{minValue:0}, legend:{position:'none'},
+      annotations:{ alwaysOutside:true, textStyle:{ fontSize:11, color:'#444', auraColor:'transparent', bold:true }, stem:{ color:'transparent' } } };
+    for(var k in opts){ base[k]=opts[k]; }
+    _dpgApplyChartTheme(base);
+    var g=new google.visualization.ColumnChart(el);
+    g.draw(google.visualization.arrayToDataTable(_dpgBarLabels(arr)), base);
+  }
+  function dpgDrawCharts(){
+    var res=DPG._charts; if(!res||!res.ok) return;
+    var years=res.tahunList||[];
+    var d1=[['Bulan'].concat(years.map(String))];
+    for(var m=0;m<12;m++){ var row=[BULAN_SHORT[m]]; years.forEach(function(y){ row.push((res.perBulanMulti[y]||[])[m]||0); }); d1.push(row); }
+    if(_el('dpgChart1')) _dpgColumn('dpgChart1', d1, { legend:{position:'top'}, colors:['#f59e0b','#5b8cff','#22c55e'] });
+    var d2=[['Bulan','Gangguan']]; var pb=res.perBulanTahun||[];
+    for(var m2=0;m2<12;m2++) d2.push([BULAN_SHORT[m2], pb[m2]||0]);
+    if(_el('dpgChart2')) _dpgColumn('dpgChart2', d2, { colors:['#5b8cff'] });
+    var d3=[['Tahun','Kali Gangguan',{role:'style'}]]; var pal=['#f59e0b','#5b8cff','#22c55e'];
+    years.forEach(function(y,i){ d3.push([String(y), res.perTahunTotal[y]||0, pal[i%pal.length]]); });
+    if(_el('dpgChart3')) _dpgColumn('dpgChart3', d3, {});
+    DPG._fgtm=res.fgtm||{ keseluruhan:[], internal:[], external:[], tidakDiketahui:{ kode:'NA', label:'Tidak Diketahui', count:0 } };
+    dpgDrawFgtm();
+  }
+  // Warna tetap per kode FGTM agar pie, bar, dan indikator (legend) selalu konsisten.
+  var DPG_FGTM_COLOR={ 'I1':'#ef4444','I2':'#f59e0b','I4':'#eab308','E3':'#5b8cff','E1':'#22c55e','E2':'#06b6d4','E4':'#a855f7','NA':'#94a3b8' };
+  var DPG_GRP_COLOR={ internal:'#ef4444', external:'#5b8cff', tidak:'#94a3b8' };
+  function _dpgColor(kode){ return DPG_FGTM_COLOR[kode]||'#5b8cff'; }
+  function _dpgFgtmSum(arr){ var s=0; (arr||[]).forEach(function(it){ s+=(it.count||0); }); return s; }
+
+  // Deteksi mode gelap (data-theme="dark" pada <html> atau <body>) untuk warna teks chart.
+  function _dpgIsDark(){ var de=document.documentElement, b=document.body; return (de&&de.getAttribute('data-theme')==='dark')||(b&&b.getAttribute('data-theme')==='dark'); }
+  // Terapkan warna teks/garis chart (anotasi, sumbu, legend) sesuai mode terang/gelap.
+  function _dpgApplyChartTheme(base){
+    var dark=_dpgIsDark();
+    var txt=dark?'#e5e7eb':'#444';       // warna label anotasi (angka pada batang)
+    var axis=dark?'#cbd5e1':'#64748b';   // warna teks sumbu & legend
+    var grid=dark?'rgba(148,163,184,.22)':'#e5e7eb';
+    base.annotations=base.annotations||{}; base.annotations.textStyle=base.annotations.textStyle||{}; base.annotations.textStyle.color=txt;
+    base.hAxis=base.hAxis||{}; base.hAxis.textStyle=base.hAxis.textStyle||{}; base.hAxis.textStyle.color=axis;
+    base.vAxis=base.vAxis||{}; base.vAxis.textStyle=base.vAxis.textStyle||{}; base.vAxis.textStyle.color=axis;
+    base.vAxis.gridlines=base.vAxis.gridlines||{}; base.vAxis.gridlines.color=grid;
+    base.hAxis.gridlines=base.hAxis.gridlines||{}; base.hAxis.gridlines.color=grid;
+    base.legend=base.legend||{};
+    if(base.legend.position && base.legend.position!=='none'){ base.legend.textStyle=base.legend.textStyle||{}; base.legend.textStyle.color=axis; }
+    return base;
+  }
+  // Pie/donut. rows: [ [label, count], ... ]; colors selaras urutan rows.
+  function _dpgPie(id, rows, colors){
+    var el=_el(id); if(!el) return;
+    var total=0; rows.forEach(function(r){ total+=(r[1]||0); });
+    if(total===0){ el.innerHTML='<div class="dpg-empty" style="padding:20px"><i class="fa-solid fa-inbox"></i><p>Tidak ada data FGTM tahun ini.</p></div>'; return; }
+    el.innerHTML='';
+    var data=[['Kategori','Jumlah',{role:'tooltip'}]];
+    rows.forEach(function(r){
+      var c=r[1]||0, pct=total?Math.round(c/total*100):0;
+      var top=String(r[0]);
+      // Label: nama FGTM (baris atas) + jumlah tepat di atas persentase; persentase = auto labeled legend di bawah garis.
+      data.push([top+'\n'+c, c, top+': '+c+' ('+pct+'%)']);
+    });
+    var g=new google.visualization.PieChart(el);
+    g.draw(google.visualization.arrayToDataTable(data), { height:270, pieHole:0.45, backgroundColor:'transparent', legend:{position:'labeled', textStyle:{color:_dpgIsDark()?'#ffffff':'#64748b',fontSize:12}}, colors:colors, pieSliceText:'none', chartArea:{width:'78%',height:'82%'} });
+  }
+  // Grafik batang. horiz=true -> BarChart (horizontal); else ColumnChart (vertikal).
+  function _dpgBars(id, rows, colors, horiz){
+    var el=_el(id); if(!el) return;
+    var total=0; rows.forEach(function(r){ total+=(r[1]||0); });
+    if(total===0){ el.innerHTML=''; return; }
+    el.innerHTML='';
+    var data=[['Kategori','Jumlah',{role:'style'},{role:'annotation'}]];
+    rows.forEach(function(r,i){ data.push([String(r[0]), r[1]||0, colors[i%colors.length], (r[1]?String(r[1]):'')]); });
+    var base={ height:270, backgroundColor:'transparent', legend:{position:'none'},
+      annotations:{ alwaysOutside:true, textStyle:{ fontSize:11, color:'#444', auraColor:'transparent', bold:true }, stem:{ color:'transparent' } } };
+    var g;
+    if(horiz){ base.chartArea={width:'66%',height:'80%'}; base.hAxis={minValue:0}; g=new google.visualization.BarChart(el); }
+    else { base.chartArea={width:'78%',height:'68%'}; base.vAxis={minValue:0}; g=new google.visualization.ColumnChart(el); }
+    _dpgApplyChartTheme(base);
+    g.draw(google.visualization.arrayToDataTable(data), base);
+  }
+  // Indikator "versi list lengkap": swatch warna + kode + label lengkap + jumlah.
+  function _dpgLegendItems(arr){
+    return (arr||[]).map(function(it){
+      return '<div class="dpg-fgtm-lg-item"><span class="sw" style="background:'+_dpgColor(it.kode)+'"></span>'
+        +'<span class="cd">'+_esc(it.kode)+'</span><span class="lb">'+_esc(it.label)+'</span><span class="ct">'+(it.count||0)+'</span></div>';
+    }).join('');
+  }
+  function _dpgLegendGroup(title, total, color, itemsHtml){
+    return '<div class="dpg-fgtm-lg-grp"><div class="dpg-fgtm-lg-ttl">'
+      +'<span><span class="sw" style="display:inline-block;width:11px;height:11px;border-radius:3px;background:'+color+';margin-right:6px"></span>'+_esc(title)+'</span>'
+      +'<span class="tot">'+total+'</span></div>'+(itemsHtml||'')+'</div>';
+  }
+  function dpgDrawFgtm(){
+    if(!_gchartReady) return;
+    var fg=DPG._fgtm||{}; var v=DPG._fgtmVar||'keseluruhan';
+    var internal=fg.internal||[], external=fg.external||[];
+    var tak=fg.tidakDiketahui||{ kode:'NA', label:'Tidak Diketahui', count:0 };
+    var lg=_el('dpgFgtmLegend');
+    if(v==='internal' || v==='external'){
+      var arr=(v==='internal')?internal:external;
+      var grpColor=(v==='internal')?DPG_GRP_COLOR.internal:DPG_GRP_COLOR.external;
+      var arrPos=arr.filter(function(it){ return (it.count||0)>0; });   // grafik hanya kode bernilai >0
+      var pieRows=arrPos.map(function(it){ return [it.label+' - '+it.kode, it.count||0]; });
+      var barRows=arrPos.map(function(it){ return [it.label+' ('+it.kode+')', it.count||0]; });
+      var cols=arrPos.map(function(it){ return _dpgColor(it.kode); });
+      _dpgPie('dpgFgtmPie', pieRows, cols);
+      _dpgBars('dpgFgtmBar', barRows, cols, true);
+      if(lg) lg.innerHTML=_dpgLegendGroup((v==='internal')?'Internal':'External', _dpgFgtmSum(arr), grpColor, _dpgLegendItems(arr));
+    } else {
+      var ti=_dpgFgtmSum(internal), te=_dpgFgtmSum(external);
+      var grpPairs=[['Internal',ti,DPG_GRP_COLOR.internal],['External',te,DPG_GRP_COLOR.external]].filter(function(p){ return p[1]>0; });   // grafik hanya kategori bernilai >0
+      var rows=grpPairs.map(function(p){ return [p[0], p[1]]; });
+      var cols2=grpPairs.map(function(p){ return p[2]; });
+      _dpgPie('dpgFgtmPie', rows, cols2);
+      _dpgBars('dpgFgtmBar', rows, cols2, false);
+      if(lg){
+        lg.innerHTML=_dpgLegendGroup('Internal', ti, DPG_GRP_COLOR.internal, _dpgLegendItems(internal))
+          +_dpgLegendGroup('External', te, DPG_GRP_COLOR.external, _dpgLegendItems(external))
+          +(tak.count? _dpgLegendGroup('Tidak Diketahui', tak.count, DPG_GRP_COLOR.tidak, ''):'');
+      }
+    }
+  }
+  function dpgFgtmVar(v){
+    DPG._fgtmVar=v;
+    ['keseluruhan','internal','external'].forEach(function(x){ var b=_el('dpgFgtmBtn-'+x); if(b) b.classList.toggle('active', x===v); });
+    dpgDrawFgtm();
+  }
+  var _dpgRz;
+  window.addEventListener('resize', function(){
+    if(DPG.tab!=='gangguan' || !DPG._charts || !_gchartReady) return;
+    clearTimeout(_dpgRz); _dpgRz=setTimeout(function(){ try{ dpgDrawCharts(); }catch(e){} }, 250);
+  });
+
+  // ===== Sub-tab 4: REKAP TEMUAN INSPEKSI (sumber db_INS_Temuan) =====
+  function dpgLoadRekapTemuan(penyulang, tahun, ulp, section){
+    DPG._rekapCtx={ penyulang:penyulang, tahun:tahun, ulp:ulp, section:section };
+    dpgLoadRekapTemuanList();
+    var wrap=_el('dpgRekapWrap');
+    wrap.innerHTML='<div class="dpg-loading"><i class="fa-solid fa-spinner fa-spin"></i><p>Memuat temuan...</p></div>';
+    if(typeof google==='undefined'){ dpgRenderRekapTemuan({ ok:true, tahun:tahun, rows:[], total:0 }); return; }
+    google.script.run
+      .withSuccessHandler(dpgRenderRekapTemuan)
+      .withFailureHandler(function(err){ wrap.innerHTML='<div class="dpg-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>'+((err&&err.message)||err)+'</p></div>'; })
+      .getDpgRekapTemuan({ penyulang:penyulang, tahun:tahun, ulp:ulp, section:section });
+  }
+  function dpgLoadRekapTemuanList(){
+    var sel=_el('dpgRekapTemuan');
+    if(!sel || sel.getAttribute('data-loaded')==='1' || typeof google==='undefined') return;
+    google.script.run
+      .withSuccessHandler(function(res){
+        var list=(res&&res.list)?res.list:[];
+        var cur=sel.value;
+        sel.innerHTML='<option value="">Semua Temuan</option>'+list.map(function(n){ return '<option value="'+_esc(n)+'">'+_esc(n)+'</option>'; }).join('');
+        if(cur) sel.value=cur;
+        sel.setAttribute('data-loaded','1');
+      })
+      .withFailureHandler(function(){})
+      .getListTemuanByObjek('');
+  }
+  function dpgRenderRekapTemuan(res){ DPG._rekapRes=res; DPG._rekapPage=1; dpgRekapRender(); }
+  function dpgRekapFilter(){ DPG._rekapPage=1; dpgRekapRender(); }
+  function dpgRekapGoPage(p){ DPG._rekapPage=p; dpgRekapRender(); var w=_el('dpgRekapWrap'); if(w&&w.scrollIntoView){ try{ w.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){} } }
+  function dpgRekapRender(){
+    var wrap=_el('dpgRekapWrap'); if(!wrap) return;
+    var res=DPG._rekapRes;
+    if(!res||!res.ok){ wrap.innerHTML='<div class="dpg-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>'+((res&&res.message)||'Gagal memuat data.')+'</p></div>'; return; }
+    var tahun=res.tahun||(DPG._rekapCtx&&DPG._rekapCtx.tahun)||(new Date()).getFullYear();
+    var selT=_el('dpgRekapTemuan')?_el('dpgRekapTemuan').value:'';
+    var all=res.rows||[];
+    var rows=selT?all.filter(function(r){ return String(r.temuan||'').trim()===selT; }):all;
+    // Grouping per temuan: Jumlah, Selesai (status 'Selesai'), Belum Tindak Lanjut (selain 'Selesai').
+    var gmap={}, gorder=[];
+    rows.forEach(function(r){
+      var tem=(String(r.temuan||'').trim())||'-';
+      if(!gmap[tem]){ gmap[tem]={ temuan:tem, jumlah:0, selesai:0, belum:0, items:[], itemsSelesai:[], itemsBelum:[] }; gorder.push(tem); }
+      gmap[tem].jumlah++; gmap[tem].items.push(r);
+      if(String(r.status||'').trim()==='Selesai'){ gmap[tem].selesai++; gmap[tem].itemsSelesai.push(r); } else { gmap[tem].belum++; gmap[tem].itemsBelum.push(r); }
+    });
+    gorder.sort(function(a,b){ return a.localeCompare(b); });
+    DPG._rekapGroups=gmap; DPG._rekapOrder=gorder;
+    var totJ=rows.length, totS=0, totB=0;
+    gorder.forEach(function(t){ totS+=gmap[t].selesai; totB+=gmap[t].belum; });
+    var chips='<div class="dpg-chips"><span class="dpg-chip">Jenis Temuan: <b>'+gorder.length+'</b></span><span class="dpg-chip">Jumlah: <b>'+totJ+'</b></span><span class="dpg-chip">Selesai: <b>'+totS+'</b></span><span class="dpg-chip">Belum Tindak Lanjut: <b>'+totB+'</b></span>'+(selT?'<span class="dpg-chip">Temuan: <b>'+_esc(selT)+'</b></span>':'')+'</div>';
+    var tableHtml, pager='';
+    if(!gorder.length){
+      DPG._rekapPage=1;
+      tableHtml='<div class="dpg-empty"><i class="fa-solid fa-inbox"></i><p>Tidak ada temuan pada tahun '+tahun+'.</p></div>';
+    } else {
+      var PER=20;
+      var totalPages=Math.ceil(gorder.length/PER);
+      if(!DPG._rekapPage||DPG._rekapPage<1) DPG._rekapPage=1;
+      if(DPG._rekapPage>totalPages) DPG._rekapPage=totalPages;
+      var pg=DPG._rekapPage, startIdx=(pg-1)*PER;
+      var pageItems=gorder.slice(startIdx, startIdx+PER);
+      var b=pageItems.map(function(t,i){
+        var g=gmap[t]; var absIdx=startIdx+i;
+        var cJ=g.jumlah?('<button type="button" class="dpg-count" onclick="dpgRekapDetail('+absIdx+',&quot;all&quot;)">'+g.jumlah+'</button>'):'<span class="dpg-count zero">0</span>';
+        var cS=g.selesai?('<button type="button" class="dpg-count dpg-count-full" onclick="dpgRekapDetail('+absIdx+',&quot;selesai&quot;)">'+g.selesai+'</button>'):'<span class="dpg-count zero">0</span>';
+        var cB=g.belum?('<button type="button" class="dpg-count dpg-count-pmt" onclick="dpgRekapDetail('+absIdx+',&quot;belum&quot;)">'+g.belum+'</button>'):'<span class="dpg-count zero">0</span>';
+        return '<tr><td style="text-align:center">'+(absIdx+1)+'</td><td class="dpg-left">'+_esc(g.temuan)+'</td><td style="text-align:center">'+cJ+'</td><td style="text-align:center">'+cS+'</td><td style="text-align:center">'+cB+'</td></tr>';
+      }).join('');
+      tableHtml='<div class="tbl-wrap"><table><thead><tr><th style="text-align:center">No</th><th>Temuan</th><th style="text-align:center">Jumlah</th><th style="text-align:center">Selesai</th><th style="text-align:center">Belum Tindak Lanjut</th></tr></thead><tbody>'+b+'</tbody></table></div>';
+      if(totalPages>1){
+        var prev='<button class="dpg-pg-btn" '+(pg<=1?'disabled':'')+' onclick="dpgRekapGoPage('+(pg-1)+')"><i class="fa-solid fa-chevron-left"></i> Sebelumnya</button>';
+        var next='<button class="dpg-pg-btn" '+(pg>=totalPages?'disabled':'')+' onclick="dpgRekapGoPage('+(pg+1)+')">Berikutnya <i class="fa-solid fa-chevron-right"></i></button>';
+        var endIdx=startIdx+pageItems.length;
+        pager='<div class="dpg-pager">'+prev+'<span class="dpg-pg-info">'+(startIdx+1)+'&ndash;'+endIdx+' dari '+gorder.length+' &middot; Hal '+pg+'/'+totalPages+'</span>'+next+'</div>';
+      }
+    }
+    wrap.innerHTML=chips+tableHtml+pager;
+  }
+  function _dpgRekapBadge(st){
+    st=String(st||'').trim()||'Belum Ada Tim';
+    var c=(st==='Selesai')?'full':((st==='Progress Pekerjaan')?'sec':'pmt');
+    return '<span class="dpg-badge '+c+'">'+_esc(st)+'</span>';
+  }
+
+  // Ubah URL Google Drive menjadi URL thumbnail (untuk pratinjau foto).
+  function _dpgThumb(url){ var s=String(url||''); var m=s.match(/\/d\/([-\w]{20,})/)||s.match(/[?&]id=([-\w]{20,})/); return m?('https://drive.google.com/thumbnail?id='+m[1]+'&sz=w320'):s; }
+  // Drill-down: kartu detail baris temuan saat angka Jumlah/Selesai/Belum diklik.
+  function _dpgRekapDetItem(r){
+    function _v(x){ return (x!=null && String(x).trim()) ? _esc(String(x)) : '-'; }
+    var fotos=[{ url:r.fotoTemuanUrl, cap:'Foto Temuan' },{ url:r.fotoTiangUrl, cap:'Foto Tiang / Gardu' }].filter(function(f){ return f.url && String(f.url).trim(); });
+    var fotoHtml=fotos.length
+      ? '<div class="dpg-det-fotos">'+fotos.map(function(f){ return '<a class="dpg-det-fcell" href="'+_esc(f.url)+'" target="_blank"><img src="'+_esc(_dpgThumb(f.url))+'" alt="'+_esc(f.cap)+'" loading="lazy" onerror="this.style.display=&quot;none&quot;"><span class="dpg-det-fcap">'+_esc(f.cap)+'</span></a>'; }).join('')+'</div>'
+      : '<span class="dpg-det-nofoto"><i class="fa-solid fa-image"></i> Tidak ada foto</span>';
+    return '<div class="dpg-det-card">'
+      +'<div class="dpg-det-head"><span class="dpg-det-kode">'+_v(r.kodePekerjaan)+'</span>'+_dpgRekapBadge(r.status)+'</div>'
+      +'<div class="dpg-det-grid">'
+        +'<div class="dpg-det-row"><span class="dpg-det-lbl">Tanggal</span><span class="dpg-det-val">'+_dpgTglLong(r.tanggal)+'</span></div>'
+        +'<div class="dpg-det-row"><span class="dpg-det-lbl">Penyulang</span><span class="dpg-det-val">'+_v(r.penyulang)+'</span></div>'
+        +'<div class="dpg-det-row"><span class="dpg-det-lbl">Section</span><span class="dpg-det-val">'+_v(r.section)+'</span></div>'
+        +'<div class="dpg-det-row"><span class="dpg-det-lbl">Objek</span><span class="dpg-det-val">'+_v(r.objek)+'</span></div>'
+        +'<div class="dpg-det-row"><span class="dpg-det-lbl">Tier</span><span class="dpg-det-val">'+_v(r.tier)+'</span></div>'
+        +'<div class="dpg-det-row"><span class="dpg-det-lbl">Temuan</span><span class="dpg-det-val">'+_v(r.temuan)+'</span></div>'
+      +'</div>'
+      +'<div class="dpg-det-row" style="border-bottom:none"><span class="dpg-det-lbl">Foto</span><span class="dpg-det-val">'+fotoHtml+'</span></div>'
+      +'</div>';
+  }
+  function dpgRekapDetail(absIdx, bucket){
+    var gorder=DPG._rekapOrder||[], gmap=DPG._rekapGroups||{};
+    var tem=gorder[absIdx]; if(tem==null) return;
+    var g=gmap[tem]; if(!g) return;
+    var items, label;
+    if(bucket==='selesai'){ items=g.itemsSelesai||[]; label='Selesai'; }
+    else if(bucket==='belum'){ items=g.itemsBelum||[]; label='Belum Tindak Lanjut'; }
+    else { items=g.items||[]; label='Semua'; }
+    if(_el('dpgRekapModalTitle')) _el('dpgRekapModalTitle').innerHTML=_esc(g.temuan)+' &mdash; '+label+' ('+items.length+')';
+    var body=_el('dpgRekapModalBody');
+    if(body){
+      body.innerHTML=items.length
+        ? '<div class="dpg-det-list">'+items.map(_dpgRekapDetItem).join('')+'</div>'
+        : '<div class="dpg-empty"><i class="fa-solid fa-inbox"></i><p>Tidak ada data.</p></div>';
+    }
+    var m=_el('dpgRekapModal'); if(m) m.classList.add('show');
+  }
+  function dpgRekapCloseModal(){ var m=_el('dpgRekapModal'); if(m) m.classList.remove('show'); }
+
+  window.dpgMuat=dpgMuat;
+  window.dpgReset=dpgReset;
+  window.dpgSwitchInner=dpgSwitchInner;
+  window.dpgFgtmVar=dpgFgtmVar;
+  window.dpgRekapFilter=dpgRekapFilter;
+  window.dpgRekapGoPage=dpgRekapGoPage;
+  window.dpgOnPenyulangChange=dpgOnPenyulangChange;
+  window.dpgCoverDetail=dpgCoverDetail;
+  window.dpgCoverCloseModal=dpgCoverCloseModal;
+  window.dpgRekapDetail=dpgRekapDetail;
+  window.dpgRekapCloseModal=dpgRekapCloseModal;
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', dpgBoot);
+  else dpgBoot();
+})();
+</script>

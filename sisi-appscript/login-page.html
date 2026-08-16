@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>SiSi - Login</title>
+  <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    :root{
+      --bg:#ffffff;
+      --navy:#102a5e; --navy-2:#16357a; --navy-deep:#0b1f48;
+      --neon:#2de2e6; --neon-soft:#7af5f7;
+      --ink:#0f172a; --ink-2:#475569; --ink-3:#94a3b8;
+      --line:#e2e8f0; --field:#f8fafc;
+      --danger:#dc2626; --ok:#16a34a;
+      --radius:18px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+      min-height:100vh;min-height:100dvh;color:var(--ink);
+      background:
+        radial-gradient(900px 480px at 12% -10%,rgba(45,226,230,.10),transparent 60%),
+        radial-gradient(900px 520px at 100% 110%,rgba(37,99,235,.08),transparent 60%),
+        #ffffff;
+    }
+    .stage{display:flex;min-height:100vh;min-height:100dvh}
+
+    /* ---------- Brand ---------- */
+    .brand{
+      flex:1;position:relative;overflow:hidden;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      padding:48px 40px;text-align:center;
+    }
+    .brand .logo{width:min(40%,210px);height:auto;margin-bottom:26px;
+      filter:drop-shadow(0 0 10px rgba(45,226,230,.22))}
+    .brand h1{
+      font-size:2.5rem;font-weight:800;letter-spacing:.5px;line-height:1.12;color:var(--navy);
+    }
+    .brand .tag{font-size:.92rem;font-weight:700;letter-spacing:6px;
+      color:#2563eb;margin-top:14px}
+    .brand .desc{margin-top:18px;max-width:420px;font-size:1rem;
+      color:var(--ink-2);line-height:1.65}
+
+    /* ---------- Auth ---------- */
+    .auth{
+      flex:0 0 460px;min-width:320px;
+      display:flex;align-items:center;justify-content:center;padding:40px 34px;
+    }
+    /* kartu = border pembungkus untuk garis neon berputar */
+    .loginCard{
+      position:relative;width:100%;max-width:360px;border-radius:var(--radius);
+      padding:3px;overflow:hidden;background:#d8edf0;
+      box-shadow:0 18px 50px rgba(15,42,94,.12);
+      transition:box-shadow .4s ease,transform .3s ease;
+    }
+    .loginCard::before{
+      content:'';position:absolute;z-index:0;
+      top:-50%;left:-50%;width:200%;height:200%;
+      background:conic-gradient(from 0deg,transparent 0 60%,var(--neon-soft) 74%,var(--neon) 85%,transparent 97%);
+      animation:spin 2.4s linear infinite;
+    }
+    .loginCard:hover,.loginCard:focus-within,.loginCard.open{
+      transform:translateY(-2px);
+      box-shadow:0 0 26px rgba(45,226,230,.45),0 26px 70px rgba(10,31,71,.5);
+    }
+    .card-inner{
+      position:relative;z-index:1;border-radius:15px;background:#fff;padding:22px 24px;
+      transition:background .4s ease;
+    }
+    .loginCard:hover .card-inner,.loginCard:focus-within .card-inner,.loginCard.open .card-inner{
+      background:linear-gradient(180deg,var(--navy-2),var(--navy-deep));
+    }
+
+    /* ---------- Pill LOGIN (hanya saat tertutup) ---------- */
+    .pill{
+      display:flex;align-items:center;justify-content:center;gap:12px;
+      height:58px;border-radius:13px;
+      background:var(--field);border:1px solid var(--line);
+      font-size:1.5rem;font-weight:800;letter-spacing:3px;color:var(--navy);
+    }
+    .pill .door{color:var(--navy)}
+    .pill .heart{color:#ff3b6b;font-size:1.15rem;text-shadow:0 0 10px rgba(255,59,107,.5);
+      animation:beat 1.3s ease-in-out infinite}
+    @keyframes beat{0%,100%{transform:scale(1)}45%{transform:scale(1.18)}}
+    .hint{margin-top:9px;text-align:center;font-size:.74rem;letter-spacing:.5px;color:var(--ink-3)}
+    /* sembunyikan LOGIN + hint saat form terbuka */
+    .loginCard:hover .pill,.loginCard:focus-within .pill,.loginCard.open .pill,
+    .loginCard:hover .hint,.loginCard:focus-within .hint,.loginCard.open .hint{display:none}
+
+    /* ---------- Reveal form ---------- */
+    .reveal{
+      max-height:0;opacity:0;overflow:hidden;
+      transition:max-height .45s ease,opacity .35s ease;
+    }
+    .loginCard:hover .reveal,.loginCard:focus-within .reveal,.loginCard.open .reveal{
+      max-height:560px;opacity:1;
+    }
+    .form-head{text-align:center;margin-bottom:18px}
+    .form-head h2{font-size:1.35rem;font-weight:800;color:#fff;letter-spacing:.3px}
+    .form-head p{margin-top:6px;font-size:.82rem;color:rgba(255,255,255,.66)}
+    .field{margin-bottom:14px}
+    .field label{display:block;font-size:.78rem;font-weight:600;color:rgba(255,255,255,.82);margin-bottom:6px}
+    .input-wrap{position:relative;display:flex;align-items:center}
+    .input-wrap > .lead{position:absolute;left:14px;color:var(--neon);font-size:1rem;pointer-events:none}
+    .input-wrap input{
+      width:100%;height:50px;padding:0 46px 0 42px;
+      background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.2);
+      border-radius:11px;font-size:16px;color:#fff;outline:none;
+      transition:border .2s,box-shadow .2s;
+    }
+    .input-wrap input::placeholder{color:rgba(255,255,255,.5)}
+    .input-wrap input:focus{border-color:var(--neon);
+      box-shadow:0 0 0 3px rgba(45,226,230,.22)}
+    .toggle{position:absolute;right:7px;top:50%;transform:translateY(-50%);
+      background:none;border:0;cursor:pointer;color:rgba(255,255,255,.6);font-size:1rem;
+      width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center}
+    .toggle:hover{color:var(--neon)}
+    .btn-login{
+      width:100%;height:52px;margin-top:6px;
+      background:linear-gradient(90deg,#2563eb,var(--neon));
+      color:#06243f;border:0;border-radius:11px;font-size:1.02rem;font-weight:800;
+      cursor:pointer;display:flex;justify-content:center;align-items:center;gap:9px;
+      transition:filter .2s,transform .1s,box-shadow .2s;
+      box-shadow:0 10px 26px rgba(45,226,230,.35);
+    }
+    .btn-login:hover:not(:disabled){filter:brightness(1.08);transform:translateY(-1px)}
+    .btn-login:active{transform:translateY(0)}
+    .btn-login:disabled{opacity:.65;cursor:not-allowed;transform:none}
+    .msg-error{
+      color:#fecaca;font-size:.85rem;margin-top:13px;text-align:center;
+      display:none;padding:10px 12px;background:rgba(220,38,38,.18);
+      border:1px solid rgba(248,113,113,.5);border-radius:9px;
+    }
+    .msg-error.show{display:block}
+    .foot{margin-top:16px;text-align:center;font-size:.72rem;color:rgba(255,255,255,.6);
+      display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap}
+    .foot .dot{opacity:.5}
+
+    /* ---------- Mobile: form selalu tampil + tampilan navy (1b) ---------- */
+    @media(max-width:820px){
+      .stage{flex-direction:column}
+      .brand{flex:0 0 auto;padding:38px 24px 22px;
+        padding-top:max(38px,calc(env(safe-area-inset-top) + 22px))}
+      .brand .logo{width:104px;margin-bottom:14px}
+      .brand h1{font-size:1.75rem}
+      .brand .tag{letter-spacing:4px;font-size:.8rem}
+      .brand .desc{display:none}
+      .auth{flex:1;min-width:0;align-items:flex-start;padding:8px 20px 30px;
+        padding-bottom:max(24px,env(safe-area-inset-bottom))}
+      .loginCard{max-width:430px;margin:0 auto;
+        box-shadow:0 0 22px rgba(45,226,230,.45),0 18px 50px rgba(10,31,71,.4)}
+      .card-inner{background:linear-gradient(180deg,var(--navy-2),var(--navy-deep))}
+      .pill,.hint{display:none}
+      .reveal{max-height:none;opacity:1}
+    }
+
+    /* ---------- Splash ---------- */
+    .splash{position:fixed;inset:0;z-index:50;display:none;
+      flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;
+      background:
+        radial-gradient(800px 400px at 50% -10%,rgba(45,226,230,.20),transparent 60%),
+        linear-gradient(160deg,var(--navy-2),var(--navy-deep));
+      color:#fff}
+    .splash.show{display:flex;animation:fade .25s ease}
+    @keyframes fade{from{opacity:0}to{opacity:1}}
+    .splash-card{background:rgba(255,255,255,.07);border:1px solid rgba(45,226,230,.25);
+      border-radius:22px;padding:34px 30px;max-width:340px;width:100%;
+      backdrop-filter:blur(6px);box-shadow:0 20px 60px rgba(0,0,0,.45);
+      animation:pop .35s cubic-bezier(.18,.9,.32,1.2)}
+    @keyframes pop{from{opacity:0;transform:scale(.86)}to{opacity:1;transform:scale(1)}}
+    .splash-ring{width:88px;height:88px;margin:0 auto 18px;border-radius:50%;
+      background:var(--ok);display:flex;align-items:center;justify-content:center;
+      animation:ring 1.4s ease-out infinite}
+    .splash-ring i{color:#fff;font-size:2.4rem;animation:check .45s ease .12s both}
+    @keyframes ring{0%{box-shadow:0 0 0 0 rgba(22,163,74,.45)}70%{box-shadow:0 0 0 18px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}
+    @keyframes check{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+    .splash-card h3{font-size:1.35rem;font-weight:800;margin-bottom:6px}
+    .splash-card p{font-size:.92rem;color:rgba(255,255,255,.82)}
+    .splash-sub{margin-top:18px;font-size:.8rem;color:rgba(255,255,255,.72);
+      display:flex;align-items:center;justify-content:center;gap:8px}
+    .splash-spin{width:15px;height:15px;border:2px solid rgba(45,226,230,.35);
+      border-top-color:var(--neon);border-radius:50%;animation:spin .7s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .splash-go{display:none;margin-top:20px;text-decoration:none;align-items:center;gap:8px;
+      background:linear-gradient(90deg,#2563eb,var(--neon));color:#06243f;font-weight:800;font-size:.98rem;
+      padding:13px 24px;border-radius:11px;box-shadow:0 10px 24px rgba(45,226,230,.35);
+      transition:filter .2s,transform .1s}
+    .splash-go:hover{filter:brightness(1.08);transform:translateY(-1px)}
+    .splash-go:active{transform:translateY(0)}
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <div class="brand">
+      <img class="logo" src="https://drive.google.com/thumbnail?id=17QGDCsqCMMvfC7O2X66o5YGbEuxFeM_y&sz=w512" alt="Logo SiSi ULP Toboali" onerror="this.style.display='none'">
+      <h1>Sistem Integrasi</h1>
+      <div class="tag">ULP TOBOALI</div>
+      <div class="desc">Satu pintu untuk inspeksi jaringan, pelaporan, dan pemantauan unit layanan PLN ULP Toboali.</div>
+    </div>
+
+    <div class="auth">
+      <div class="loginCard" id="loginCard">
+        <div class="card-inner">
+          <div class="pill">
+            <i class="fa-solid fa-right-to-bracket door"></i>
+            <span>LOGIN</span>
+            <i class="fa-solid fa-heart heart"></i>
+          </div>
+          <div class="hint">Arahkan kursor untuk masuk</div>
+
+          <form id="frmLogin" class="reveal" autocomplete="off" onsubmit="return false;">
+            <div class="form-head">
+              <h2>Selamat Datang 👋</h2>
+              <p>Masuk untuk melanjutkan ke SiSi</p>
+            </div>
+            <div class="field">
+              <label for="inpUser">Username</label>
+              <div class="input-wrap">
+                <i class="fa-solid fa-user lead"></i>
+                <input id="inpUser" name="sisiUser" type="text"
+                  autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+                  placeholder="Masukkan username" required>
+              </div>
+            </div>
+            <div class="field">
+              <label for="inpPass">Password</label>
+              <div class="input-wrap">
+                <i class="fa-solid fa-lock lead"></i>
+                <input id="inpPass" name="password" type="password"
+                  autocomplete="current-password" placeholder="Masukkan password" required>
+                <button type="button" class="toggle" id="btnTogglePw" aria-label="Tampilkan password">
+                  <i class="fa-regular fa-eye"></i>
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" class="btn-login" id="btnLogin">
+              <i class="fa-solid fa-right-to-bracket"></i>
+              <span id="btnLoginLabel">Sign in</span>
+            </button>
+
+            <div class="msg-error" id="errBox"><?= error ?></div>
+
+            <div class="foot">
+              <span><i class="fa-solid fa-lock"></i> Koneksi aman</span>
+              <span class="dot">&bull;</span>
+              <span>PLN ULP Toboali &copy; 2026</span>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="splash" id="splash" aria-live="polite">
+    <div class="splash-card">
+      <div class="splash-ring"><i class="fa-solid fa-check"></i></div>
+      <h3>Akun Terverifikasi</h3>
+      <p id="splashUser">Selamat datang kembali</p>
+      <div class="splash-sub" id="splashSub"><span class="splash-spin"></span> Mengalihkan ke aplikasi…</div>
+      <a class="splash-go" id="splashGo" target="_top" href="#">Masuk ke Aplikasi <i class="fa-solid fa-arrow-right"></i></a>
+    </div>
+  </div>
+
+  <input type="hidden" id="hdnScriptUrl" value="<?= scriptUrl ?>">
+
+  <script>
+  (function(){
+    'use strict';
+    var form      = document.getElementById('frmLogin');
+    var inpUser   = document.getElementById('inpUser');
+    var inpPass   = document.getElementById('inpPass');
+    var btnLogin  = document.getElementById('btnLogin');
+    var btnLabel  = document.getElementById('btnLoginLabel');
+    var errBox    = document.getElementById('errBox');
+    var btnToggle = document.getElementById('btnTogglePw');
+    var loginCard = document.getElementById('loginCard');
+    var scriptUrl = document.getElementById('hdnScriptUrl').value;
+
+    if (errBox && errBox.textContent.trim()){
+      errBox.classList.add('show');
+      if (loginCard) loginCard.classList.add('open');
+    }
+
+    btnToggle.addEventListener('click', function(){
+      var show = inpPass.type === 'password';
+      inpPass.type = show ? 'text' : 'password';
+      btnToggle.innerHTML = show
+        ? '<i class="fa-regular fa-eye-slash"></i>'
+        : '<i class="fa-regular fa-eye"></i>';
+    });
+
+    function setLoading(on){
+      btnLogin.disabled    = on;
+      btnLabel.textContent = on ? 'Memverifikasi…' : 'Sign in';
+    }
+    function showErr(msg){ errBox.textContent = msg; errBox.classList.add('show');
+      if (loginCard) loginCard.classList.add('open'); }
+    function clearErr(){ errBox.textContent = ''; errBox.classList.remove('show'); }
+
+    form.addEventListener('submit', function(e){
+      e.preventDefault();
+      clearErr();
+      var u = (inpUser.value || '').trim();
+      var p = (inpPass.value || '').trim();
+      if (!u || !p){ showErr('Username dan password wajib diisi.'); return; }
+      setLoading(true);
+      google.script.run
+        .withSuccessHandler(function(res){
+          if (res && res.success){
+            btnLogin.disabled = true;
+            var splash = document.getElementById('splash');
+            var su = document.getElementById('splashUser');
+            if (su && res.username) su.textContent = 'Halo, ' + res.username;
+            if (splash) splash.classList.add('show');
+            sessionStorage.setItem('sisiSesi', JSON.stringify({
+              token    : res.token,
+              username : res.username,
+              email    : res.email,
+              role     : res.role,
+              ulp      : res.ulp,
+              kodeUlp  : res.kodeUlp,
+              bidang   : res.bidang,
+              tim      : res.tim,
+              aksesMenu: res.aksesMenu
+            }));
+            sessionStorage.setItem('sisiScriptUrl', scriptUrl);
+            var dest = scriptUrl + '?token=' + res.token;
+            var goLink = document.getElementById('splashGo');
+            if (goLink) goLink.href = dest;
+            var revealGo = function(){
+              var sub = document.getElementById('splashSub');
+              if (sub) sub.style.display = 'none';
+              if (goLink) goLink.style.display = 'inline-flex';
+            };
+            setTimeout(function(){
+              try { window.top.location.href = dest; }
+              catch (err2) { revealGo(); }
+            }, 1200);
+            setTimeout(revealGo, 2600);
+          } else {
+            setLoading(false);
+            showErr((res && res.message) || 'Username atau password salah.');
+          }
+        })
+        .withFailureHandler(function(err){
+          setLoading(false);
+          showErr('Error: ' + ((err && err.message) || String(err)));
+        })
+        .doLogin(u, p);
+    });
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,2280 @@
+<style>
+  .ba-wrap{width:100%;max-width:none;min-width:0;margin:0;padding:0;color:var(--text);font-family:'Segoe UI',sans-serif;box-sizing:border-box;background:linear-gradient(180deg,var(--surface-3,#eff6ff) 0%,var(--bg,#f1f5f9) 120px);min-height:100vh}
+  .ba-wrap>.ba-card,.ba-wrap>.ba-tab-content,.ba-tab-content>.ba-card{width:100%;max-width:none;box-sizing:border-box}
+  .ba-head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+  .ba-icon{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--primary),var(--primary-2));color:var(--on-primary);display:flex;align-items:center;justify-content:center;font-size:20px}
+  .ba-head h2{margin:0;font-size:20px;font-weight:700;color:var(--text)}
+  .ba-head p{margin:3px 0 0;font-size:13px;color:var(--text-3)}
+
+  .ba-tabs{position:relative;display:inline-flex;gap:0;margin-bottom:16px;background:var(--surface-2);border:1px solid var(--border);border-radius:999px;padding:4px;max-width:100%;overflow-x:auto;scrollbar-width:none}
+  .ba-tabs::-webkit-scrollbar{display:none}
+  .ba-tab-indicator{position:absolute;top:4px;left:0;height:calc(100% - 8px);width:0;border-radius:999px;background:var(--surface);opacity:0;box-shadow:0 2px 8px rgba(0,0,0,.12);z-index:0;pointer-events:none;transition:transform .35s cubic-bezier(.34,1.56,.64,1),width .35s cubic-bezier(.34,1.56,.64,1),opacity .2s}
+  [data-theme="dark"] .ba-tab-indicator{background:linear-gradient(135deg,#29E3FF,#5b8cff);box-shadow:0 0 14px rgba(41,227,255,.5)}
+  .ba-tab{position:relative;z-index:1;padding:8px 17px;border:0;background:transparent;border-radius:999px;color:var(--text-3);font-size:.88rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+  .ba-tab:hover{color:var(--primary)}
+  .ba-tab.active{color:var(--primary);transform:translateY(-1px)}
+  [data-theme="dark"] .ba-tab.active{color:#06243a}
+  .ba-tab-content{display:none}
+  .ba-tab-content.active{display:block}
+
+  .ba-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-md);overflow:hidden;margin-bottom:14px}
+  .ba-card-head{display:flex;align-items:center;gap:9px;padding:13px 16px;background:var(--surface-2);border-bottom:1px solid var(--border);font-size:14px;font-weight:700;color:var(--text)}
+  .ba-card-head i{color:var(--primary)}
+  .ba-card-body{padding:15px 16px}
+
+  .ba-filter{display:flex;flex-wrap:wrap;gap:11px;align-items:flex-end}
+  .ba-field{display:flex;flex-direction:column;gap:4px;min-width:145px;flex:1}
+  .ba-field label{font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.3px}
+  .ba-field input,.ba-field select{width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;outline:none;font-family:inherit}
+  .ba-field input:focus,.ba-field select:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(30,58,138,.09)}
+  .ba-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .ba-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:8px 15px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
+  .ba-btn-search{background:var(--primary);color:var(--on-primary);border:1px solid var(--primary)}
+  .ba-btn-reset{background:var(--surface-2);color:var(--text-2);border:1px solid var(--border)}
+  .ba-btn:disabled{opacity:.65;cursor:not-allowed}
+
+  .ba-table-wrap{overflow:auto;border:1px solid var(--border);border-radius:10px}
+  .ba-table{width:100%;min-width:1040px;table-layout:fixed;border-collapse:collapse;font-size:13px;color:var(--text)}
+  .ba-table th{padding:10px 12px;background:var(--surface-2);color:var(--text-3);font-size:11px;text-transform:uppercase;text-align:left;white-space:nowrap;border-bottom:2px solid var(--border)}
+  .ba-table td{padding:9px 12px;border-bottom:1px solid var(--border-2);vertical-align:middle;word-break:break-word;overflow-wrap:anywhere}
+  .ba-table tbody tr:hover{background:var(--surface-2)}
+  .ba-center{text-align:center!important}
+  .ba-eye{width:31px;height:31px;border:1px solid var(--primary);border-radius:8px;background:var(--primary-lt,#eff6ff);color:var(--primary);cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+  .ba-eye:hover{background:var(--primary);color:var(--on-primary)}
+  .ba-empty{text-align:center;padding:38px 16px;color:var(--text-muted)}
+  .ba-empty i{display:block;font-size:28px;margin-bottom:8px}
+  .ba-info{font-size:12px;color:var(--text-3);margin:0 0 9px}
+
+  .ba-soon{padding:46px 20px;text-align:center;color:var(--text-3)}
+  .ba-soon i{font-size:38px;color:var(--primary);margin-bottom:12px}
+  .ba-soon h3{margin:0 0 6px;color:var(--text);font-size:18px}
+  .ba-soon p{margin:0;font-size:13px}
+
+  .ba-modal-bg{position:fixed;inset:0;z-index:9500;background:var(--overlay);display:none;align-items:center;justify-content:center;padding:16px}
+  .ba-modal-bg.show{display:flex}
+  .ba-modal{width:100%;max-width:620px;max-height:88vh;display:flex;flex-direction:column;background:var(--surface);border-radius:14px;box-shadow:var(--shadow-lg);overflow:hidden}
+  .ba-modal-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:linear-gradient(135deg,var(--primary),var(--primary-2));color:var(--on-primary)}
+  .ba-modal-head h3{margin:0;font-size:16px}
+  .ba-modal-x{border:0;background:none;color:inherit;font-size:21px;cursor:pointer}
+  .ba-modal-body{padding:16px 18px;overflow:auto}
+  .ba-detail-row{display:flex;gap:12px;padding:7px 0;border-bottom:1px solid var(--border-2);font-size:13px}
+  .ba-detail-label{flex:0 0 155px;font-weight:700;color:var(--text-3)}
+  .ba-detail-value{flex:1;color:var(--text);word-break:break-word}
+  .ba-modal-foot{display:flex;align-items:center;gap:8px;justify-content:flex-end;padding:12px 18px;border-top:1px solid var(--border)}
+  .ba-jenis-badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:700;border:1.5px solid;white-space:nowrap}
+  .ba-jenis-pengoperasian{color:#1e40af;border-color:#1e40af;background:#eff6ff}
+  .ba-jenis-penggantian{color:#15803d;border-color:#16a34a;background:#f0fdf4}
+  .ba-jenis-bongkar-sementara{color:#b45309;border-color:#d97706;background:#fffbeb}
+  .ba-jenis-bongkar{color:#b91c1c;border-color:#dc2626;background:#fef2f2}
+  .ba-jenis-pemeriksaan{color:#6d28d9;border-color:#7c3aed;background:#f5f3ff}
+  .ba-jenis-default{color:#374151;border-color:#9ca3af;background:#f9fafb}
+  .ba-status-badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:700;border:1.5px solid;white-space:nowrap}
+  .ba-status-draft{color:#b45309;border-color:#d97706;background:#fffbeb}
+  .ba-status-proses{color:#1d4ed8;border-color:#2563eb;background:#eff6ff}
+  .ba-status-selesai{color:#15803d;border-color:#16a34a;background:#f0fdf4}
+
+  .ba-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+  .ba-grid.cols2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ba-grid .ba-field{min-width:0;flex:none}
+  .ba-grid .ba-full{grid-column:1/-1}
+  .ba-mode{display:flex;gap:10px;flex-wrap:wrap}
+  .ba-mode-btn{flex:1;min-width:210px;display:flex;align-items:center;gap:11px;padding:12px 14px;border:1.5px solid var(--border);border-radius:11px;background:var(--surface);cursor:pointer;font-family:inherit;color:var(--text);text-align:left}
+  .ba-mode-btn:hover{border-color:var(--primary)}
+  .ba-mode-btn.active{border-color:var(--primary);background:var(--primary-lt,#eff6ff)}
+  .ba-mode-btn i{font-size:19px;color:var(--primary);flex-shrink:0}
+  .ba-mode-btn .mtx{display:flex;flex-direction:column;line-height:1.3}
+  .ba-mode-btn .mtx b{font-size:13px}
+  .ba-mode-btn .mtx small{font-size:11px;color:var(--text-3)}
+  .ba-src-info{display:flex;align-items:center;gap:8px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:12.5px;color:var(--text-2);margin-top:12px}
+  .ba-src-info i{color:var(--primary)}
+  .ba-toggle-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;font-weight:700;color:var(--text-2)}
+  .ba-toggle{position:relative;display:inline-block;width:46px;height:25px;flex:none}
+  .ba-toggle input{opacity:0;width:0;height:0}
+  .ba-toggle-slider{position:absolute;inset:0;border-radius:999px;background:var(--border);cursor:pointer;transition:.2s}
+  .ba-toggle-slider:before{content:'';position:absolute;width:19px;height:19px;left:3px;top:3px;border-radius:50%;background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.2);transition:.2s}
+  .ba-toggle input:checked + .ba-toggle-slider{background:var(--primary)}
+  .ba-toggle input:checked + .ba-toggle-slider:before{transform:translateX(21px)}
+.ba-group-identitas{border-color:#a78bfa;background:#f5f3ff}.ba-group-identitas>.ba-card-head{background:#ede9fe;color:#5b21b6}
+.ba-group-awal{border-color:#93c5fd;background:#eff6ff}
+.ba-group-awal>.ba-card-head{background:#dbeafe;color:#1e3a8a}
+.ba-group-sesudah{border-color:#86efac;background:#f0fdf4}
+.ba-group-sesudah>.ba-card-head{background:#dcfce7;color:#166534}
+.ba-sub-card{box-shadow:none;margin-bottom:12px}
+.ba-sub-card:last-child{margin-bottom:0}
+.ba-sub-trafo-awal{border-color:#bfdbfe}.ba-sub-trafo-awal>.ba-card-head{background:#eff6ff}
+.ba-sub-phb-awal{border-color:#c4b5fd}.ba-sub-phb-awal>.ba-card-head{background:#f5f3ff}
+.ba-sub-trafo-sesudah{border-color:#86efac}.ba-sub-trafo-sesudah>.ba-card-head{background:#f0fdf4}
+.ba-sub-phb-sesudah{border-color:#fcd34d}.ba-sub-phb-sesudah>.ba-card-head{background:#fffbeb}
+.ba-photo-status{display:block;min-height:16px;font-size:11px;color:var(--text-3);margin-top:3px;word-break:break-word}.ba-photo-status.ok{color:#15803d}.ba-photo-status.error{color:#dc2626}
+
+/* Modal Detail BA: ukuran TETAP untuk semua jenis pekerjaan (tidak fleksibel). */
+#baDetailModal .ba-modal{width:880px;max-width:96vw;height:80vh;max-height:80vh}
+#baDetailModal .ba-modal-body{flex:1;min-height:0;overflow:auto}
+/* Tab detail selalu horizontal satu baris (geser bila layar sempit). */
+#baDetailTabs{display:flex;flex-wrap:nowrap;width:100%;overflow-x:auto;justify-content:flex-start}
+#baDetailTabs .ba-tab{flex:0 0 auto}
+#baDetailModal .ba-tab-content{min-height:330px}
+@media(max-width:700px){
+  #baDetailModal .ba-modal{width:100%;height:88vh;max-height:88vh}
+  #baDetailModal .ba-tab-content{min-height:280px}
+}
+
+  @media(max-width:700px){
+    .ba-grid,.ba-grid.cols2{grid-template-columns:1fr}
+    .ba-mode-btn{min-width:100%}
+    .ba-field{min-width:100%}
+    .ba-actions{width:100%}
+    .ba-btn{flex:1}
+    .ba-detail-row{flex-direction:column;gap:3px}
+    .ba-detail-label{flex:auto}
+  }
+</style>
+
+<div class="ba-wrap">
+  <div class="ba-head">
+    <div class="ba-icon"><i class="fa-solid fa-file-signature"></i></div>
+    <div>
+      <h2>Berita Acara</h2>
+      <p>SIE Teknik — SiSi ULP Toboali</p>
+    </div>
+  </div>
+
+  <div class="ba-tabs" id="baTabs">
+    <span class="ba-tab-indicator" id="baTabIndicator"></span>
+    <button class="ba-tab active" data-tab="data" onclick="baSwitchTab('data')"><i class="fa-solid fa-magnifying-glass"></i> Pencarian Data</button>
+    <button class="ba-tab" data-tab="gardu" onclick="baSwitchTab('gardu')"><i class="fa-solid fa-building"></i> Buat BA Gardu</button>
+    <button class="ba-tab" data-tab="switching" onclick="baSwitchTab('switching')"><i class="fa-solid fa-toggle-on"></i> Buat BA Switching</button>
+  </div>
+
+  <!-- TAB 1: DATA PEKERJAAN -->
+  <section class="ba-tab-content active" id="baTab-data">
+    <div class="ba-card">
+      <div class="ba-card-head"><i class="fa-solid fa-filter"></i> Filter Data</div>
+      <div class="ba-card-body">
+        <div class="ba-filter">
+          <div class="ba-field"><label>Nomor / Nama Peralatan</label><input type="text" id="baKataKunciPeralatan" placeholder="Contoh: TB0393 / Recloser" onkeydown="if(event.key==='Enter')baCari()"></div>
+          <div class="ba-field"><label>Tanggal Dari</label><input type="date" id="baTglDari"></div>
+          <div class="ba-field"><label>Tanggal Sampai</label><input type="date" id="baTglSampai"></div>
+          <div class="ba-field">
+            <label>Jenis Pekerjaan</label>
+            <select id="baJenis">
+              <option value="">Semua</option>
+              <option value="Pengoperasian Trafo">Pengoperasian Trafo</option>
+              <option value="Penggantian Trafo">Penggantian Trafo</option>
+              <option value="Bongkar Sementara Trafo">Bongkar Sementara Trafo</option>
+              <option value="Bongkar Trafo">Bongkar Trafo</option>
+              <option value="Pemeriksaan Trafo">Pemeriksaan Trafo</option>
+            </select>
+          </div>
+          <div class="ba-field">
+            <label>Jenis Peralatan</label>
+            <select id="baPeralatan">
+              <option value="">Semua</option>
+              <option value="Gardu">Gardu</option>
+              <option value="Switching">Switching</option>
+            </select>
+          </div>
+          <div class="ba-field">
+            <label>Status BA</label>
+            <select id="baStatusBA">
+              <option value="">Semua</option>
+              <option value="Selesai TTD">Selesai TTD</option>
+              <option value="Proses TTD">Proses TTD</option>
+              <option value="Draft BA">Draft BA</option>
+            </select>
+          </div>
+          <div class="ba-actions">
+            <button class="ba-btn ba-btn-search" id="baBtnCari" onclick="baCari()"><i class="fa-solid fa-magnifying-glass"></i> Cari</button>
+            <button class="ba-btn ba-btn-reset" onclick="baReset()"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ba-card">
+      <div class="ba-card-head"><i class="fa-solid fa-table-list"></i> Hasil Pencarian</div>
+      <div class="ba-card-body">
+        <p class="ba-info" id="baInfo"></p>
+        <div class="ba-table-wrap">
+          <table class="ba-table">
+            <thead><tr>
+              <th class="ba-center" style="width:4%">No</th>
+              <th style="width:15%">Nama Peralatan</th>
+              <th style="width:13%">Jenis Pekerjaan</th>
+              <th style="width:9%">Tanggal</th>
+              <th style="width:12%">Penyulang</th>
+              <th style="width:11%">Section</th>
+              <th class="ba-center" style="width:10%">Status BA</th>
+              <th style="width:11%">BA TTD</th>
+              <th class="ba-center" style="width:7%">WA EAM</th>
+              <th class="ba-center" style="width:8%">Aksi</th>
+            </tr></thead>
+            <tbody id="baBody">
+              <tr><td colspan="10"><div class="ba-empty"><i class="fa-solid fa-magnifying-glass"></i>Pilih filter lalu klik Cari.</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB 2: BUAT BA GARDU -->
+  <section class="ba-tab-content" id="baTab-gardu">
+
+    <div class="ba-card">
+      <div class="ba-card-head"><i class="fa-solid fa-database"></i> Sumber Data</div>
+      <div class="ba-card-body">
+        <div class="ba-mode">
+          <button type="button" class="ba-mode-btn active" id="bagModeMaster" onclick="bagSetMode('master')">
+            <i class="fa-solid fa-magnifying-glass-location"></i>
+            <span class="mtx"><b>Ambil dari Master Gardu</b><small>Cari Nomor Gardu, data awal terisi otomatis</small></span>
+          </button>
+          <button type="button" class="ba-mode-btn" id="bagModeManual" onclick="bagSetMode('manual')">
+            <i class="fa-solid fa-keyboard"></i>
+            <span class="mtx"><b>Input Manual</b><small>Isi seluruh data secara manual</small></span>
+          </button>
+        </div>
+        <div id="bagMasterWrap">
+          <div class="ba-filter" style="margin-top:12px">
+            <div class="ba-field"><label>Cari Nomor Gardu</label><input type="text" id="bagCariNomor" placeholder="Ketik nomor gardu..." onkeydown="if(event.key==='Enter')bagCariMaster()"></div>
+            <div class="ba-actions"><button class="ba-btn ba-btn-search" id="bagBtnCariMaster" onclick="bagCariMaster()"><i class="fa-solid fa-magnifying-glass"></i> Cari Gardu</button><button class="ba-btn ba-btn-reset" id="bagBtnResetMaster" onclick="bagResetDataGardu()" disabled><i class="fa-solid fa-rotate-left"></i> Reset Data</button></div>
+          </div>
+          <div id="bagMasterHasil"></div>
+        </div>
+        <div class="ba-src-info" id="bagSrcInfo" style="display:none"><i class="fa-solid fa-circle-info"></i><span></span></div>
+      </div>
+    </div>
+
+    <div id="bagFormWrap" style="display:none">
+
+      <div class="ba-card" id="bagCardJenis">
+        <div class="ba-card-head"><i class="fa-solid fa-list-check"></i> Jenis Pekerjaan</div>
+        <div class="ba-card-body">
+          <div class="ba-grid">
+            <div class="ba-field ba-full">
+              <label>Jenis Pekerjaan</label>
+              <select id="bagJenisPekerjaan" onchange="bagTerapkanJenis()">
+                <option value="">- Pilih -</option>
+                <option value="Pengoperasian Trafo">Pengoperasian Trafo</option>
+                <option value="Penggantian Trafo">Penggantian Trafo</option>
+                <option value="Bongkar Sementara Trafo">Bongkar Sementara Trafo</option>
+                <option value="Bongkar Trafo">Bongkar Trafo</option>
+                <option value="Pemeriksaan Trafo">Pemeriksaan Trafo</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="bagCardsWrap" style="display:none">
+
+      <div class="ba-card ba-group-identitas">
+        <div class="ba-card-head"><i class="fa-solid fa-id-card"></i> Identitas Berita Acara</div>
+        <div class="ba-card-body">
+          <div class="ba-grid">
+            <div class="ba-field" id="bagKodeGarduField" style="display:none"><label>Kode Gardu (Prefix)</label><select id="bagKodeGardu" onchange="bagIsiNomorGardu()"><option value="">- Pilih -</option><option value="TB">TB</option><option value="PY">PY</option><option value="TL">TL</option><option value="PG">PG</option></select></div>
+            <div class="ba-field"><label>Nomor Gardu / Trafo</label><input type="text" id="bagNomorTrafo"></div>
+            <div class="ba-field"><label>Tanggal BA</label><input type="date" id="bagTanggalBA"></div>
+            <div class="ba-field"><label>Tanggal Pekerjaan</label><input type="date" id="bagTanggalPekerjaan"></div>
+            <div class="ba-field"><label>Nomor BA</label><input type="text" id="bagNomorBA" placeholder="Otomatis saat disimpan" readonly><small class="ba-info" style="margin:2px 0 0">Nomor BA dibuat otomatis saat disimpan</small></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ba-card ba-group-awal" id="bagCardTrafoAwal" style="display:none">
+        <div class="ba-card-head"><i class="fa-solid fa-bolt"></i> Data Trafo Awal</div>
+        <div class="ba-card-body">
+          <div class="ba-card ba-sub-card ba-sub-trafo-awal" style="margin-bottom:12px">
+            <div class="ba-card-head"><i class="fa-solid fa-transformer-bolt"></i> Identitas Trafo</div>
+            <div class="ba-card-body">
+              <div class="ba-grid">
+                <div class="ba-field"><label>Kapasitas (kVA)</label><input type="text" id="bagKapasitas"></div>
+                <div class="ba-field"><label>Merk</label><select id="bagMerk"><option value="">- Pilih Merk -</option><option>Alsthom Atlantique</option><option>Amtra Electric</option><option>B&amp;D</option><option>Centrado</option><option>J&amp;P</option><option>Lucky Light</option><option>Mastergreen</option><option>Maxima</option><option>Monata</option><option>Morawa</option><option>Trafindo</option><option>Trafoindo</option><option>Triputra Electric Abadi</option><option>Schneider</option><option>Shenyang</option><option>Sintra</option><option>Starlite</option><option>Unindo</option><option>Voltra</option><option>Weltraf</option></select></div>
+                <div class="ba-field"><label>Nomor Seri</label><input type="text" id="bagNomorSeri"></div>
+                <div class="ba-field"><label>Tahun</label><input type="text" id="bagTahun"></div>
+                <div class="ba-field"><label>Konstruksi</label><input type="text" id="bagKonstruksi"></div>
+                <div class="ba-field"><label>Penyulang</label><select id="bagPenyulang" onchange="bagPilihPenyulang()"><option value="">- Pilih Penyulang -</option></select></div>
+                <div class="ba-field"><label>Section</label><select id="bagSection" onchange="bagPilihSection()"><option value="">- Pilih Section -</option></select></div>
+                <div class="ba-field"><label>Koordinat Trafo</label><input type="text" id="bagKoordinat"></div>
+                <div class="ba-field"><label>Jurusan Terpasang</label><input type="text" id="bagJurusan"></div>
+                <div class="ba-field ba-full"><label>Alamat</label><input type="text" id="bagAlamat"></div>
+                <div class="ba-field"><label>Nameplate Trafo</label><input type="file" id="bagFotoNameplateAwal" accept="image/*" onchange="bagUploadFoto('nameplateTrafoAwal',this)"><small class="ba-photo-status" id="bagFotoNameplateAwalStatus"></small></div>
+                <div class="ba-field"><label>Foto Full Gardu</label><input type="file" id="bagFotoFullGarduAwal" accept="image/*" onchange="bagUploadFoto('fotoFullGarduAwal',this)"><small class="ba-photo-status" id="bagFotoFullGarduAwalStatus"></small></div>
+              </div>
+            </div>
+          </div>
+          <div class="ba-card ba-sub-card ba-sub-phb-awal" id="bagCardPhbLama" style="display:none">
+            <div class="ba-card-head"><i class="fa-solid fa-boxes-stacked"></i> <span id="bagPhbLamaLabel">Identitas PHB-TR Lama</span></div>
+            <div class="ba-card-body">
+              <div class="ba-grid">
+                <div class="ba-field"><label>Merk PHB-TR</label><input type="text" id="bagPhbMerk"></div>
+                <div class="ba-field"><label>Nomor Seri PHB-TR</label><input type="text" id="bagPhbSeri"></div>
+                <div class="ba-field"><label>Tahun PHB-TR</label><input type="text" id="bagPhbTahun"></div>
+                <div class="ba-field"><label>Foto Nameplate PHB-TR</label><input type="file" id="bagFotoNameplatePhbAwal" accept="image/*" onchange="bagUploadFoto('nameplatePhbAwal',this)"><small class="ba-photo-status" id="bagFotoNameplatePhbAwalStatus"></small></div>
+                <div class="ba-field"><label>Foto Box PHB-TR</label><input type="file" id="bagFotoBoxPhbAwal" accept="image/*" onchange="bagUploadFoto('fotoBoxPhbAwal',this)"><small class="ba-photo-status" id="bagFotoBoxPhbAwalStatus"></small></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ba-card" id="bagCardPengoperasian" style="display:none">
+        <div class="ba-card-head"><i class="fa-solid fa-plug-circle-check"></i> Data Pengoperasian</div>
+        <div class="ba-card-body">
+          <div class="ba-grid">
+            <div class="ba-field"><label>Kepemilikan</label><input type="text" id="bagKepemilikan"></div>
+            <div class="ba-field"><label>OwnerId</label><input type="text" id="bagOwnerId" readonly placeholder="Otomatis setelah Section dipilih"></div>
+            <div class="ba-field"><label>External Reference</label><input type="text" id="bagExternalRef" readonly placeholder="Otomatis setelah Section dipilih"></div>
+            <div class="ba-field"><label>Panjang Perluasan SUTM</label><div style="display:flex;align-items:center;gap:6px"><input type="text" id="bagPerluasan" style="flex:1"><span style="font-size:13px;font-weight:700;color:var(--text-3);white-space:nowrap">kmS</span></div></div>
+            <div class="ba-field"><label>Vendor Pekerja</label><input type="text" id="bagVendor"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ba-card ba-group-sesudah" id="bagCardSesudah" style="display:none">
+        <div class="ba-card-head"><i class="fa-solid fa-right-left"></i> Data Trafo Sesudah</div>
+        <div class="ba-card-body">
+          <div class="ba-grid">
+            <div class="ba-field"><label>Kapasitas (kVA)</label><input type="text" id="bagsKapasitas"></div>
+            <div class="ba-field"><label>Merk</label><select id="bagsMerk"><option value="">- Pilih Merk -</option><option>Alsthom Atlantique</option><option>Amtra Electric</option><option>B&amp;D</option><option>Centrado</option><option>J&amp;P</option><option>Lucky Light</option><option>Mastergreen</option><option>Maxima</option><option>Monata</option><option>Morawa</option><option>Trafindo</option><option>Trafoindo</option><option>Triputra Electric Abadi</option><option>Schneider</option><option>Shenyang</option><option>Sintra</option><option>Starlite</option><option>Unindo</option><option>Voltra</option><option>Weltraf</option></select></div>
+            <div class="ba-field"><label>Nomor Seri</label><input type="text" id="bagsSeri"></div>
+            <div class="ba-field"><label>Tahun</label><input type="text" id="bagsTahun"></div>
+            <div class="ba-field"><label>Asal Trafo</label><input type="text" id="bagsAsal"></div>
+            <div class="ba-field"><label>Jumlah Jurusan</label><input type="text" id="bagsJurusan"></div>
+            <div class="ba-field"><label>Nameplate Trafo Sesudah</label><input type="file" id="bagFotoNameplateSesudah" accept="image/*" onchange="bagUploadFoto('nameplateTrafoSesudah',this)"><small class="ba-photo-status" id="bagFotoNameplateSesudahStatus"></small></div>
+            <div class="ba-field"><label>Foto Full Gardu Sesudah</label><input type="file" id="bagFotoFullGarduSesudah" accept="image/*" onchange="bagUploadFoto('fotoFullGarduSesudah',this)"><small class="ba-photo-status" id="bagFotoFullGarduSesudahStatus"></small></div>
+            <div class="ba-field ba-full">
+              <label>Status PHB-TR</label>
+              <div class="ba-toggle-row">
+                <span>PHB-TR Tidak Diganti</span>
+                <label class="ba-toggle" title="Aktifkan jika PHB-TR diganti">
+                  <input type="checkbox" id="bagTogglePhbGanti" onchange="bagKonfirmasiPhbGanti(this.checked)">
+                  <span class="ba-toggle-slider"></span>
+                </label>
+                <span>PHB-TR Diganti</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ba-card ba-sub-card ba-sub-phb-sesudah" id="bagCardPhbSesudah" style="display:none">
+        <div class="ba-card-head"><i class="fa-solid fa-boxes-stacked"></i> Identitas PHB-TR Sesudah / Baru</div>
+        <div class="ba-card-body">
+          <div class="ba-grid">
+            <div class="ba-field"><label>Merk PHB-TR</label><input type="text" id="bagsPhbMerk"></div>
+            <div class="ba-field"><label>Nomor Seri PHB-TR</label><input type="text" id="bagsPhbSeri"></div>
+            <div class="ba-field"><label>Tahun PHB-TR</label><input type="text" id="bagsPhbTahun"></div>
+            <div class="ba-field"><label>Foto Nameplate PHB-TR Sesudah</label><input type="file" id="bagFotoNameplatePhbSesudah" accept="image/*" onchange="bagUploadFoto('nameplatePhbSesudah',this)"><small class="ba-photo-status" id="bagFotoNameplatePhbSesudahStatus"></small></div>
+            <div class="ba-field"><label>Foto Box PHB-TR Sesudah</label><input type="file" id="bagFotoBoxPhbSesudah" accept="image/*" onchange="bagUploadFoto('fotoBoxPhbSesudah',this)"><small class="ba-photo-status" id="bagFotoBoxPhbSesudahStatus"></small></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ba-card" id="bagCardPemeriksaan" style="display:none">
+        <div class="ba-card-head"><i class="fa-solid fa-gauge-high"></i> Data Pemeriksaan (Megger)</div>
+        <div class="ba-card-body">
+          <div class="ba-grid">
+            <div class="ba-field"><label>Lampiran 1</label><input type="file" id="bagFotoMegger1" accept="image/*" onchange="bagUploadFoto('megger1',this)"><small class="ba-photo-status" id="bagFotoMegger1Status"></small></div>
+            <div class="ba-field"><label>Lampiran 2</label><input type="file" id="bagFotoMegger2" accept="image/*" onchange="bagUploadFoto('megger2',this)"><small class="ba-photo-status" id="bagFotoMegger2Status"></small></div>
+            <div class="ba-field"><label>Lampiran 3</label><input type="file" id="bagFotoMegger3" accept="image/*" onchange="bagUploadFoto('megger3',this)"><small class="ba-photo-status" id="bagFotoMegger3Status"></small></div>
+            <div class="ba-field"><label>Lampiran 4</label><input type="file" id="bagFotoMegger4" accept="image/*" onchange="bagUploadFoto('megger4',this)"><small class="ba-photo-status" id="bagFotoMegger4Status"></small></div>
+            <div class="ba-field"><label>Lampiran 5</label><input type="file" id="bagFotoMegger5" accept="image/*" onchange="bagUploadFoto('megger5',this)"><small class="ba-photo-status" id="bagFotoMegger5Status"></small></div>
+            <div class="ba-field"><label>Lampiran 6</label><input type="file" id="bagFotoMegger6" accept="image/*" onchange="bagUploadFoto('megger6',this)"><small class="ba-photo-status" id="bagFotoMegger6Status"></small></div>
+          </div>
+          <p class="ba-info" style="margin-top:10px">Isi 1–6 foto hasil megger sesuai yang tersedia. Hanya foto yang terisi yang dicetak pada lampiran PDF (1 foto = 1 kotak, 2 foto = 2 kotak, dst.).</p>
+          <div class="ba-grid cols2" style="margin-top:6px">
+            <div class="ba-field ba-full"><label>Kesimpulan</label><textarea id="bagKesimpulan" rows="3" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;font-family:inherit"></textarea></div>
+            <div class="ba-field ba-full"><label>Catatan</label><textarea id="bagCatatan" rows="3" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;font-family:inherit"></textarea></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ba-card" id="bagCardBongkar" style="display:none">
+        <div class="ba-card-head"><i class="fa-solid fa-screwdriver-wrench"></i> Data Pembongkaran</div>
+        <div class="ba-card-body">
+          <div class="ba-grid cols2">
+            <div class="ba-field"><label>Alasan Pembongkaran</label><input type="text" id="bagBongkarAlasan"></div>
+            <div class="ba-field"><label>Lokasi Penyimpanan</label><input type="text" id="bagBongkarLokasi"></div>
+            <div class="ba-field ba-full"><label>Catatan Pembongkaran</label><input type="text" id="bagBongkarCatatan"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ba-card" id="bagCardPemeriksa">
+        <div class="ba-card-head"><i class="fa-solid fa-user-check"></i> Pemeriksa</div>
+        <div class="ba-card-body">
+          <div class="ba-grid">
+            <div class="ba-field"><label>Petugas 1</label><input type="text" id="bagPetugas1"></div>
+            <div class="ba-field"><label>Jabatan Petugas 1</label><input type="text" id="bagJabatan1"></div>
+            <div class="ba-field"><label>Petugas 2</label><input type="text" id="bagPetugas2"></div>
+            <div class="ba-field"><label>Jabatan Petugas 2</label><input type="text" id="bagJabatan2"></div>
+            <div class="ba-field"><label>Mengetahui</label><input type="text" id="bagMengetahui"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ba-card" id="bagCardFinalisasi">
+        <div class="ba-card-head"><i class="fa-solid fa-flag-checkered"></i> Finalisasi</div>
+        <div class="ba-card-body">
+          <div class="ba-actions" style="justify-content:space-between">
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="ba-btn ba-btn-search" id="bagBtnSimpan" onclick="bagSimpan()"><i class="fa-solid fa-floppy-disk"></i> Simpan BA Gardu</button>
+              <button class="ba-btn ba-btn-reset" onclick="bagResetSemua()"><i class="fa-solid fa-rotate-left"></i> Reset Form</button>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="ba-btn ba-btn-reset" id="bagBtnPdf" onclick="bagGeneratePdf()" disabled><i class="fa-solid fa-file-pdf"></i> Generate PDF</button>
+              <button class="ba-btn ba-btn-search" id="bagBtnDownload" onclick="bagDownloadBa()" disabled><i class="fa-solid fa-download"></i> Download BA</button>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- TAB 3: BA SWITCHING -->
+  <section class="ba-tab-content" id="baTab-switching">
+
+    <div class="ba-card" id="swCardJenis">
+      <div class="ba-card-head"><i class="fa-solid fa-list-check"></i> Jenis Pekerjaan</div>
+      <div class="ba-card-body">
+        <div class="ba-grid">
+          <div class="ba-field ba-full">
+            <label>Jenis Pekerjaan</label>
+            <select id="swJenisPekerjaan" onchange="swTerapkanJenis()">
+              <option value="">- Pilih -</option>
+              <option value="Pengoperasian Switching">Pengoperasian Switching</option>
+              <option value="Penggantian Switching">Penggantian Switching</option>
+              <option value="Relokasi Switching">Relokasi Switching</option>
+              <option value="Pemeriksaan Switching">Pemeriksaan Switching</option>
+              <option value="Kerusakan Switching">Kerusakan Switching</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="swCardsWrap" style="display:none">
+
+      <div class="ba-card ba-group-identitas">
+        <div class="ba-card-head"><i class="fa-solid fa-id-card"></i> Identitas Berita Acara</div>
+        <div class="ba-card-body">
+          <div class="ba-grid">
+            <div class="ba-field"><label>Tanggal BA</label><input type="date" id="swTanggalBA"></div>
+            <div class="ba-field"><label>Tanggal Pekerjaan</label><input type="date" id="swTanggalPekerjaan"></div>
+            <div class="ba-field"><label>Nomor BA</label><input type="text" id="swNomorBA" placeholder="Otomatis saat disimpan" readonly><small class="ba-info" style="margin:2px 0 0">Nomor BA dibuat otomatis saat disimpan</small></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ba-card ba-group-awal">
+        <div class="ba-card-head"><i class="fa-solid fa-toggle-on"></i> Data Switching</div>
+        <div class="ba-card-body">
+          <div class="ba-grid">
+            <div class="ba-field"><label>Jenis Switching</label><select id="swJenisSwitching"><option value="">- Pilih -</option><option value="LBS Motorized">LBS Motorized</option><option value="Recloser">Recloser</option><option value="Fuse Cut Out (FCO)">Fuse Cut Out (FCO)</option><option value="Disconnected Switch (DS)">Disconnected Switch (DS)</option></select></div>
+            <div class="ba-field"><label>Nama Switching</label><input type="text" id="swNamaSwitching"></div>
+            <div class="ba-field"><label>Penyulang</label><select id="swPenyulang" onchange="swPilihPenyulang()"><option value="">- Pilih Penyulang -</option></select></div>
+            <div class="ba-field"><label>Section</label><select id="swSection"><option value="">- Pilih Section -</option></select></div>
+            <div class="ba-field"><label>Merk</label><input type="text" id="swMerk"></div>
+            <div class="ba-field"><label>Tipe</label><input type="text" id="swTipe"></div>
+            <div class="ba-field"><label>Nomor Seri</label><input type="text" id="swNomorSeri"></div>
+            <div class="ba-field"><label>Koordinat Awal</label><input type="text" id="swKoordinat"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ba-card ba-group-lampiran">
+        <div class="ba-card-head"><i class="fa-solid fa-images"></i> Lampiran</div>
+        <div class="ba-card-body">
+          <div class="ba-grid">
+            <div class="ba-field"><label>SLD Sebelum</label><input type="file" id="swSldSebelum" accept="image/*" onchange="swUploadFoto('sldSebelum',this)"><small class="ba-photo-status" id="swSldSebelumStatus"></small></div>
+            <div class="ba-field"><label>SLD Sesudah</label><input type="file" id="swSldSesudah" accept="image/*" onchange="swUploadFoto('sldSesudah',this)"><small class="ba-photo-status" id="swSldSesudahStatus"></small></div>
+            <div class="ba-field"><label>Foto Nameplate Switching</label><input type="file" id="swFotoNameplate" accept="image/*" onchange="swUploadFoto('nameplateAwal',this)"><small class="ba-photo-status" id="swFotoNameplateStatus"></small></div>
+            <div class="ba-field"><label>Foto Konstruksi Switching</label><input type="file" id="swFotoKonstruksi" accept="image/*" onchange="swUploadFoto('konstruksiAwal',this)"><small class="ba-photo-status" id="swFotoKonstruksiStatus"></small></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ba-card ba-group-sesudah" id="swCardSesudah" style="display:none">
+        <div class="ba-card-head"><i class="fa-solid fa-right-left"></i> Data Switching Sesudah</div>
+        <div class="ba-card-body">
+          <div class="ba-grid">
+            <div class="ba-field"><label>Jenis Switching Sesudah</label><select id="swJenisSesudah"><option value="">- Pilih -</option><option value="LBS Motorized">LBS Motorized</option><option value="Recloser">Recloser</option><option value="Fuse Cut Out (FCO)">Fuse Cut Out (FCO)</option><option value="Disconnected Switch (DS)">Disconnected Switch (DS)</option></select></div>
+            <div class="ba-field"><label>Nama Switching Sesudah</label><input type="text" id="swNamaSesudah"></div>
+            <div class="ba-field"><label>Penyulang</label><select id="swPenyulangSesudah" onchange="swPilihPenyulangSesudah()"><option value="">- Pilih Penyulang -</option></select></div>
+            <div class="ba-field"><label>Section</label><select id="swSectionSesudah"><option value="">- Pilih Section -</option></select></div>
+            <div class="ba-field"><label>Merk Switching Sesudah</label><input type="text" id="swMerkSesudah"></div>
+            <div class="ba-field"><label>Tipe Switching Sesudah</label><input type="text" id="swTipeSesudah"></div>
+            <div class="ba-field"><label>Nomor Seri Switching Sesudah</label><input type="text" id="swNomorSeriSesudah"></div>
+            <div class="ba-field"><label>Koordinat Sesudah</label><input type="text" id="swKoordinatSesudah"></div>
+            <div class="ba-field"><label>Asal Switching</label><input type="text" id="swAsalSwitching"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ba-card ba-group-lampiran-sesudah" id="swLampiranSesudah" style="display:none">
+        <div class="ba-card-head"><i class="fa-solid fa-images"></i> Lampiran Sesudah</div>
+        <div class="ba-card-body">
+          <div class="ba-grid">
+            <div class="ba-field"><label>Foto Nameplate Switching Sesudah</label><input type="file" id="swFotoNameplateSesudah" accept="image/*" onchange="swUploadFoto('nameplateSesudah',this)"><small class="ba-photo-status" id="swFotoNameplateSesudahStatus"></small></div>
+            <div class="ba-field"><label>Foto Konstruksi Switching Sesudah</label><input type="file" id="swFotoKonstruksiSesudah" accept="image/*" onchange="swUploadFoto('konstruksiSesudah',this)"><small class="ba-photo-status" id="swFotoKonstruksiSesudahStatus"></small></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ba-card">
+        <div class="ba-card-head"><i class="fa-solid fa-note-sticky"></i> Keterangan</div>
+        <div class="ba-card-body">
+          <div class="ba-grid cols2">
+            <div class="ba-field ba-full"><label>Keterangan Tambahan</label><input type="text" id="swKetTambahan"></div>
+            <div class="ba-field ba-full" id="swFieldKetKerusakan" style="display:none"><label>Keterangan Kerusakan / Pemeriksaan</label><input type="text" id="swKetKerusakan"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ba-card">
+        <div class="ba-card-head"><i class="fa-solid fa-user-check"></i> Pemeriksa</div>
+        <div class="ba-card-body">
+          <div class="ba-grid">
+            <div class="ba-field"><label>Petugas 1</label><input type="text" id="swPetugas1"></div>
+            <div class="ba-field"><label>Jabatan Petugas 1</label><input type="text" id="swJabatan1"></div>
+            <div class="ba-field"><label>Petugas 2</label><input type="text" id="swPetugas2"></div>
+            <div class="ba-field"><label>Jabatan Petugas 2</label><input type="text" id="swJabatan2"></div>
+            <div class="ba-field"><label>Mengetahui</label><input type="text" id="swMengetahui"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ba-card">
+        <div class="ba-card-head"><i class="fa-solid fa-flag-checkered"></i> Finalisasi</div>
+        <div class="ba-card-body">
+          <div class="ba-actions" style="justify-content:space-between">
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="ba-btn ba-btn-search" id="swBtnSimpan" onclick="swSimpan()"><i class="fa-solid fa-floppy-disk"></i> Simpan BA Switching</button>
+              <button class="ba-btn ba-btn-reset" onclick="swResetForm()"><i class="fa-solid fa-rotate-left"></i> Reset Form</button>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="ba-btn ba-btn-reset" id="swBtnPdf" onclick="swGeneratePdf()" disabled><i class="fa-solid fa-file-pdf"></i> Generate PDF</button>
+              <button class="ba-btn ba-btn-search" id="swBtnDownload" onclick="swDownloadBa()" disabled><i class="fa-solid fa-download"></i> Download BA</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+</div>
+
+<div class="ba-modal-bg" id="baDetailModal">
+  <div class="ba-modal">
+    <div class="ba-modal-head"><h3><i class="fa-solid fa-eye"></i> Detail Peralatan</h3><button class="ba-modal-x" onclick="baTutupDetail()">&times;</button></div>
+    <div class="ba-modal-body" id="baDetailBody"></div>
+    <div class="ba-modal-foot">
+      <button class="ba-btn ba-btn-search" id="baDetailSimpan" onclick="baDetailSimpanUpload()" disabled><i class="fa-solid fa-floppy-disk"></i> Simpan</button>
+      <button class="ba-btn ba-btn-reset" id="baDetailEdit" onclick="baDetailEdit()" style="margin-right:auto"><i class="fa-solid fa-pen"></i> Edit</button>
+      <button class="ba-btn ba-btn-search" id="baDetailGenerate" onclick="baDetailGeneratePdf()"><i class="fa-solid fa-rotate-right"></i> Generate Ulang PDF</button>
+      <button class="ba-btn ba-btn-search" id="baDetailDownload" onclick="baDetailDownload()" style="display:none"><i class="fa-solid fa-download"></i> Download</button>
+      <button class="ba-btn ba-btn-search" id="baDetailSimpanPerubahan" onclick="baDetailSimpanEdit()" style="display:none"><i class="fa-solid fa-floppy-disk"></i> Simpan Perubahan</button>
+      <button class="ba-btn ba-btn-reset" id="baDetailBatalEdit" onclick="baDetailBatalEdit()" style="display:none">Batal</button>
+    </div>
+  </div>
+</div>
+
+<div class="ba-modal-bg" id="baConfirmModal" style="z-index:9700">
+  <div class="ba-modal" style="max-width:440px">
+    <div class="ba-modal-head" style="background:linear-gradient(135deg,#dc2626,#b91c1c)"><h3><i class="fa-solid fa-triangle-exclamation"></i> <span id="baConfirmTitle">Konfirmasi</span></h3></div>
+    <div class="ba-modal-body"><p id="baConfirmPesan" style="margin:0;font-size:14px;color:var(--text);line-height:1.5"></p></div>
+    <div class="ba-modal-foot">
+      <button class="ba-btn ba-btn-reset" id="baConfirmBatal">Batal</button>
+      <button class="ba-btn ba-btn-search" id="baConfirmOke" style="background:#dc2626;border-color:#dc2626"><i class="fa-solid fa-trash-can"></i> Lanjutkan</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var _BA = { rows:[], loading:false };
+var _baSearchToken=0, _baSearchTimer=null;
+function baEl(id){ return document.getElementById(id); }
+function baEsc(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+// Kelas warna badge per jenis pekerjaan (border pembeda di tabel).
+function baJenisClass(j){
+  var s=String(j||'').toLowerCase();
+  if(s.indexOf('pengoperasian')>=0) return 'ba-jenis-pengoperasian';
+  if(s.indexOf('penggantian')>=0) return 'ba-jenis-penggantian';
+  if(s.indexOf('bongkar sementara')>=0) return 'ba-jenis-bongkar-sementara';
+  if(s.indexOf('bongkar')>=0) return 'ba-jenis-bongkar';
+  if(s.indexOf('pemeriksaan')>=0) return 'ba-jenis-pemeriksaan';
+  return 'ba-jenis-default';
+}
+// Status BA: Draft BA (belum ada PDF) -> Proses TTD (ada PDF, belum ada BA TTD) -> Selesai TTD (BA TTD ada).
+function baStatusBaBadge(r){
+  var ttd=r&&r.baTtd&&String(r.baTtd).trim();
+  var pdf=r&&r.filePdfUrl&&String(r.filePdfUrl).trim();
+  var label, cls;
+  if(ttd){ label='Selesai TTD'; cls='ba-status-selesai'; }
+  else if(pdf){ label='Proses TTD'; cls='ba-status-proses'; }
+  else { label='Draft BA'; cls='ba-status-draft'; }
+  return '<span class="ba-status-badge '+cls+'">'+label+'</span>';
+}
+// Format tanggal -> "DD MMMM YYYY" (mis. "14 Juli 2026"). Terima dd/MM/yyyy atau yyyy-MM-dd.
+function baFormatTanggalPanjang(v){
+  if(!v) return '';
+  var s=String(v).trim(), d, m, y;
+  var m1=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  var m2=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(m1){ d=+m1[1]; m=+m1[2]; y=+m1[3]; }
+  else if(m2){ y=+m2[1]; m=+m2[2]; d=+m2[3]; }
+  else return s;
+  var bulan=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  if(m<1||m>12||!d||!y) return s;
+  return d+' '+bulan[m-1]+' '+y;
+}
+
+function baMoveIndicator(){
+  var nav=baEl('baTabs'), ind=baEl('baTabIndicator');
+  if(!nav||!ind) return;
+  var active=nav.querySelector('.ba-tab.active');
+  if(!active){ ind.style.opacity='0'; return; }
+  ind.style.opacity='1';
+  ind.style.width=active.offsetWidth+'px';
+  ind.style.transform='translateX('+active.offsetLeft+'px)';
+}
+function baSwitchTab(tab){
+  var leavingGardu=tab!=='gardu'&&baEl('baTab-gardu').classList.contains('active');
+  if(leavingGardu&&typeof bagResetSemua==='function') bagResetSemua();
+  document.querySelectorAll('.ba-tab').forEach(function(btn){ btn.classList.toggle('active',btn.dataset.tab===tab); });
+  document.querySelectorAll('.ba-tab-content').forEach(function(box){ box.classList.toggle('active',box.id==='baTab-'+tab); });
+  baMoveIndicator();
+}
+
+function baSetLoading(active){
+  _BA.loading=!!active;
+  var btn=baEl('baBtnCari'); if(!btn) return;
+  btn.disabled=!!active;
+  btn.innerHTML=active
+    ? '<i class="fa-solid fa-spinner fa-spin"></i> Mencari'
+    : '<i class="fa-solid fa-magnifying-glass"></i> Cari';
+}
+
+function baCari(){
+  if(_BA.loading) return;
+  var kataKunciPeralatan=baEl('baKataKunciPeralatan').value.trim();
+  var dari=baEl('baTglDari').value;
+  var sampai=baEl('baTglSampai').value;
+  if(dari&&sampai&&dari>sampai){
+    if(typeof showToast==='function') showToast('Tanggal Dari tidak boleh melebihi Tanggal Sampai','warning');
+    return;
+  }
+  baSetLoading(true);
+  baEl('baInfo').textContent='';
+  baEl('baBody').innerHTML='<tr><td colspan="10"><div class="ba-empty"><i class="fa-solid fa-spinner fa-spin"></i>Mencari data...</div></td></tr>';
+  var _token=++_baSearchToken;
+  if(_baSearchTimer){ clearTimeout(_baSearchTimer); }
+  _baSearchTimer=setTimeout(function(){
+    if(_token!==_baSearchToken) return;
+    baSetLoading(false);
+    _BA.rows=[];
+    baEl('baInfo').textContent='';
+    baEl('baBody').innerHTML='<tr><td colspan="10"><div class="ba-empty"><i class="fa-solid fa-inbox"></i>BA tidak ditemukan. Coba ubah kata kunci atau filter, lalu cari lagi.</div></td></tr>';
+    if(typeof showToast==='function') showToast('BA tidak ditemukan — pencarian dihentikan.','warning');
+  },20000);
+  google.script.run
+    .withSuccessHandler(function(res){
+      if(_token!==_baSearchToken) return;
+      if(_baSearchTimer){ clearTimeout(_baSearchTimer); _baSearchTimer=null; }
+      baSetLoading(false);
+      if(!res||!res.ok){
+        _BA.rows=[];
+        baEl('baBody').innerHTML='<tr><td colspan="10"><div class="ba-empty"><i class="fa-solid fa-triangle-exclamation"></i>'+baEsc((res&&res.message)||'Gagal memuat data')+'</div></td></tr>';
+        return;
+      }
+      _BA.rows=res.rows||[];
+      baRender();
+    })
+    .withFailureHandler(function(err){
+      if(_token!==_baSearchToken) return;
+      if(_baSearchTimer){ clearTimeout(_baSearchTimer); _baSearchTimer=null; }
+      baSetLoading(false);
+      _BA.rows=[];
+      baEl('baBody').innerHTML='<tr><td colspan="10"><div class="ba-empty"><i class="fa-solid fa-triangle-exclamation"></i>'+baEsc((err&&err.message)||err)+'</div></td></tr>';
+    })
+    .getDataBeritaAcara({
+      kataKunciPeralatan:kataKunciPeralatan,
+      tglDari:dari,
+      tglSampai:sampai,
+      jenisPekerjaan:baEl('baJenis').value,
+      peralatan:baEl('baPeralatan').value,
+      statusBA:baEl('baStatusBA').value
+    });
+}
+
+function baRender(){
+  var body=baEl('baBody'), rows=_BA.rows||[];
+  baEl('baInfo').textContent=rows.length+' data ditemukan';
+  if(!rows.length){ body.innerHTML='<tr><td colspan="10"><div class="ba-empty"><i class="fa-solid fa-inbox"></i>Tidak ada data sesuai filter.</div></td></tr>'; return; }
+  body.innerHTML=rows.map(function(r,i){
+    return '<tr>'
+      +'<td class="ba-center">'+(i+1)+'</td>'
+      +'<td>'+baEsc(r.namaPeralatan||'-')+'</td>'
+      +'<td>'+(r.jenisPekerjaan?('<span class="ba-jenis-badge '+baJenisClass(r.jenisPekerjaan)+'">'+baEsc(r.jenisPekerjaan)+'</span>'):'-')+'</td>'
+      +'<td>'+baEsc(baFormatTanggalPanjang(r.tanggal)||'-')+'</td>'
+      +'<td>'+baEsc(r.penyulang||'-')+'</td>'
+      +'<td>'+baEsc(r.section||'-')+'</td>'
+      +'<td class="ba-center">'+baStatusBaBadge(r)+'</td>'
+      +'<td>'+(r.baTtd?('<a href="'+baEsc(r.baTtd)+'" target="_blank" rel="noopener" style="color:var(--primary);text-decoration:underline"><i class="fa-solid fa-file-signature"></i> Lihat BA</a>'):'-')+'</td>'
+      +'<td class="ba-center">'+(r.baTtd
+        ?('<button class="ba-eye" onclick="baKirimWa('+i+')" title="Kirim WA EAM" style="border-color:#25D366;color:#25D366"><i class="fa-brands fa-whatsapp"></i></button>')
+        :('<button class="ba-eye" title="Link BA TTD kosong. Upload BA TTD dulu untuk mengaktifkan." style="border-color:var(--border);color:var(--text-muted);cursor:not-allowed;opacity:.55" disabled><i class="fa-brands fa-whatsapp"></i></button>'))+'</td>'
+      +'<td class="ba-center" style="white-space:nowrap">'
+        +'<button class="ba-eye" onclick="baLihatDetail('+i+')" title="Lihat detail"><i class="fa-solid fa-eye"></i></button> '
+        +'<button class="ba-eye" onclick="baUploadBa('+i+')" title="Upload BA TTD"><i class="fa-solid fa-upload"></i></button>'
+        +(String(r.peralatan||'').toLowerCase()==='switching'?'':(r.baTtd
+          ?' <button class="ba-eye" id="baUpdMgBtn'+i+'" onclick="baUpdateMasterGardu('+i+')" title="Update Master Gardu" style="border-color:#16a34a;color:#16a34a"><i class="fa-solid fa-rotate"></i></button>'
+          :' <button class="ba-eye" title="Update Master Gardu nonaktif. Upload BA TTD dulu untuk mengaktifkan." style="border-color:var(--border);color:var(--text-muted);cursor:not-allowed;opacity:.55" disabled><i class="fa-solid fa-rotate"></i></button>'))
+      +'</td>'
+      +'</tr>';
+  }).join('');
+}
+
+// Refresh PAKSA tabel pencarian BA (dipanggil setelah upload BA TTD sukses).
+// Backend getDataBeritaAcara selalu membaca sheet terbaru, jadi cukup jalankan
+// ulang pencarian memakai filter yang sedang aktif. Flag loading di-reset dulu
+// agar pemanggilan tidak terblokir oleh proses sebelumnya.
+function baRefreshTabelPencarian(){
+  try{
+    _BA.loading=false;
+    if(typeof baCari==='function' && baEl('baBtnCari')) baCari();
+  }catch(e){}
+}
+var _baDetailRow=null, _baDetailFile=null, _baDetailIndex=-1;
+// Cari nilai detail berdasarkan daftar pencocokan (eq / starts / has, tanpa peduli huruf besar/kecil).
+function baDetailCari(detail, tests, kecuali){
+  var keys=Object.keys(detail||{});
+  for(var t=0;t<tests.length;t++){
+    var test=tests[t];
+    for(var i=0;i<keys.length;i++){
+      var lk=keys[i].trim().toLowerCase();
+      if(kecuali && kecuali(lk)) continue;
+      var cocok = test.mode==='eq' ? (lk===test.text)
+        : test.mode==='starts' ? (lk.indexOf(test.text)===0)
+        : (lk.indexOf(test.text)>=0);
+      if(cocok){
+        var v=detail[keys[i]];
+        if(v!=null && String(v).trim()!=='') return String(v);
+      }
+    }
+  }
+  return '';
+}
+// Ekstrak File ID dari URL Google Drive (mendukung /d/<id>/ dan ?id=<id>).
+function baExtractDriveId(url){
+  var s=String(url||'');
+  var m=s.match(/\/d\/([a-zA-Z0-9_-]+)/) || s.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  return m?m[1]:'';
+}
+function baLihatDetail(index){
+  var row=(_BA.rows||[])[index]; if(!row) return;
+  _baDetailRow=row; _baDetailFile=null; _baDetailIndex=index;
+  var detail=row.detail||{};
+  var keys=Object.keys(detail);
+  // Ambil nilai khusus sebelum difilter: PDF (utk tombol download) & Nomor BA.
+  var pdfUrl='', pdfId='', nomorBA='';
+  keys.forEach(function(k){
+    var lk=k.trim().toLowerCase();
+    if(lk==='file pdf non-ttd') pdfUrl=detail[k];
+    else if(lk==='file id') pdfId=detail[k];
+    else if(lk==='no ba full') nomorBA=detail[k];
+  });
+  row._pdfUrl=pdfUrl; row._pdfId=pdfId;
+  var jenis=String(row.jenisPekerjaan||'').trim();
+  var isSwitching=jenis.toLowerCase().indexOf('switching')>=0;
+  // Nilai kartu Identitas Trafo (diambil dari kolom huruf tetap via backend).
+  var vNomorTrafo=String(row.namaPeralatan||'').trim();
+  var vKapasitas=String(row.kapasitas||'').trim();
+  if(vKapasitas && !/kva/i.test(vKapasitas)) vKapasitas+=' kVA'; // satuan kVA
+  var vMerk=String(row.merkTrafo||'').trim();            // kolom G
+  var vNomorSeri=String(row.nomorSeriTrafo||'').trim();  // kolom H
+  var vKonstruksi=String(row.konstruksi||'').trim();     // kolom J
+  var vJurusan=String(row.jurusan||'').trim();           // kolom S
+  var vPenyulang=String(row.penyulang||'').trim();       // kolom L
+  var vSection=String(row.section||'').trim();           // kolom M
+  var vAlamat=String(row.alamat||'').trim();             // kolom K
+  var vKoordX=String(row.koordinatX||'').trim();         // kolom Q (X)
+  var vKoordY=String(row.koordinatY||'').trim();         // kolom R (Y)
+  var vKoordinat=(vKoordX&&vKoordY)?(vKoordX+', '+vKoordY):(vKoordX||vKoordY||String(row.koordinat||'').trim());
+  // Koordinat jadi tautan Google Maps bila X & Y tersedia.
+  var koordinatHtml;
+  if(vKoordX&&vKoordY){
+    var mapUrl='https://www.google.com/maps?q='+encodeURIComponent(vKoordX+','+vKoordY);
+    koordinatHtml='<a href="'+mapUrl+'" target="_blank" rel="noopener" style="color:var(--primary);text-decoration:underline"><i class="fa-solid fa-location-dot"></i> '+baEsc(vKoordinat)+'</a>';
+  } else {
+    koordinatHtml=baEsc(vKoordinat||'-');
+  }
+  // Data PHB-TR: Merk (kolom Z) + Nomor Seri (kolom Y) + Tahun (kolom AA).
+  var vPhbMerk=String(row.phbMerk||'').trim();
+  var vPhbSeri=String(row.phbSeri||'').trim();
+  var vPhbTahun=String(row.phbTahun||'').trim();
+  var phbRows=baDetailRowHtml('Merk PHB-TR', vPhbMerk)+baDetailRowHtml('Nomor Seri PHB-TR', vPhbSeri)+baDetailRowHtml('Tahun PHB-TR', vPhbTahun);
+  if(!vPhbMerk && !vPhbSeri && !vPhbTahun) phbRows='<div class="ba-detail-row"><div class="ba-detail-value" style="color:var(--text-3)">Tidak ada data PHB-TR.</div></div>';
+
+  var html='';
+  // Baris atas: (1) Nomor BA, (2) Tanggal BA, (3) Tanggal Pekerjaan <Jenis>.
+  html+='<div class="ba-detail-row"><div class="ba-detail-label" style="color:var(--primary)">Nomor BA</div><div class="ba-detail-value"><b>'+baEsc(nomorBA||row.idBA||'-')+'</b></div></div>';
+  html+=baDetailRowHtml('Tanggal BA', baFormatTanggalPanjang(baDetailCari(detail,[{mode:'eq',text:'tanggal ba'}])||row.tanggal));
+  html+=baDetailRowHtml('Tanggal Pekerjaan'+(jenis?(' '+jenis):''), baFormatTanggalPanjang(baDetailCari(detail,[{mode:'starts',text:'tanggal trafo'},{mode:'starts',text:'tanggal pekerjaan'}])||row.tanggal));
+  // Kartu "Informasi" berisi 2 sub-kartu: Identitas Trafo + Data PHB-TR.
+  // Untuk pekerjaan Switching, kartu Informasi trafo/PHB-TR tidak relevan -> disembunyikan.
+  var isPenggantian=jenis.toLowerCase().indexOf('penggantian')>=0;
+  var vKapasitasSesudah=String(row.kapasitasSesudah||'').trim();
+  if(vKapasitasSesudah && !/kva/i.test(vKapasitasSesudah)) vKapasitasSesudah+=' kVA';
+  var vMerkSesudah=String(row.merkSesudah||'').trim();
+  var vNomorSeriSesudah=String(row.nomorSeriSesudah||'').trim();
+  var vTahunSesudah=String(row.tahunSesudah||'').trim();
+  var vAsalTrafo=String(row.asalTrafo||'').trim();
+  var vJumlahJurusanSesudah=String(row.jumlahJurusanSesudah||'').trim();
+  var vPhbMerkSesudah=String(row.phbMerkSesudah||'').trim();
+  var vPhbSeriSesudah=String(row.phbSeriSesudah||'').trim();
+  var vPhbTahunSesudah=String(row.phbTahunSesudah||'').trim();
+  if(!isSwitching){
+    // Tampilan detail dibagi menjadi TAB sesuai jenis pekerjaan:
+    //  - Pemeriksaan Trafo : 2 tab (Data Awal, Pemeriksaan)
+    //  - Penggantian Trafo : 4 tab (Trafo Sebelum, PHB-TR Sebelum, Trafo Sesudah, PHB-TR Sesudah)
+    //  - Lainnya (Pengoperasian/Bongkar) : 2 tab (Identitas Trafo, Identitas PHB-TR)
+    var isPemeriksaan=jenis.toLowerCase().indexOf('pemeriksaan')>=0;
+    var _trafoRows=''
+      +baDetailRowHtml('Nomor Trafo', vNomorTrafo)
+      +baDetailRowHtml('Kapasitas Trafo', vKapasitas)
+      +baDetailRowHtml('Merk Trafo', vMerk)
+      +baDetailRowHtml('Nomor Seri Trafo', vNomorSeri)
+      +baDetailRowHtml('Konstruksi Gardu', vKonstruksi)
+      +baDetailRowHtml('Jurusan Terpasang', vJurusan)
+      +baDetailRowHtml('Penyulang', vPenyulang)
+      +baDetailRowHtml('Section', vSection)
+      +baDetailRowHtml('Alamat', vAlamat)
+      +'<div class="ba-detail-row"><div class="ba-detail-label">Koordinat</div><div class="ba-detail-value">'+koordinatHtml+'</div></div>';
+    var _trafoSesudahRows=''
+      +baDetailRowHtml('Kapasitas Trafo', vKapasitasSesudah)
+      +baDetailRowHtml('Merk Trafo', vMerkSesudah)
+      +baDetailRowHtml('Nomor Seri Trafo', vNomorSeriSesudah)
+      +baDetailRowHtml('Tahun', vTahunSesudah)
+      +baDetailRowHtml('Asal Trafo', vAsalTrafo);
+    var _phbSesudahRows=baDetailRowHtml('Merk PHB-TR', vPhbMerkSesudah)+baDetailRowHtml('Nomor Seri PHB-TR', vPhbSeriSesudah)+baDetailRowHtml('Tahun PHB-TR', vPhbTahunSesudah)+baDetailRowHtml('Jumlah Jurusan', vJumlahJurusanSesudah);
+    if(!vPhbMerkSesudah && !vPhbSeriSesudah && !vPhbTahunSesudah && !vJumlahJurusanSesudah) _phbSesudahRows='<div class="ba-detail-row"><div class="ba-detail-value" style="color:var(--text-3)">PHB-TR tidak diganti.</div></div>';
+    var _tabs=[];
+    if(isPemeriksaan){
+      var vKesimpulan=String(row.kesimpulan||baDetailCari(detail,[{mode:'eq',text:'kesimpulan'}])||'').trim();
+      var vCatatan=String(row.catatan||baDetailCari(detail,[{mode:'eq',text:'catatan'}])||'').trim();
+      _tabs.push({key:'awal',label:'Data Awal',icon:'fa-bolt',html:_trafoRows+'<div style="height:12px"></div>'+phbRows});
+      _tabs.push({key:'periksa',label:'Pemeriksaan',icon:'fa-clipboard-check',html:baDetailRowHtml('Kesimpulan', vKesimpulan)+baDetailRowHtml('Catatan', vCatatan)});
+    } else if(isPenggantian){
+      _tabs.push({key:'trafolama',label:'Trafo Sebelum',icon:'fa-bolt',html:_trafoRows});
+      _tabs.push({key:'phblama',label:'PHB-TR Sebelum',icon:'fa-boxes-stacked',html:phbRows});
+      _tabs.push({key:'trafobaru',label:'Trafo Sesudah',icon:'fa-right-left',html:_trafoSesudahRows});
+      _tabs.push({key:'phbbaru',label:'PHB-TR Sesudah',icon:'fa-boxes-stacked',html:_phbSesudahRows});
+    } else {
+      _tabs.push({key:'trafo',label:'Identitas Trafo',icon:'fa-bolt',html:_trafoRows});
+      _tabs.push({key:'phb',label:'Identitas PHB-TR',icon:'fa-boxes-stacked',html:phbRows});
+    }
+    var _bar='<div class="ba-tabs" id="baDetailTabs" style="margin-bottom:12px">';
+    var _panes='';
+    _tabs.forEach(function(t,i){
+      _bar+='<button type="button" class="ba-tab'+(i===0?' active':'')+'" data-dtab="'+t.key+'" onclick="baDetailTab(\''+t.key+'\')"><i class="fa-solid '+t.icon+'"></i> '+baEsc(t.label)+'</button>';
+      _panes+='<div class="ba-tab-content'+(i===0?' active':'')+'" data-dtabpane="'+t.key+'">'+t.html+'</div>';
+    });
+    _bar+='</div>';
+    html+='<div class="ba-card" style="margin-top:12px;box-shadow:none">'
+      +'<div class="ba-card-head"><i class="fa-solid fa-circle-info"></i> Informasi</div>'
+      +'<div class="ba-card-body">'+_bar+_panes+'</div>'
+    +'</div>';
+  }
+  // Untuk pekerjaan Switching: tampilkan kartu detail khusus Switching (Data Switching + Sesudah + Keterangan).
+  if(isSwitching){
+    var swJenisSw=baDetailCari(detail,[{mode:'eq',text:'jenis switching'}]);
+    var swKoordinat=String(row.koordinat||'').trim();
+    var swKoordParts=swKoordinat.split(/\s*,\s*/);
+    var swKoordinatHtml;
+    if(swKoordParts.length>=2 && swKoordParts[0] && swKoordParts[1]){
+      var swMapUrl='https://www.google.com/maps?q='+encodeURIComponent(swKoordParts[0].trim()+','+swKoordParts[1].trim());
+      swKoordinatHtml='<a href="'+swMapUrl+'" target="_blank" rel="noopener" style="color:var(--primary);text-decoration:underline"><i class="fa-solid fa-location-dot"></i> '+baEsc(swKoordinat)+'</a>';
+    } else {
+      swKoordinatHtml=baEsc(swKoordinat||'-');
+    }
+    var swJl=jenis.toLowerCase();
+    var swPerluSesudah=(swJl.indexOf('penggantian')>=0||swJl.indexOf('relokasi')>=0);
+    var swPerluKerusakan=(swJl.indexOf('pemeriksaan')>=0||swJl.indexOf('kerusakan')>=0);
+    html+='<div class="ba-card" style="margin-top:12px;box-shadow:none">'
+      +'<div class="ba-card-head"><i class="fa-solid fa-circle-info"></i> Informasi Switching</div>'
+      +'<div class="ba-card-body">'
+        +'<div class="ba-card ba-sub-card ba-sub-trafo-awal" style="margin-bottom:'+(swPerluSesudah?'12px':'0')+'">'
+          +'<div class="ba-card-head"><i class="fa-solid fa-toggle-on"></i> Data Switching</div>'
+          +'<div class="ba-card-body">'
+            +baDetailRowHtml('Jenis Switching', swJenisSw)
+            +baDetailRowHtml('Nama Switching', vNomorTrafo)
+            +baDetailRowHtml('Merk', vMerk)
+            +baDetailRowHtml('Tipe', vKonstruksi)
+            +baDetailRowHtml('Nomor Seri', vNomorSeri)
+            +baDetailRowHtml('Penyulang', vPenyulang)
+            +baDetailRowHtml('Section', vSection)
+            +'<div class="ba-detail-row"><div class="ba-detail-label">Koordinat</div><div class="ba-detail-value">'+swKoordinatHtml+'</div></div>'
+          +'</div>'
+        +'</div>'
+        +(swPerluSesudah?('<div class="ba-card ba-sub-card ba-sub-trafo-sesudah" style="margin-bottom:0">'
+          +'<div class="ba-card-head"><i class="fa-solid fa-right-left"></i> Data Switching Sesudah</div>'
+          +'<div class="ba-card-body">'
+            +baDetailRowHtml('Jenis Switching Sesudah', baDetailCari(detail,[{mode:'eq',text:'jenis switching sesudah'}]))
+            +baDetailRowHtml('Nama Switching Sesudah', baDetailCari(detail,[{mode:'eq',text:'nama switching sesudah'}]))
+            +baDetailRowHtml('Merk Sesudah', baDetailCari(detail,[{mode:'eq',text:'merk switching sesudah'}]))
+            +baDetailRowHtml('Tipe Sesudah', baDetailCari(detail,[{mode:'eq',text:'tipe switching sesudah'}]))
+            +baDetailRowHtml('Nomor Seri Sesudah', baDetailCari(detail,[{mode:'eq',text:'nomor seri switching sesudah'}]))
+            +baDetailRowHtml('Penyulang Sesudah', baDetailCari(detail,[{mode:'eq',text:'penyulang sesudah'}]))
+            +baDetailRowHtml('Section Sesudah', baDetailCari(detail,[{mode:'eq',text:'section sesudah'}]))
+            +baDetailRowHtml('Koordinat Sesudah', baDetailCari(detail,[{mode:'eq',text:'koordinat sesudah'}]))
+            +baDetailRowHtml('Asal Switching', baDetailCari(detail,[{mode:'eq',text:'asal switching'}]))
+          +'</div>'
+        +'</div>'):'')
+      +'</div>'
+    +'</div>';
+    var swKetTambahan=baDetailCari(detail,[{mode:'eq',text:'keterangan tambahan'}]);
+    var swKetKerusakan=baDetailCari(detail,[{mode:'starts',text:'keterangan kerusakan'}]);
+    var swKetRows='';
+    if(swKetTambahan) swKetRows+=baDetailRowHtml('Keterangan Tambahan', swKetTambahan);
+    if(swPerluKerusakan && swKetKerusakan) swKetRows+=baDetailRowHtml('Keterangan Kerusakan / Pemeriksaan', swKetKerusakan);
+    if(swKetRows){
+      html+='<div class="ba-card" style="margin-top:12px;box-shadow:none">'
+        +'<div class="ba-card-head"><i class="fa-solid fa-note-sticky"></i> Keterangan</div>'
+        +'<div class="ba-card-body">'+swKetRows+'</div>'
+      +'</div>';
+    }
+  }
+  // Baris upload BA TTD (file) di dalam modal.
+  html+='<div class="ba-detail-row"><div class="ba-detail-label">Upload BA TTD</div><div class="ba-detail-value">'
+    +'<input type="file" id="baDetailUploadFile" accept="application/pdf,image/*" onchange="baDetailFilePicked()">'
+    +'<small class="ba-photo-status" id="baDetailUploadStatus"></small></div></div>';
+  baEl('baDetailBody').innerHTML=html;
+  var dl=baEl('baDetailDownload'); if(dl) dl.style.display=(pdfUrl||pdfId)?'inline-flex':'none';
+  var sv=baEl('baDetailSimpan'); if(sv){ sv.disabled=true; sv.innerHTML='<i class="fa-solid fa-floppy-disk"></i> Simpan'; }
+  baDetailSetMode('view');
+  baEl('baDetailModal').classList.add('show');
+}
+function baDetailRowHtml(label,value){
+  return '<div class="ba-detail-row"><div class="ba-detail-label">'+baEsc(label)+'</div><div class="ba-detail-value">'+baEsc(value==null||value===''?'-':value)+'</div></div>';
+}
+// Pindah tab pada modal detail BA (tab dibangun dinamis di baLihatDetail).
+function baDetailTab(key){
+  var body=baEl('baDetailBody'); if(!body) return;
+  Array.prototype.forEach.call(body.querySelectorAll('[data-dtab]'),function(b){
+    if(b.getAttribute('data-dtab')===key) b.classList.add('active'); else b.classList.remove('active');
+  });
+  Array.prototype.forEach.call(body.querySelectorAll('[data-dtabpane]'),function(p){
+    if(p.getAttribute('data-dtabpane')===key) p.classList.add('active'); else p.classList.remove('active');
+  });
+}
+// Atur tampilan tombol footer modal sesuai mode: 'view' atau 'edit'.
+function baDetailSetMode(mode){
+  var isEdit=mode==='edit';
+  var upload=baEl('baDetailSimpan'); if(upload) upload.style.display=isEdit?'none':'inline-flex';
+  var edit=baEl('baDetailEdit'); if(edit) edit.style.display=isEdit?'none':'inline-flex';
+  var gen=baEl('baDetailGenerate'); if(gen) gen.style.display=isEdit?'none':'inline-flex';
+  var dl=baEl('baDetailDownload'); if(dl && isEdit) dl.style.display='none';
+  var sp=baEl('baDetailSimpanPerubahan'); if(sp) sp.style.display=isEdit?'inline-flex':'none';
+  var bt=baEl('baDetailBatalEdit'); if(bt) bt.style.display=isEdit?'inline-flex':'none';
+}
+// Baris input untuk mode edit (label + input).
+function baDetailEditRow(label,id,value,type){
+  return '<div class="ba-detail-row"><div class="ba-detail-label">'+baEsc(label)+'</div>'
+    +'<div class="ba-detail-value"><input type="'+(type||'text')+'" id="'+id+'" value="'+baEsc(value==null?'':value)+'" style="width:100%;padding:7px 9px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;font-family:inherit"></div></div>';
+}
+// Daftar merk trafo untuk dropdown (dipakai form BA Gardu & mode edit).
+var BA_MERK_TRAFO = ['Alsthom Atlantique','Amtra Electric','B&D','Centrado','J&P','Lucky Light','Mastergreen','Maxima','Monata','Morawa','Trafindo','Trafoindo','Triputra Electric Abadi','Schneider','Shenyang','Sintra','Starlite','Unindo','Voltra','Weltraf'];
+// Bangun <option> merk trafo; nilai lama yang belum terdaftar tetap dipertahankan.
+function baMerkOptions(selected){
+  var sel=String(selected==null?'':selected).trim();
+  var opts='<option value="">- Pilih Merk -</option>';
+  var ada=false;
+  BA_MERK_TRAFO.forEach(function(m){ if(m===sel) ada=true; opts+='<option'+(m===sel?' selected':'')+'>'+baEsc(m)+'</option>'; });
+  if(sel && !ada) opts+='<option selected>'+baEsc(sel)+'</option>';
+  return opts;
+}
+// Baris SELECT merk trafo untuk mode edit.
+function baDetailEditMerkRow(label,id,value){
+  return '<div class="ba-detail-row"><div class="ba-detail-label">'+baEsc(label)+'</div>'
+    +'<div class="ba-detail-value"><select id="'+id+'" style="width:100%;padding:7px 9px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;font-family:inherit">'+baMerkOptions(value)+'</select></div></div>';
+}
+// Ubah tanggal (dd/MM/yyyy atau yyyy-MM-dd) ke yyyy-MM-dd untuk input[type=date].
+function baDetailToInputDate(v){
+  if(!v) return '';
+  var s=String(v).trim();
+  var m2=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(m2) return m2[1]+'-'+('0'+m2[2]).slice(-2)+'-'+('0'+m2[3]).slice(-2);
+  var m1=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(m1) return m1[3]+'-'+('0'+m1[2]).slice(-2)+'-'+('0'+m1[1]).slice(-2);
+  return '';
+}
+// Dropdown Penyulang & Section untuk mode edit (sumber db_Penyulang, sama seperti form input BA).
+var _baEditPenyulangList=[], _baEditPenyulangMap={}, _baEditPenyulangLoaded=false;
+// Baris input SELECT untuk mode edit (label + dropdown).
+function baDetailEditSelectRow(label,id,value,onchange){
+  return '<div class="ba-detail-row"><div class="ba-detail-label">'+baEsc(label)+'</div>'
+    +'<div class="ba-detail-value"><select id="'+id+'"'+(onchange?(' onchange="'+onchange+'"'):'')+' style="width:100%;padding:7px 9px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px;font-family:inherit">'
+    +'<option value="'+baEsc(value==null?'':value)+'" selected>'+baEsc(value==null||value===''?'- Pilih -':value)+'</option>'
+    +'</select></div></div>';
+}
+// Muat daftar Penyulang dari backend lalu isi dropdown Penyulang + Section (preselect nilai lama).
+function baDetailMuatPenyulang(penyulang, section){
+  function apply(){
+    var pSel=baEl('baEditPenyulang'); if(!pSel) return;
+    var opts='<option value="">- Pilih Penyulang -</option>';
+    var ada=false;
+    _baEditPenyulangList.forEach(function(p){ if(p===penyulang) ada=true; opts+='<option value="'+baEsc(p)+'"'+(p===penyulang?' selected':'')+'>'+baEsc(p)+'</option>'; });
+    if(penyulang && !ada) opts+='<option value="'+baEsc(penyulang)+'" selected>'+baEsc(penyulang)+'</option>';
+    pSel.innerHTML=opts;
+    baDetailIsiSection(penyulang, section);
+  }
+  if(_baEditPenyulangLoaded){ apply(); return; }
+  google.script.run
+    .withSuccessHandler(function(res){
+      if(res&&res.ok){ _baEditPenyulangList=res.penyulangList||[]; _baEditPenyulangMap=res.sectionByPenyulang||{}; _baEditPenyulangLoaded=true; }
+      apply();
+    })
+    .withFailureHandler(function(){ apply(); })
+    .getPenyulangDanSection();
+}
+// Isi opsi Section sesuai Penyulang terpilih (dropdown bertingkat).
+function baDetailIsiSection(penyulang, section){
+  var sSel=baEl('baEditSection'); if(!sSel) return;
+  var sections=(_baEditPenyulangMap||{})[penyulang]||[];
+  var opts='<option value="">- Pilih Section -</option>';
+  var ada=false;
+  sections.forEach(function(s){ if(s===section) ada=true; opts+='<option value="'+baEsc(s)+'"'+(s===section?' selected':'')+'>'+baEsc(s)+'</option>'; });
+  if(section && !ada) opts+='<option value="'+baEsc(section)+'" selected>'+baEsc(section)+'</option>';
+  sSel.innerHTML=opts;
+}
+// Penyulang diganti -> reset & isi ulang Section.
+function baDetailEditPilihPenyulang(){
+  baDetailIsiSection(baEl('baEditPenyulang').value, '');
+}
+// Perbarui nilai detail lokal (utk sinkron tampilan setelah edit).
+function baDetailSetDetailValue(detail,tests,value){
+  if(!detail) return;
+  var keys=Object.keys(detail);
+  for(var t=0;t<tests.length;t++){
+    for(var i=0;i<keys.length;i++){
+      var lk=keys[i].trim().toLowerCase();
+      var cocok=tests[t].mode==='eq'?(lk===tests[t].text):(lk.indexOf(tests[t].text)===0);
+      if(cocok){ detail[keys[i]]=value; return; }
+    }
+  }
+}
+// Generate ulang PDF BA dari modal detail (memakai idBA baris terpilih).
+// Deteksi jenis dari kolom Jenis Pekerjaan: mengandung "switching" -> engine
+// switching (generatePdfBaSwitching); selain itu (Gardu) -> generatePdfBaPengoperasian.
+function baDetailGeneratePdf(){
+  var row=_baDetailRow; if(!row) return;
+  var idBA=row.idBA||'';
+  if(!idBA){ if(typeof showToast==='function') showToast('idBA tidak ditemukan. Pastikan BA sudah tersimpan.','warning'); return; }
+  var isSwitching=String(row.jenisPekerjaan||'').trim().toLowerCase().indexOf('switching')>=0;
+  var btn=baEl('baDetailGenerate'), labelSemula=btn?btn.innerHTML:'';
+  if(btn){ btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Membuat PDF'; }
+  var runnerBA=google.script.run
+    .withSuccessHandler(function(res){
+      if(btn){ btn.disabled=false; btn.innerHTML=labelSemula; }
+      if(!res||!res.ok){ if(typeof showToast==='function') showToast((res&&res.message)||'Gagal membuat PDF','error'); return; }
+      row._pdfUrl=res.url||row._pdfUrl; row._pdfId=res.fileId||row._pdfId;
+      if(row.detail){ if(res.url) row.detail['File PDF Non-TTD']=res.url; if(res.fileId) row.detail['File ID']=res.fileId; }
+      var dl=baEl('baDetailDownload'); if(dl) dl.style.display='inline-flex';
+      if(window.sisiSukses) sisiSukses('PDF Berita Acara berhasil dibuat ulang.'); else if(typeof showToast==='function') showToast('PDF berhasil dibuat ulang. Klik Download untuk mengunduh.','success');
+    })
+    .withFailureHandler(function(err){
+      if(btn){ btn.disabled=false; btn.innerHTML=labelSemula; }
+      if(typeof showToast==='function') showToast('Error: '+((err&&err.message)||err),'error');
+    });
+  if(isSwitching) runnerBA.generatePdfBaSwitching(idBA);
+  else runnerBA.generatePdfBaPengoperasian(idBA);
+}
+// Baris upload foto untuk mode edit: re-upload ke kolom foto tetap (sebelum/sesudah).
+function baDetailFotoRow(label,slot){
+  return '<div class="ba-detail-row"><div class="ba-detail-label">'+baEsc(label)+'</div>'
+    +'<div class="ba-detail-value"><input type="file" id="baEditFoto_'+slot+'" accept="image/*" onchange="baDetailUploadFotoEdit(\''+slot+'\',this)">'
+    +'<small class="ba-photo-status" id="baEditFoto_'+slot+'Status"></small></div></div>';
+}
+// Modal konfirmasi (card) pengganti window.confirm bawaan browser.
+function baKonfirmasi(opts){
+  opts=opts||{};
+  var modal=baEl('baConfirmModal'), pesanEl=baEl('baConfirmPesan'), okeBtn=baEl('baConfirmOke'), batalBtn=baEl('baConfirmBatal');
+  if(!modal||!okeBtn||!batalBtn){ if(window.confirm(opts.pesan||'Lanjutkan?')){ if(opts.onOke) opts.onOke(); } else { if(opts.onBatal) opts.onBatal(); } return; }
+  var titleEl=baEl('baConfirmTitle'); if(titleEl) titleEl.textContent=opts.judul||'Konfirmasi';
+  if(pesanEl) pesanEl.textContent=opts.pesan||'';
+  okeBtn.innerHTML=opts.labelOke||'<i class="fa-solid fa-trash-can"></i> Lanjutkan';
+  batalBtn.textContent=opts.labelBatal||'Batal';
+  function tutup(){ modal.classList.remove('show'); okeBtn.onclick=null; batalBtn.onclick=null; modal.onclick=null; }
+  okeBtn.onclick=function(){ tutup(); if(opts.onOke) opts.onOke(); };
+  batalBtn.onclick=function(){ tutup(); if(opts.onBatal) opts.onBatal(); };
+  modal.onclick=function(e){ if(e.target===modal){ tutup(); if(opts.onBatal) opts.onBatal(); } };
+  modal.classList.add('show');
+}
+// Unggah ulang foto dari modal edit -> tulis link ke kolom foto tetap (baris idBA).
+function baDetailUploadFotoEdit(slot,input){
+  var row=_baDetailRow; if(!row) return;
+  var file=input&&input.files&&input.files[0];
+  var status=baEl('baEditFoto_'+slot+'Status');
+  if(!file) return;
+  if(!/^image\//.test(file.type)){ if(status){ status.className='ba-photo-status error'; status.textContent='Pilih file gambar.'; } input.value=''; return; }
+  if(file.size>5*1024*1024){ if(status){ status.className='ba-photo-status error'; status.textContent='Ukuran gambar maksimal 5 MB.'; } input.value=''; return; }
+  var idBA=row.idBA||'';
+  if(!idBA){ if(status){ status.className='ba-photo-status error'; status.textContent='idBA tidak ditemukan.'; } input.value=''; return; }
+  var tglBA=baDetailToInputDate(row.tanggal||'')||'';
+  if(!tglBA){ if(status){ status.className='ba-photo-status error'; status.textContent='Tanggal BA tidak valid untuk folder foto.'; } input.value=''; return; }
+  // Notifikasi (modal card): menyimpan foto baru akan MENGHAPUS foto lama yang tersimpan di Drive.
+  baKonfirmasi({
+    pesan:'Menyimpan foto ini akan menghapus foto lama yang tersimpan di Drive. Lanjutkan?',
+    onBatal:function(){ input.value=''; if(status){ status.className='ba-photo-status'; status.textContent=''; } },
+    onOke:function(){
+      input.disabled=true;
+      if(status){ status.className='ba-photo-status'; status.textContent='Mengunggah foto...'; }
+      var reader=new FileReader();
+      reader.onload=function(e){
+        google.script.run
+          .withSuccessHandler(function(res){
+            input.disabled=false;
+            if(!res||!res.ok){ if(status){ status.className='ba-photo-status error'; status.textContent=(res&&res.message)||'Upload gagal.'; } return; }
+            if(status){ status.className='ba-photo-status ok'; status.innerHTML='<i class="fa-solid fa-check"></i> Foto diperbarui'; }
+          })
+          .withFailureHandler(function(err){
+            input.disabled=false;
+            if(status){ status.className='ba-photo-status error'; status.textContent='Upload gagal: '+((err&&err.message)||err); }
+          })
+          .updateFotoBeritaAcaraDetail({ idBA:idBA, slot:slot, dataUrl:e.target.result, fileName:file.name, mimeType:file.type, nomorTrafo:row.namaPeralatan||'', tanggalBA:tglBA, jenisPekerjaan:row.jenisPekerjaan||'' });
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+}
+// Alihkan modal ke mode edit: tampilkan input untuk mengubah data BA.
+function baDetailEdit(){
+  var row=_baDetailRow; if(!row) return;
+  if(!row.idBA){ if(typeof showToast==='function') showToast('Data hanya bisa diedit jika BA sudah tersimpan (idBA kosong).','warning'); return; }
+  var jenis=String(row.jenisPekerjaan||'').trim();
+  var isSwitching=jenis.toLowerCase().indexOf('switching')>=0;
+  var detail=row.detail||{};
+  var tglBA=baDetailToInputDate(row.tanggal||baDetailCari(detail,[{mode:'eq',text:'tanggal ba'}]));
+  var tglKerja=baDetailToInputDate(baDetailCari(detail,[{mode:'starts',text:'tanggal pekerjaan'},{mode:'starts',text:'tanggal trafo'}])||row.tanggal);
+  var html='';
+  html+='<div class="ba-detail-row"><div class="ba-detail-label" style="color:var(--primary)">Nomor BA</div><div class="ba-detail-value"><b>'+baEsc(row.idBA||'-')+'</b></div></div>';
+  html+=baDetailEditRow('Tanggal BA','baEditTanggalBA',tglBA,'date');
+  html+=baDetailEditRow('Tanggal Pekerjaan'+(jenis?(' '+jenis):''),'baEditTanggalPekerjaan',tglKerja,'date');
+  var isPenggantian=jenis.toLowerCase().indexOf('penggantian')>=0;
+  var isPemeriksaan=(!isSwitching)&&jenis.toLowerCase().indexOf('pemeriksaan')>=0;
+  // Blok input dipisah agar bisa disusun menjadi tab (mengikuti tampilan detail).
+  var _eTrafoRows=baDetailEditRow('Nomor Trafo','baEditNomorTrafo',row.namaPeralatan)
+    +baDetailEditRow('Kapasitas Trafo (kVA)','baEditKapasitas',row.kapasitas)
+    +baDetailEditMerkRow('Merk Trafo','baEditMerk',row.merkTrafo)
+    +baDetailEditRow('Nomor Seri Trafo','baEditNomorSeri',row.nomorSeriTrafo)
+    +baDetailEditRow('Konstruksi Gardu','baEditKonstruksi',row.konstruksi)
+    +baDetailEditRow('Jurusan Terpasang','baEditJurusan',row.jurusan)
+    +baDetailEditSelectRow('Penyulang','baEditPenyulang',row.penyulang,'baDetailEditPilihPenyulang()')
+    +baDetailEditSelectRow('Section','baEditSection',row.section,'')
+    +baDetailEditRow('Alamat','baEditAlamat',row.alamat)
+    +baDetailEditRow('Koordinat X (Lat)','baEditKoordinatX',row.koordinatX)
+    +baDetailEditRow('Koordinat Y (Long)','baEditKoordinatY',row.koordinatY)
+    +((!isSwitching)?(baDetailFotoRow('Foto Nameplate Trafo'+(isPenggantian?' Sebelum':''),'nameplateTrafoAwal')+baDetailFotoRow('Foto Full Gardu'+(isPenggantian?' Sebelum':''),'fotoFullGarduAwal')):'');
+  var _ePhbRows=isSwitching?'':(baDetailEditRow('Merk PHB-TR','baEditPhbMerk',row.phbMerk)
+    +baDetailEditRow('Nomor Seri PHB-TR','baEditPhbSeri',row.phbSeri)
+    +baDetailEditRow('Tahun PHB-TR','baEditPhbTahun',row.phbTahun)
+    +baDetailFotoRow('Foto Nameplate PHB-TR'+(isPenggantian?' Sebelum':''),'nameplatePhbAwal')
+    +baDetailFotoRow('Foto Box PHB-TR'+(isPenggantian?' Sebelum':''),'fotoBoxPhbAwal'));
+  var _eTrafoSesudahRows=baDetailEditRow('Kapasitas Trafo (kVA)','baEditKapasitasSesudah',row.kapasitasSesudah)
+    +baDetailEditMerkRow('Merk Trafo','baEditMerkSesudah',row.merkSesudah)
+    +baDetailEditRow('Nomor Seri Trafo','baEditNomorSeriSesudah',row.nomorSeriSesudah)
+    +baDetailEditRow('Tahun','baEditTahunSesudah',row.tahunSesudah)
+    +baDetailEditRow('Asal Trafo','baEditAsalTrafo',row.asalTrafo)
+    +baDetailFotoRow('Foto Nameplate Trafo Sesudah','nameplateTrafoSesudah')
+    +baDetailFotoRow('Foto Full Gardu Sesudah','fotoFullGarduSesudah');
+  var _ePhbSesudahRows=baDetailEditRow('Merk PHB-TR','baEditPhbMerkSesudah',row.phbMerkSesudah)
+    +baDetailEditRow('Nomor Seri PHB-TR','baEditPhbSeriSesudah',row.phbSeriSesudah)
+    +baDetailEditRow('Tahun PHB-TR','baEditPhbTahunSesudah',row.phbTahunSesudah)
+    +baDetailEditRow('Jumlah Jurusan','baEditJumlahJurusanSesudah',row.jumlahJurusanSesudah)
+    +baDetailFotoRow('Foto Nameplate PHB-TR Sesudah','nameplatePhbSesudah')
+    +baDetailFotoRow('Foto Box PHB-TR Sesudah','fotoBoxPhbSesudah');
+  // Susunan tab mode edit mengikuti jenis pekerjaan (sama seperti mode detail).
+  var _eTabs=[];
+  if(isSwitching){
+    _eTabs.push({key:'trafo',label:'Identitas Switching',icon:'fa-bolt',html:_eTrafoRows});
+  } else if(isPemeriksaan){
+    _eTabs.push({key:'awal',label:'Data Awal',icon:'fa-bolt',html:_eTrafoRows+'<div style="height:12px"></div>'+_ePhbRows});
+    _eTabs.push({key:'periksa',label:'Pemeriksaan',icon:'fa-clipboard-check',html:baDetailRowHtml('Kesimpulan', row.kesimpulan||baDetailCari(detail,[{mode:'eq',text:'kesimpulan'}]))+baDetailRowHtml('Catatan', row.catatan||baDetailCari(detail,[{mode:'eq',text:'catatan'}]))});
+  } else if(isPenggantian){
+    _eTabs.push({key:'trafolama',label:'Trafo Sebelum',icon:'fa-bolt',html:_eTrafoRows});
+    _eTabs.push({key:'phblama',label:'PHB-TR Sebelum',icon:'fa-boxes-stacked',html:_ePhbRows});
+    _eTabs.push({key:'trafobaru',label:'Trafo Sesudah',icon:'fa-right-left',html:_eTrafoSesudahRows});
+    _eTabs.push({key:'phbbaru',label:'PHB-TR Sesudah',icon:'fa-boxes-stacked',html:_ePhbSesudahRows});
+  } else {
+    _eTabs.push({key:'trafo',label:'Identitas Trafo',icon:'fa-bolt',html:_eTrafoRows});
+    _eTabs.push({key:'phb',label:'Identitas PHB-TR',icon:'fa-boxes-stacked',html:_ePhbRows});
+  }
+  var _eBar='<div class="ba-tabs" id="baDetailTabs" style="margin-bottom:12px">';
+  var _ePanes='';
+  _eTabs.forEach(function(t,i){
+    _eBar+='<button type="button" class="ba-tab'+(i===0?' active':'')+'" data-dtab="'+t.key+'" onclick="baDetailTab(\''+t.key+'\')"><i class="fa-solid '+t.icon+'"></i> '+baEsc(t.label)+'</button>';
+    _ePanes+='<div class="ba-tab-content'+(i===0?' active':'')+'" data-dtabpane="'+t.key+'">'+t.html+'</div>';
+  });
+  _eBar+='</div>';
+  html+='<div class="ba-card" style="margin-top:12px;box-shadow:none">'
+    +'<div class="ba-card-head"><i class="fa-solid fa-pen"></i> Edit Data</div>'
+    +'<div class="ba-card-body">'+_eBar+_ePanes+'</div>'
+  +'</div>';
+  baEl('baDetailBody').innerHTML=html;
+  baDetailSetMode('edit');
+  baDetailMuatPenyulang(String(row.penyulang||'').trim(), String(row.section||'').trim());
+}
+// Batal edit -> kembali ke tampilan detail.
+function baDetailBatalEdit(){
+  if(_baDetailIndex>=0) baLihatDetail(_baDetailIndex);
+}
+// Simpan perubahan data BA ke sheet (kolom huruf tetap) via backend.
+function baDetailSimpanEdit(){
+  var row=_baDetailRow; if(!row) return;
+  var idBA=row.idBA||'';
+  if(!idBA){ if(typeof showToast==='function') showToast('idBA tidak ditemukan.','warning'); return; }
+  var val=function(id){ var e=baEl(id); return e?e.value.trim():undefined; };
+  var payload={
+    idBA:idBA,
+    tanggalBA:baEl('baEditTanggalBA')?baEl('baEditTanggalBA').value:undefined,
+    tanggalPekerjaan:baEl('baEditTanggalPekerjaan')?baEl('baEditTanggalPekerjaan').value:undefined,
+    nomorTrafo:val('baEditNomorTrafo'),
+    kapasitas:val('baEditKapasitas'),
+    merkTrafo:val('baEditMerk'),
+    nomorSeriTrafo:val('baEditNomorSeri'),
+    konstruksi:val('baEditKonstruksi'),
+    jurusan:val('baEditJurusan'),
+    penyulang:val('baEditPenyulang'),
+    section:val('baEditSection'),
+    alamat:val('baEditAlamat'),
+    koordinatX:val('baEditKoordinatX'),
+    koordinatY:val('baEditKoordinatY'),
+    phbMerk:val('baEditPhbMerk'),
+    phbSeri:val('baEditPhbSeri'),
+    phbTahun:val('baEditPhbTahun')
+  };
+  // Data "sesudah" (Penggantian Trafo) hanya dikirim bila field editnya ada di modal.
+  if(baEl('baEditKapasitasSesudah')){
+    payload.kapasitasSesudah=val('baEditKapasitasSesudah');
+    payload.merkSesudah=val('baEditMerkSesudah');
+    payload.nomorSeriSesudah=val('baEditNomorSeriSesudah');
+    payload.tahunSesudah=val('baEditTahunSesudah');
+    payload.asalTrafo=val('baEditAsalTrafo');
+    payload.phbMerkSesudah=val('baEditPhbMerkSesudah');
+    payload.phbSeriSesudah=val('baEditPhbSeriSesudah');
+    payload.phbTahunSesudah=val('baEditPhbTahunSesudah');
+    payload.jumlahJurusanSesudah=val('baEditJumlahJurusanSesudah');
+  }
+  var btn=baEl('baDetailSimpanPerubahan'), labelSemula=btn?btn.innerHTML:'';
+  if(btn){ btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan'; }
+  google.script.run
+    .withSuccessHandler(function(res){
+      if(btn){ btn.disabled=false; btn.innerHTML=labelSemula; }
+      if(!res||!res.ok){ if(typeof showToast==='function') showToast((res&&res.message)||'Gagal menyimpan perubahan','error'); return; }
+      row.namaPeralatan=payload.nomorTrafo; row.kapasitas=payload.kapasitas;
+      row.merkTrafo=payload.merkTrafo; row.nomorSeriTrafo=payload.nomorSeriTrafo;
+      row.konstruksi=payload.konstruksi; row.jurusan=payload.jurusan;
+      row.penyulang=payload.penyulang;
+      row.section=payload.section; row.alamat=payload.alamat;
+      row.koordinatX=payload.koordinatX; row.koordinatY=payload.koordinatY;
+      row.koordinat=(payload.koordinatX&&payload.koordinatY)?(payload.koordinatX+', '+payload.koordinatY):(payload.koordinatX||payload.koordinatY||row.koordinat);
+      row.phbMerk=payload.phbMerk; row.phbSeri=payload.phbSeri; row.phbTahun=payload.phbTahun;
+      if(payload.hasOwnProperty('kapasitasSesudah')){
+        row.kapasitasSesudah=payload.kapasitasSesudah; row.merkSesudah=payload.merkSesudah;
+        row.nomorSeriSesudah=payload.nomorSeriSesudah; row.tahunSesudah=payload.tahunSesudah;
+        row.asalTrafo=payload.asalTrafo; row.jumlahJurusanSesudah=payload.jumlahJurusanSesudah;
+        row.phbMerkSesudah=payload.phbMerkSesudah; row.phbSeriSesudah=payload.phbSeriSesudah; row.phbTahunSesudah=payload.phbTahunSesudah;
+      }
+      if(payload.tanggalBA){ row.tanggal=payload.tanggalBA; baDetailSetDetailValue(row.detail,[{mode:'eq',text:'tanggal ba'}],payload.tanggalBA); }
+      if(payload.tanggalPekerjaan){ baDetailSetDetailValue(row.detail,[{mode:'starts',text:'tanggal pekerjaan'},{mode:'starts',text:'tanggal trafo'}],payload.tanggalPekerjaan); }
+      if(typeof baRender==='function') baRender();
+      if(window.sisiSukses) sisiSukses('Data BA berhasil diperbarui.'); else if(typeof showToast==='function') showToast('Data BA berhasil diperbarui','success');
+      if(_baDetailIndex>=0) baLihatDetail(_baDetailIndex);
+    })
+    .withFailureHandler(function(err){
+      if(btn){ btn.disabled=false; btn.innerHTML=labelSemula; }
+      if(typeof showToast==='function') showToast('Error: '+((err&&err.message)||err),'error');
+    })
+    .updateBeritaAcaraDetail(payload);
+}
+// File BA TTD dipilih -> aktifkan tombol Simpan.
+function baDetailFilePicked(){
+  var inp=baEl('baDetailUploadFile'), st=baEl('baDetailUploadStatus'), sv=baEl('baDetailSimpan');
+  _baDetailFile=(inp&&inp.files&&inp.files[0])||null;
+  if(!_baDetailFile){ if(sv) sv.disabled=true; if(st){ st.className='ba-photo-status'; st.textContent=''; } return; }
+  if(_baDetailFile.size>10*1024*1024){ if(st){ st.className='ba-photo-status error'; st.textContent='Ukuran file maksimal 10 MB'; } _baDetailFile=null; if(inp) inp.value=''; if(sv) sv.disabled=true; return; }
+  if(st){ st.className='ba-photo-status'; st.textContent='Siap disimpan: '+_baDetailFile.name; }
+  if(sv) sv.disabled=false;
+}
+// Simpan: unggah BA TTD -> tulis link ke kolom CG (uploadBaFinal).
+function baDetailSimpanUpload(){
+  var row=_baDetailRow; if(!row) return;
+  var file=_baDetailFile, st=baEl('baDetailUploadStatus'), sv=baEl('baDetailSimpan');
+  if(!file){ if(typeof showToast==='function') showToast('Pilih file BA TTD dulu','warning'); return; }
+  var idBA=row.idBA||'';
+  if(!idBA){ if(typeof showToast==='function') showToast('idBA tidak ditemukan untuk baris ini. Pastikan BA sudah tersimpan.','warning'); return; }
+  if(sv){ sv.disabled=true; sv.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan'; }
+  if(st){ st.className='ba-photo-status'; st.textContent='Mengunggah berkas BA...'; }
+  var reader=new FileReader();
+  reader.onload=function(e){
+    google.script.run
+      .withSuccessHandler(function(res){
+        if(sv) sv.innerHTML='<i class="fa-solid fa-floppy-disk"></i> Simpan';
+        if(!res||!res.ok){ if(sv) sv.disabled=false; if(st){ st.className='ba-photo-status error'; st.textContent=(res&&res.message)||'Upload gagal'; } if(typeof showToast==='function') showToast((res&&res.message)||'Upload BA gagal','error'); return; }
+        if(st){ st.className='ba-photo-status ok'; st.innerHTML='<i class="fa-solid fa-check"></i> Tersimpan (kolom CG diperbarui)'; }
+        if(window.sisiSukses) sisiSukses('Berkas BA TTD tersimpan & kolom CG diperbarui.'); else if(typeof showToast==='function') showToast('Berkas BA TTD tersimpan (kolom CG terisi)','success');
+        baTutupDetail();            // paksa tutup action card setelah upload sukses
+        baRefreshTabelPencarian(); // lalu refresh tabel pencarian
+      })
+      .withFailureHandler(function(err){
+        if(sv){ sv.disabled=false; sv.innerHTML='<i class="fa-solid fa-floppy-disk"></i> Simpan'; }
+        if(st){ st.className='ba-photo-status error'; st.textContent='Error: '+((err&&err.message)||err); }
+      })
+      .uploadBaFinal({ idBA:idBA, dataUrl:e.target.result, fileName:file.name, mimeType:file.type, tanggalBA:row.tanggal||'', jenisPekerjaan:row.jenisPekerjaan||'', nomorTrafo:row.namaPeralatan||'', peralatan:row.peralatan||'' });
+  };
+  reader.readAsDataURL(file);
+}
+// Download PDF BA benar-benar langsung: ambil isi file via backend (base64) lalu
+// unduh sebagai data URL agar atribut download dihormati browser (bukan sekadar
+// membuka preview Google Drive). Fallback ke tautan uc?export bila server gagal.
+function baDetailDownload(){
+  var row=_baDetailRow; if(!row) return;
+  var fileId=row._pdfId||baExtractDriveId(row._pdfUrl||'');
+  var url=row._pdfUrl||'';
+  if(!fileId && !url){ if(typeof showToast==='function') showToast('File PDF belum tersedia.','warning'); return; }
+  var btn=baEl('baDetailDownload'), labelSemula=btn?btn.innerHTML:'';
+  function selesai(){ if(btn){ btn.disabled=false; btn.innerHTML=labelSemula; } }
+  function unduhLangsung(href, nama){
+    var a=document.createElement('a');
+    a.href=href; a.setAttribute('download', nama||''); a.rel='noopener'; a.style.display='none';
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ if(a.parentNode) a.parentNode.removeChild(a); },2000);
+  }
+  if(!fileId){ unduhLangsung('https://drive.google.com/uc?export=download&id='+baExtractDriveId(url), ''); return; }
+  if(btn){ btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Mengunduh'; }
+  google.script.run
+    .withSuccessHandler(function(res){
+      selesai();
+      if(!res||!res.ok){
+        unduhLangsung('https://drive.google.com/uc?export=download&id='+fileId, '');
+        if(res&&res.message&&typeof showToast==='function') showToast(res.message,'warning');
+        return;
+      }
+      unduhLangsung('data:'+(res.mimeType||'application/pdf')+';base64,'+res.base64, res.fileName||'BeritaAcara.pdf');
+    })
+    .withFailureHandler(function(err){
+      selesai();
+      unduhLangsung('https://drive.google.com/uc?export=download&id='+fileId, '');
+      if(typeof showToast==='function') showToast('Unduh via server gagal, memakai tautan Drive.','warning');
+    })
+    .unduhFileBa(fileId);
+}
+// Bangun tabel ringkas hasil update (2 kolom): Sumber Data + ikon checklist.
+// Dipakai popup sukses (sisiSukses) menggantikan pesan teks. Satu baris per
+// target di res.hasil (Master Gardu, Data Trafo, Input TBL).
+function baBuildTabelUpdate(hasil){
+  var LABEL={ 'Master Gardu':'Master HI Toboali', '1. DATA TRAFO':'Master HI HP', 'INPUT TBL':'Mater HI UP3' };
+  var list=(hasil&&hasil.length)?hasil:[];
+  var baris=list.map(function(rr){
+    var nama=LABEL[rr.sheetName]||rr.sheetName||'-';
+    var ok=rr&&rr.ok&&rr.action!=='skip';
+    var ikon=ok
+      ? '<i class="fa-solid fa-circle-check" style="color:#22c55e"></i>'
+      : '<i class="fa-solid fa-circle-xmark" style="color:#f87171"></i>';
+    return '<tr>'
+      +'<td style="padding:9px 14px;text-align:left;border:1px solid rgba(255,255,255,.25);color:#fff">'+baEsc(nama)+'</td>'
+      +'<td style="padding:9px 14px;text-align:center;border:1px solid rgba(255,255,255,.25);font-size:16px">'+ikon+'</td>'
+      +'</tr>';
+  }).join('');
+  return '<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:6px">'
+    +'<tbody>'+baris+'</tbody></table>';
+}
+
+// Update Master Gardu langsung dari baris tabel pencarian. Backend
+// (updateMasterGarduDariBA) hanya memproses jenis Pengoperasian & Penggantian
+// Trafo, mencocokkan lewat Nomor Gardu, dan menimpa data HANYA bila Tanggal BA
+// lebih baru dari tanggal di kolom U Master Gardu.
+function baUpdateMasterGardu(index){
+  var row=(_BA.rows||[])[index]; if(!row) return;
+  if(String(row.peralatan||'').toLowerCase()==='switching'){ if(typeof showToast==='function') showToast('Update Master Gardu hanya untuk BA Gardu.','warning'); return; }
+  if(!(row.baTtd&&String(row.baTtd).trim())){ if(typeof showToast==='function') showToast('BA TTD belum ada. Upload BA TTD dulu sebelum update Master Gardu.','warning'); return; }
+  var idBA=row.idBA||'';
+  if(!idBA){ if(typeof showToast==='function') showToast('idBA tidak ditemukan untuk baris ini. Pastikan BA sudah tersimpan.','warning'); return; }
+  var btn=baEl('baUpdMgBtn'+index), labelSemula=btn?btn.innerHTML:'';
+  if(btn){ btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i>'; }
+  var _selesai=false;
+  function _pulih(){ if(btn){ btn.disabled=false; btn.innerHTML=labelSemula; } }
+  var _timer=setTimeout(function(){
+    if(_selesai) return;
+    _selesai=true; _pulih();
+    if(typeof showToast==='function') showToast('Update Master Gardu memakan waktu terlalu lama dan dihentikan. Coba lagi; jika berulang, periksa ukuran/proteksi sheet Master Gardu.','warning');
+  },90000);
+  google.script.run
+    .withSuccessHandler(function(res){
+      if(_selesai) return;
+      _selesai=true; clearTimeout(_timer); _pulih();
+      if(!res||!res.ok){ if(typeof showToast==='function') showToast((res&&res.message)||'Update Master Gardu gagal','error'); return; }
+      var msg=res.message||'Master Gardu diperbarui.';
+      if(res.action==='skip'){ if(typeof showToast==='function') showToast(msg,'warning'); return; }
+      if(window.sisiSukses) sisiSukses('Data sudah diinput', baBuildTabelUpdate(res.hasil)); else if(typeof showToast==='function') showToast(msg,'success');
+    })
+    .withFailureHandler(function(err){
+      if(_selesai) return;
+      _selesai=true; clearTimeout(_timer); _pulih();
+      if(typeof showToast==='function') showToast('Error: '+((err&&err.message)||err),'error');
+    })
+    .updateMasterGarduDariBA(idBA);
+}
+function baTutupDetail(){ var m=baEl('baDetailModal'); if(m) m.classList.remove('show'); }
+
+// Upload berkas BA (hasil tanda tangan/scan) untuk satu baris -> tulis link ke kolom CG.
+function baUploadBa(index){
+  var row=(_BA.rows||[])[index]; if(!row) return;
+  var idBA=row.idBA||'';
+  if(!idBA){ if(typeof showToast==='function') showToast('idBA tidak ditemukan untuk baris ini. Pastikan BA sudah tersimpan.','warning'); return; }
+  var input=document.createElement('input');
+  input.type='file';
+  input.accept='application/pdf,image/*';
+  input.style.display='none';
+  input.onchange=function(){
+    var file=input.files&&input.files[0];
+    if(!file){ if(input.parentNode) input.parentNode.removeChild(input); return; }
+    if(file.size>10*1024*1024){ if(typeof showToast==='function') showToast('Ukuran file maksimal 10 MB','error'); if(input.parentNode) input.parentNode.removeChild(input); return; }
+    if(typeof showToast==='function') showToast('Mengunggah berkas BA...','info');
+    var reader=new FileReader();
+    reader.onload=function(e){
+      google.script.run
+        .withSuccessHandler(function(res){
+          if(input.parentNode) input.parentNode.removeChild(input);
+          if(!res||!res.ok){ if(typeof showToast==='function') showToast((res&&res.message)||'Upload BA gagal','error'); return; }
+          if(window.sisiSukses) sisiSukses('Berkas BA terunggah & kolom CG diperbarui.'); else if(typeof showToast==='function') showToast('Berkas BA terunggah (kolom CG terisi)','success');
+          baRefreshTabelPencarian();
+        })
+        .withFailureHandler(function(err){
+          if(input.parentNode) input.parentNode.removeChild(input);
+          if(typeof showToast==='function') showToast('Error: '+((err&&err.message)||err),'error');
+        })
+        .uploadBaFinal({ idBA:idBA, dataUrl:e.target.result, fileName:file.name, mimeType:file.type, tanggalBA:row.tanggal||'', jenisPekerjaan:row.jenisPekerjaan||'', nomorTrafo:row.namaPeralatan||'', peralatan:row.peralatan||'' });
+    };
+    reader.readAsDataURL(file);
+  };
+  document.body.appendChild(input);
+  input.click();
+}
+
+// Kirim pesan WhatsApp Berita Acara: teks dibangun di backend (kolom huruf tetap
+// sesuai formula sheet) lalu dibuka di WhatsApp (api.whatsapp.com).
+function baKirimWa(index){
+  var row=(_BA.rows||[])[index]; if(!row) return;
+  var idBA=row.idBA||'';
+  if(!idBA){ if(typeof showToast==='function') showToast('idBA tidak ditemukan untuk baris ini. Pastikan BA sudah tersimpan.','warning'); return; }
+  // Buka tab kosong SINKRON (dalam gestur klik) agar tidak diblokir popup blocker,
+  // lalu diarahkan ke URL WhatsApp setelah teks selesai dibangun di backend.
+  var win=window.open('', '_blank');
+  if(typeof showToast==='function') showToast('Menyiapkan pesan WhatsApp...','info');
+  google.script.run
+    .withSuccessHandler(function(res){
+      if(!res||!res.ok){
+        if(win){ try{ win.close(); }catch(e){} }
+        if(typeof showToast==='function') showToast((res&&res.message)||'Gagal membuat pesan WA','error');
+        return;
+      }
+      if(win) win.location.href=res.waUrl; else window.location.href=res.waUrl;
+    })
+    .withFailureHandler(function(err){
+      if(win){ try{ win.close(); }catch(e){} }
+      if(typeof showToast==='function') showToast('Error: '+((err&&err.message)||err),'error');
+    })
+    .getLinkWaBeritaAcara(idBA);
+}
+
+function baReset(){
+  ['baKataKunciPeralatan','baTglDari','baTglSampai','baJenis','baPeralatan','baStatusBA'].forEach(function(id){ var el=baEl(id); if(el) el.value=''; });
+  _BA.rows=[];
+  baEl('baInfo').textContent='';
+  baEl('baBody').innerHTML='<tr><td colspan="10"><div class="ba-empty"><i class="fa-solid fa-magnifying-glass"></i>Pilih filter lalu klik Cari.</div></td></tr>';
+  baSetLoading(false);
+}
+
+function baBoot(){
+  var now=new Date();
+  var today=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10);
+  var start=today.slice(0,8)+'01';
+  if(baEl('baTglDari')) baEl('baTglDari').value=start;
+  if(baEl('baTglSampai')) baEl('baTglSampai').value=today;
+  setTimeout(baMoveIndicator,50);
+}
+window.addEventListener('resize',baMoveIndicator);
+document.addEventListener('keydown',function(e){ if(e.key==='Escape') baTutupDetail(); });
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',baBoot); else baBoot();
+
+/* ===================== TAB 2: BUAT BA GARDU ===================== */
+var _BAG = { mode:'master', sumber:'', selected:null, phbDiganti:true, foto:{}, penyulangMap:{}, penyulangLoaded:false };
+function bagEl(id){ return document.getElementById(id); }
+
+function bagSrcInfo(msg){
+  var box=bagEl('bagSrcInfo'); if(!box) return;
+  if(!msg){ box.style.display='none'; return; }
+  box.style.display='flex'; box.querySelector('span').textContent=msg;
+}
+
+function bagSetMode(mode){
+  _BAG.mode=mode;
+  bagEl('bagModeMaster').classList.toggle('active', mode==='master');
+  bagEl('bagModeManual').classList.toggle('active', mode==='manual');
+  bagEl('bagMasterWrap').style.display=(mode==='master')?'block':'none';
+  var optPengoperasian=bagEl('bagJenisPekerjaan').querySelector('option[value="Pengoperasian Trafo"]');
+  if(optPengoperasian){ optPengoperasian.disabled=mode!=='manual'; optPengoperasian.hidden=mode!=='manual'; }
+  if(mode!=='manual'&&bagEl('bagJenisPekerjaan').value==='Pengoperasian Trafo') bagEl('bagJenisPekerjaan').value='';
+  if(mode==='manual'){
+    _BAG.selected=null; _BAG.sumber='Manual';
+    bagResetForm();
+    bagEl('bagNomorTrafo').readOnly=false;
+    bagEl('bagFormWrap').style.display='block';
+    bagSrcInfo('');
+  } else {
+    _BAG.sumber='';
+    bagEl('bagFormWrap').style.display=_BAG.selected?'block':'none';
+    bagSrcInfo(_BAG.selected?('Data awal dari Master Gardu: '+_BAG.selected.nomorGardu):'');
+  }
+}
+
+function bagCariMaster(){
+  var q=bagEl('bagCariNomor').value.trim();
+  if(!q){ if(typeof showToast==='function') showToast('Masukkan nomor gardu dulu','warning'); return; }
+  var btn=bagEl('bagBtnCariMaster');
+  btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Mencari';
+bagEl('bagMasterHasil').style.display='block';
+  bagEl('bagMasterHasil').innerHTML='<div class="ba-empty"><i class="fa-solid fa-spinner fa-spin"></i>Mencari gardu...</div>';
+  google.script.run
+    .withSuccessHandler(function(res){
+      btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-magnifying-glass"></i> Cari Gardu';
+      bagRenderMaster(res);
+    })
+    .withFailureHandler(function(err){
+      btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-magnifying-glass"></i> Cari Gardu';
+      bagEl('bagMasterHasil').innerHTML='<div class="ba-empty"><i class="fa-solid fa-triangle-exclamation"></i>'+baEsc((err&&err.message)||err)+'</div>';
+    })
+    .cariPengukuranGardu({ nomorGardu:q });
+}
+
+function bagRenderMaster(res){
+  var box=bagEl('bagMasterHasil');
+  if(!res||!res.ok){ box.innerHTML='<div class="ba-empty"><i class="fa-solid fa-triangle-exclamation"></i>'+baEsc((res&&res.message)||'Gagal memuat')+'</div>'; return; }
+  var list=res.list||[];
+  if(!list.length){ box.innerHTML='<div class="ba-empty"><i class="fa-solid fa-inbox"></i>Gardu tidak ditemukan.</div>'; return; }
+  window._bagMap={};
+  var rows=list.map(function(g,i){
+    window._bagMap[g.nomorGardu]=g;
+    return '<tr>'
+      +'<td class="ba-center">'+(i+1)+'</td>'
+      +'<td>'+baEsc(g.nomorGardu)+'</td>'
+      +'<td>'+baEsc(g.penyulang||'-')+'</td>'
+      +'<td>'+baEsc(g.section||'-')+'</td>'
+      +'<td>'+baEsc(g.dayaKva||'-')+'</td>'
+      +'<td class="ba-center"><button class="ba-btn ba-btn-search" style="padding:5px 11px" onclick="bagPakaiMaster(this.getAttribute(&quot;data-nomor&quot;))" data-nomor="'+baEsc(g.nomorGardu)+'"><i class="fa-solid fa-download"></i> Gunakan</button></td>'
+      +'</tr>';
+  }).join('');
+  box.innerHTML='<div class="ba-table-wrap" style="margin-top:10px"><table class="ba-table"><thead><tr><th class="ba-center">No</th><th>Nomor Gardu</th><th>Penyulang</th><th>Section</th><th>kVA</th><th class="ba-center">Aksi</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
+
+function bagVal(id,val){ var e=bagEl(id); if(!e) return; var v=(val==null?'':val); if(e.tagName==='SELECT' && v!==''){ var ada=false; for(var i=0;i<e.options.length;i++){ if(String(e.options[i].value)===String(v)){ ada=true; break; } } if(!ada){ var o=document.createElement('option'); o.value=v; o.textContent=v; e.appendChild(o); } } e.value=v; }
+
+// Muat daftar Penyulang dari db_Penyulang dan isi dropdown Penyulang.
+function bagMuatPenyulang(callback){
+  var sel=bagEl('bagPenyulang');
+  if(!sel){ if(callback) callback(); return; }
+  google.script.run
+    .withSuccessHandler(function(res){
+      if(res&&res.ok){
+        _BAG.penyulangMap=res.sectionByPenyulang||{};
+        _BAG.penyulangLoaded=true;
+        var opts='<option value="">- Pilih Penyulang -</option>';
+        (res.penyulangList||[]).forEach(function(p){ opts+='<option value="'+baEsc(p)+'">'+baEsc(p)+'</option>'; });
+        sel.innerHTML=opts;
+      } else if(typeof showToast==='function'){ showToast((res&&res.message)||'Gagal memuat daftar penyulang','error'); }
+      if(callback) callback();
+    })
+    .withFailureHandler(function(err){
+      if(typeof showToast==='function') showToast('Gagal memuat penyulang: '+((err&&err.message)||err),'error');
+      if(callback) callback();
+    })
+    .getPenyulangDanSection();
+}
+
+// Isi opsi Section sesuai Penyulang terpilih (dropdown bertingkat).
+function bagIsiSectionOptions(penyulang){
+  var sel=bagEl('bagSection');
+  if(!sel) return;
+  var sections=(_BAG.penyulangMap||{})[penyulang]||[];
+  var opts='<option value="">- Pilih Section -</option>';
+  sections.forEach(function(s){ opts+='<option value="'+baEsc(s)+'">'+baEsc(s)+'</option>'; });
+  sel.innerHTML=opts;
+}
+
+function bagPilihPenyulang(){
+  bagIsiSectionOptions(bagEl('bagPenyulang').value);
+  bagVal('bagOwnerId',''); bagVal('bagExternalRef','');
+}
+
+function bagPilihSection(){ bagIsiOwnerExternal(); }
+
+// OwnerId + External Reference otomatis (non-editable) dari sheet OwnerId,
+// dicocokkan berdasarkan Penyulang + Section.
+function bagIsiOwnerExternal(){
+  var penyulang=(bagEl('bagPenyulang').value||'').trim();
+  var section=(bagEl('bagSection').value||'').trim();
+  var ownerEl=bagEl('bagOwnerId'), refEl=bagEl('bagExternalRef');
+  if(!penyulang||!section){ if(ownerEl)ownerEl.value=''; if(refEl)refEl.value=''; return; }
+  if(ownerEl) ownerEl.value='Mencari…';
+  if(refEl) refEl.value='Mencari…';
+  google.script.run
+    .withSuccessHandler(function(res){
+      if(res&&res.ok&&res.found){
+        if(ownerEl) ownerEl.value=res.ownerId||'';
+        if(refEl) refEl.value=res.externalReference||'';
+        _BAG.ownerWarn='';
+      } else {
+        if(ownerEl) ownerEl.value='';
+        if(refEl) refEl.value='';
+        // Tidak ada toast di sini. Peringatan OwnerId hanya ditampilkan SETELAH
+        // Simpan dan HANYA untuk jenis "Pengoperasian Trafo" (lihat bagSimpan).
+        _BAG.ownerWarn=(res&&res.message)||'OwnerId / External Reference tidak ditemukan untuk penyulang & section ini.';
+      }
+    })
+    .withFailureHandler(function(err){
+      if(ownerEl) ownerEl.value=''; if(refEl) refEl.value='';
+      if(typeof showToast==='function') showToast('Gagal ambil OwnerId: '+((err&&err.message)||err),'error');
+    })
+    .getOwnerIdDanExternalReference({ penyulang:penyulang, section:section });
+}
+
+// Set nilai Penyulang + Section pada dropdown (mode Master Gardu), lalu autofill.
+function bagSetPenyulangSection(penyulang, section){
+  function apply(){
+    var pSel=bagEl('bagPenyulang'), sSel=bagEl('bagSection');
+    if(pSel && penyulang){
+      if(!Array.prototype.some.call(pSel.options,function(o){return o.value===penyulang;})){
+        var o=document.createElement('option'); o.value=penyulang; o.textContent=penyulang; pSel.appendChild(o);
+      }
+      pSel.value=penyulang;
+    }
+    bagIsiSectionOptions(penyulang);
+    if(sSel && section){
+      if(!Array.prototype.some.call(sSel.options,function(o){return o.value===section;})){
+        var o2=document.createElement('option'); o2.value=section; o2.textContent=section; sSel.appendChild(o2);
+      }
+      sSel.value=section;
+    }
+    bagIsiOwnerExternal();
+  }
+  if(_BAG.penyulangLoaded) apply(); else bagMuatPenyulang(apply);
+}
+
+function bagUploadFoto(slot,input){
+  var file=input&&input.files&&input.files[0];
+  var status=bagEl(input.id+'Status');
+  if(!file) return;
+  if(!/^image\//.test(file.type)){ if(status){ status.className='ba-photo-status error'; status.textContent='Pilih file gambar.'; } input.value=''; return; }
+  if(file.size>5*1024*1024){ if(status){ status.className='ba-photo-status error'; status.textContent='Ukuran gambar maksimal 5 MB.'; } input.value=''; return; }
+  var nomor=bagEl('bagNomorTrafo').value.trim();
+  var tanggalBA=bagEl('bagTanggalBA').value;
+  var jenis=bagEl('bagJenisPekerjaan').value;
+  if(!nomor||!tanggalBA||!jenis){
+    if(status){ status.className='ba-photo-status error'; status.textContent='Isi Nomor Gardu, Tanggal BA, dan Jenis Pekerjaan terlebih dahulu.'; }
+    input.value=''; return;
+  }
+  input.disabled=true;
+  if(status){ status.className='ba-photo-status'; status.textContent='Mengunggah foto...'; }
+  var reader=new FileReader();
+  reader.onload=function(e){
+    google.script.run
+      .withSuccessHandler(function(res){
+        input.disabled=false;
+        if(!res||!res.ok){ if(status){ status.className='ba-photo-status error'; status.textContent=(res&&res.message)||'Upload gagal.'; } return; }
+        _BAG.foto[slot]={url:res.url,fileId:res.fileId,folderId:res.folderId,kolom:res.sheetColumn};
+        if(status){ status.className='ba-photo-status ok'; status.innerHTML='<i class="fa-solid fa-check"></i> Foto tersimpan di Drive'; }
+      })
+      .withFailureHandler(function(err){
+        input.disabled=false;
+        if(status){ status.className='ba-photo-status error'; status.textContent='Upload gagal: '+((err&&err.message)||err); }
+      })
+      .uploadFotoBeritaAcara({slot:slot,dataUrl:e.target.result,fileName:file.name,mimeType:file.type,nomorTrafo:nomor,tanggalBA:tanggalBA,jenisPekerjaan:jenis});
+  };
+  reader.readAsDataURL(file);
+}
+
+function bagUploadFoto(slot,input){
+  var file=input&&input.files&&input.files[0];
+  var status=bagEl(input.id+'Status');
+  if(!file) return;
+  if(!/^image\//.test(file.type)){ if(status){ status.className='ba-photo-status error'; status.textContent='Pilih file gambar.'; } input.value=''; return; }
+  if(file.size>5*1024*1024){ if(status){ status.className='ba-photo-status error'; status.textContent='Ukuran gambar maksimal 5 MB.'; } input.value=''; return; }
+  _BAG.foto[slot]={file:file,fileName:file.name,mimeType:file.type};
+  if(status){ status.className='ba-photo-status'; status.textContent='Foto siap diunggah saat BA disimpan.'; }
+}
+
+function bagUploadFotoSaatSimpan(payload,done,failed){
+  var slots=Object.keys(_BAG.foto||{}), hasil={};
+  if(!slots.length){ payload.foto=hasil; done(); return; }
+  var nomor=bagEl('bagNomorTrafo').value.trim(), tanggalBA=bagEl('bagTanggalBA').value, jenis=bagEl('bagJenisPekerjaan').value, index=0;
+  function lanjut(){
+    if(index>=slots.length){ payload.foto=hasil; done(); return; }
+    var slot=slots[index++], item=_BAG.foto[slot], reader=new FileReader();
+    reader.onload=function(e){
+      var argFoto={slot:slot,dataUrl:e.target.result,fileName:item.fileName,mimeType:item.mimeType,nomorTrafo:nomor,tanggalBA:tanggalBA,jenisPekerjaan:jenis};
+      var runnerFoto=google.script.run
+        .withSuccessHandler(function(res){
+          if(!res||!res.ok){ failed((res&&res.message)||'Upload foto gagal.'); return; }
+          hasil[slot]={url:res.url,fileId:res.fileId,folderId:res.folderId,kolom:res.sheetColumn};
+          lanjut();
+        })
+        .withFailureHandler(function(err){ failed('Upload foto gagal: '+((err&&err.message)||err)); });
+      // Slot megger (Pemeriksaan Trafo) ditulis ke kolom BF/BI/BL/BO/BR/BU lewat endpoint khusus.
+      if(/^megger[1-6]$/.test(slot)) runnerFoto.uploadFotoPemeriksaanTrafo(argFoto);
+      else runnerFoto.uploadFotoBeritaAcara(argFoto);
+    };
+    reader.readAsDataURL(item.file);
+  }
+  lanjut();
+}
+
+function bagPakaiMaster(nomor){
+  var g=(window._bagMap||{})[nomor];
+  if(!g){ if(typeof showToast==='function') showToast('Data gardu tidak ditemukan','warning'); return; }
+  _BAG.selected=g; _BAG.sumber='Master Gardu';
+  bagResetForm();
+  bagVal('bagNomorTrafo', g.nomorGardu);
+  bagEl('bagNomorTrafo').readOnly=true;
+  bagVal('bagKapasitas', g.dayaKva);
+  bagVal('bagMerk', g.merkTrafo);
+  bagVal('bagNomorSeri', g.nomorSeriTrafo);
+  bagVal('bagTahun', g.tahunTrafo);
+  bagVal('bagKonstruksi', g.konstruksiTrafo);
+  bagVal('bagAlamat', g.alamat);
+  bagSetPenyulangSection(g.penyulang, g.section);
+  bagVal('bagKoordinat', g.lokasiTrafo);
+  bagVal('bagJurusan', g.jurusanTerpasang);
+  bagVal('bagPhbMerk', g.merkBox);
+  bagVal('bagPhbSeri', g.nomorSeriBox);
+  bagVal('bagPhbTahun', g.tahunBox);
+var cari=bagEl('bagCariNomor'); if(cari) cari.disabled=true;
+var reset=bagEl('bagBtnResetMaster'); if(reset) reset.disabled=false;
+  bagEl('bagFormWrap').style.display='block';
+  bagSrcInfo('Data awal diambil dari Master Gardu: '+g.nomorGardu+'. Data akan disimpan sebagai BA baru.');
+  bagTerapkanJenis();
+  bagEl('bagFormWrap').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function bagTampilCard(id,show){ var el=bagEl(id); if(el) el.style.display=show?'block':'none'; }
+
+function bagSusunPemeriksa(){
+  var petugas1=bagEl('bagPetugas1');
+  if(!petugas1) return;
+  var grid=petugas1.closest('.ba-grid');
+  if(!grid || grid.parentElement.querySelector('.ba-sub-card')) return;
+  var body=grid.parentElement;
+  var groups=[
+    {title:'Petugas 1 (Team Leader)',icon:'fa-user-tie',fields:[bagEl('bagPetugas1'),bagEl('bagJabatan1')]},
+    {title:'Petugas 2 (Staff Teknik / Team Leader Put)',icon:'fa-users',fields:[bagEl('bagPetugas2'),bagEl('bagJabatan2')]},
+    {title:'Mengetahui (Manager ULP)',icon:'fa-user-shield',fields:[bagEl('bagMengetahui')]}
+  ];
+  groups.forEach(function(group){ group.fields.forEach(function(input,index){
+    var field=input.closest('.ba-field');
+    field.querySelector('label').textContent=index===0?'Nama':'Jabatan';
+  }); });
+  body.innerHTML='';
+  groups.forEach(function(group){
+    var card=document.createElement('div');
+    card.className='ba-card ba-sub-card';
+    card.style.marginBottom='12px';
+    card.innerHTML='<div class="ba-card-head"><i class="fa-solid '+group.icon+'"></i> '+group.title+'</div><div class="ba-card-body"><div class="ba-grid cols2"></div></div>';
+    var target=card.querySelector('.ba-grid');
+    group.fields.forEach(function(input){ target.appendChild(input.closest('.ba-field')); });
+    body.appendChild(card);
+  });
+  var cards=body.querySelectorAll('.ba-sub-card');
+  if(cards.length) cards[cards.length-1].style.marginBottom='0';
+}
+bagSusunPemeriksa();
+bagMuatPenyulang();
+
+function bagResetDataGardu(){
+  _BAG.selected=null;
+  _BAG.sumber='';
+  bagResetForm();
+  var cari=bagEl('bagCariNomor');
+  if(cari){ cari.value=''; cari.disabled=false; cari.focus(); }
+  var cariBtn=bagEl('bagBtnCariMaster');
+  if(cariBtn){ cariBtn.disabled=false; cariBtn.innerHTML='<i class="fa-solid fa-magnifying-glass"></i> Cari Gardu'; }
+  var reset=bagEl('bagBtnResetMaster'); if(reset) reset.disabled=true;
+  var hasil=bagEl('bagMasterHasil'); if(hasil){ hasil.innerHTML=''; hasil.style.display='none'; }
+  bagEl('bagFormWrap').style.display='none';
+  bagSrcInfo('');
+}
+
+function bagGabungCardSesudah(){
+  var outer=bagEl('bagCardSesudah');
+  var phb=bagEl('bagCardPhbSesudah');
+  if(!outer||!phb) return;
+  var body=outer.querySelector(':scope > .ba-card-body');
+  if(!body) return;
+  var grid=body.querySelector(':scope > .ba-grid');
+  if(grid && !grid.parentElement.classList.contains('ba-sub-trafo-sesudah')){
+    var sub=document.createElement('div');
+    sub.className='ba-card ba-sub-card ba-sub-trafo-sesudah';
+    sub.style.marginBottom='12px';
+    sub.innerHTML='<div class="ba-card-head"><i class="fa-solid fa-transformer-bolt"></i> Identitas Trafo Sesudah</div><div class="ba-card-body"></div>';
+    body.insertBefore(sub,grid);
+    sub.querySelector('.ba-card-body').appendChild(grid);
+  }
+  if(phb.parentElement!==body) body.appendChild(phb);
+}
+
+function bagTampilKodeGardu(show){
+  var f=bagEl('bagKodeGarduField'); if(f) f.style.display=show?'flex':'none';
+}
+
+// Auto-isi Nomor Gardu untuk Pengoperasian Trafo (mode manual) via prefix terpilih.
+function bagIsiNomorGardu(){
+  if(bagEl('bagJenisPekerjaan').value!=='Pengoperasian Trafo') return;
+  var kode=bagEl('bagKodeGardu').value.trim();
+  var target=bagEl('bagNomorTrafo');
+  if(!target) return;
+  if(!kode){ target.value=''; return; }
+  var prev=target.value;
+  target.value='Mencari…';
+  google.script.run
+    .withSuccessHandler(function(res){
+      if(res&&res.ok){
+        target.value=res.nomorGardu;
+        if(typeof showToast==='function') showToast('Nomor gardu: '+res.nomorGardu+' (dari '+res.sumber+')','success');
+      } else {
+        target.value='';
+        if(typeof showToast==='function') showToast((res&&res.message)||'Gagal ambil nomor gardu','error');
+      }
+    })
+    .withFailureHandler(function(err){
+      target.value=prev;
+      if(typeof showToast==='function') showToast('Error: '+((err&&err.message)||err),'error');
+    })
+    .getNomorGarduBerikutnya(kode);
+}
+
+function bagTerapkanJenis(){
+  var j=bagEl('bagJenisPekerjaan').value;
+  if(_BAG.mode!=='manual' && j==='Pengoperasian Trafo'){
+    bagEl('bagJenisPekerjaan').value='';
+    if(typeof showToast==='function') showToast('Pengoperasian Trafo hanya tersedia pada Input Manual.','warning');
+    j='';
+  }
+  bagGabungCardSesudah();
+  var adaJenis=!!j;
+  var pengoperasian=(j==='Pengoperasian Trafo');
+
+  // Tampilkan seluruh kartu isian hanya setelah jenis pekerjaan dipilih.
+  var wrap=bagEl('bagCardsWrap');
+  if(wrap) wrap.style.display=adaJenis?'block':'none';
+
+  // Kartu isian per jenis pekerjaan.
+  bagTampilCard('bagCardTrafoAwal', adaJenis);
+  bagTampilCard('bagCardPengoperasian', pengoperasian);
+  bagTampilCard('bagCardPhbLama', j==='Pengoperasian Trafo'||j==='Penggantian Trafo');
+  bagTampilCard('bagCardSesudah', j==='Penggantian Trafo');
+  bagTampilCard('bagCardPhbSesudah', j==='Penggantian Trafo');
+  bagTampilCard('bagCardPemeriksaan', j==='Pemeriksaan Trafo');
+  bagTampilCard('bagCardBongkar', j==='Bongkar Trafo'||j==='Bongkar Sementara Trafo');
+  // Pemeriksa + Finalisasi hanya muncul setelah jenis pekerjaan dipilih.
+  bagTampilCard('bagCardPemeriksa', adaJenis);
+  bagTampilCard('bagCardFinalisasi', adaJenis);
+
+  // Prefix kode gardu + editable Nomor Gardu (khusus mode manual).
+  bagTampilKodeGardu(pengoperasian);
+  if(_BAG.mode==='manual'){
+    var nomor=bagEl('bagNomorTrafo');
+    if(nomor){
+      if(pengoperasian){
+        nomor.readOnly=true;   // nomor gardu otomatis dari prefix, jangan diganggu
+        nomor.placeholder='Pilih kode gardu untuk mengisi otomatis';
+        bagIsiNomorGardu();    // isi jika kode sudah dipilih
+      } else {
+        nomor.readOnly=false;  // jenis lain: nomor gardu diketik manual
+        nomor.placeholder='';
+      }
+    }
+  }
+
+  var label=bagEl('bagPhbLamaLabel');
+  if(label) label.textContent=j==='Pengoperasian Trafo'?'Identitas PHB-TR':'Identitas PHB-TR Lama';
+  if(j==='Penggantian Trafo') bagTerapkanStatusPhbGanti();
+}
+
+function bagTerapkanStatusPhbGanti(){
+  var diganti=!!_BAG.phbDiganti;
+  var toggle=bagEl('bagTogglePhbGanti');
+  var pairs=[['bagPhbMerk','bagsPhbMerk'],['bagPhbSeri','bagsPhbSeri'],['bagPhbTahun','bagsPhbTahun']];
+  if(toggle) toggle.checked=diganti;
+  pairs.forEach(function(pair){
+    var awal=bagEl(pair[0]), sesudah=bagEl(pair[1]);
+    if(!sesudah) return;
+    sesudah.disabled=!diganti;
+    if(diganti) sesudah.value='';
+    else sesudah.value=awal ? awal.value : '';
+  });
+}
+
+function bagKonfirmasiPhbGanti(diganti){
+  _BAG.phbDiganti=!!diganti;
+  bagTerapkanStatusPhbGanti();
+}
+
+function bagResetForm(){
+  var ids=['bagNomorTrafo','bagKodeGardu','bagTanggalBA','bagTanggalPekerjaan','bagJenisPekerjaan','bagNomorBA','bagKapasitas','bagMerk','bagNomorSeri','bagTahun','bagKonstruksi','bagAlamat','bagPenyulang','bagSection','bagKoordinat','bagJurusan','bagKepemilikan','bagOwnerId','bagExternalRef','bagPerluasan','bagVendor','bagPhbMerk','bagPhbSeri','bagPhbTahun','bagsKapasitas','bagsMerk','bagsSeri','bagsTahun','bagsAsal','bagsJurusan','bagsPhbMerk','bagsPhbSeri','bagsPhbTahun','bagKesimpulan','bagCatatan','bagBongkarAlasan','bagBongkarLokasi','bagBongkarCatatan','bagPetugas1','bagJabatan1','bagPetugas2','bagJabatan2','bagMengetahui'];
+  ids.forEach(function(id){ var e=bagEl(id); if(e) e.value=''; });
+  _BAG.phbDiganti=true;
+  _BAG.foto={};
+  document.querySelectorAll('input[type="file"]').forEach(function(el){ el.value=''; });
+  document.querySelectorAll('.ba-photo-status').forEach(function(el){ el.className='ba-photo-status'; el.textContent=''; });
+  var secSel=bagEl('bagSection'); if(secSel) secSel.innerHTML='<option value="">- Pilih Section -</option>';
+  var pdf=bagEl('bagBtnPdf'); if(pdf){ pdf.disabled=true; pdf.innerHTML='<i class="fa-solid fa-file-pdf"></i> Generate PDF'; pdf.removeAttribute('data-idba'); }
+  var dl=bagEl('bagBtnDownload'); if(dl){ dl.disabled=true; dl.removeAttribute('data-fileid'); dl.removeAttribute('data-url'); }
+  bagTerapkanJenis();
+}
+
+function bagResetSemua(){
+  _BAG.selected=null; _BAG.sumber=(_BAG.mode==='manual'?'Manual':'');
+  bagResetForm();
+  bagEl('bagMasterHasil').innerHTML='';
+if(bagEl('bagCariNomor')){ bagEl('bagCariNomor').value=''; bagEl('bagCariNomor').disabled=false; }
+if(bagEl('bagBtnResetMaster')) bagEl('bagBtnResetMaster').disabled=true;
+  bagEl('bagFormWrap').style.display=(_BAG.mode==='manual')?'block':'none';
+  bagSrcInfo('');
+}
+
+function bagSimpan(){
+  var jenis=bagEl('bagJenisPekerjaan').value;
+  var nomor=bagEl('bagNomorTrafo').value.trim();
+  if(!nomor){ if(typeof showToast==='function') showToast('Nomor Gardu wajib diisi','error'); return; }
+  if(!bagEl('bagTanggalBA').value){ if(typeof showToast==='function') showToast('Tanggal BA wajib diisi','error'); return; }
+  if(!jenis){ if(typeof showToast==='function') showToast('Jenis Pekerjaan wajib dipilih','error'); return; }
+  var payload={
+    sumber:_BAG.sumber||'Manual',
+    jenisPekerjaan:jenis,
+    identitas:{ nomorTrafo:nomor, tanggalBA:bagEl('bagTanggalBA').value, tanggalPekerjaan:bagEl('bagTanggalPekerjaan').value },
+    trafoAwal:{ kapasitas:bagEl('bagKapasitas').value, merk:bagEl('bagMerk').value, nomorSeri:bagEl('bagNomorSeri').value, tahun:bagEl('bagTahun').value, konstruksi:bagEl('bagKonstruksi').value, alamat:bagEl('bagAlamat').value, penyulang:bagEl('bagPenyulang').value, section:bagEl('bagSection').value, koordinat:bagEl('bagKoordinat').value, jurusanTerpasang:bagEl('bagJurusan').value },
+    phbTr:{ kepemilikan:bagEl('bagKepemilikan').value, ownerId:bagEl('bagOwnerId').value, externalRef:bagEl('bagExternalRef').value, perluasanSutm:bagEl('bagPerluasan').value, vendor:bagEl('bagVendor').value, merk:bagEl('bagPhbMerk').value, nomorSeri:bagEl('bagPhbSeri').value, tahun:bagEl('bagPhbTahun').value },
+    trafoSesudah:{ kapasitas:bagEl('bagsKapasitas').value, merk:bagEl('bagsMerk').value, nomorSeri:bagEl('bagsSeri').value, tahun:bagEl('bagsTahun').value, asalTrafo:bagEl('bagsAsal').value, jumlahJurusan:bagEl('bagsJurusan').value },
+    phbTrSesudah:{ diganti:!!_BAG.phbDiganti, merk:bagEl('bagsPhbMerk').value, nomorSeri:bagEl('bagsPhbSeri').value, tahun:bagEl('bagsPhbTahun').value },
+    foto:_BAG.foto,
+    pembongkaran:{ alasan:bagEl('bagBongkarAlasan').value, lokasi:bagEl('bagBongkarLokasi').value, catatan:bagEl('bagBongkarCatatan').value },
+    pemeriksaan:{ kesimpulan:bagEl('bagKesimpulan').value, catatan:bagEl('bagCatatan').value },
+    kesimpulan:bagEl('bagKesimpulan').value,
+    catatan:bagEl('bagCatatan').value,
+    pemeriksa:{ petugas1:bagEl('bagPetugas1').value, jabatan1:bagEl('bagJabatan1').value, petugas2:bagEl('bagPetugas2').value, jabatan2:bagEl('bagJabatan2').value, mengetahui:bagEl('bagMengetahui').value, jabatanMengetahui:'' }
+  };
+  var btn=bagEl('bagBtnSimpan');
+  btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan';
+  bagUploadFotoSaatSimpan(payload,function(){
+  var runnerSimpan=google.script.run
+    .withSuccessHandler(function(res){
+      btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-floppy-disk"></i> Simpan BA Gardu';
+      if(!res||!res.ok){ if(typeof showToast==='function') showToast((res&&res.message)||'Gagal menyimpan','error'); return; }
+      if(res.nomorBAFull||res.nomorBA) bagEl('bagNomorBA').value=res.nomorBAFull||res.nomorBA;
+      if(window.sisiSukses) sisiSukses('Berita Acara Gardu tersimpan.'); else if(typeof showToast==='function') showToast('BA Gardu tersimpan','success');
+      // Peringatan OwnerId/External Reference: hanya untuk Pengoperasian Trafo,
+      // hanya setelah BA tersimpan, dan hanya bila datanya memang kosong.
+      if(jenis==='Pengoperasian Trafo'){
+        var ownerKosong=!((bagEl('bagOwnerId')&&bagEl('bagOwnerId').value)||'').trim();
+        var refKosong=!((bagEl('bagExternalRef')&&bagEl('bagExternalRef').value)||'').trim();
+        if((ownerKosong||refKosong)&&typeof showToast==='function'){
+          showToast(_BAG.ownerWarn||'OwnerId / External Reference belum terisi. Lengkapi data OwnerId untuk penyulang & section ini.','warning');
+        }
+      }
+      var pdf=bagEl('bagBtnPdf'); if(pdf){ pdf.disabled=false; pdf.setAttribute('data-idba', res.idBA||''); }
+    })
+    .withFailureHandler(function(err){
+      btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-floppy-disk"></i> Simpan BA Gardu';
+      if(typeof showToast==='function') showToast('Error: '+((err&&err.message)||err),'error');
+    });
+  // Pemeriksaan Trafo memakai penyimpan khusus (kolom BF–BY di Rekap Gardu).
+  if(jenis==='Pemeriksaan Trafo') runnerSimpan.simpanBaPemeriksaanTrafo(payload);
+  else runnerSimpan.simpanBeritaAcaraGardu(payload);
+  },function(message){
+    btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-floppy-disk"></i> Simpan BA Gardu';
+    if(typeof showToast==='function') showToast(message,'error');
+  });
+}
+
+function bagGeneratePdf(){
+  var btn=bagEl('bagBtnPdf');
+  var idBA=(btn&&btn.getAttribute('data-idba'))||bagEl('bagNomorBA').value.trim();
+  if(!idBA){ if(typeof showToast==='function') showToast('Simpan BA terlebih dahulu','warning'); return; }
+  var labelSemula=btn.innerHTML;
+  btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Membuat PDF';
+  google.script.run
+    .withSuccessHandler(function(res){
+      btn.disabled=false;
+      if(!res||!res.ok){ btn.innerHTML=labelSemula; if(typeof showToast==='function') showToast((res&&res.message)||'Gagal membuat PDF','error'); return; }
+      // PDF berhasil: label berubah jadi "Generate Ulang PDF".
+      btn.innerHTML='<i class="fa-solid fa-rotate-right"></i> Generate Ulang PDF';
+      // Aktifkan tombol Download BA + simpan referensi file hasil.
+      var dl=bagEl('bagBtnDownload');
+      if(dl){ dl.disabled=false; dl.setAttribute('data-fileid', res.fileId||''); dl.setAttribute('data-url', res.url||''); }
+      if(window.sisiSukses) sisiSukses('PDF Berita Acara selesai dibuat.'); else if(typeof showToast==='function') showToast('PDF selesai dibuat. Klik Download BA untuk mengunduh.','success');
+    })
+    .withFailureHandler(function(err){
+      btn.disabled=false; btn.innerHTML=labelSemula;
+      if(typeof showToast==='function') showToast('Error: '+((err&&err.message)||err),'error');
+    })
+    .generatePdfBaPengoperasian(idBA);
+}
+
+// Unduh langsung file PDF BA: ambil isi file via backend (base64) lalu unduh
+// sebagai data URL agar atribut download dihormati browser (bukan sekadar
+// membuka preview Google Drive). Fallback ke tautan uc?export bila server gagal.
+function bagDownloadBa(){
+  var dl=bagEl('bagBtnDownload');
+  var fileId=dl&&dl.getAttribute('data-fileid');
+  var url=dl&&dl.getAttribute('data-url');
+  if(!fileId && !url){ if(typeof showToast==='function') showToast('File BA belum tersedia. Generate PDF dulu.','warning'); return; }
+  var labelSemula=dl?dl.innerHTML:'';
+  function selesai(){ if(dl){ dl.disabled=false; dl.innerHTML=labelSemula; } }
+  function unduhLangsung(href, nama){
+    var a=document.createElement('a');
+    a.href=href; a.setAttribute('download', nama||''); a.rel='noopener'; a.style.display='none';
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ if(a.parentNode) a.parentNode.removeChild(a); },2000);
+  }
+  if(!fileId){ unduhLangsung('https://drive.google.com/uc?export=download&id='+baExtractDriveId(url), ''); return; }
+  if(dl){ dl.disabled=true; dl.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Mengunduh'; }
+  google.script.run
+    .withSuccessHandler(function(res){
+      selesai();
+      if(!res||!res.ok){
+        unduhLangsung('https://drive.google.com/uc?export=download&id='+fileId, '');
+        if(res&&res.message&&typeof showToast==='function') showToast(res.message,'warning');
+        return;
+      }
+      unduhLangsung('data:'+(res.mimeType||'application/pdf')+';base64,'+res.base64, res.fileName||'BeritaAcara.pdf');
+    })
+    .withFailureHandler(function(err){
+      selesai();
+      unduhLangsung('https://drive.google.com/uc?export=download&id='+fileId, '');
+      if(typeof showToast==='function') showToast('Unduh via server gagal, memakai tautan Drive.','warning');
+    })
+    .unduhFileBa(fileId);
+}
+
+/* ===================== TAB 3: BUAT BA SWITCHING ===================== */
+var _SW = { foto:{}, penyulangMap:{}, penyulangLoaded:false };
+function swEl(id){ return document.getElementById(id); }
+function swTampilCard(id,show){ var el=swEl(id); if(el) el.style.display=show?'block':'none'; }
+
+// Kolom 4 (Jenis Pekerjaan) memicu tampil/sembunyi blok Sesudah + Asal Switching.
+// Pengoperasian -> hanya blok Awal (2 foto). Penggantian/Relokasi -> + blok Sesudah (4 foto).
+function swTerapkanJenis(){
+  var j=swEl('swJenisPekerjaan').value;
+  var ada=!!j;
+  var perluSesudah=(j==='Penggantian Switching'||j==='Relokasi Switching');
+  var perluKerusakan=(j==='Pemeriksaan Switching'||j==='Kerusakan Switching');
+  var wrap=swEl('swCardsWrap'); if(wrap) wrap.style.display=ada?'block':'none';
+  swTampilCard('swCardSesudah', perluSesudah);
+  // Lampiran Sesudah (nameplate/konstruksi sesudah) ikut muncul untuk Penggantian/Relokasi.
+  swTampilCard('swLampiranSesudah', perluSesudah);
+  var fk=swEl('swFieldKetKerusakan'); if(fk) fk.style.display=perluKerusakan?'flex':'none';
+}
+
+// Muat daftar Penyulang (db_Penyulang, dipakai bersama getPenyulangDanSection) untuk
+// dua dropdown: Penyulang Awal & Penyulang Sesudah.
+function swMuatPenyulang(){
+  google.script.run
+    .withSuccessHandler(function(res){
+      if(res&&res.ok){
+        _SW.penyulangMap=res.sectionByPenyulang||{};
+        _SW.penyulangLoaded=true;
+        var opts='<option value="">- Pilih Penyulang -</option>';
+        (res.penyulangList||[]).forEach(function(p){ opts+='<option value="'+baEsc(p)+'">'+baEsc(p)+'</option>'; });
+        var a=swEl('swPenyulang'), b=swEl('swPenyulangSesudah');
+        if(a) a.innerHTML=opts;
+        if(b) b.innerHTML=opts;
+      }
+    })
+    .withFailureHandler(function(){})
+    .getPenyulangDanSection();
+}
+function swIsiSection(selId, penyulang){
+  var sel=swEl(selId); if(!sel) return;
+  var sections=(_SW.penyulangMap||{})[penyulang]||[];
+  var opts='<option value="">- Pilih Section -</option>';
+  sections.forEach(function(s){ opts+='<option value="'+baEsc(s)+'">'+baEsc(s)+'</option>'; });
+  sel.innerHTML=opts;
+}
+function swPilihPenyulang(){ swIsiSection('swSection', swEl('swPenyulang').value); }
+function swPilihPenyulangSesudah(){ swIsiSection('swSectionSesudah', swEl('swPenyulangSesudah').value); }
+
+// Foto disimpan di memori dulu, diunggah saat Simpan (pola sama seperti BA Gardu).
+function swUploadFoto(slot,input){
+  var file=input&&input.files&&input.files[0];
+  var status=swEl(input.id+'Status');
+  if(!file) return;
+  if(!/^image\//.test(file.type)){ if(status){ status.className='ba-photo-status error'; status.textContent='Pilih file gambar.'; } input.value=''; return; }
+  if(file.size>5*1024*1024){ if(status){ status.className='ba-photo-status error'; status.textContent='Ukuran gambar maksimal 5 MB.'; } input.value=''; return; }
+  _SW.foto[slot]={file:file,fileName:file.name,mimeType:file.type};
+  if(status){ status.className='ba-photo-status'; status.textContent='Foto siap diunggah saat BA disimpan.'; }
+}
+function swUploadFotoSaatSimpan(payload,done,failed){
+  var slots=Object.keys(_SW.foto||{}), hasil={};
+  if(!slots.length){ payload.foto=hasil; done(); return; }
+  var nama=swEl('swNamaSwitching').value.trim(), tanggalBA=swEl('swTanggalBA').value, jenis=swEl('swJenisPekerjaan').value, i=0;
+  function lanjut(){
+    if(i>=slots.length){ payload.foto=hasil; done(); return; }
+    var slot=slots[i++], item=_SW.foto[slot], reader=new FileReader();
+    reader.onload=function(e){
+      google.script.run
+        .withSuccessHandler(function(res){
+          if(!res||!res.ok){ failed((res&&res.message)||'Upload foto gagal.'); return; }
+          hasil[slot]={url:res.url,fileId:res.fileId,kolom:res.sheetColumn};
+          lanjut();
+        })
+        .withFailureHandler(function(err){ failed('Upload foto gagal: '+((err&&err.message)||err)); })
+        .uploadFotoSwitching({slot:slot,dataUrl:e.target.result,fileName:item.fileName,mimeType:item.mimeType,namaSwitching:nama,tanggalBA:tanggalBA,jenisPekerjaan:jenis});
+    };
+    reader.readAsDataURL(item.file);
+  }
+  lanjut();
+}
+
+function swSimpan(){
+  var jenis=swEl('swJenisPekerjaan').value;
+  var nama=swEl('swNamaSwitching').value.trim();
+  if(!nama){ if(typeof showToast==='function') showToast('Nama Switching wajib diisi','error'); return; }
+  if(!swEl('swTanggalBA').value){ if(typeof showToast==='function') showToast('Tanggal BA wajib diisi','error'); return; }
+  if(!jenis){ if(typeof showToast==='function') showToast('Jenis Pekerjaan wajib dipilih','error'); return; }
+  var payload={
+    jenisPekerjaan:jenis,
+    identitas:{ tanggalBA:swEl('swTanggalBA').value, tanggalPekerjaan:swEl('swTanggalPekerjaan').value },
+    awal:{ jenisSwitching:swEl('swJenisSwitching').value, namaSwitching:nama, penyulang:swEl('swPenyulang').value, section:swEl('swSection').value, merk:swEl('swMerk').value, tipe:swEl('swTipe').value, nomorSeri:swEl('swNomorSeri').value, koordinat:swEl('swKoordinat').value },
+    sesudah:{ jenisSwitching:swEl('swJenisSesudah').value, namaSwitching:swEl('swNamaSesudah').value, penyulang:swEl('swPenyulangSesudah').value, section:swEl('swSectionSesudah').value, merk:swEl('swMerkSesudah').value, tipe:swEl('swTipeSesudah').value, nomorSeri:swEl('swNomorSeriSesudah').value, koordinat:swEl('swKoordinatSesudah').value, asalSwitching:swEl('swAsalSwitching').value },
+    keterangan:{ tambahan:swEl('swKetTambahan').value, kerusakan:swEl('swKetKerusakan').value },
+    pemeriksa:{ petugas1:swEl('swPetugas1').value, jabatan1:swEl('swJabatan1').value, petugas2:swEl('swPetugas2').value, jabatan2:swEl('swJabatan2').value, mengetahui:swEl('swMengetahui').value },
+    foto:_SW.foto
+  };
+  var btn=swEl('swBtnSimpan');
+  btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan';
+  swUploadFotoSaatSimpan(payload,function(){
+    google.script.run
+      .withSuccessHandler(function(res){
+        btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-floppy-disk"></i> Simpan BA Switching';
+        if(!res||!res.ok){ if(typeof showToast==='function') showToast((res&&res.message)||'Gagal menyimpan','error'); return; }
+        if(res.nomorBAFull||res.idBA) swEl('swNomorBA').value=res.nomorBAFull||res.idBA;
+        if(window.sisiSukses) sisiSukses('Berita Acara Switching tersimpan.'); else if(typeof showToast==='function') showToast('BA Switching tersimpan','success');
+        var pdf=swEl('swBtnPdf'); if(pdf){ pdf.disabled=false; pdf.setAttribute('data-idba', res.idBA||''); }
+      })
+      .withFailureHandler(function(err){
+        btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-floppy-disk"></i> Simpan BA Switching';
+        if(typeof showToast==='function') showToast('Error: '+((err&&err.message)||err),'error');
+      })
+      .simpanBeritaAcaraSwitching(payload);
+  },function(message){
+    btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-floppy-disk"></i> Simpan BA Switching';
+    if(typeof showToast==='function') showToast(message,'error');
+  });
+}
+
+// Generate PDF -> jembatan ke Cloud Run /ba/switching (engine PDF menyusul di tahap berikutnya).
+function swGeneratePdf(){
+  var btn=swEl('swBtnPdf');
+  var idBA=(btn&&btn.getAttribute('data-idba'))||'';
+  if(!idBA){ if(typeof showToast==='function') showToast('Simpan BA terlebih dahulu','warning'); return; }
+  var labelSemula=btn.innerHTML;
+  btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Membuat PDF';
+  google.script.run
+    .withSuccessHandler(function(res){
+      btn.disabled=false;
+      if(!res||!res.ok){ btn.innerHTML=labelSemula; if(typeof showToast==='function') showToast((res&&res.message)||'Gagal membuat PDF','error'); return; }
+      btn.innerHTML='<i class="fa-solid fa-rotate-right"></i> Generate Ulang PDF';
+      var dl=swEl('swBtnDownload'); if(dl){ dl.disabled=false; dl.setAttribute('data-fileid', res.fileId||''); dl.setAttribute('data-url', res.url||''); }
+      if(window.sisiSukses) sisiSukses('PDF BA Switching selesai dibuat.'); else if(typeof showToast==='function') showToast('PDF selesai dibuat.','success');
+    })
+    .withFailureHandler(function(err){
+      btn.disabled=false; btn.innerHTML=labelSemula;
+      if(typeof showToast==='function') showToast('Error: '+((err&&err.message)||err),'error');
+    })
+    .generatePdfBaSwitching(idBA);
+}
+
+function swDownloadBa(){
+  var dl=swEl('swBtnDownload');
+  var fileId=dl&&dl.getAttribute('data-fileid');
+  var url=dl&&dl.getAttribute('data-url');
+  if(!fileId && !url){ if(typeof showToast==='function') showToast('File BA belum tersedia. Generate PDF dulu.','warning'); return; }
+  var labelSemula=dl?dl.innerHTML:'';
+  function selesai(){ if(dl){ dl.disabled=false; dl.innerHTML=labelSemula; } }
+  function unduhLangsung(href, nama){
+    var a=document.createElement('a'); a.href=href; a.setAttribute('download', nama||''); a.rel='noopener'; a.style.display='none';
+    document.body.appendChild(a); a.click(); setTimeout(function(){ if(a.parentNode) a.parentNode.removeChild(a); },2000);
+  }
+  if(!fileId){ unduhLangsung('https://drive.google.com/uc?export=download&id='+baExtractDriveId(url), ''); return; }
+  if(dl){ dl.disabled=true; dl.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Mengunduh'; }
+  google.script.run
+    .withSuccessHandler(function(res){
+      selesai();
+      if(!res||!res.ok){ unduhLangsung('https://drive.google.com/uc?export=download&id='+fileId, ''); return; }
+      unduhLangsung('data:'+(res.mimeType||'application/pdf')+';base64,'+res.base64, res.fileName||'BA-Switching.pdf');
+    })
+    .withFailureHandler(function(){ selesai(); unduhLangsung('https://drive.google.com/uc?export=download&id='+fileId, ''); })
+    .unduhFileBa(fileId);
+}
+
+function swResetForm(){
+  var ids=['swTanggalBA','swTanggalPekerjaan','swNomorBA','swJenisSwitching','swNamaSwitching','swPenyulang','swSection','swMerk','swTipe','swNomorSeri','swKoordinat','swJenisSesudah','swNamaSesudah','swPenyulangSesudah','swSectionSesudah','swMerkSesudah','swTipeSesudah','swNomorSeriSesudah','swKoordinatSesudah','swAsalSwitching','swKetTambahan','swKetKerusakan','swPetugas1','swJabatan1','swPetugas2','swJabatan2','swMengetahui'];
+  ids.forEach(function(id){ var e=swEl(id); if(e) e.value=''; });
+  _SW.foto={};
+  var s1=swEl('swSection'); if(s1) s1.innerHTML='<option value="">- Pilih Section -</option>';
+  var s2=swEl('swSectionSesudah'); if(s2) s2.innerHTML='<option value="">- Pilih Section -</option>';
+  document.querySelectorAll('#baTab-switching input[type="file"]').forEach(function(el){ el.value=''; });
+  document.querySelectorAll('#baTab-switching .ba-photo-status').forEach(function(el){ el.className='ba-photo-status'; el.textContent=''; });
+  var pdf=swEl('swBtnPdf'); if(pdf){ pdf.disabled=true; pdf.innerHTML='<i class="fa-solid fa-file-pdf"></i> Generate PDF'; pdf.removeAttribute('data-idba'); }
+  var dl=swEl('swBtnDownload'); if(dl){ dl.disabled=true; dl.removeAttribute('data-fileid'); dl.removeAttribute('data-url'); }
+  swTerapkanJenis();
+}
+
+// Bagian Pemeriksa: susun jadi card group (sama seperti BA Trafo).
+function swSusunPemeriksa(){
+  var petugas1=swEl('swPetugas1');
+  if(!petugas1) return;
+  var grid=petugas1.closest('.ba-grid');
+  if(!grid || grid.parentElement.querySelector('.ba-sub-card')) return;
+  var body=grid.parentElement;
+  var groups=[
+    {title:'Petugas 1 (Team Leader)',icon:'fa-user-tie',fields:[swEl('swPetugas1'),swEl('swJabatan1')]},
+    {title:'Petugas 2 (Staff Teknik / Team Leader Put)',icon:'fa-users',fields:[swEl('swPetugas2'),swEl('swJabatan2')]},
+    {title:'Mengetahui (Manager ULP)',icon:'fa-user-shield',fields:[swEl('swMengetahui')]}
+  ];
+  groups.forEach(function(group){ group.fields.forEach(function(input,index){
+    var field=input.closest('.ba-field');
+    field.querySelector('label').textContent=index===0?'Nama':'Jabatan';
+  }); });
+  body.innerHTML='';
+  groups.forEach(function(group){
+    var card=document.createElement('div');
+    card.className='ba-card ba-sub-card';
+    card.style.marginBottom='12px';
+    card.innerHTML='<div class="ba-card-head"><i class="fa-solid '+group.icon+'"></i> '+group.title+'</div><div class="ba-card-body"><div class="ba-grid cols2"></div></div>';
+    var target=card.querySelector('.ba-grid');
+    group.fields.forEach(function(input){ target.appendChild(input.closest('.ba-field')); });
+    body.appendChild(card);
+  });
+  var cards=body.querySelectorAll('.ba-sub-card');
+  if(cards.length) cards[cards.length-1].style.marginBottom='0';
+}
+
+swMuatPenyulang();
+swSusunPemeriksa();
+</script>

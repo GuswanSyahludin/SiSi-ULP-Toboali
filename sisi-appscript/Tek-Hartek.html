@@ -1,0 +1,313 @@
+<style>
+  :root{ --radius:10px; }
+  .htk-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+  .htk-header .ico{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#1e3a8a,#3b82f6);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;}
+  .htk-header h2{margin:0;font-size:20px;font-weight:700;color:var(--primary);}
+  .htk-header p{margin:2px 0 0;font-size:13px;color:var(--text-3);}
+
+  .htk-filter{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:16px;}
+  .htk-field{display:flex;flex-direction:column;gap:4px;}
+  .htk-field label{font-size:11px;font-weight:600;color:var(--gray,#64748b);text-transform:uppercase;}
+  .htk-field select,.htk-field input{padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px;min-width:160px;background:var(--surface);color:var(--text);}
+  .htk-btn{border:none;border-radius:8px;padding:9px 14px;font-size:14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
+  .htk-btn-primary{background:var(--primary);color:var(--on-primary);}
+  .htk-btn-reset{background:var(--surface-2);color:var(--text-2);border:1px solid var(--border);}
+
+  /* Tabel lebar: kriteria vertikal + bulan/minggu horizontal, scroll + freeze kolom kiri */
+  .htk-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:auto;max-height:72vh;}
+  .htk-table{border-collapse:separate;border-spacing:0;font-size:12.5px;color:var(--text);white-space:nowrap;width:max-content;}
+  .htk-table th,.htk-table td{border-bottom:1px solid var(--border-2);border-right:1px solid var(--border-2);padding:7px 10px;text-align:center;}
+  .htk-table thead th{position:sticky;background:var(--surface-2);font-size:11px;font-weight:700;text-transform:uppercase;color:var(--gray,#64748b);}
+  .htk-table thead tr.htk-grp th{top:0;z-index:4;}
+  .htk-table thead tr.htk-sub th{top:34px;z-index:3;}
+  /* Freeze 2 kolom kiri: Grup + Kriteria */
+  .htk-c1{position:sticky;left:0;z-index:2;min-width:120px;text-align:left;}
+  .htk-c2{position:sticky;left:120px;z-index:2;min-width:190px;text-align:left;}
+  .htk-table thead tr th.htk-c1,.htk-table thead tr th.htk-c2{z-index:7;background:var(--surface-2)!important;}
+  .htk-table tbody td{background:var(--surface);}
+  .htk-table tbody td.htk-c1,.htk-table tbody td.htk-c2{background:var(--surface);}
+  .htk-grp-cell{font-weight:700;color:var(--primary);background:var(--primary-lt,#eff6ff)!important;vertical-align:middle;}
+  .htk-total{position:sticky;right:0;z-index:2;font-weight:700;background:var(--surface-2)!important;}
+  .htk-table thead tr th.htk-total{z-index:6;}
+  .htk-val{font-variant-numeric:tabular-nums;}
+  .htk-zero{color:var(--text-muted);}
+  .htk-month-alt{background:linear-gradient(rgba(91,140,255,.06),rgba(91,140,255,.06)),var(--surface-2);}
+  .htk-table tbody tr:hover td{background:var(--surface-2);}
+  /* Garis pemisah antar grup kriteria */
+  .htk-table tbody tr.htk-grp-start td{border-top:2px solid var(--border);}
+  .htk-table tbody tr.htk-grp-start td.htk-c1{border-top:2px solid var(--border);}
+  /* Sel bernilai bisa diklik utk lihat detail pekerjaan */
+  .htk-table td.htk-click{cursor:pointer;color:var(--primary);font-weight:600;}
+  .htk-table td.htk-click:hover{background:var(--primary-lt,#eff6ff)!important;text-decoration:underline;}
+  /* Modal detail pekerjaan */
+  .htk-modal{display:none;position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.5);align-items:center;justify-content:center;padding:20px;}
+  .htk-modal.show{display:flex;}
+  .htk-modal-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;width:min(940px,96vw);max-height:86vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.25);}
+  .htk-modal-head{display:flex;align-items:flex-start;gap:12px;padding:16px 18px;border-bottom:1px solid var(--border);}
+  .htk-modal-head .mi{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#1e3a8a,#3b82f6);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;flex:0 0 auto;}
+  .htk-modal-head h3{margin:0;font-size:16px;font-weight:700;color:var(--primary);}
+  .htk-modal-head p{margin:2px 0 0;font-size:12px;color:var(--gray,#64748b);}
+  .htk-modal-x{margin-left:auto;border:none;background:var(--surface-2);color:var(--text-2);width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:15px;}
+  .htk-modal-body{padding:14px 18px;overflow:auto;}
+  .htk-dsum{font-size:13px;color:var(--text-2);margin-bottom:10px;}
+  .htk-dtable{width:100%;border-collapse:collapse;font-size:12.5px;color:var(--text);}
+  .htk-dtable th,.htk-dtable td{border-bottom:1px solid var(--border-2);padding:7px 8px;text-align:center;white-space:nowrap;}
+  .htk-dtable thead th{background:var(--surface-2);font-size:10.5px;text-transform:uppercase;color:var(--gray,#64748b);font-weight:700;position:sticky;top:0;}
+  .htk-dtable td.htk-dleft{text-align:left;white-space:normal;min-width:220px;}
+  .htk-dtable tbody tr:hover td{background:var(--surface-2);}
+  .htk-empty,.htk-loading{padding:40px;text-align:center;color:var(--gray,#64748b);}
+  .htk-empty i,.htk-loading i{font-size:30px;margin-bottom:8px;display:block;}
+</style>
+
+<div class="htk-header">
+  <div class="ico"><i class="fa-solid fa-screwdriver-wrench"></i></div>
+  <div>
+    <h2>Hartek — Rekap Pekerjaan per Penyulang</h2>
+    <p>Kriteria pekerjaan (vertikal) &times; Bulan &amp; Minggu ke- (horizontal). Sumber: db_Hartek_Pekerjaan.</p>
+  </div>
+</div>
+
+<div class="htk-filter">
+  <div class="htk-field" id="htkUlpWrap" style="display:none">
+    <label>ULP</label>
+    <select id="htkUlp" onchange="htkLoadPenyulang()"><option value="">Semua ULP</option></select>
+  </div>
+  <div class="htk-field">
+    <label>Penyulang</label>
+    <select id="htkPenyulang"><option value="">Semua Penyulang</option></select>
+  </div>
+  <div class="htk-field">
+    <label>Tahun</label>
+    <select id="htkTahun"></select>
+  </div>
+  <button class="htk-btn htk-btn-primary" onclick="htkMuat()"><i class="fa-solid fa-magnifying-glass"></i> Muat</button>
+  <button class="htk-btn htk-btn-reset" onclick="htkReset()"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+</div>
+
+<div class="htk-wrap" id="htkWrap">
+  <div class="htk-empty"><i class="fa-solid fa-table-cells"></i><p>Pilih Penyulang &amp; Tahun lalu klik Muat.</p></div>
+</div>
+
+<div class="htk-modal" id="htkModal">
+  <div class="htk-modal-card">
+    <div class="htk-modal-head">
+      <div class="mi"><i class="fa-solid fa-list-check"></i></div>
+      <div>
+        <h3 id="htkModalTitle">Detail Pekerjaan</h3>
+        <p id="htkModalSub"></p>
+      </div>
+      <button class="htk-modal-x" onclick="htkModalClose()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="htk-modal-body" id="htkModalBody"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var HTK = { sesi:null, ulp:'', isSuper:false };
+  function _el(id){ return document.getElementById(id); }
+  function _sesi(){ return (typeof window!=='undefined' && window.__SISI_SESI__) ? window.__SISI_SESI__ : (HTK.sesi||{}); }
+
+  var BULAN_SHORT = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+
+  // Kriteria pekerjaan Hartek. key = properti kolom GASPOL (samakan dgn _gaspolReadHartekMap
+  // di SIE-Teknik-Code.gs). Grup HANYA untuk pengelompokan tampilan (vertikal).
+  var KRITERIA = [
+    { grup:'HARKOM', items:[
+      { key:'harkomIsolator', label:'Isolator' },
+      { key:'harkomArrester', label:'Arrester' },
+      { key:'harkomFco', label:'FCO' }
+    ]},
+    { grup:'HARKONS SUTM', items:[
+      { key:'harkonsTiang', label:'Tiang' },
+      { key:'harkonsSutm', label:'SUTM' },
+      { key:'harkonsGw', label:'GW' },
+      { key:'harkonsGsw', label:'GSW' },
+      { key:'groundingTm', label:'Grounding TM' },
+      { key:'harkeypoint', label:'Harkeypoint' },
+      { key:'penghalangHewan', label:'Penghalang Hewan' },
+      { key:'rekonektorSutm', label:'Rekonektor SUTM' },
+      { key:'rehabSutm', label:'Rehab SUTM' },
+      { key:'penyulangBaruSutm', label:'Penyulang Baru SUTM' }
+    ]},
+    { grup:'Gardu', items:[
+      { key:'manajemenGardu', label:'Manajemen Gardu' },
+      { key:'tapChanger', label:'Tap Changer' },
+      { key:'penyeimbanganBeban', label:'Penyeimbangan Beban' },
+      { key:'groundingGardu', label:'Grounding Gardu' },
+      { key:'coverGardu', label:'Cover Gardu' },
+      { key:'lostContactPhbTr', label:'Lost Contact PHB-TR' }
+    ]},
+    { grup:'SUTR / SR', items:[
+      { key:'jurusanBaruPecahBeban', label:'Jurusan Baru / Pecah Beban' },
+      { key:'rekonektorSutr', label:'Rekonektor SUTR' },
+      { key:'srSeri', label:'SR Seri' },
+      { key:'rekonektorSr', label:'Rekonektor SR' }
+    ]}
+  ];
+
+  // Jumlah 'minggu ke-' dalam sebulan = ceil(jumlah hari / 7) -> 4 atau 5.
+  function _weeksInMonth(tahun, bulan0){ return Math.ceil(new Date(tahun, bulan0+1, 0).getDate() / 7); }
+
+  function htkBoot(){
+    var s = _sesi(); HTK.sesi = s; HTK.ulp = s.ulp || '';
+    HTK.isSuper = (['Super User','Admin'].indexOf(String(s.role||'').trim()) !== -1);
+    var thn = (new Date()).getFullYear();
+    var selT = _el('htkTahun');
+    if(selT){ selT.innerHTML=''; for(var y=thn; y>=thn-3; y--){ selT.innerHTML += '<option value="'+y+'">'+y+'</option>'; } selT.value = thn; }
+    if(HTK.isSuper){ var uw=_el('htkUlpWrap'); if(uw) uw.style.display=''; htkLoadUlp(); }
+    var wrap=_el('htkWrap');
+    if(wrap && !wrap.__htkBound){
+      wrap.__htkBound=true;
+      wrap.addEventListener('click', function(ev){
+        var td=ev.target.closest ? ev.target.closest('td.htk-click') : null;
+        if(!td) return;
+        htkDetail(td.getAttribute('data-k'), td.getAttribute('data-lbl'), td.getAttribute('data-b'), td.getAttribute('data-w'));
+      });
+    }
+    var ov=_el('htkModal');
+    if(ov && !ov.__htkBound){
+      ov.__htkBound=true;
+      ov.addEventListener('click', function(ev){ if(ev.target===ov) htkModalClose(); });
+      document.addEventListener('keydown', function(ev){ if(ev.key==='Escape') htkModalClose(); });
+    }
+    htkLoadPenyulang();
+  }
+
+  function htkLoadUlp(){
+    if(typeof google==='undefined') return;
+    google.script.run.withSuccessHandler(function(list){
+      var sel=_el('htkUlp'); if(!sel) return;
+      sel.innerHTML='<option value="">Semua ULP</option>';
+      (list||[]).forEach(function(u){ sel.innerHTML += '<option value="'+u+'">'+u+'</option>'; });
+    }).withFailureHandler(function(){}).getListUlpIns();
+  }
+
+  function htkLoadPenyulang(){
+    var sel=_el('htkPenyulang'); if(!sel) return;
+    var ulp = HTK.isSuper ? (_el('htkUlp')?_el('htkUlp').value:'') : HTK.ulp;
+    sel.disabled=true; sel.innerHTML='<option value="">Memuat penyulang...</option>';
+    if(typeof google==='undefined'){ sel.innerHTML='<option value="">Semua Penyulang</option>'; sel.disabled=false; return; }
+    google.script.run
+      .withSuccessHandler(function(res){
+        var list=(res&&res.list)?res.list:[];
+        sel.innerHTML='<option value="">Semua Penyulang</option>' + list.map(function(p){ var nm=(p&&p.nama!=null)?p.nama:p; return '<option value="'+nm+'">'+nm+'</option>'; }).join('');
+        sel.disabled=false;
+      })
+      .withFailureHandler(function(){ sel.innerHTML='<option value="">Semua Penyulang</option>'; sel.disabled=false; })
+      .getDataPenyulangByUlp(ulp);
+  }
+
+  function htkMuat(){
+    var wrap=_el('htkWrap');
+    var tahun=parseInt(_el('htkTahun').value,10)||(new Date()).getFullYear();
+    var penyulang=_el('htkPenyulang')?_el('htkPenyulang').value:'';
+    var ulp = HTK.isSuper ? (_el('htkUlp')?_el('htkUlp').value:'') : HTK.ulp;
+    wrap.innerHTML='<div class="htk-loading"><i class="fa-solid fa-spinner fa-spin"></i><p>Memuat rekap...</p></div>';
+    if(typeof google==='undefined'){ htkRender({ ok:true, tahun:tahun, data:{}, totalPerKriteria:{} }); return; }
+    google.script.run
+      .withSuccessHandler(htkRender)
+      .withFailureHandler(function(err){ wrap.innerHTML='<div class="htk-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>'+((err&&err.message)||err)+'</p></div>'; })
+      .getHartekRekapMatrix({ penyulang:penyulang, tahun:tahun, ulp:ulp });
+  }
+
+  function htkRender(res){
+    var wrap=_el('htkWrap');
+    if(!res||!res.ok){ wrap.innerHTML='<div class="htk-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>'+((res&&res.message)||'Gagal memuat data.')+'</p></div>'; return; }
+    var tahun=res.tahun||(new Date()).getFullYear();
+    var data=res.data||{};
+    var totKrit=res.totalPerKriteria||{};
+
+    var weeks=[];
+    for(var m=0;m<12;m++){ weeks.push(_weeksInMonth(tahun,m)); }
+
+    // Header baris 1 = Bulan (colspan minggu); baris 2 = Minggu ke- (M1..Mn)
+    var h1='<tr class="htk-grp"><th class="htk-c1" rowspan="2">Grup</th><th class="htk-c2" rowspan="2">Kriteria Pekerjaan</th>';
+    var h2='<tr class="htk-sub">';
+    for(var mm=0;mm<12;mm++){
+      var alt=(mm%2===1)?' htk-month-alt':'';
+      h1+='<th class="'+alt.trim()+'" colspan="'+weeks[mm]+'">'+BULAN_SHORT[mm]+'</th>';
+      for(var wk=1;wk<=weeks[mm];wk++){ h2+='<th class="'+alt.trim()+'">M'+wk+'</th>'; }
+    }
+    h1+='<th class="htk-total" rowspan="2">Total '+tahun+'</th></tr>';
+    h2+='</tr>';
+
+    var body='';
+    KRITERIA.forEach(function(g){
+      g.items.forEach(function(it, idx){
+        body+='<tr'+(idx===0?' class="htk-grp-start"':'')+'>';
+        if(idx===0){ body+='<td class="htk-c1 htk-grp-cell" rowspan="'+g.items.length+'">'+g.grup+'</td>'; }
+        body+='<td class="htk-c2">'+it.label+'</td>';
+        var cells=data[it.key]||{};
+        for(var m2=0;m2<12;m2++){
+          var alt2=(m2%2===1)?' htk-month-alt':'';
+          for(var wk2=1;wk2<=weeks[m2];wk2++){
+            var v=cells[m2+'-'+wk2]||0;
+            if(v){ body+='<td class="htk-val htk-click'+alt2+'" data-k="'+it.key+'" data-lbl="'+it.label+'" data-b="'+m2+'" data-w="'+wk2+'">'+v+'</td>'; }
+            else { body+='<td class="htk-val htk-zero'+alt2+'">&middot;</td>'; }
+          }
+        }
+        var t=totKrit[it.key]||0;
+        if(t){ body+='<td class="htk-total htk-val htk-click" data-k="'+it.key+'" data-lbl="'+it.label+'" data-b="" data-w="">'+t+'</td></tr>'; }
+        else { body+='<td class="htk-total htk-val htk-zero">&middot;</td></tr>'; }
+      });
+    });
+
+    wrap.innerHTML='<table class="htk-table"><thead>'+h1+h2+'</thead><tbody>'+body+'</tbody></table>';
+  }
+
+  function htkReset(){
+    if(_el('htkPenyulang')) _el('htkPenyulang').value='';
+    if(_el('htkTahun')) _el('htkTahun').value=(new Date()).getFullYear();
+    _el('htkWrap').innerHTML='<div class="htk-empty"><i class="fa-solid fa-table-cells"></i><p>Pilih Penyulang &amp; Tahun lalu klik Muat.</p></div>';
+  }
+
+  function htkDetail(kriteria, label, bulan, minggu){
+    var tahun=parseInt(_el('htkTahun').value,10)||(new Date()).getFullYear();
+    var penyulang=_el('htkPenyulang')?_el('htkPenyulang').value:'';
+    var ulp = HTK.isSuper ? (_el('htkUlp')?_el('htkUlp').value:'') : HTK.ulp;
+    var bIdx = (bulan===''||bulan==null) ? null : parseInt(bulan,10);
+    var wIdx = (minggu===''||minggu==null) ? null : parseInt(minggu,10);
+    var periode = (bIdx==null) ? ('Total '+tahun) : (BULAN_SHORT[bIdx]+' '+tahun+' · Minggu ke-'+wIdx);
+    htkModalOpen(label, periode);
+    if(typeof google==='undefined'){ htkModalBody({ ok:true, rows:[], total:0 }); return; }
+    google.script.run
+      .withSuccessHandler(htkModalBody)
+      .withFailureHandler(function(err){ htkModalBody({ ok:false, message:(err&&err.message)||String(err) }); })
+      .getHartekRekapDetail({ penyulang:penyulang, tahun:tahun, ulp:ulp, kriteria:kriteria, bulan:bIdx, minggu:wIdx });
+  }
+
+  function htkModalOpen(label, periode){
+    var ov=_el('htkModal'); if(!ov) return;
+    if(_el('htkModalTitle')) _el('htkModalTitle').textContent=label||'Detail Pekerjaan';
+    if(_el('htkModalSub')) _el('htkModalSub').textContent=periode||'';
+    if(_el('htkModalBody')) _el('htkModalBody').innerHTML='<div class="htk-loading"><i class="fa-solid fa-spinner fa-spin"></i><p>Memuat detail...</p></div>';
+    ov.classList.add('show');
+  }
+
+  function htkModalBody(res){
+    var b=_el('htkModalBody'); if(!b) return;
+    if(!res||!res.ok){ b.innerHTML='<div class="htk-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>'+((res&&res.message)||'Gagal memuat detail.')+'</p></div>'; return; }
+    var rows=res.rows||[];
+    if(!rows.length){ b.innerHTML='<div class="htk-empty"><i class="fa-solid fa-inbox"></i><p>Tidak ada pekerjaan pada periode ini.</p></div>'; return; }
+    var html='<div class="htk-dsum">Total <b>'+(res.total||0)+'</b> pekerjaan · '+rows.length+' baris entri</div>';
+    html+='<table class="htk-dtable"><thead><tr><th>#</th><th>Tanggal</th><th>Penyulang</th><th>Section</th><th>Gardu</th><th>Jenis</th><th>Pekerjaan</th><th>Jumlah</th><th>Input By</th></tr></thead><tbody>';
+    rows.forEach(function(r,i){
+      html+='<tr><td>'+(i+1)+'</td><td>'+_esc(r.tanggal)+'</td><td>'+_esc(r.penyulang)+'</td><td>'+_esc(r.section)+'</td><td>'+_esc(r.gardu)+'</td><td>'+_esc(r.jenisPekerjaan)+'</td><td class="htk-dleft">'+_esc(r.pekerjaan)+'</td><td>'+(r.jumlah||0)+' '+_esc(r.satuan)+'</td><td>'+_esc(r.inputBy)+'</td></tr>';
+    });
+    html+='</tbody></table>';
+    b.innerHTML=html;
+  }
+
+  function htkModalClose(){ var ov=_el('htkModal'); if(ov) ov.classList.remove('show'); }
+  function _esc(s){ s=(s==null)?'':String(s); return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  window.htkLoadPenyulang=htkLoadPenyulang;
+  window.htkMuat=htkMuat;
+  window.htkReset=htkReset;
+  window.htkModalClose=htkModalClose;
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', htkBoot);
+  else htkBoot();
+})();
+</script>

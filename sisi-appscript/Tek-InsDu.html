@@ -1,0 +1,1088 @@
+<style>
+body{ background-image:url('https://drive.google.com/thumbnail?id=1rfN5LJOjjx0t-rjuLquBe6Qsx7hfcqqV&sz=w1920'); background-size:cover; background-position:center; background-attachment:fixed; }
+[data-theme="dark"] body, body[data-theme="dark"]{ background-image:url('https://drive.google.com/thumbnail?id=1T76yS2vAnMufKEKkhQie2zZ4AYVIn1tD&sz=w1920'); }
+.idu-wrap{padding:4px 2px 24px;color:var(--text,#0f172a)}
+.idu-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.idu-title{margin:0;font-size:20px;font-weight:700;color:var(--text,#0f172a)}
+.idu-sub{margin:2px 0 0;font-size:13px;opacity:.7}
+.idu-btn,.idu-btn-primary{border:none;border-radius:10px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;transition:.15s}
+.idu-btn{background:var(--surface,#fff);color:var(--text,#0f172a);border:1px solid rgba(127,127,127,.25)}
+.idu-btn:hover{filter:brightness(.97)}
+.idu-btn-primary{background:var(--primary,#1E3A8A);color:#fff}
+.idu-btn-primary:hover{filter:brightness(1.08)}
+.idu-filter{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;background:var(--surface,#fff);border:1px solid rgba(127,127,127,.18);border-radius:12px;padding:12px;margin-bottom:14px}
+.idu-filter label{display:block;font-size:11px;font-weight:600;opacity:.75;margin-bottom:4px}
+.idu-filter input,.idu-filter select{padding:7px 9px;border-radius:8px;border:1px solid rgba(127,127,127,.3);background:var(--surface,#fff);color:var(--text,#0f172a);font-size:13px;min-width:120px}
+.idu-table-wrap{overflow-x:auto;border:1px solid rgba(127,127,127,.18);border-radius:12px}
+.idu-table{width:100%;border-collapse:collapse;font-size:13px;min-width:760px}
+.idu-table th,.idu-table td{padding:9px 11px;text-align:left;border-bottom:1px solid rgba(127,127,127,.14);white-space:nowrap}
+.idu-table th{background:var(--surface-2,#f1f5f9);color:var(--text-2,#475569);font-weight:600;text-transform:uppercase;font-size:12px;border-bottom:2px solid rgba(127,127,127,.2);position:sticky;top:0}
+.idu-table tr:hover td{background:rgba(127,127,127,.06)}
+.idu-empty{padding:26px;text-align:center;opacity:.6;font-size:13px}
+.idu-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px}
+.idu-modal{background:var(--surface,#fff);color:var(--text,#0f172a);border-radius:16px;width:100%;max-width:440px;max-height:90vh;overflow:auto;box-shadow:0 18px 50px rgba(0,0,0,.3)}
+.idu-modal-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid rgba(127,127,127,.16)}
+.idu-modal-head h3{margin:0;font-size:16px;font-weight:700}
+.idu-x{background:none;border:none;font-size:22px;line-height:1;cursor:pointer;color:var(--text,#0f172a);opacity:.6}
+.idu-modal-body{padding:16px}
+.idu-modal-foot{display:flex;gap:10px;justify-content:flex-end;padding:12px 16px;border-top:1px solid rgba(127,127,127,.16)}
+.idu-field{margin-bottom:12px}
+.idu-field label{display:block;font-size:12px;font-weight:600;opacity:.8;margin-bottom:5px}
+.idu-field input,.idu-field select,.idu-field textarea{width:100%;box-sizing:border-box;padding:9px 10px;border-radius:9px;border:1px solid rgba(127,127,127,.3);background:var(--surface,#fff);color:var(--text,#0f172a);font-size:13px}
+.idu-filter select option,.idu-field select option{background:var(--surface,#fff);color:var(--text,#0f172a)}
+.idu-filter select:focus,.idu-field select:focus{outline:none;border-color:var(--primary,#1E3A8A)}
+.idu-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.idu-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(8px);display:flex;align-items:center;gap:10px;background:#0f172a;color:#fff;padding:12px 18px;border-radius:12px;font-size:13.5px;font-weight:600;z-index:10000;opacity:0;pointer-events:none;box-shadow:0 12px 32px rgba(0,0,0,.3);transition:.25s}
+.idu-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.idu-toast i{font-size:18px;flex-shrink:0}
+.idu-toast.success{background:#16a34a;color:#fff}
+.idu-toast.error{background:#dc2626;color:#fff}
+.idu-toast.info{background:#0f172a;color:#fff}
+.idu-success-overlay{position:fixed;inset:0;z-index:11000;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.55);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity .25s}
+.idu-success-overlay.show{opacity:1;pointer-events:auto}
+.idu-success-card{display:flex;flex-direction:column;align-items:center;gap:16px;padding:34px 30px;max-width:340px;text-align:center;transform:scale(.85);transition:transform .3s cubic-bezier(.2,.8,.3,1.2)}
+.idu-success-overlay.show .idu-success-card{transform:scale(1)}
+.idu-success-circle{width:104px;height:104px;border-radius:50%;background:#16a34a;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 36px rgba(22,163,74,.45);animation:iduPop .45s ease}
+.idu-success-circle i{color:#fff;font-size:54px}
+@keyframes iduPop{0%{transform:scale(0)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+.idu-success-title{font-size:22px;font-weight:800;color:#fff;margin:0}
+.idu-success-desc{font-size:14px;color:rgba(255,255,255,.88);margin:0;line-height:1.5}
+.idu-badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:600;background:rgba(30,58,138,.12);color:var(--primary,#1E3A8A)}
+.idu-act{display:inline-flex;gap:6px;justify-content:center}
+.idu-act button{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:none;border-radius:7px;color:#fff;cursor:pointer;font-size:13px}
+.idu-act button:hover{filter:brightness(.92)}
+.idu-act button:active{transform:scale(.92)}
+.idu-act .b-detail{background:var(--info,#0ea5e9)}
+.idu-act .b-edit{background:#f59e0b}
+.idu-act .b-add{background:var(--primary-2,#16a34a)}
+.idu-dtable{width:100%;border-collapse:collapse;font-size:13px}
+.idu-dtable th,.idu-dtable td{padding:7px 9px;border-bottom:1px solid rgba(127,127,127,.14);text-align:left;white-space:nowrap}
+.idu-dtable th{background:var(--surface-2,#f1f5f9);color:var(--text-2,#475569);font-size:11px;text-transform:uppercase}
+.idu-hint{font-size:11px;opacity:.7;margin-top:4px}
+.idu-tabs{position:relative;display:flex;gap:0;background:var(--surface-2,#f1f5f9);border:1px solid var(--border,rgba(127,127,127,.18));border-radius:999px;padding:4px;margin-bottom:16px;max-width:560px}
+.idu-tab-indicator{position:absolute;top:4px;bottom:4px;left:4px;width:0;background:var(--surface,#fff);border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,.12);transition:transform .4s cubic-bezier(.34,1.56,.64,1),width .4s cubic-bezier(.34,1.56,.64,1);z-index:0;pointer-events:none}
+[data-theme="dark"] .idu-tab-indicator{background:linear-gradient(135deg,#29E3FF,#5b8cff);box-shadow:0 0 14px rgba(41,227,255,.5)}
+.idu-tab{position:relative;z-index:1;flex:1;border:none;background:none;cursor:pointer;padding:8px 16px;font-size:13px;font-weight:600;color:var(--text-3,#64748b);border-radius:999px;transition:color .25s ease,transform .25s ease;white-space:nowrap}
+.idu-tab:hover{color:var(--primary,#1E3A8A)}
+.idu-tab.active{color:var(--primary,#1E3A8A);transform:translateY(-1px)}
+[data-theme="dark"] .idu-tab.active{color:#06243a}
+.idu-tab-content{display:none}
+.idu-tab-content.active{display:block}
+.idu-lph-card{border:1px solid rgba(127,127,127,.2);border-radius:14px;padding:14px;margin-bottom:14px;background:var(--surface,#fff)}
+.idu-lph-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.idu-lph-head .t{display:flex;align-items:center;gap:9px;font-weight:700;font-size:14px}
+.idu-lph-wa-ic{width:34px;height:34px;border-radius:9px;background:#25D366;color:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.idu-lph-meta{display:flex;gap:6px;flex-wrap:wrap}
+.idu-lph-wabox{white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.5;background:var(--surface-2,#f8fafc);border:1px solid rgba(127,127,127,.18);border-radius:10px;padding:12px;max-height:340px;overflow:auto;color:var(--text,#0f172a)}
+.idu-lph-foot{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.idu-lph-foot button{display:inline-flex;align-items:center;gap:6px;border:none;border-radius:9px;padding:8px 13px;font-size:12.5px;font-weight:600;cursor:pointer;color:#fff}
+.idu-lph-foot button:active{transform:scale(.96)}
+.idu-lph-foot button:disabled{opacity:.6;cursor:default}
+.idu-lph-copy{background:var(--info,#0ea5e9)}
+.idu-lph-wa{background:#25D366}
+.idu-lph-edit{background:#f59e0b}
+.idu-lph-upd{background:var(--primary,#1E3A8A)}
+</style>
+
+<div class="idu-wrap">
+  <div class="idu-head">
+    <div>
+      <h2 class="idu-title">Inspeksi Gardu</h2>
+      <p class="idu-sub">Header penugasan harian Inspeksi Gardu</p>
+    </div>
+    <button id="btnTambahHeaderGardu" class="idu-btn-primary" style="display:none" onclick="bukaTambahHeaderGardu()">+ Tambah Data</button>
+  </div>
+
+  <div class="idu-tabs" id="iduTabs">
+    <span class="idu-tab-indicator" id="iduTabIndicator"></span>
+    <button class="idu-tab active" id="iduTab-lapHarian" onclick="_switchIduTab('lapHarian')">Laporan Harian</button>
+    <button class="idu-tab" id="iduTab-rekap" onclick="_switchIduTab('rekap')">Rekapitulasi Inspeksi Gardu</button>
+  </div>
+
+  <div class="idu-tab-content active" id="tab-lapHarian">
+    <div class="idu-filter">
+      <div id="wrapUlpLph" style="display:none">
+        <label>ULP</label>
+        <select id="lph_ulp"><option value="">Semua ULP</option></select>
+      </div>
+      <div><label>Dari Tanggal</label><input type="date" id="lph_tglDari"></div>
+      <div><label>Sampai Tanggal</label><input type="date" id="lph_tglSampai"></div>
+      <button class="idu-btn-primary" onclick="muatLapHarianGardu()">Tampilkan</button>
+    </div>
+
+    <div id="gduTableWrap" class="idu-table-wrap">
+      <div class="idu-empty">Atur filter lalu klik <strong>Tampilkan</strong> untuk menampilkan data header gardu. Klik ikon WhatsApp di kolom Aksi untuk melihat Format WA.</div>
+    </div>
+  </div>
+
+  <div class="idu-tab-content" id="tab-rekap">
+    <div class="idu-filter">
+      <div id="wrapUlpGardu" style="display:none">
+        <label>ULP</label>
+        <select id="gdu_ulp"><option value="">Semua ULP</option></select>
+      </div>
+      <div><label>Dari Tanggal</label><input type="date" id="gdu_tglDari"></div>
+      <div><label>Sampai Tanggal</label><input type="date" id="gdu_tglSampai"></div>
+      <button class="idu-btn-primary" onclick="muatRekapGardu()">Tampilkan</button>
+    </div>
+
+    <div id="gduPejabatCard" style="display:none;background:var(--surface,#fff);border:1px solid rgba(127,127,127,.18);border-radius:12px;padding:12px;margin-bottom:14px">
+      <div style="font-weight:700;font-size:13px;margin-bottom:8px"><i class="fa-solid fa-file-signature"></i> Pejabat Tanda Tangan PDF</div>
+      <div class="idu-grid2" style="grid-template-columns:1fr 1fr 1fr">
+        <div class="idu-field" style="margin:0"><label>Manager</label><input type="text" id="gpjManager" placeholder="Nama Manager"></div>
+        <div class="idu-field" style="margin:0"><label>Team Leader (TL)</label><input type="text" id="gpjTeamLeader" placeholder="Nama TL Teknik"></div>
+        <div class="idu-field" style="margin:0"><label>Koordinator</label><input type="text" id="gpjKoordinator" placeholder="Nama Koordinator"></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:10px">
+        <button id="btnSimpanPejabatGardu" class="idu-btn-primary" onclick="simpanPejabatGardu()">Simpan Pejabat</button>
+      </div>
+      <div class="idu-hint">Nama ini tampil pada blok tanda tangan PDF — Pihak Pertama: Manager &amp; TL; Pihak Kedua: Koordinator.</div>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+      <div style="font-weight:700;font-size:14px">Tabel Rekapitulasi Inspeksi Gardu</div>
+      <button class="idu-btn" style="background:#b91c1c;color:#fff;border-color:#b91c1c" onclick="unduhPdfGardu()"><i class="fa-solid fa-file-pdf"></i> Unduh PDF</button>
+    </div>
+
+    <div id="rekapTableWrap" class="idu-table-wrap">
+      <div class="idu-empty">Atur filter lalu klik <strong>Tampilkan</strong> untuk menampilkan rekapitulasi.</div>
+    </div>
+  </div>
+</div>
+
+<div id="modalTambahHeaderGardu" class="idu-modal-overlay" style="display:none">
+  <div class="idu-modal">
+    <div class="idu-modal-head">
+      <h3>Tambah Header Gardu</h3>
+      <button class="idu-x" onclick="tutupTambahHeaderGardu()">&times;</button>
+    </div>
+    <div class="idu-modal-body">
+      <div class="idu-field">
+        <label>ULP</label>
+        <select id="ghUlp" disabled></select>
+      </div>
+      <div class="idu-grid2">
+        <div class="idu-field"><label>Tanggal</label><input type="date" id="ghTanggal" onchange="_ghUpdateHari()"></div>
+        <div class="idu-field"><label>Hari</label><input type="text" id="ghHari" readonly placeholder="Otomatis"></div>
+      </div>
+      <div class="idu-grid2">
+        <div class="idu-field"><label>Koordinat Gardu Awal</label><input type="text" id="ghKoordAwal" placeholder="-2.000, 106.000"></div>
+        <div class="idu-field"><label>Koordinat Gardu Akhir</label><input type="text" id="ghKoordAkhir" placeholder="-2.000, 106.000"></div>
+      </div>
+      <div class="idu-grid2">
+        <div class="idu-field"><label>KM Awal</label><input type="number" step="0.01" id="ghKmAwal" placeholder="0"></div>
+        <div class="idu-field"><label>KM Akhir</label><input type="number" step="0.01" id="ghKmAkhir" placeholder="0"></div>
+      </div>
+      <div class="idu-field"><label>Kendala</label><textarea id="ghKendala" rows="2" placeholder="(opsional)"></textarea></div>
+    </div>
+    <div class="idu-modal-foot">
+      <button class="idu-btn" onclick="tutupTambahHeaderGardu()">Batal</button>
+      <button id="btnSimpanHeaderGardu" class="idu-btn-primary" onclick="simpanTambahHeaderGardu()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalTambahRealisasiGardu" class="idu-modal-overlay" style="display:none">
+  <div class="idu-modal">
+    <div class="idu-modal-head">
+      <h3>Tambah Realisasi Gardu</h3>
+      <button class="idu-x" onclick="tutupTambahRealisasiGardu()">&times;</button>
+    </div>
+    <div class="idu-modal-body">
+      <div class="idu-field"><label>Kode Header</label><div><span class="idu-badge" id="trgKodeHeader"></span> <span id="trgTanggalInfo" style="font-size:12px;opacity:.7"></span></div></div>
+      <div class="idu-field"><label>Penyulang</label><select id="trgPenyulang" onchange="_trgLoadGardu()"><option value="">Pilih penyulang…</option></select></div>
+      <div class="idu-field"><label>Gardu</label><select id="trgGardu"><option value="">— pilih penyulang dulu —</option></select><div class="idu-hint">Gardu "belum diukur" tidak bisa dipilih — update tanggal pengukuran (kolom U) di Master_Gardu agar sama dengan tanggal header.</div></div>
+      <div class="idu-field"><label>Inspeksi Tier</label><select id="trgTier"><option value="">Pilih Tier…</option><option value="Tier 1">Tier 1</option><option value="Tier 2">Tier 2</option><option value="Tier 1 &amp; Tier 2">Tier 1 &amp; Tier 2</option></select></div>
+    </div>
+    <div class="idu-modal-foot">
+      <button class="idu-btn" onclick="tutupTambahRealisasiGardu()">Tutup</button>
+      <button id="btnSimpanRealisasiGardu" class="idu-btn-primary" onclick="simpanTambahRealisasiGardu()">Simpan Gardu</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalDetailRealisasiGardu" class="idu-modal-overlay" style="display:none">
+  <div class="idu-modal" style="max-width:680px">
+    <div class="idu-modal-head">
+      <h3 id="drgTitle">Realisasi Gardu</h3>
+      <button class="idu-x" onclick="tutupDetailRealisasiGardu()">&times;</button>
+    </div>
+    <div class="idu-modal-body" id="drgBody"><div class="idu-empty">Memuat…</div></div>
+    <div class="idu-modal-foot">
+      <button class="idu-btn" onclick="tutupDetailRealisasiGardu()">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalEditHeaderGardu" class="idu-modal-overlay" style="display:none">
+  <div class="idu-modal">
+    <div class="idu-modal-head">
+      <h3>Edit Header Gardu</h3>
+      <button class="idu-x" onclick="tutupEditHeaderGardu()">&times;</button>
+    </div>
+    <div class="idu-modal-body">
+      <div class="idu-field"><label>Kode Header</label><div><span class="idu-badge" id="ehgKodeHeader"></span></div></div>
+      <div class="idu-grid2">
+        <div class="idu-field"><label>Koordinat Gardu Awal</label><input type="text" id="ehgKoordAwal" placeholder="-2.000, 106.000"></div>
+        <div class="idu-field"><label>Koordinat Gardu Akhir</label><input type="text" id="ehgKoordAkhir" placeholder="-2.000, 106.000"></div>
+      </div>
+      <div class="idu-grid2">
+        <div class="idu-field"><label>KM Awal</label><input type="number" step="0.01" id="ehgKmAwal" placeholder="0"></div>
+        <div class="idu-field"><label>KM Akhir</label><input type="number" step="0.01" id="ehgKmAkhir" placeholder="0"></div>
+      </div>
+      <div class="idu-field"><label>Kendala</label><textarea id="ehgKendala" rows="2" placeholder="(opsional)"></textarea></div>
+    </div>
+    <div class="idu-modal-foot">
+      <button class="idu-btn" onclick="tutupEditHeaderGardu()">Batal</button>
+      <button id="btnSimpanEditHeaderGardu" class="idu-btn-primary" onclick="simpanEditHeaderGardu()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalTambahTemuanGardu" class="idu-modal-overlay" style="display:none">
+  <div class="idu-modal" style="max-width:560px">
+    <div class="idu-modal-head">
+      <h3>Tambah Temuan Gardu</h3>
+      <button class="idu-x" onclick="tutupTambahTemuanGardu()">&times;</button>
+    </div>
+    <div class="idu-modal-body">
+      <div class="idu-field"><label>Gardu</label><div><span class="idu-badge" id="ttgNomorGardu"></span> <span id="ttgInfo" style="font-size:12px;opacity:.7"></span></div></div>
+      <div class="idu-field"><label>Temuan</label><select id="ttgTemuan"><option value="">Memuat…</option></select></div>
+      <div class="idu-field"><label>Deskripsi Temuan</label><textarea id="ttgDeskripsi" rows="2" placeholder="(opsional)"></textarea></div>
+      <div class="idu-grid2">
+        <div class="idu-field"><label>Foto Temuan</label><input type="file" id="ttgFotoTemuan" accept="image/*" onchange="_ttgPreview(this,'ttgPrevTemuan')"><img id="ttgPrevTemuan" style="display:none;margin-top:6px;max-width:100%;max-height:120px;border-radius:8px;border:1px solid rgba(127,127,127,.3)"></div>
+        <div class="idu-field"><label>Foto Gardu</label><input type="file" id="ttgFotoGardu" accept="image/*" onchange="_ttgPreview(this,'ttgPrevGardu')"><img id="ttgPrevGardu" style="display:none;margin-top:6px;max-width:100%;max-height:120px;border-radius:8px;border:1px solid rgba(127,127,127,.3)"></div>
+      </div>
+      <div class="idu-hint">Koordinat temuan otomatis diambil dari titik koordinat gardu (master).</div>
+    </div>
+    <div class="idu-modal-foot">
+      <button class="idu-btn" onclick="tutupTambahTemuanGardu()">Batal</button>
+      <button id="btnSimpanTemuanGardu" class="idu-btn-primary" onclick="simpanTambahTemuanGardu()">Simpan Temuan</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalDetailTemuanGardu" class="idu-modal-overlay" style="display:none">
+  <div class="idu-modal" style="max-width:620px">
+    <div class="idu-modal-head">
+      <h3 id="dtgTitle">Temuan Gardu</h3>
+      <button class="idu-x" onclick="tutupDetailTemuanGardu()">&times;</button>
+    </div>
+    <div class="idu-modal-body" id="dtgBody"><div class="idu-empty">Memuat…</div></div>
+    <div class="idu-modal-foot">
+      <button class="idu-btn" onclick="tutupDetailTemuanGardu()">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalEditTemuanGardu" class="idu-modal-overlay" style="display:none">
+  <div class="idu-modal">
+    <div class="idu-modal-head">
+      <h3>Edit Temuan Gardu</h3>
+      <button class="idu-x" onclick="tutupEditTemuanGardu()">&times;</button>
+    </div>
+    <div class="idu-modal-body">
+      <div class="idu-field"><label>Temuan</label><select id="etgTemuan"><option value="">Memuat…</option></select></div>
+      <div class="idu-field"><label>Deskripsi Temuan</label><textarea id="etgDeskripsi" rows="2" placeholder="(opsional)"></textarea></div>
+    </div>
+    <div class="idu-modal-foot">
+      <button class="idu-btn" onclick="tutupEditTemuanGardu()">Batal</button>
+      <button id="btnSimpanEditTemuanGardu" class="idu-btn-primary" onclick="simpanEditTemuanGardu()">Simpan Perubahan</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalEditRealisasiGardu" class="idu-modal-overlay" style="display:none">
+  <div class="idu-modal">
+    <div class="idu-modal-head">
+      <h3>Edit Realisasi Gardu</h3>
+      <button class="idu-x" onclick="tutupEditRealisasiGardu()">&times;</button>
+    </div>
+    <div class="idu-modal-body">
+      <div class="idu-field"><label>Gardu</label><div><span class="idu-badge" id="ergNomorGardu"></span></div></div>
+      <div class="idu-field"><label>Inspeksi Tier</label><select id="ergTier"><option value="">Pilih Tier…</option><option value="Tier 1">Tier 1</option><option value="Tier 2">Tier 2</option><option value="Tier 1 &amp; Tier 2">Tier 1 &amp; Tier 2</option></select></div>
+    </div>
+    <div class="idu-modal-foot">
+      <button class="idu-btn" onclick="tutupEditRealisasiGardu()">Batal</button>
+      <button id="btnSimpanEditRealisasiGardu" class="idu-btn-primary" onclick="simpanEditRealisasiGardu()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalFormatWaGardu" class="idu-modal-overlay" style="display:none">
+  <div class="idu-modal" style="max-width:560px">
+    <div class="idu-modal-head">
+      <h3 id="fwgTitle">Format WA Laporan Harian</h3>
+      <button class="idu-x" onclick="tutupFormatWaGardu()">&times;</button>
+    </div>
+    <div class="idu-modal-body">
+      <div class="idu-lph-wabox" id="fwgBox">(Memuat…)</div>
+    </div>
+    <div class="idu-modal-foot">
+      <button class="idu-btn" onclick="tutupFormatWaGardu()">Tutup</button>
+      <button class="idu-btn" style="background:#0ea5e9;color:#fff" onclick="salinFormatWaAktif()"><i class="fa-solid fa-copy"></i> Salin Format</button>
+      <button class="idu-btn" style="background:#25D366;color:#fff" onclick="kirimWaAktif()"><i class="fa-brands fa-whatsapp"></i> Kirim ke WA</button>
+      <button id="fwgUpdBtn" class="idu-btn" style="background:var(--primary,#1E3A8A);color:#fff;display:none" onclick="updateFormatWaGardu()"><i class="fa-solid fa-rotate"></i> Update Data</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var _idu = { sesi:null, ulp:'', role:'', tim:'', isSuper:false, boleh:false };
+  var IDU_TIM_BOLEH_TAMBAH = ['Super User','Inspeksi Gardu','Admin','Team Leader','Staff'];
+  var _HARI = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+
+  function _esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+  function _toast(msg, type){
+    var t=document.getElementById('iduToast');
+    if(!t){ t=document.createElement('div'); t.id='iduToast'; t.className='idu-toast'; document.body.appendChild(t); }
+    msg=String(msg==null?'':msg);
+    if(!type){
+      var low=msg.toLowerCase();
+      if(/^(gagal|error)\b/.test(low) || low.indexOf('wajib')!==-1 || low.indexOf('tidak ditemukan')!==-1 || low.indexOf('pilih ')===0) type='error';
+      else if(low.indexOf('berhasil')!==-1 || low.indexOf('tersimpan')!==-1 || low.indexOf('diperbarui')!==-1) type='success';
+      else type='info';
+    }
+    var icon=type==='success'?'fa-circle-check':(type==='error'?'fa-circle-exclamation':'fa-circle-info');
+    t.className='idu-toast '+type;
+    t.innerHTML='<i class="fa-solid '+icon+'"></i><span>'+_esc(msg)+'</span>';
+    t.classList.add('show');
+    clearTimeout(t._h); t._h=setTimeout(function(){ t.classList.remove('show'); },2800);
+  }
+  function _sukses(desc){
+    var ov=document.getElementById('iduSuccessOverlay');
+    if(!ov){
+      ov=document.createElement('div');
+      ov.id='iduSuccessOverlay';
+      ov.className='idu-success-overlay';
+      ov.innerHTML='<div class="idu-success-card"><div class="idu-success-circle"><i class="fa-solid fa-check"></i></div><p class="idu-success-title">Berhasil</p><p class="idu-success-desc" id="iduSuccessDesc"></p></div>';
+      ov.addEventListener('click', _tutupSukses);
+      document.body.appendChild(ov);
+    }
+    document.getElementById('iduSuccessDesc').textContent=desc||'Data telah diinput';
+    var c=ov.querySelector('.idu-success-circle');
+    if(c){ c.style.animation='none'; void c.offsetWidth; c.style.animation=''; }
+    ov.classList.add('show');
+    clearTimeout(ov._h); ov._h=setTimeout(_tutupSukses,1900);
+  }
+  function _tutupSukses(){
+    var ov=document.getElementById('iduSuccessOverlay');
+    if(ov) ov.classList.remove('show');
+  }
+  function _tglIndo(s){
+    var p=String(s||'').split('-'); if(p.length<3) return s||'';
+    return p[2]+'-'+p[1]+'-'+p[0];
+  }
+  function _hariDari(tgl){
+    var d=new Date(String(tgl)+'T00:00:00');
+    return isNaN(d.getTime())?'':_HARI[d.getDay()];
+  }
+
+  window._ghUpdateHari=function(){
+    var t=document.getElementById('ghTanggal').value;
+    document.getElementById('ghHari').value=_hariDari(t);
+  };
+
+  function _initSession(sesi){
+    _idu.sesi=sesi||{};
+    _idu.role=String(_idu.sesi.role||'').trim();
+    _idu.ulp=String(_idu.sesi.ulp||'').trim();
+    _idu.tim=String(_idu.sesi.tim||'').trim();
+    _idu.isSuper=(_idu.role==='Super User'||_idu.role==='Admin');
+    _idu.boleh=(_idu.isSuper || IDU_TIM_BOLEH_TAMBAH.indexOf(_idu.tim)!==-1 || IDU_TIM_BOLEH_TAMBAH.indexOf(_idu.role)!==-1);
+
+    var btn=document.getElementById('btnTambahHeaderGardu');
+    if(btn) btn.style.display=_idu.boleh?'inline-block':'none';
+
+    var pjbCard=document.getElementById('gduPejabatCard');
+    if(pjbCard) pjbCard.style.display=_idu.boleh?'block':'none';
+    google.script.run.withSuccessHandler(function(u){ _idu.execUrl=String(u||''); }).getExecUrlInsGardu();
+    google.script.run.withSuccessHandler(function(p){ _isiPejabatGardu(p); }).getPejabatRekapInsGardu();
+
+    if(_idu.role==='Super User'){
+      document.getElementById('wrapUlpGardu').style.display='block';
+      var _wlp=document.getElementById('wrapUlpLph'); if(_wlp) _wlp.style.display='block';
+      _loadUlpOptions();
+    }
+    // Default tanggal Laporan Harian = hari ini.
+    var _tHari=new Date();
+    var _isoHari=_tHari.getFullYear()+'-'+('0'+(_tHari.getMonth()+1)).slice(-2)+'-'+('0'+_tHari.getDate()).slice(-2);
+    var _ld=document.getElementById('lph_tglDari'), _ls=document.getElementById('lph_tglSampai');
+    if(_ld && !_ld.value) _ld.value=_isoHari;
+    if(_ls && !_ls.value) _ls.value=_isoHari;
+    setTimeout(_moveIduTabIndicator, 60);
+    // Tidak auto-muat: tabel tampil hanya setelah user mengatur filter & klik "Tampilkan".
+  }
+
+  function _loadUlpOptions(){
+    google.script.run.withSuccessHandler(function(list){
+      list=list||[];
+      var selF=document.getElementById('gdu_ulp');
+      var selL=document.getElementById('lph_ulp');
+      var selM=document.getElementById('ghUlp');
+      var optsF='<option value="">Semua ULP</option>';
+      var optsM='';
+      list.forEach(function(u){
+        optsF+='<option value="'+_esc(u)+'">'+_esc(u)+'</option>';
+        optsM+='<option value="'+_esc(u)+'">'+_esc(u)+'</option>';
+      });
+      if(selF) selF.innerHTML=optsF;
+      if(selL) selL.innerHTML=optsF;
+      if(selM){ selM.innerHTML=optsM; selM.disabled=false; if(_idu.ulp) selM.value=_idu.ulp; }
+    }).getListUlpUsers();
+  }
+
+  window.bukaTambahHeaderGardu=function(){
+    var selM=document.getElementById('ghUlp');
+    if(_idu.role==='Super User'){
+      selM.disabled=false;
+      if(!selM.options.length) _loadUlpOptions();
+      if(_idu.ulp) selM.value=_idu.ulp;
+    }else{
+      selM.disabled=true;
+      selM.innerHTML='<option value="'+_esc(_idu.ulp)+'">'+_esc(_idu.ulp)+'</option>';
+      selM.value=_idu.ulp;
+    }
+    var today=new Date();
+    var iso=today.getFullYear()+'-'+('0'+(today.getMonth()+1)).slice(-2)+'-'+('0'+today.getDate()).slice(-2);
+    document.getElementById('ghTanggal').value=iso;
+    _ghUpdateHari();
+    document.getElementById('ghKoordAwal').value='';
+    document.getElementById('ghKoordAkhir').value='';
+    document.getElementById('ghKmAwal').value='';
+    document.getElementById('ghKmAkhir').value='';
+    document.getElementById('ghKendala').value='';
+    document.getElementById('modalTambahHeaderGardu').style.display='flex';
+  };
+  window.tutupTambahHeaderGardu=function(){
+    document.getElementById('modalTambahHeaderGardu').style.display='none';
+  };
+
+  window.simpanTambahHeaderGardu=function(){
+    var ulp=String(document.getElementById('ghUlp').value||'').trim();
+    var tanggal=document.getElementById('ghTanggal').value;
+    var koordAwal=document.getElementById('ghKoordAwal').value;
+    var koordAkhir=document.getElementById('ghKoordAkhir').value;
+    var kmAwal=document.getElementById('ghKmAwal').value;
+    var kmAkhir=document.getElementById('ghKmAkhir').value;
+    var kendala=document.getElementById('ghKendala').value;
+    if(!ulp){ _toast('ULP wajib dipilih.'); return; }
+    if(!tanggal){ _toast('Tanggal wajib diisi.'); return; }
+
+    var btn=document.getElementById('btnSimpanHeaderGardu');
+    btn.disabled=true; btn.textContent='Menyimpan…';
+    google.script.run
+      .withSuccessHandler(function(res){
+        btn.disabled=false; btn.textContent='Simpan';
+        if(res&&res.ok){ _sukses('Data header telah diinput.'); tutupTambahHeaderGardu(); muatHeaderGardu(); }
+        else { _toast('Gagal: '+((res&&res.message)||'tidak diketahui')); }
+      })
+      .withFailureHandler(function(err){
+        btn.disabled=false; btn.textContent='Simpan';
+        _toast('Error: '+(err&&err.message?err.message:err));
+      })
+      .simpanHeaderInsGardu({
+        username:_idu.sesi&&_idu.sesi.username,
+        ulp:ulp, tanggal:tanggal,
+        koordinatAwal:koordAwal, koordinatAkhir:koordAkhir,
+        kmAwal:kmAwal, kmAkhir:kmAkhir, kendala:kendala
+      });
+  };
+
+  function _isiPejabatGardu(p){
+    p=p||{};
+    var m=document.getElementById('gpjManager'); if(m) m.value=p.manager||'';
+    var t=document.getElementById('gpjTeamLeader'); if(t) t.value=p.teamLeader||'';
+    var k=document.getElementById('gpjKoordinator'); if(k) k.value=p.koordinator||'';
+  }
+  window.simpanPejabatGardu=function(){
+    var btn=document.getElementById('btnSimpanPejabatGardu');
+    var payload={
+      manager:(document.getElementById('gpjManager')||{}).value||'',
+      teamLeader:(document.getElementById('gpjTeamLeader')||{}).value||'',
+      koordinator:(document.getElementById('gpjKoordinator')||{}).value||''
+    };
+    if(btn){ btn.disabled=true; btn.textContent='Menyimpan…'; }
+    google.script.run
+      .withSuccessHandler(function(res){
+        if(btn){ btn.disabled=false; btn.textContent='Simpan Pejabat'; }
+        if(res&&(res.ok||res.success)){ _isiPejabatGardu(res.pejabat); _sukses('Pejabat tanda tangan disimpan.'); }
+        else { _toast('Gagal: '+((res&&res.message)||'tidak diketahui'),'error'); }
+      })
+      .withFailureHandler(function(err){ if(btn){ btn.disabled=false; btn.textContent='Simpan Pejabat'; } _toast('Error: '+(err&&err.message?err.message:err)); })
+      .simpanPejabatRekapInsGardu(payload);
+  };
+  window.unduhPdfGardu=function(){
+    var go=function(u){
+      var q='pdf=gardu';
+      var d=(document.getElementById('gdu_tglDari')||{}).value||'';
+      var s=(document.getElementById('gdu_tglSampai')||{}).value||'';
+      var ulp=(_idu.role==='Super User')?((document.getElementById('gdu_ulp')||{}).value||''):_idu.ulp;
+      if(d) q+='&tglDari='+encodeURIComponent(d);
+      if(s) q+='&tglSampai='+encodeURIComponent(s);
+      if(ulp) q+='&ulp='+encodeURIComponent(ulp);
+      window.open(u+(u.indexOf('?')>=0?'&':'?')+q,'_blank');
+    };
+    var base=String(_idu.execUrl||'');
+    if(base){ go(base); return; }
+    _toast('Menyiapkan tautan PDF…','info');
+    google.script.run
+      .withSuccessHandler(function(u){ _idu.execUrl=String(u||''); if(_idu.execUrl) go(_idu.execUrl); else _toast('Gagal mendapatkan URL web app.','error'); })
+      .withFailureHandler(function(err){ _toast('Error: '+(err&&err.message?err.message:err)); })
+      .getExecUrlInsGardu();
+  };
+
+  window.bukaFormatWaGardu=function(kode){
+    _idu.fwgKode=kode;
+    var r=(_idu.rowsMap||{})[kode]||{};
+    var ttl=document.getElementById('fwgTitle');
+    if(ttl) ttl.textContent='Format WA — '+((r.hari?r.hari+', ':'')+_tglIndo(r.tanggal||''));
+    var wa=String(r.waText||'').trim();
+    var box=document.getElementById('fwgBox');
+    if(box) box.textContent=wa||'(Belum ada data realisasi gardu pada header ini — klik Update Data.)';
+    var upd=document.getElementById('fwgUpdBtn'); if(upd) upd.style.display=_idu.boleh?'inline-flex':'none';
+    document.getElementById('modalFormatWaGardu').style.display='flex';
+  };
+  window.tutupFormatWaGardu=function(){ document.getElementById('modalFormatWaGardu').style.display='none'; };
+  window.salinFormatWaAktif=function(){ copyFormatWaGardu(_idu.fwgKode); };
+  window.kirimWaAktif=function(){ kirimWaGardu(_idu.fwgKode); };
+  window.updateFormatWaGardu=function(){
+    var kode=_idu.fwgKode; if(!kode) return;
+    var btn=document.getElementById('fwgUpdBtn');
+    if(btn){ btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-rotate fa-spin"></i> Memperbarui…'; }
+    google.script.run
+      .withSuccessHandler(function(res){
+        if(btn){ btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-rotate"></i> Update Data'; }
+        if(res&&res.ok){
+          if(_idu.rowsMap&&_idu.rowsMap[kode]) _idu.rowsMap[kode].waText=res.waText||'';
+          var box=document.getElementById('fwgBox');
+          if(box) box.textContent=(String(res.waText||'').trim())||'(Belum ada data realisasi gardu pada header ini.)';
+          _toast('Format WA diperbarui.','success');
+        } else { _toast('Gagal: '+((res&&res.message)||'tidak diketahui'),'error'); }
+      })
+      .withFailureHandler(function(err){ if(btn){ btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-rotate"></i> Update Data'; } _toast('Error: '+(err&&err.message?err.message:err)); })
+      .updateHeaderInsGarduLangsung(kode);
+  };
+
+  // ===== Rekapitulasi Inspeksi Gardu (struktur PDF) =====
+  function _adaTierGardu(tier,n){ return String(tier||'').indexOf(String(n))>=0?'ADA':'TIDAK ADA'; }
+  window.muatRekapGardu=function(){
+    var wrap=document.getElementById('rekapTableWrap');
+    if(!wrap) return;
+    wrap.innerHTML='<div class="idu-empty">Memuat…</div>';
+    var params={ tglDari:(document.getElementById('gdu_tglDari')||{}).value||'',
+                 tglSampai:(document.getElementById('gdu_tglSampai')||{}).value||'' };
+    if(_idu.role==='Super User') params.ulp=(document.getElementById('gdu_ulp')||{}).value||'';
+    else params.ulp=_idu.ulp;
+    google.script.run
+      .withSuccessHandler(_renderRekapGardu)
+      .withFailureHandler(function(err){ wrap.innerHTML='<div class="idu-empty">Gagal memuat: '+_esc(err&&err.message?err.message:err)+'</div>'; })
+      .getRekapInsGarduRows(params);
+  };
+  function _renderRekapGardu(res){
+    var wrap=document.getElementById('rekapTableWrap');
+    if(!wrap) return;
+    if(!res||!res.ok){ wrap.innerHTML='<div class="idu-empty">'+_esc((res&&res.message)||'Gagal memuat')+'</div>'; return; }
+    var rows=res.rows||[];
+    if(!rows.length){ wrap.innerHTML='<div class="idu-empty">Tidak ada data untuk filter ini.</div>'; return; }
+    var html='<table class="idu-table" style="min-width:880px"><thead>'
+      +'<tr><th rowspan="2">No</th><th rowspan="2">Tanggal</th><th rowspan="2">Tim</th><th rowspan="2">Penyulang</th><th rowspan="2">No Gardu</th><th rowspan="2">Section</th><th colspan="2" style="text-align:center">Item</th><th rowspan="2">File Excel</th></tr>'
+      +'<tr><th style="text-align:center">Tier 1</th><th style="text-align:center">Tier 2</th></tr>'
+      +'</thead><tbody>';
+    rows.forEach(function(r,i){
+      html+='<tr>'
+        +'<td>'+(i+1)+'</td>'
+        +'<td>'+_esc(_tglIndo(r.tanggal))+'</td>'
+        +'<td>TIM 1</td>'
+        +'<td>'+_esc(r.penyulang)+'</td>'
+        +'<td>'+_esc(r.nomorGardu)+'</td>'
+        +'<td>'+_esc(r.section)+'</td>'
+        +'<td style="text-align:center">'+_adaTierGardu(r.tier,1)+'</td>'
+        +'<td style="text-align:center">'+_adaTierGardu(r.tier,2)+'</td>'
+        +'<td>DATA TERLAMPIR</td>'
+        +'</tr>';
+    });
+    html+='</tbody></table>';
+    wrap.innerHTML=html;
+  }
+
+  window.muatHeaderGardu=function(){ muatLapHarianGardu(); };
+
+  function _renderHeaderGardu(rows){
+    var wrap=document.getElementById('gduTableWrap');
+    rows=rows||[];
+    _idu.rowsMap={};
+    rows.forEach(function(rr){ _idu.rowsMap[rr.kodeHeader]=rr; });
+    if(!rows.length){ wrap.innerHTML='<div class="idu-empty">Belum ada header gardu.</div>'; return; }
+    var html='<table class="idu-table"><thead><tr>'
+      +'<th>Kode Header</th><th>ULP</th><th>Hari</th><th>Tanggal</th>'
+      +'<th>Kendala</th><th style="text-align:center">Aksi</th></tr></thead><tbody>';
+    rows.forEach(function(r){
+      html+='<tr>'
+        +'<td><span class="idu-badge">'+_esc(r.kodeHeader)+'</span></td>'
+        +'<td>'+_esc(r.ulp)+'</td>'
+        +'<td>'+_esc(r.hari)+'</td>'
+        +'<td>'+_esc(_tglIndo(r.tanggal))+'</td>'
+        +'<td>'+_esc(r.kendala)+'</td>'
+        +'<td style="text-align:center">'+_buildAksiGardu(r.kodeHeader)+'</td>'
+        +'</tr>';
+    });
+    html+='</tbody></table>';
+    wrap.innerHTML=html;
+  }
+
+  _idu.rowsMap = _idu.rowsMap || {};
+  function _findHeaderRow(k){ return _idu.rowsMap[k]||null; }
+
+  function _buildAksiGardu(kode){
+    var k=_esc(kode);
+    var s='<div class="idu-act"><button class="b-detail" title="Detail" onclick="bukaDetailRealisasiGardu(&#39;'+k+'&#39;)"><i class="fa-solid fa-eye"></i></button>'
+      +'<button class="b-wa" title="Format WA" style="background:#25D366" onclick="bukaFormatWaGardu(&#39;'+k+'&#39;)"><i class="fa-brands fa-whatsapp"></i></button>';
+    if(_idu.boleh){
+      s+='<button class="b-edit" title="Edit Header" onclick="bukaEditHeaderGardu(&#39;'+k+'&#39;)"><i class="fa-solid fa-pen"></i></button>'
+        +'<button class="b-add" title="Tambah Gardu" onclick="bukaTambahRealisasiGardu(&#39;'+k+'&#39;)"><i class="fa-solid fa-plus"></i></button>';
+    }
+    return s+'</div>';
+  }
+
+  // ===== Tambah Realisasi (per gardu) =====
+  window.bukaTambahRealisasiGardu=function(kode){
+    var h=_findHeaderRow(kode); if(!h){ _toast('Header tidak ditemukan.'); return; }
+    _idu.trg={ kodeHeader:h.kodeHeader, tanggal:h.tanggal, ulp:h.ulp };
+    document.getElementById('trgKodeHeader').textContent=h.kodeHeader;
+    document.getElementById('trgTanggalInfo').textContent=(h.hari?h.hari+', ':'')+_tglIndo(h.tanggal);
+    var selP=document.getElementById('trgPenyulang');
+    selP.innerHTML='<option value="">Memuat…</option>';
+    document.getElementById('trgGardu').innerHTML='<option value="">— pilih penyulang dulu —</option>';
+    document.getElementById('trgTier').value='';
+    document.getElementById('modalTambahRealisasiGardu').style.display='flex';
+    google.script.run.withSuccessHandler(function(res){
+      var list=(res&&res.list)||[];
+      var o='<option value="">Pilih penyulang…</option>';
+      list.forEach(function(p){ o+='<option value="'+_esc(p)+'">'+_esc(p)+'</option>'; });
+      selP.innerHTML=o;
+    }).withFailureHandler(function(err){ selP.innerHTML='<option value="">Gagal memuat</option>'; _toast('Error: '+(err&&err.message?err.message:err)); })
+      .getListPenyulangGardu(_idu.trg.ulp);
+  };
+  window.tutupTambahRealisasiGardu=function(){ document.getElementById('modalTambahRealisasiGardu').style.display='none'; };
+
+  window._trgLoadGardu=function(){
+    var pen=document.getElementById('trgPenyulang').value;
+    var selG=document.getElementById('trgGardu');
+    if(!pen){ selG.innerHTML='<option value="">— pilih penyulang dulu —</option>'; return; }
+    selG.innerHTML='<option value="">Memuat…</option>';
+    google.script.run.withSuccessHandler(function(res){
+      var list=(res&&res.list)||[];
+      if(!list.length){ selG.innerHTML='<option value="">(tidak ada gardu)</option>'; return; }
+      var o='<option value="">Pilih gardu…</option>';
+      list.forEach(function(g){
+        var label=g.nomorGardu+(g.merkTrafo?(' '+g.merkTrafo):'')+(g.dayaKva?(' '+g.dayaKva):'');
+        if(g.updated){ o+='<option value="'+_esc(g.nomorGardu)+'">'+_esc(label)+'</option>'; }
+        else { o+='<option value="" disabled>'+_esc(label)+' — belum diukur</option>'; }
+      });
+      selG.innerHTML=o;
+    }).withFailureHandler(function(err){ selG.innerHTML='<option value="">Gagal memuat</option>'; _toast('Error: '+(err&&err.message?err.message:err)); })
+      .getListGarduByPenyulang({ penyulang:pen, tanggal:_idu.trg.tanggal });
+  };
+
+  window.simpanTambahRealisasiGardu=function(){
+    var nomorGardu=document.getElementById('trgGardu').value;
+    var tier=document.getElementById('trgTier').value;
+    if(!nomorGardu){ _toast('Pilih gardu (yang sudah diukur).'); return; }
+    if(!tier){ _toast('Pilih Tier.'); return; }
+    var btn=document.getElementById('btnSimpanRealisasiGardu');
+    btn.disabled=true; btn.textContent='Menyimpan…';
+    google.script.run
+      .withSuccessHandler(function(res){
+        btn.disabled=false; btn.textContent='Simpan Gardu';
+        if(res&&res.ok){
+          _sukses('Data gardu telah diinput.');
+          document.getElementById('trgGardu').value='';
+          document.getElementById('trgTier').value='';
+        } else { _toast('Gagal: '+((res&&res.message)||'tidak diketahui'), 'error'); }
+      })
+      .withFailureHandler(function(err){ btn.disabled=false; btn.textContent='Simpan Gardu'; _toast('Error: '+(err&&err.message?err.message:err)); })
+      .simpanRealisasiInsGardu({ kodeHeader:_idu.trg.kodeHeader, nomorGardu:nomorGardu, tier:tier, username:_idu.sesi&&_idu.sesi.username });
+  };
+
+  // ===== Detail Realisasi =====
+  window.bukaDetailRealisasiGardu=function(kode){
+    _idu.drgHeader=_findHeaderRow(kode);
+    document.getElementById('drgTitle').textContent='Realisasi Gardu — '+kode;
+    document.getElementById('drgBody').innerHTML='<div class="idu-empty">Memuat…</div>';
+    document.getElementById('modalDetailRealisasiGardu').style.display='flex';
+    google.script.run.withSuccessHandler(_renderDetailRealisasiGardu)
+      .withFailureHandler(function(err){ document.getElementById('drgBody').innerHTML='<div class="idu-empty">Gagal: '+_esc(err&&err.message?err.message:err)+'</div>'; })
+      .getDetailRealisasiGardu(kode);
+  };
+  window.tutupDetailRealisasiGardu=function(){ document.getElementById('modalDetailRealisasiGardu').style.display='none'; };
+  function _drgHeaderInfo(){
+    var h=_idu.drgHeader||{};
+    return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">'
+      +'<div class="idu-field" style="margin:0"><label>Koordinat Awal</label><div>'+_esc(h.koordinatAwal||'-')+'</div></div>'
+      +'<div class="idu-field" style="margin:0"><label>Koordinat Akhir</label><div>'+_esc(h.koordinatAkhir||'-')+'</div></div>'
+      +'<div class="idu-field" style="margin:0"><label>KM Awal</label><div>'+_esc(h.kmAwal||'-')+'</div></div>'
+      +'<div class="idu-field" style="margin:0"><label>KM Akhir</label><div>'+_esc(h.kmAkhir||'-')+'</div></div>'
+      +'</div>';
+  }
+  function _renderDetailRealisasiGardu(res){
+    var body=document.getElementById('drgBody');
+    if(!res||!res.ok){ body.innerHTML='<div class="idu-empty">'+_esc((res&&res.message)||'Gagal memuat')+'</div>'; return; }
+    var rows=res.rows||[];
+    _idu.drgRows=rows;
+    if(!rows.length){ body.innerHTML=_drgHeaderInfo()+'<div class="idu-empty">Belum ada gardu pada header ini.</div>'; return; }
+    var h=_drgHeaderInfo()+'<div class="idu-table-wrap"><table class="idu-dtable"><thead><tr>'
+      +'<th>No</th><th>Nomor Gardu</th><th>Penyulang</th><th>Section</th><th>Trafo</th><th>Tier</th><th style="text-align:center">Jml Temuan</th><th style="text-align:center">Aksi</th>'
+      +'</tr></thead><tbody>';
+    rows.forEach(function(r,i){
+      var trafo=(r.merkTrafo||'')+(r.dayaKva?(' '+r.dayaKva):'');
+      var aksi='<div class="idu-act"><button class="b-detail" title="Detail Temuan" onclick="bukaDetailTemuanGardu('+i+')"><i class="fa-solid fa-eye"></i></button>';
+      if(_idu.boleh){
+        aksi+='<button class="b-edit" title="Edit Tier" onclick="bukaEditRealisasiGardu('+i+')"><i class="fa-solid fa-pen"></i></button>'
+          +'<button class="b-add" title="Tambah Temuan" onclick="bukaTambahTemuanGardu('+i+')"><i class="fa-solid fa-plus"></i></button>';
+      }
+      aksi+='</div>';
+      h+='<tr><td>'+(i+1)+'</td><td>'+_esc(r.nomorGardu)+'</td><td>'+_esc(r.penyulang)+'</td><td>'+_esc(r.section)+'</td><td>'+_esc(trafo)+'</td><td>'+_esc(r.tier)+'</td><td style="text-align:center">'+_esc(r.jumlahTemuan)+'</td><td style="text-align:center">'+aksi+'</td></tr>';
+    });
+    h+='</tbody></table></div>';
+    body.innerHTML=h;
+  }
+
+  // ===== Edit Header =====
+  window.bukaEditHeaderGardu=function(kode){
+    var h=_findHeaderRow(kode); if(!h){ _toast('Header tidak ditemukan.'); return; }
+    _idu.ehg={ kodeHeader:h.kodeHeader };
+    document.getElementById('ehgKodeHeader').textContent=h.kodeHeader;
+    document.getElementById('ehgKoordAwal').value=h.koordinatAwal||'';
+    document.getElementById('ehgKoordAkhir').value=h.koordinatAkhir||'';
+    document.getElementById('ehgKmAwal').value=h.kmAwal||'';
+    document.getElementById('ehgKmAkhir').value=h.kmAkhir||'';
+    document.getElementById('ehgKendala').value=h.kendala||'';
+    document.getElementById('modalEditHeaderGardu').style.display='flex';
+  };
+  window.tutupEditHeaderGardu=function(){ document.getElementById('modalEditHeaderGardu').style.display='none'; };
+  window.simpanEditHeaderGardu=function(){
+    var btn=document.getElementById('btnSimpanEditHeaderGardu');
+    btn.disabled=true; btn.textContent='Menyimpan…';
+    google.script.run
+      .withSuccessHandler(function(res){
+        btn.disabled=false; btn.textContent='Simpan';
+        if(res&&res.ok){ _sukses('Data telah diperbarui.'); tutupEditHeaderGardu(); _refreshActiveIduTab(); }
+        else { _toast('Gagal: '+((res&&res.message)||'tidak diketahui')); }
+      })
+      .withFailureHandler(function(err){ btn.disabled=false; btn.textContent='Simpan'; _toast('Error: '+(err&&err.message?err.message:err)); })
+      .editHeaderInsGardu({ kodeHeader:_idu.ehg.kodeHeader,
+        koordinatAwal:document.getElementById('ehgKoordAwal').value,
+        koordinatAkhir:document.getElementById('ehgKoordAkhir').value,
+        kmAwal:document.getElementById('ehgKmAwal').value,
+        kmAkhir:document.getElementById('ehgKmAkhir').value,
+        kendala:document.getElementById('ehgKendala').value });
+  };
+
+  // ===== Foto helper (temuan gardu) =====
+  window._ttgPreview=function(input,imgId){
+    var img=document.getElementById(imgId);
+    if(!img) return;
+    var f=input.files&&input.files[0];
+    if(!f){ img.style.display='none'; img.src=''; return; }
+    var rd=new FileReader();
+    rd.onload=function(e){ img.src=e.target.result; img.style.display='block'; };
+    rd.readAsDataURL(f);
+  };
+  function _kompresGambar(file, cb){
+    if(!file){ cb(null); return; }
+    var reader=new FileReader();
+    reader.onload=function(e){
+      var img=new Image();
+      img.onload=function(){
+        var maxDim=1280, w=img.width, h=img.height;
+        if(w>maxDim||h>maxDim){ if(w>=h){ h=Math.round(h*maxDim/w); w=maxDim; } else { w=Math.round(w*maxDim/h); h=maxDim; } }
+        var c=document.createElement('canvas'); c.width=w; c.height=h;
+        c.getContext('2d').drawImage(img,0,0,w,h);
+        var b64=(c.toDataURL('image/jpeg',0.7).split(',')[1])||'';
+        cb({ b64:b64, mime:'image/jpeg' });
+      };
+      img.onerror=function(){ cb(null); };
+      img.src=e.target.result;
+    };
+    reader.onerror=function(){ cb(null); };
+    reader.readAsDataURL(file);
+  }
+  function _fotoLink(url,label){
+    if(!url) return '';
+    var th=(window._sisiDriveImg?_sisiDriveImg(url,'w300'):url);
+    return '<div style="display:inline-block;text-align:center;margin:6px 12px 0 0;vertical-align:top">'
+      +'<img class="sisi-foto" data-full="'+_esc(url)+'" src="'+_esc(th)+'" alt="'+_esc(label)+'" loading="lazy" '
+      +'style="width:86px;height:86px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid rgba(127,127,127,.3);background:rgba(127,127,127,.08)" '
+      +'onerror="this.style.opacity=0.4">'
+      +'<div style="font-size:11px;opacity:.7;margin-top:3px">'+_esc(label)+'</div></div>';
+  }
+
+  // ===== Tambah Temuan Gardu =====
+  window.bukaTambahTemuanGardu=function(idx){
+    var r=(_idu.drgRows||[])[idx]; if(!r){ _toast('Data gardu tidak ditemukan.'); return; }
+    if(!_idu.drgHeader){ _toast('Header tidak ditemukan.'); return; }
+    _idu.ttg={ kodeHeader:_idu.drgHeader.kodeHeader, nomorGardu:r.nomorGardu };
+    document.getElementById('ttgNomorGardu').textContent=r.nomorGardu;
+    document.getElementById('ttgInfo').textContent=(r.penyulang||'')+(r.tier?(' · '+r.tier):'');
+    document.getElementById('ttgDeskripsi').value='';
+    document.getElementById('ttgFotoTemuan').value='';
+    document.getElementById('ttgFotoGardu').value='';
+    document.getElementById('ttgPrevTemuan').style.display='none';
+    document.getElementById('ttgPrevGardu').style.display='none';
+    var sel=document.getElementById('ttgTemuan');
+    sel.innerHTML='<option value="">Memuat…</option>';
+    google.script.run.withSuccessHandler(function(res){
+      var list=(res&&res.list)||[];
+      var o='<option value="">Pilih temuan…</option>';
+      list.forEach(function(n){ o+='<option value="'+_esc(n)+'">'+_esc(n)+'</option>'; });
+      sel.innerHTML=o;
+    }).withFailureHandler(function(){ sel.innerHTML='<option value="">Gagal memuat</option>'; }).getListTemuanByObjek('Gardu');
+    document.getElementById('modalTambahTemuanGardu').style.display='flex';
+  };
+  window.tutupTambahTemuanGardu=function(){ document.getElementById('modalTambahTemuanGardu').style.display='none'; };
+  window.simpanTambahTemuanGardu=function(){
+    var temuan=document.getElementById('ttgTemuan').value;
+    if(!temuan){ _toast('Pilih temuan dulu.'); return; }
+    var btn=document.getElementById('btnSimpanTemuanGardu');
+    btn.disabled=true; btn.textContent='Menyimpan…';
+    var fT=(document.getElementById('ttgFotoTemuan').files||[])[0]||null;
+    var fG=(document.getElementById('ttgFotoGardu').files||[])[0]||null;
+    _kompresGambar(fT,function(foTemuan){
+      _kompresGambar(fG,function(foGardu){
+        google.script.run
+          .withSuccessHandler(function(res){
+            btn.disabled=false; btn.textContent='Simpan Temuan';
+            if(res&&res.ok){ tutupTambahTemuanGardu(); _sukses('Temuan gardu telah diinput.'); if(_idu.drgHeader) bukaDetailRealisasiGardu(_idu.drgHeader.kodeHeader); }
+            else { _toast('Gagal: '+((res&&(res.message||res.error))||'tidak diketahui'),'error'); }
+          })
+          .withFailureHandler(function(err){ btn.disabled=false; btn.textContent='Simpan Temuan'; _toast('Error: '+(err&&err.message?err.message:err)); })
+          .simpanTemuanGardu({
+            kodeHeader:_idu.ttg.kodeHeader, nomorGardu:_idu.ttg.nomorGardu,
+            temuan:temuan, deskripsi:document.getElementById('ttgDeskripsi').value,
+            username:_idu.sesi&&_idu.sesi.username,
+            fotoTemuanB64:foTemuan?foTemuan.b64:'', fotoTemuanMime:foTemuan?foTemuan.mime:'',
+            fotoGarduB64:foGardu?foGardu.b64:'', fotoGarduMime:foGardu?foGardu.mime:''
+          });
+      });
+    });
+  };
+
+  // ===== Detail Temuan Gardu =====
+  window.bukaDetailTemuanGardu=function(idx){
+    var r=(_idu.drgRows||[])[idx]; if(!r){ _toast('Data gardu tidak ditemukan.'); return; }
+    if(!_idu.drgHeader){ _toast('Header tidak ditemukan.'); return; }
+    _idu.dtg={ kodeHeader:_idu.drgHeader.kodeHeader, nomorGardu:r.nomorGardu };
+    document.getElementById('dtgTitle').textContent='Temuan Gardu — '+r.nomorGardu;
+    document.getElementById('dtgBody').innerHTML='<div class="idu-empty">Memuat…</div>';
+    document.getElementById('modalDetailTemuanGardu').style.display='flex';
+    google.script.run.withSuccessHandler(_renderDetailTemuanGardu)
+      .withFailureHandler(function(err){ document.getElementById('dtgBody').innerHTML='<div class="idu-empty">Gagal: '+_esc(err&&err.message?err.message:err)+'</div>'; })
+      .getTemuanGardu(_idu.dtg.kodeHeader, _idu.dtg.nomorGardu);
+  };
+  window.tutupDetailTemuanGardu=function(){ document.getElementById('modalDetailTemuanGardu').style.display='none'; };
+  function _renderDetailTemuanGardu(res){
+    var body=document.getElementById('dtgBody');
+    if(!res||!res.ok){ body.innerHTML='<div class="idu-empty">'+_esc((res&&(res.message||res.error))||'Gagal memuat')+'</div>'; return; }
+    var list=res.list||[];
+    _idu.dtgList=list;
+    if(!list.length){ body.innerHTML='<div class="idu-empty">Belum ada temuan pada gardu ini.</div>'; return; }
+    body.innerHTML=list.map(function(t,i){
+      var foto=_fotoLink(t.fotoTemuanUrl,'Foto Temuan')+_fotoLink(t.fotoGarduUrl,'Foto Gardu');
+      return '<div style="border:1px solid rgba(127,127,127,.2);border-radius:10px;padding:12px 14px;margin-bottom:10px">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">'
+        +'<b>'+(i+1)+'. '+_esc(t.temuan||'-')+'</b>'
+        +(_idu.boleh?'<button title="Edit Temuan" onclick="bukaEditTemuanGardu('+i+')" style="border:none;border-radius:7px;width:30px;height:30px;color:#fff;cursor:pointer;background:#f59e0b"><i class="fa-solid fa-pen"></i></button>':'')
+        +'</div>'
+        +'<div style="font-size:12.5px;opacity:.85;line-height:1.6">'
+        +'<div><span class="idu-badge">'+_esc(t.kodePekerjaan||'-')+'</span></div>'
+        +(t.deskripsi?('<div>Deskripsi: '+_esc(t.deskripsi)+'</div>'):'')
+        +(t.koordinat?('<div>Koordinat: '+_esc(t.koordinat)+'</div>'):'')
+        +(t.status?('<div style="margin-top:2px">Status: '+_esc(t.status)+'</div>'):'')
+        +(foto?('<div style="margin-top:8px">'+foto+'</div>'):'')
+        +'</div>'
+        +'</div>';
+    }).join('');
+  }
+
+  // ===== Edit Temuan Gardu (dari dalam Detail) =====
+  window.bukaEditTemuanGardu=function(idx){
+    var t=(_idu.dtgList||[])[idx]; if(!t){ _toast('Temuan tidak ditemukan.'); return; }
+    _idu.etg={ kodePekerjaan:t.kodePekerjaan };
+    document.getElementById('etgDeskripsi').value=t.deskripsi||'';
+    var sel=document.getElementById('etgTemuan');
+    var cur=t.temuan||'';
+    sel.innerHTML='<option value="">Memuat…</option>';
+    google.script.run.withSuccessHandler(function(res){
+      var list=(res&&res.list)?res.list.slice():[];
+      if(cur&&list.indexOf(cur)===-1) list.unshift(cur);
+      var o='<option value="">Pilih temuan…</option>';
+      list.forEach(function(n){ o+='<option value="'+_esc(n)+'"'+(n===cur?' selected':'')+'>'+_esc(n)+'</option>'; });
+      sel.innerHTML=o;
+    }).withFailureHandler(function(){ sel.innerHTML='<option value="'+_esc(cur)+'" selected>'+_esc(cur)+'</option>'; }).getListTemuanByObjek('Gardu');
+    document.getElementById('modalEditTemuanGardu').style.display='flex';
+  };
+  window.tutupEditTemuanGardu=function(){ document.getElementById('modalEditTemuanGardu').style.display='none'; };
+  window.simpanEditTemuanGardu=function(){
+    var temuan=document.getElementById('etgTemuan').value;
+    if(!temuan){ _toast('Pilih temuan dulu.'); return; }
+    var btn=document.getElementById('btnSimpanEditTemuanGardu');
+    btn.disabled=true; btn.textContent='Menyimpan…';
+    google.script.run
+      .withSuccessHandler(function(res){
+        btn.disabled=false; btn.textContent='Simpan Perubahan';
+        if(res&&res.ok){
+          tutupEditTemuanGardu();
+          _sukses('Temuan telah diperbarui.');
+          if(_idu.dtg){ document.getElementById('dtgBody').innerHTML='<div class="idu-empty">Memuat…</div>'; google.script.run.withSuccessHandler(_renderDetailTemuanGardu).getTemuanGardu(_idu.dtg.kodeHeader,_idu.dtg.nomorGardu); }
+        } else { _toast('Gagal: '+((res&&(res.message||res.error))||'tidak diketahui'),'error'); }
+      })
+      .withFailureHandler(function(err){ btn.disabled=false; btn.textContent='Simpan Perubahan'; _toast('Error: '+(err&&err.message?err.message:err)); })
+      .editTemuanGardu({ kodePekerjaan:_idu.etg.kodePekerjaan, temuan:temuan, deskripsi:document.getElementById('etgDeskripsi').value });
+  };
+
+  // ===== Edit Realisasi Gardu (Tier) =====
+  window.bukaEditRealisasiGardu=function(idx){
+    var r=(_idu.drgRows||[])[idx]; if(!r){ _toast('Data gardu tidak ditemukan.'); return; }
+    _idu.erg={ kodePekerjaan:r.kodePekerjaan };
+    document.getElementById('ergNomorGardu').textContent=r.nomorGardu;
+    document.getElementById('ergTier').value=r.tier||'';
+    document.getElementById('modalEditRealisasiGardu').style.display='flex';
+  };
+  window.tutupEditRealisasiGardu=function(){ document.getElementById('modalEditRealisasiGardu').style.display='none'; };
+  window.simpanEditRealisasiGardu=function(){
+    var tier=document.getElementById('ergTier').value;
+    if(!tier){ _toast('Pilih Tier dulu.'); return; }
+    if(!_idu.erg||!_idu.erg.kodePekerjaan){ _toast('Kode pekerjaan tidak ada.'); return; }
+    var btn=document.getElementById('btnSimpanEditRealisasiGardu');
+    btn.disabled=true; btn.textContent='Menyimpan…';
+    google.script.run
+      .withSuccessHandler(function(res){
+        btn.disabled=false; btn.textContent='Simpan';
+        if(res&&res.ok){ tutupEditRealisasiGardu(); _sukses('Data realisasi telah diperbarui.'); if(_idu.drgHeader) bukaDetailRealisasiGardu(_idu.drgHeader.kodeHeader); }
+        else { _toast('Gagal: '+((res&&res.message)||'tidak diketahui'),'error'); }
+      })
+      .withFailureHandler(function(err){ btn.disabled=false; btn.textContent='Simpan'; _toast('Error: '+(err&&err.message?err.message:err)); })
+      .editRealisasiGardu({ kodePekerjaan:_idu.erg.kodePekerjaan, tier:tier });
+  };
+
+  // ===== Tab Laporan Realisasi / Laporan Harian =====
+  function _moveIduTabIndicator(){
+    var tabs=document.getElementById('iduTabs');
+    var ind=document.getElementById('iduTabIndicator');
+    if(!tabs||!ind) return;
+    var act=tabs.querySelector('.idu-tab.active');
+    var first=tabs.querySelector('.idu-tab');
+    if(!act||!first) return;
+    ind.style.width=act.offsetWidth+'px';
+    ind.style.transform='translateX('+(act.offsetLeft-first.offsetLeft)+'px)';
+  }
+  window._switchIduTab=function(id){
+    ['lapHarian','rekap'].forEach(function(t){
+      var btn=document.getElementById('iduTab-'+t);
+      var con=document.getElementById('tab-'+t);
+      if(btn) btn.classList.toggle('active', t===id);
+      if(con) con.classList.toggle('active', t===id);
+    });
+    _moveIduTabIndicator();
+  };
+  window.addEventListener('resize', _moveIduTabIndicator);
+  function _refreshActiveIduTab(){
+    muatLapHarianGardu();
+  }
+
+  function _copyText(txt, okMsg){
+    var done=function(){ _toast(okMsg||'Teks tersalin.','success'); };
+    var fallback=function(){
+      try{
+        var ta=document.createElement('textarea'); ta.value=txt;
+        ta.style.position='fixed'; ta.style.left='-9999px'; document.body.appendChild(ta);
+        ta.focus(); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); done();
+      }catch(e){ _toast('Gagal menyalin otomatis. Salin manual dari kotak teks.','error'); }
+    };
+    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(done).catch(fallback); }
+    else fallback();
+  }
+
+  // ===== Laporan Harian (Format WA) =====
+  window.muatLapHarianGardu=function(){
+    var tbl=document.getElementById('gduTableWrap');
+    if(tbl) tbl.innerHTML='<div class="idu-empty">Memuat…</div>';
+    var params={ tglDari:document.getElementById('lph_tglDari').value||'',
+                 tglSampai:document.getElementById('lph_tglSampai').value||'' };
+    if(_idu.role==='Super User') params.ulp=document.getElementById('lph_ulp').value||'';
+    else params.ulp=_idu.ulp;
+    google.script.run
+      .withSuccessHandler(_renderHeaderGardu)
+      .withFailureHandler(function(err){ if(tbl) tbl.innerHTML='<div class="idu-empty">Gagal memuat: '+_esc(err&&err.message?err.message:err)+'</div>'; })
+      .getDataHeaderInsGardu(params);
+  };
+  function _renderLapHarianGardu(rows){
+    var wrap=document.getElementById('lphWrap');
+    rows=rows||[];
+    _idu.lphMap={};
+    rows.forEach(function(rr){ _idu.lphMap[rr.kodeHeader]=rr; _idu.rowsMap[rr.kodeHeader]=rr; });
+    if(!rows.length){ wrap.innerHTML='<div class="idu-empty">Belum ada data Laporan Harian pada rentang ini.</div>'; return; }
+    wrap.innerHTML=rows.map(function(r){
+      var k=_esc(r.kodeHeader);
+      var wa=String(r.waText||'').trim();
+      var box=wa?_esc(wa):'(Belum ada data realisasi gardu pada header ini — klik Update Data.)';
+      return '<div class="idu-lph-card">'
+        +'<div class="idu-lph-head">'
+        +'<div class="t"><span class="idu-lph-wa-ic"><i class="fa-brands fa-whatsapp"></i></span>'
+        +'<span>'+_esc(r.hari)+', '+_esc(_tglIndo(r.tanggal))+'</span></div>'
+        +'<div class="idu-lph-meta"><span class="idu-badge">'+k+'</span><span class="idu-badge">'+_esc(r.ulp)+'</span></div>'
+        +'</div>'
+        +'<div class="idu-lph-wabox" id="iduWaBox-'+k+'">'+box+'</div>'
+        +'<div class="idu-lph-foot">'
+        +'<button class="idu-lph-copy" onclick="copyFormatWaGardu(&#39;'+k+'&#39;)"><i class="fa-solid fa-copy"></i> Salin Format</button>'
+        +'<button class="idu-lph-wa" onclick="kirimWaGardu(&#39;'+k+'&#39;)"><i class="fa-brands fa-whatsapp"></i> Kirim ke WA</button>'
+        +(_idu.boleh?'<button class="idu-lph-edit" onclick="bukaEditHeaderGardu(&#39;'+k+'&#39;)"><i class="fa-solid fa-pen"></i> Edit Header</button>':'')
+        +(_idu.boleh?'<button class="idu-lph-upd" id="iduUpdBtn-'+k+'" onclick="updateLapHarianGardu(&#39;'+k+'&#39;)"><i class="fa-solid fa-rotate"></i> Update Data</button>':'')
+        +'</div>'
+        +'</div>';
+    }).join('');
+  }
+  window.copyFormatWaGardu=function(kode){
+    var r=(_idu.rowsMap||{})[kode];
+    var wa=r?String(r.waText||'').trim():'';
+    if(!wa){ _toast('Belum ada teks WA untuk disalin.','error'); return; }
+    _copyText(wa,'Format WA tersalin.');
+  };
+  window.kirimWaGardu=function(kode){
+    var r=(_idu.rowsMap||{})[kode];
+    var wa=r?String(r.waText||'').trim():'';
+    if(!wa){ _toast('Belum ada teks WA untuk dikirim.','error'); return; }
+    window.open('https://wa.me/?text='+encodeURIComponent(wa),'_blank');
+  };
+  window.updateLapHarianGardu=function(kode){
+    var btn=document.getElementById('iduUpdBtn-'+kode);
+    if(btn){ btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-rotate fa-spin"></i> Memperbarui…'; }
+    google.script.run
+      .withSuccessHandler(function(res){
+        if(btn){ btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-rotate"></i> Update Data'; }
+        if(res&&res.ok){
+          if(_idu.lphMap&&_idu.lphMap[kode]) _idu.lphMap[kode].waText=res.waText||'';
+          var box=document.getElementById('iduWaBox-'+kode);
+          if(box) box.textContent=(String(res.waText||'').trim())||'(Belum ada data realisasi gardu pada header ini.)';
+          _toast('Format WA diperbarui.','success');
+        } else { _toast('Gagal: '+((res&&res.message)||'tidak diketahui'),'error'); }
+      })
+      .withFailureHandler(function(err){ if(btn){ btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-rotate"></i> Update Data'; } _toast('Error: '+(err&&err.message?err.message:err)); })
+      .updateHeaderInsGarduLangsung(kode);
+  };
+
+  function _bootInsDu(){
+    var s = window.__SISI_SESI__;
+    if(s && s.role){ _initSession(s); return; }
+    if(typeof getSessionUser==='undefined' && google.script.run.getSessionUser==null){ _initSession(s||{}); return; }
+    google.script.run
+      .withSuccessHandler(function(sesi){ _initSession((sesi&&sesi.role)?sesi:(window.__SISI_SESI__||sesi||{})); })
+      .withFailureHandler(function(){ _initSession((window.__SISI_SESI__)||{}); })
+      .getSessionUser();
+  }
+
+  _bootInsDu();
+})();
+</script>
