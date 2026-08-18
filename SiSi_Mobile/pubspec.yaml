@@ -1,27 +1,30 @@
-name: coba_sisi
-description: "A new Flutter project."
+name: sisi_mobile
+description: "Aplikasi Mobile Sistem Integrasi SiSi PLN ULP Toboali"
 publish_to: "none"
-
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.13.0
+  sdk: ">=3.0.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
   http: ^1.2.0
-  shared_preferences: ^2.2.0
+  image_picker: ^1.1.2
+  geolocator: ^12.0.0
   url_launcher: ^6.3.0
-  cupertino_icons: ^1.0.8
+  intl: ^0.19.0
+  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^6.0.0
+  flutter_lints: ^3.0.0
 
 flutter:
   uses-material-design: true
+
   assets:
+    - assets/images/loading.gif
     - assets/images/logo-sisi.png
     - assets/images/logo-pln.png

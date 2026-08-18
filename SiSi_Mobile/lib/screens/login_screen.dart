@@ -332,11 +332,11 @@ class _LoginSheetState extends State<_LoginSheet> {
                 ),
                 const SizedBox(height: 16),
               ],
-              _buildLabel('Username'),
+              _buildLabel('Username (Kode Unit.Tim)'),
               const SizedBox(height: 6),
               _buildTextField(
                 controller: _userCtrl,
-                hint: 'cth. teknisi01',
+                hint: 'cth. 16130.ROW01',
                 icon: Icons.person_outline,
               ),
               const SizedBox(height: 16),

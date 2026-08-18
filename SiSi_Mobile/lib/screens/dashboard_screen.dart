@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import 'laporan_harian_screen.dart';
+import 'eksekusi_row_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final Map<String, dynamic> sesi;
@@ -18,7 +19,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   late AnimationController _bubbleController;
   late Animation<double> _bubbleAnimation;
 
-  // State untuk navigasi drill-down Tim (khusus Super User / Admin)
+  // Sub-layar aktif di dalam Tab Tim (Persistent Bottom Nav)
+  Widget? _activeSubScreen;
   Map<String, dynamic>? _selectedTeamDetail;
 
   final List<String> menuItems = ['Tim', 'Teknik', 'Pengaturan'];
@@ -28,7 +30,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     Icons.settings_outlined,
   ];
 
-  // Definisi 12 Tim SiSi ULP Toboali
   final List<Map<String, dynamic>> allTeams = [
     {
       'name': 'Inspeksi Gardu',
@@ -76,7 +77,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     return role == 'super user' || role == 'admin';
   }
 
-  // Navbar dinamis berdasarkan role user
   List<String> get currentMenuItems {
     if (_isSuperUser) {
       return ['Tim', 'Teknik', 'Pengaturan'];
@@ -96,12 +96,13 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   void _selectMenu(int index) {
-    if (selectedIndex == index) return;
+    if (selectedIndex == index && _activeSubScreen == null) return;
 
     setState(() {
       previousIndex = selectedIndex;
       selectedIndex = index;
-      _selectedTeamDetail = null; // Reset drilldown saat ganti tab
+      _activeSubScreen = null;
+      _selectedTeamDetail = null;
     });
 
     _bubbleController.forward(from: 0.0);
@@ -112,12 +113,22 @@ class _DashboardScreenState extends State<DashboardScreen>
     return (index * tabWidth) + (tabWidth / 2);
   }
 
+  void _openSubScreen(Widget screen) {
+    setState(() {
+      _activeSubScreen = screen;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
 
     return WillPopScope(
       onWillPop: () async {
+        if (_activeSubScreen != null) {
+          setState(() => _activeSubScreen = null);
+          return false;
+        }
         if (_selectedTeamDetail != null) {
           setState(() => _selectedTeamDetail = null);
           return false;
@@ -126,34 +137,17 @@ class _DashboardScreenState extends State<DashboardScreen>
       },
       child: Scaffold(
         backgroundColor: AppColors.neutral100,
-        appBar: AppBar(
-          backgroundColor: AppColors.navy700,
-          title: Text(
-            selectedIndex == 0 && _selectedTeamDetail != null
-                ? _selectedTeamDetail!['name']
-                : (selectedIndex == -1
-                      ? 'SiSi Dashboard'
-                      : 'SiSi — ${currentMenuItems[selectedIndex]}'),
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          leading: selectedIndex == 0 && _selectedTeamDetail != null
-              ? IconButton(
-                  icon: const Icon(Icons.arrow_back_rounded),
-                  onPressed: () => setState(() => _selectedTeamDetail = null),
-                )
-              : null,
-          elevation: 0,
-        ),
-        body: selectedIndex == -1
-            ? _buildGreetingView()
-            : _buildTabContent(selectedIndex),
+        body:
+            _activeSubScreen ??
+            (selectedIndex == -1
+                ? _buildGreetingView()
+                : _buildTabContent(selectedIndex)),
         bottomNavigationBar: SafeArea(
           child: SizedBox(
             height: 80,
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                // Garis pembatas atas navbar + notch dinamis
                 AnimatedBuilder(
                   animation: _bubbleAnimation,
                   builder: (context, child) {
@@ -176,8 +170,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                     );
                   },
                 ),
-
-                // Floating Bubble Icon
                 if (selectedIndex >= 0)
                   AnimatedBuilder(
                     animation: _bubbleAnimation,
@@ -220,8 +212,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                       );
                     },
                   ),
-
-                // Menu Items Row
                 Positioned.fill(
                   child: Row(
                     children: List.generate(
@@ -273,29 +263,43 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Widget _buildGreetingView() {
     final subTim = widget.sesi['subTim'] ?? 'Tim';
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            'Halo, $subTim',
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppColors.navy700,
+    return Scaffold(
+      backgroundColor: AppColors.neutral100,
+      appBar: AppBar(
+        backgroundColor: AppColors.navy700,
+        elevation: 0,
+        title: const Text(
+          'SiSi Dashboard',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Halo, $subTim',
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: AppColors.navy700,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Semangat Pagi!!!',
-            style: TextStyle(fontSize: 20, color: AppColors.navy700),
-          ),
-        ],
+            const SizedBox(height: 8),
+            const Text(
+              'Semangat Pagi!!!',
+              style: TextStyle(fontSize: 20, color: AppColors.navy700),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  // Router Konten per Tab
   Widget _buildTabContent(int index) {
     if (_isSuperUser) {
       switch (index) {
@@ -309,7 +313,6 @@ class _DashboardScreenState extends State<DashboardScreen>
           return const SizedBox();
       }
     } else {
-      // Role User biasa (hanya ada tab 0: Tim dan tab 1: Pengaturan)
       switch (index) {
         case 0:
           return _buildMenuTim();
@@ -321,18 +324,29 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
   }
 
-  // ══════════════════════════════════════════
-  // TAB 1: MENU TIM (BERDASARKAN ROLE)
-  // ══════════════════════════════════════════
   Widget _buildMenuTim() {
     if (_isSuperUser) {
       if (_selectedTeamDetail != null) {
         return _buildTeamSubMenuActions(_selectedTeamDetail!);
       }
-      return _buildSuperUserTeamGrid();
+      return Scaffold(
+        backgroundColor: AppColors.neutral100,
+        appBar: AppBar(
+          backgroundColor: AppColors.navy700,
+          elevation: 0,
+          title: const Text(
+            'SiSi — Tim Operasional',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+        ),
+        body: _buildSuperUserTeamGrid(),
+      );
     }
 
-    // Role User: Langsung tampilkan sub-menu sesuai tim/subTim login
     final userSubTim = (widget.sesi['subTim'] ?? widget.sesi['tim'] ?? 'ROW')
         .toString();
     String category = 'ROW';
@@ -358,7 +372,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     });
   }
 
-  // Grid 12 Tim untuk Super User / Admin
   Widget _buildSuperUserTeamGrid() {
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -390,9 +403,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           itemBuilder: (context, idx) {
             final team = allTeams[idx];
             return InkWell(
-              onTap: () {
-                setState(() => _selectedTeamDetail = team);
-              },
+              onTap: () => setState(() => _selectedTeamDetail = team),
               borderRadius: BorderRadius.circular(12),
               child: Container(
                 padding: const EdgeInsets.all(12),
@@ -454,7 +465,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  // Daftar Sub-Menu Tindakan di dalam masing-masing Tim
   Widget _buildTeamSubMenuActions(Map<String, dynamic> team) {
     final category = (team['category'] ?? '').toString();
     final name = (team['name'] ?? '').toString();
@@ -541,7 +551,6 @@ class _DashboardScreenState extends State<DashboardScreen>
         },
       ];
     } else {
-      // Default / Inspeksi
       subActions = [
         {
           'title': 'Laporan Harian',
@@ -556,134 +565,157 @@ class _DashboardScreenState extends State<DashboardScreen>
       ];
     }
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.navy700,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  team['icon'] ?? Icons.people,
-                  color: Colors.white,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      team['name'],
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Kategori: ${team['category']}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white.withOpacity(0.8),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-        const Text(
-          'Menu Pekerjaan',
-          style: TextStyle(
-            fontSize: 14,
+    return Scaffold(
+      backgroundColor: AppColors.neutral100,
+      appBar: AppBar(
+        backgroundColor: AppColors.navy700,
+        elevation: 0,
+        leading: _selectedTeamDetail != null
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                onPressed: () => setState(() => _selectedTeamDetail = null),
+              )
+            : null,
+        title: Text(
+          team['name'],
+          style: const TextStyle(
+            fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: AppColors.navy700,
+            color: Colors.white,
           ),
         ),
-        const SizedBox(height: 10),
-        ...subActions.map(
-          (action) => Card(
-            margin: const EdgeInsets.only(bottom: 10),
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: Colors.grey.shade200),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.navy700,
+              borderRadius: BorderRadius.circular(14),
             ),
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 6,
-              ),
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.navy700.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(8),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    team['icon'] ?? Icons.people,
+                    color: Colors.white,
+                    size: 28,
+                  ),
                 ),
-                child: Icon(action['icon'], color: AppColors.navy700),
-              ),
-              title: Text(
-                action['title'],
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        team['name'],
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Kategori: ${team['category']}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white.withOpacity(0.8),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Menu Pekerjaan',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: AppColors.navy700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          ...subActions.map(
+            (action) => Card(
+              margin: const EdgeInsets.only(bottom: 10),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: Colors.grey.shade200),
               ),
-              subtitle: Text(
-                action['desc'],
-                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-              ),
-              trailing: const Icon(
-                Icons.chevron_right_rounded,
-                color: Colors.grey,
-              ),
-              onTap: () {
-                if (action['title'] == 'Laporan Harian') {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => LaporanHarianScreen(
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 6,
+                ),
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.navy700.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(action['icon'], color: AppColors.navy700),
+                ),
+                title: Text(
+                  action['title'],
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+                subtitle: Text(
+                  action['desc'],
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                ),
+                trailing: const Icon(
+                  Icons.chevron_right_rounded,
+                  color: Colors.grey,
+                ),
+                onTap: () {
+                  if (action['title'] == 'Laporan Harian') {
+                    _openSubScreen(
+                      LaporanHarianScreen(
                         sesi: widget.sesi,
                         targetSubTim: team['name'],
                         targetTim: team['category'],
                       ),
-                    ),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        '${action['title']} (${team['name']}) akan dibuka',
+                    );
+                  } else if (action['title'] == 'Eksekusi Pekerjaan') {
+                    _openSubScreen(
+                      EksekusiRowScreen(
+                        sesi: widget.sesi,
+                        targetSubTim: team['name'],
+                        targetTim: team['category'],
                       ),
-                      duration: const Duration(seconds: 1),
-                    ),
-                  );
-                }
-              },
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          '${action['title']} (${team['name']}) akan dibuka',
+                        ),
+                      ),
+                    );
+                  }
+                },
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  // ══════════════════════════════════════════
-  // TAB 2: MENU TEKNIK
-  // ══════════════════════════════════════════
   Widget _buildMenuTeknik() {
     final subTeknik = [
       {
@@ -723,167 +755,193 @@ class _DashboardScreenState extends State<DashboardScreen>
       },
     ];
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        const Text(
-          'Manajemen Operasional Teknik',
+    return Scaffold(
+      backgroundColor: AppColors.neutral100,
+      appBar: AppBar(
+        backgroundColor: AppColors.navy700,
+        elevation: 0,
+        title: const Text(
+          'SiSi — Teknik',
           style: TextStyle(
-            fontSize: 16,
+            fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: AppColors.navy700,
+            color: Colors.white,
           ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          'Kelola penugasan, verifikasi, dan pelaporan teknik ULP',
-          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text(
+            'Manajemen Operasional Teknik',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppColors.navy700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Kelola penugasan, verifikasi, dan pelaporan teknik ULP',
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          ),
+          const SizedBox(height: 16),
+          ...subTeknik.map(
+            (item) => Card(
+              margin: const EdgeInsets.only(bottom: 10),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: Colors.grey.shade200),
+              ),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 6,
+                ),
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.navy700.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    item['icon'] as IconData,
+                    color: AppColors.navy700,
+                  ),
+                ),
+                title: Text(
+                  item['title'] as String,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+                subtitle: Text(
+                  item['desc'] as String,
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                ),
+                trailing: const Icon(
+                  Icons.chevron_right_rounded,
+                  color: Colors.grey,
+                ),
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('${item['title']} akan dibuka')),
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMenuPengaturan() {
+    return Scaffold(
+      backgroundColor: AppColors.neutral100,
+      appBar: AppBar(
+        backgroundColor: AppColors.navy700,
+        elevation: 0,
+        title: const Text(
+          'SiSi — Pengaturan',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
-        const SizedBox(height: 16),
-        ...subTeknik.map(
-          (item) => Card(
-            margin: const EdgeInsets.only(bottom: 10),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 26,
+                  backgroundColor: AppColors.navy700,
+                  child: Text(
+                    (widget.sesi['username'] ?? 'U')[0].toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.sesi['username'] ?? 'Pengguna',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.navy700,
+                        ),
+                      ),
+                      Text(
+                        '${widget.sesi['role'] ?? '-'} • ${widget.sesi['subTim'] ?? widget.sesi['tim'] ?? '-'}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          Card(
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
               side: BorderSide(color: Colors.grey.shade200),
             ),
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 6,
-              ),
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.navy700.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(item['icon'] as IconData, color: AppColors.navy700),
-              ),
-              title: Text(
-                item['title'] as String,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
-              subtitle: Text(
-                item['desc'] as String,
-                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-              ),
-              trailing: const Icon(
-                Icons.chevron_right_rounded,
-                color: Colors.grey,
-              ),
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${item['title']} akan dibuka'),
-                    duration: const Duration(seconds: 1),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(
+                    Icons.lock_reset_rounded,
+                    color: AppColors.navy700,
                   ),
-                );
-              },
+                  title: const Text('Ganti Password'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () {},
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(
+                    Icons.logout_rounded,
+                    color: Colors.redAccent,
+                  ),
+                  title: const Text(
+                    'Keluar / Logout',
+                    style: TextStyle(color: Colors.redAccent),
+                  ),
+                  onTap: () => Navigator.of(context).pop(),
+                ),
+              ],
             ),
           ),
-        ),
-      ],
-    );
-  }
-
-  // ══════════════════════════════════════════
-  // TAB 3: MENU PENGATURAN
-  // ══════════════════════════════════════════
-  Widget _buildMenuPengaturan() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 26,
-                backgroundColor: AppColors.navy700,
-                child: Text(
-                  (widget.sesi['username'] ?? 'U')[0].toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 20,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.sesi['username'] ?? 'Pengguna',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.navy700,
-                      ),
-                    ),
-                    Text(
-                      '${widget.sesi['role'] ?? '-'} • ${widget.sesi['subTim'] ?? widget.sesi['tim'] ?? '-'}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-        Card(
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: Colors.grey.shade200),
-          ),
-          child: Column(
-            children: [
-              ListTile(
-                leading: const Icon(
-                  Icons.lock_reset_rounded,
-                  color: AppColors.navy700,
-                ),
-                title: const Text('Ganti Password'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () {},
-              ),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(
-                  Icons.logout_rounded,
-                  color: Colors.redAccent,
-                ),
-                title: const Text(
-                  'Keluar / Logout',
-                  style: TextStyle(color: Colors.redAccent),
-                ),
-                onTap: () => Navigator.of(context).pop(),
-              ),
-            ],
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
-// Painter untuk background navbar putih + garis border atas + lekukan notch mengikuti bubble
 class NavbarWithNotchPainter extends CustomPainter {
   final double? notchCenterX;
 
