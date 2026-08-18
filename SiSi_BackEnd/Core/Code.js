@@ -1,8 +1,7 @@
 /* ═════════════════════════════════════
    Code.gs — SiSi ULP Toboali (BAGIAN 1: INTI / SHARED)
    Google Apps Script Backend
-   Rev: 31 Mei 2026 (konsolidasi bersih + modul Inspeksi + MOBILE API LAYER)
-   Catatan: fungsi per-menu dipindah ke Tek-Code.gs
+   Rev: 19 Agu 2026 (Konsolidasi Bersih + Mobile API Layer + Yandal P0 Approval Router)
 ═════════════════════════════════════ */
 
 /* ── Konstanta ── */
@@ -48,7 +47,6 @@ var PAGE_ACCESS_PARENT = {
   "Tek-Data-Checkpoint": "SIE-Teknik",
 };
 
-/* Helper smart include & createHtmlOutput agar tahan path folder maupun non-folder */
 function _getHtmlOutputFromFileSafe_(filename) {
   var possibleNames = [
     PAGE_FILE_ALIASES[filename] || filename,
@@ -98,8 +96,7 @@ var PP_PAGES = ["PP-Dashboard"];
 var TE_PAGES = ["TE-Dashboard"];
 var K3_PAGES = ["K3-Dashboard"];
 
-/* Peta kolom db_Users (0-based)
-   A=No, B=Email, C=Username, D=Password, E=Role, F=ULP, G=Kode ULP, H=Bidang, I=Tim, J=Sub-Tim, K=Akses Menu */
+/* Peta kolom db_Users (0-based) */
 var COL_USERS = {
   no: 0,
   email: 1,
@@ -113,158 +110,6 @@ var COL_USERS = {
   subTim: 9,
   aksesMenu: 10,
 };
-
-/* ═══ SHARED LAYER — INSPEKSI (dipakai modul Tek-Ins) ═══ */
-
-function _ssIns() {
-  return SpreadsheetApp.openById(SPREADSHEET_ID);
-}
-
-const SHEET_INS = {
-  HEADER: "db_Global_Header",
-  REALISASI: "db_InsJar_Realisasi",
-  TEMUAN: "db_INS_Temuan",
-  TIM: "db_Tim",
-  PENYULANG: "db_Penyulang",
-};
-
-const COL_INS = {
-  HEADER: {
-    no: 0,
-    kodeHeader: 1,
-    ulp: 2,
-    hari: 3,
-    tanggal: 4,
-    tim: 5,
-    subTim: 6,
-    koordinatAwal: 7,
-    koordinatAkhir: 8,
-    kmAwal: 9,
-    kmAkhir: 10,
-    kendala: 11,
-    waText: 12,
-    timestamp: 13,
-    inputBy: 14,
-    timestampUpdate: 15,
-    statusTextWa: 16,
-  },
-  REALISASI: {
-    kodeHeader: 1,
-    kodePekerjaanPeny: 2,
-    hari: 3,
-    tanggal: 4,
-    penyulang: 5,
-    section: 6,
-    segmen: 7,
-    tier: 8,
-    totalTiang: 9,
-    jumlahTemuan: 10,
-    inputBy: 11,
-    timestamp: 12,
-  },
-  TEMUAN: {
-    no: 0,
-    kodeHeader: 1,
-    kodePekerjaanPeny: 2,
-    kodePekerjaan: 3,
-    ulp: 4,
-    hari: 5,
-    tanggal: 6,
-    timInspeksi: 7,
-    objekInspeksi: 8,
-    penyulang: 9,
-    section: 10,
-    segmen: 11,
-    nomorTiang: 12,
-    nomorGardu: 13,
-    tier: 14,
-    temuan: 15,
-    fotoTemuan: 16,
-    fotoTemuanUrl: 17,
-    fotoTiang: 18,
-    fotoTiangUrl: 19,
-    deskripsi: 20,
-    koordinat: 21,
-    lat: 22,
-    long: 23,
-    inputBy: 24,
-    timestamp: 25,
-    status: 26,
-    forwardBy: 27,
-    tglForward: 28,
-    timEksekusi: 29,
-    catatan: 30,
-    diameter: 31,
-    jenisPekerjaan: 32,
-    fotoPekerjaan: 33,
-    fotoPekerjaanUrl: 34,
-    fotoSesudah: 35,
-    fotoSesudahUrl: 36,
-    tglSelesai: 37,
-    petugas: 38,
-    inputBySelesai: 39,
-    timestampSelesai: 40,
-    tampilFotoTemuan: 41,
-    tampilFotoPekerjaan: 42,
-    tampilFotoSesudah: 43,
-    folderPath: 44,
-  },
-};
-
-const STATUS_INS = {
-  PENUGASAN: "Penugasan Tim",
-  PROGRESS: "Progress Pekerjaan",
-  SELESAI: "Selesai",
-};
-
-function _readSheetIns(name, headerRows) {
-  headerRows = headerRows == null ? 1 : headerRows;
-  const sh = _ssIns().getSheetByName(name);
-  if (!sh) throw new Error("Sheet tidak ditemukan: " + name);
-  const lastRow = sh.getLastRow();
-  const lastCol = sh.getLastColumn();
-  const start = headerRows + 1;
-  if (lastRow < start) return [];
-  return sh.getRange(start, 1, lastRow - start + 1, lastCol).getValues();
-}
-
-function _indexBy(rows, keyIdx) {
-  const map = {};
-  for (let i = 0; i < rows.length; i++) {
-    const k = String(rows[i][keyIdx] == null ? "" : rows[i][keyIdx]).trim();
-    if (!k) continue;
-    (map[k] || (map[k] = [])).push(rows[i]);
-  }
-  return map;
-}
-
-function _distinct(rows, idx) {
-  const seen = {},
-    out = [];
-  for (let i = 0; i < rows.length; i++) {
-    const v = String(rows[i][idx] == null ? "" : rows[i][idx]).trim();
-    if (v && !seen[v]) {
-      seen[v] = true;
-      out.push(v);
-    }
-  }
-  return out;
-}
-
-function _cacheIns(key, ttlSec, producer) {
-  const cache = CacheService.getScriptCache();
-  const hit = cache.get(key);
-  if (hit) {
-    try {
-      return JSON.parse(hit);
-    } catch (e) {}
-  }
-  const val = producer();
-  try {
-    cache.put(key, JSON.stringify(val), ttlSec);
-  } catch (e) {}
-  return val;
-}
 
 function _normTgl(v) {
   if (!v) return "";
@@ -284,36 +129,7 @@ function _normTgl(v) {
   return s;
 }
 
-function _insInRange(tgl, dari, sampai) {
-  if (!tgl) return false;
-  if (dari && tgl < dari) return false;
-  if (sampai && tgl > sampai) return false;
-  return true;
-}
-
-function _findRowTemuan(kodePekerjaan) {
-  const sh = _ssIns().getSheetByName(SHEET_INS.TEMUAN);
-  const data = _readSheetIns(SHEET_INS.TEMUAN);
-  const idx = data.findIndex(function (r) {
-    return (
-      String(r[COL_INS.TEMUAN.kodePekerjaan]).trim() ===
-      String(kodePekerjaan).trim()
-    );
-  });
-  return idx === -1 ? null : { sheet: sh, row: idx + 2 };
-}
-
-function _jenisPekerjaan(diameter) {
-  const d = Number(diameter) || 0;
-  if (d === 0) return "Rabas / Pangkas";
-  if (d <= 50) return "Tebang Sedang";
-  return "Tebang Besar";
-}
-
-/* ═══ MOBILE API LAYER (dipanggil Flutter via ?mobile=1) ═══
-   GET  : /exec?mobile=1&action=xxx&token=xxx&...
-   POST : body JSON { action:'xxx', token:'xxx', ... }
-   Semua balikan JSON, tidak render HTML. */
+/* ═══ MOBILE API LAYER (dipanggil Flutter via ?mobile=1) ═══ */
 function apiRouter_(e, body) {
   var p = (e && e.parameter) || {};
   var action = (body && body.action) || p.action || "";
@@ -321,6 +137,7 @@ function apiRouter_(e, body) {
 
   try {
     switch (action) {
+      // 1. Autentikasi & Akun
       case "login":
         result = doLogin(
           body ? body.username : p.username,
@@ -330,6 +147,13 @@ function apiRouter_(e, body) {
 
       case "logout":
         result = doLogout((body && body.token) || p.token);
+        break;
+
+      case "cekSesi":
+        var sesi = getSesiByToken(p.token || (body && body.token));
+        result = sesi
+          ? { success: true, sesi: sesi }
+          : { success: false, message: "Sesi habis" };
         break;
 
       case "getPageContent":
@@ -372,6 +196,7 @@ function apiRouter_(e, body) {
         );
         break;
 
+      // 2. Laporan Harian (db_Global_Header)
       case "getMobileLaporanHarian":
       case "getLaporanHarian":
         result = getMobileLaporanHarian(
@@ -383,6 +208,7 @@ function apiRouter_(e, body) {
         );
         break;
 
+      // 3. Eksekusi ROW (db_ROW_Eksekusi)
       case "getMobileDropdownRow":
       case "getDropdownRow":
         result = getMobileDropdownRow(p.token || (body && body.token));
@@ -404,11 +230,68 @@ function apiRouter_(e, body) {
         result = simpanMobileEksekusiRow(body || p);
         break;
 
-      case "cekSesi":
-        var sesi = getSesiByToken(p.token || (body && body.token));
-        result = sesi
-          ? { success: true, sesi: sesi }
-          : { success: false, message: "Sesi habis" };
+      // 4. Verifikasi & Approval P0 (db_Yandal_P0, db_Yandal_Pengecekan_Switching, Pengukuran Gardu)
+      case "getMobileApprovalP0List":
+      case "getApprovalP0List":
+        if (typeof getApprovalP0List === "function") {
+          result = getApprovalP0List(body || p);
+        } else {
+          result = {
+            success: false,
+            message:
+              "Fungsi getApprovalP0List tidak ditemukan di Tek-Yandal-Code.js",
+          };
+        }
+        break;
+
+      case "setMobileApprovalP0":
+      case "setApprovalP0":
+        if (typeof setApprovalP0 === "function") {
+          result = setApprovalP0(body || p);
+        } else {
+          result = {
+            success: false,
+            message:
+              "Fungsi setApprovalP0 tidak ditemukan di Tek-Yandal-Code.js",
+          };
+        }
+        break;
+
+      case "getMobileLampiranPengecekanP0":
+      case "getLampiranPengecekanP0":
+        if (typeof getLampiranPengecekanP0 === "function") {
+          result = getLampiranPengecekanP0(body || p);
+        } else {
+          result = {
+            success: false,
+            message:
+              "Fungsi getLampiranPengecekanP0 tidak ditemukan di Tek-Yandal-Code.js",
+          };
+        }
+        break;
+
+      case "getListPekerjaanP0":
+        if (typeof getListPekerjaanP0 === "function") {
+          result = getListPekerjaanP0();
+        } else {
+          result = {
+            success: false,
+            message:
+              "Fungsi getListPekerjaanP0 tidak ditemukan di Tek-Yandal-Code.js",
+          };
+        }
+        break;
+
+      case "updateNamaPekerjaanP0":
+        if (typeof updateNamaPekerjaanP0 === "function") {
+          result = updateNamaPekerjaanP0(body || p);
+        } else {
+          result = {
+            success: false,
+            message:
+              "Fungsi updateNamaPekerjaanP0 tidak ditemukan di Tek-Yandal-Code.js",
+          };
+        }
         break;
 
       default:
@@ -428,7 +311,6 @@ function apiRouter_(e, body) {
 
 /* ═══ ENTRY POINT ═══ */
 function doGet(e) {
-  // MOBILE: rute semua request Flutter (?mobile=1) ke apiRouter_, balikan JSON murni.
   if (e && e.parameter && e.parameter.mobile) return apiRouter_(e, null);
 
   if (e && e.parameter && e.parameter.pdf) {
@@ -468,11 +350,10 @@ function doGet(e) {
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
 }
 
-/* ═══ WEBHOOK (POST) — dipanggil oleh Bot AppSheet ═══ */
+/* ═══ WEBHOOK (POST) ═══ */
 var WEBHOOK_SECRET = "GANTI_DENGAN_SECRET_KAMU";
 
 function doPost(e) {
-  // MOBILE: rute semua request Flutter (?mobile=1) ke apiRouter_, balikan JSON murni.
   if (e && e.parameter && e.parameter.mobile) {
     var bodyMobile = {};
     try {
@@ -541,85 +422,6 @@ function doPost(e) {
           };
         }
       }
-    } else if (action === "recalcWa") {
-      var kodeHeader = String(body.kodeHeader || body.kode || "").trim();
-      if (!kodeHeader) {
-        out = { ok: false, message: "recalcWa butuh kodeHeader" };
-      } else if (typeof recalcWaByHeader !== "function") {
-        out = { ok: false, message: "recalcWaByHeader tidak tersedia" };
-      } else {
-        var dbKeyW = "wh_wa_" + kodeHeader;
-        if (cache.get(dbKeyW)) {
-          out = {
-            ok: true,
-            action: action,
-            mode: "sync",
-            skipped: true,
-            reason: "debounce",
-            kodeHeader: kodeHeader,
-          };
-        } else {
-          cache.put(dbKeyW, "1", 8);
-          var hasilW = recalcWaByHeader(kodeHeader);
-          out = {
-            ok: true,
-            action: action,
-            mode: "sync",
-            kodeHeader: kodeHeader,
-            hasil: hasilW,
-          };
-        }
-      }
-    } else if (action === "refreshWa") {
-      if (cache.get("wh_refreshwa")) {
-        out = { ok: true, skipped: true, reason: "debounce" };
-      } else {
-        cache.put("wh_refreshwa", "1", 30);
-        var hasilR =
-          typeof refreshWaHarian === "function"
-            ? refreshWaHarian()
-            : { ok: false, message: "refreshWaHarian tidak tersedia" };
-        out = { ok: true, action: action, hasil: hasilR };
-      }
-    } else if (action === "validasiFoto") {
-      if (cache.get("wh_validasifoto")) {
-        out = { ok: true, skipped: true, reason: "debounce" };
-      } else {
-        cache.put("wh_validasifoto", "1", 20);
-        var hasilV =
-          typeof validasiUlangFotoTemuan === "function"
-            ? validasiUlangFotoTemuan()
-            : { ok: false, message: "validasiUlangFotoTemuan tidak tersedia" };
-        out = { ok: true, action: action, hasil: hasilV };
-      }
-    } else if (action === "refreshLaporan") {
-      var tglLap = _normTgl(body.tanggal || "") || "";
-      if (typeof markLaporanDirty_ === "function") {
-        var tandaLap = markLaporanDirty_(tglLap);
-        out = {
-          ok: true,
-          action: action,
-          mode: "queued",
-          queued: true,
-          tanggal: tandaLap,
-        };
-      } else {
-        out = {
-          ok: false,
-          message:
-            "markLaporanDirty_ tidak tersedia; pasang fungsi antrean laporan (Tek-LaporanHarianSheet.gs) & jalankan createLaporanDrainTrigger() dulu.",
-        };
-      }
-    } else if (action === "prosesShiftYandal") {
-      var kodeShift = String(body.kodeShift || "").trim();
-      if (!kodeShift) {
-        out = { ok: false, message: "prosesShiftYandal butuh kodeShift" };
-      } else if (typeof prosesShiftYandal === "function") {
-        prosesShiftYandal(kodeShift);
-        out = { ok: true, action: action, kodeShift: kodeShift };
-      } else {
-        out = { ok: false, message: "prosesShiftYandal tidak tersedia" };
-      }
     } else if (action === "prosesP0Yandal") {
       var kodeP0 = String(body.kodeP0 || "").trim();
       var fotoTg = String(body.foto || "").trim();
@@ -636,11 +438,7 @@ function doPost(e) {
           foto: fotoTg,
         };
       } else {
-        out = {
-          ok: false,
-          message:
-            "enqueueP0Yandal_ tidak tersedia; jalankan createWmDrainTriggerY dulu agar antrean WM diproses.",
-        };
+        out = { ok: false, message: "enqueueP0Yandal_ tidak tersedia" };
       }
     } else if (action === "prosesSwitchingYandal") {
       var kodeSwc = String(body.kodeSwitching || "").trim();
@@ -661,87 +459,7 @@ function doPost(e) {
           foto: fotoSwc,
         };
       } else {
-        out = {
-          ok: false,
-          message:
-            "enqueueP0Yandal_ tidak tersedia; jalankan createWmDrainTriggerY dulu agar antrean WM diproses.",
-        };
-      }
-    } else if (action === "prosesHartekPG") {
-      var kodePgH = String(body.kodePG || "").trim();
-      if (!kodePgH) {
-        out = { ok: false, message: "prosesHartekPG butuh kodePG" };
-      } else if (typeof prosesHartekPG === "function") {
-        out = prosesHartekPG(kodePgH);
-      } else {
-        out = { ok: false, message: "prosesHartekPG tidak tersedia" };
-      }
-    } else if (action === "cekBarisHartekPG") {
-      var kodePgCek = String(body.kodePG || "").trim();
-      if (!kodePgCek) {
-        out = { ok: false, message: "cekBarisHartekPG butuh kodePG" };
-      } else if (typeof cekBarisHartekPG === "function") {
-        out = cekBarisHartekPG(kodePgCek);
-      } else {
-        out = { ok: false, message: "cekBarisHartekPG tidak tersedia" };
-      }
-    } else if (action === "prosesHartekPekerjaan") {
-      var kodePekH = String(body.kodePekerjaan || "").trim();
-      if (!kodePekH) {
-        out = {
-          ok: false,
-          message: "prosesHartekPekerjaan butuh kodePekerjaan",
-        };
-      } else if (typeof prosesHartekPekerjaan === "function") {
-        out = prosesHartekPekerjaan(kodePekH);
-      } else {
-        out = { ok: false, message: "prosesHartekPekerjaan tidak tersedia" };
-      }
-    } else if (action === "prosesHartekMaterial") {
-      var kodeMatH = String(body.kodeMaterial || "").trim();
-      if (!kodeMatH) {
-        out = { ok: false, message: "prosesHartekMaterial butuh kodeMaterial" };
-      } else if (typeof prosesHartekMaterial === "function") {
-        out = prosesHartekMaterial(kodeMatH);
-      } else {
-        out = { ok: false, message: "prosesHartekMaterial tidak tersedia" };
-      }
-    } else if (action === "prosesHartekHarGrounding") {
-      var kodeGndH = String(body.kodeHarGrounding || "").trim();
-      if (!kodeGndH) {
-        out = {
-          ok: false,
-          message: "prosesHartekHarGrounding butuh kodeHarGrounding",
-        };
-      } else if (typeof prosesHartekHarGrounding === "function") {
-        out = prosesHartekHarGrounding(kodeGndH);
-      } else {
-        out = { ok: false, message: "prosesHartekHarGrounding tidak tersedia" };
-      }
-    } else if (action === "prosesHartekPemerataanBeban") {
-      var kodePmrH = String(body.kodePemerataan || "").trim();
-      if (!kodePmrH) {
-        out = {
-          ok: false,
-          message: "prosesHartekPemerataanBeban butuh kodePemerataan",
-        };
-      } else if (typeof prosesHartekPemerataanBeban === "function") {
-        out = prosesHartekPemerataanBeban(kodePmrH);
-      } else {
-        out = {
-          ok: false,
-          message: "prosesHartekPemerataanBeban tidak tersedia",
-        };
-      }
-    } else if (action === "prosesEksekusiRow") {
-      var kodeEksRow = String(body.kodeEksekusi || body.kode || "").trim();
-      if (!kodeEksRow) {
-        out = { ok: false, message: "prosesEksekusiRow butuh kodeEksekusi" };
-      } else if (typeof prosesEksekusiROW === "function") {
-        out = prosesEksekusiROW(kodeEksRow);
-        out.action = action;
-      } else {
-        out = { ok: false, message: "prosesEksekusiROW tidak tersedia" };
+        out = { ok: false, message: "enqueueP0Yandal_ tidak tersedia" };
       }
     } else if (action === "hitungPointP0Yandal") {
       var kodeP0Pt = String(body.kodeP0 || body.kode || "").trim();
@@ -764,284 +482,7 @@ function doPost(e) {
   );
 }
 
-/* ═══ ANTREAN RECALC GABUNGAN ═══ */
-var RECALC_QUEUE_SHEET = "db_Recalc_Queue";
-var RECALC_MAX_ATTEMPTS = 5;
-var RECALC_BATCH = 50;
-var RECALC_STALE_MS = 10 * 60 * 1000;
-
-var RQ = {
-  jenis: 0,
-  key: 1,
-  tim: 2,
-  tanggal: 3,
-  kodeHeader: 4,
-  dirtyAt: 5,
-  status: 6,
-  lastTriedAt: 7,
-  attempts: 8,
-};
-var RECALC_QUEUE_COLS = 9;
-var RECALC_QUEUE_HEADER = [
-  "jenis",
-  "key",
-  "tim",
-  "tanggal",
-  "kodeHeader",
-  "dirtyAt",
-  "status",
-  "lastTriedAt",
-  "attempts",
-];
-
-function _recalcQueueSheet_() {
-  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  var sh = ss.getSheetByName(RECALC_QUEUE_SHEET);
-  if (!sh) {
-    sh = ss.insertSheet(RECALC_QUEUE_SHEET);
-    sh.getRange(1, 1, 1, RECALC_QUEUE_COLS).setValues([RECALC_QUEUE_HEADER]);
-    sh.setFrozenRows(1);
-    return sh;
-  }
-  var head = String(sh.getRange(1, 1).getValue() || "").trim();
-  if (head !== "jenis") {
-    sh.clearContents();
-    sh.getRange(1, 1, 1, RECALC_QUEUE_COLS).setValues([RECALC_QUEUE_HEADER]);
-    sh.setFrozenRows(1);
-  }
-  return sh;
-}
-
-function _enqueueRecalc_(rec) {
-  var lock = LockService.getScriptLock();
-  try {
-    lock.waitLock(10000);
-  } catch (e) {
-    return false;
-  }
-  try {
-    var sh = _recalcQueueSheet_();
-    var last = sh.getLastRow();
-    var now = Date.now();
-    if (last >= 2) {
-      var data = sh.getRange(2, 1, last - 1, RECALC_QUEUE_COLS).getValues();
-      for (var i = 0; i < data.length; i++) {
-        if (String(data[i][RQ.key]).trim() === rec.key) {
-          sh.getRange(i + 2, RQ.dirtyAt + 1).setValue(now);
-          return true;
-        }
-      }
-    }
-    var baris = [];
-    baris[RQ.jenis] = rec.jenis;
-    baris[RQ.key] = rec.key;
-    baris[RQ.tim] = rec.tim || "";
-    baris[RQ.tanggal] = rec.tanggal || "";
-    baris[RQ.kodeHeader] = rec.kodeHeader || "";
-    baris[RQ.dirtyAt] = now;
-    baris[RQ.status] = "pending";
-    baris[RQ.lastTriedAt] = "";
-    baris[RQ.attempts] = 0;
-    sh.appendRow(baris);
-    return true;
-  } finally {
-    try {
-      lock.releaseLock();
-    } catch (e) {}
-  }
-}
-
-function markRecalcRowDirty_(tim, tanggal) {
-  tim = String(tim || "").trim();
-  tanggal = _normTgl(tanggal || new Date()) || _normTgl(new Date());
-  return _enqueueRecalc_({
-    jenis: "row",
-    key: "row|" + tim + "|" + tanggal,
-    tim: tim,
-    tanggal: tanggal,
-  });
-}
-
-function markWaDirty_(kodeHeader) {
-  kodeHeader = String(kodeHeader || "").trim();
-  if (!kodeHeader) return false;
-  return _enqueueRecalc_({
-    jenis: "wa",
-    key: "wa|" + kodeHeader,
-    kodeHeader: kodeHeader,
-  });
-}
-
-function recalcTick() {
-  var sh = _recalcQueueSheet_();
-  var claimed = [];
-  var lock = LockService.getScriptLock();
-  try {
-    lock.waitLock(20000);
-  } catch (e) {
-    return;
-  }
-  try {
-    var last = sh.getLastRow();
-    if (last < 2) return;
-    var data = sh.getRange(2, 1, last - 1, RECALC_QUEUE_COLS).getValues();
-    var now = Date.now();
-    for (var i = 0; i < data.length && claimed.length < RECALC_BATCH; i++) {
-      var st = String(data[i][RQ.status] || "pending").trim();
-      var lastTried = Number(data[i][RQ.lastTriedAt] || 0);
-      var stale = st === "processing" && now - lastTried > RECALC_STALE_MS;
-      if (st === "pending" || stale) {
-        sh.getRange(i + 2, RQ.status + 1).setValue("processing");
-        sh.getRange(i + 2, RQ.lastTriedAt + 1).setValue(now);
-        claimed.push({
-          jenis: String(data[i][RQ.jenis] || "row").trim(),
-          key: String(data[i][RQ.key]).trim(),
-          tim: String(data[i][RQ.tim]).trim(),
-          tanggal: String(data[i][RQ.tanggal]).trim(),
-          kodeHeader: String(data[i][RQ.kodeHeader]).trim(),
-          dirtyAt: Number(data[i][RQ.dirtyAt] || 0),
-          attempts: Number(data[i][RQ.attempts] || 0),
-        });
-      }
-    }
-  } finally {
-    try {
-      lock.releaseLock();
-    } catch (e) {}
-  }
-  if (!claimed.length) return;
-
-  for (var j = 0; j < claimed.length; j++) {
-    try {
-      if (claimed[j].jenis === "wa") {
-        if (typeof recalcWaByHeader === "function" && claimed[j].kodeHeader) {
-          recalcWaByHeader(claimed[j].kodeHeader);
-          claimed[j].ok = true;
-        } else {
-          claimed[j].ok = false;
-        }
-      } else {
-        if (typeof recalcEksekusiROW === "function") {
-          recalcEksekusiROW(claimed[j].tim || null, null, claimed[j].tanggal);
-          claimed[j].ok = true;
-        } else {
-          claimed[j].ok = false;
-        }
-      }
-    } catch (e) {
-      claimed[j].ok = false;
-    }
-  }
-
-  try {
-    lock.waitLock(20000);
-  } catch (e) {
-    return;
-  }
-  try {
-    var last2 = sh.getLastRow();
-    if (last2 < 2) return;
-    var data2 = sh.getRange(2, 1, last2 - 1, RECALC_QUEUE_COLS).getValues();
-    var byKey = {};
-    for (var r = 0; r < data2.length; r++)
-      byKey[String(data2[r][RQ.key]).trim()] = { row: r + 2, v: data2[r] };
-
-    var toDelete = [];
-    for (var k = 0; k < claimed.length; k++) {
-      var c = claimed[k];
-      var hit = byKey[c.key];
-      if (!hit) continue;
-      var curDirty = Number(hit.v[RQ.dirtyAt] || 0);
-      if (curDirty > c.dirtyAt) {
-        sh.getRange(hit.row, RQ.status + 1).setValue("pending");
-      } else if (c.ok) {
-        toDelete.push(hit.row);
-      } else {
-        var att = Number(hit.v[RQ.attempts] || 0) + 1;
-        sh.getRange(hit.row, RQ.attempts + 1).setValue(att);
-        sh.getRange(hit.row, RQ.status + 1).setValue(
-          att >= RECALC_MAX_ATTEMPTS ? "failed" : "pending",
-        );
-      }
-    }
-    toDelete.sort(function (a, b) {
-      return b - a;
-    });
-    for (var d = 0; d < toDelete.length; d++) sh.deleteRow(toDelete[d]);
-  } finally {
-    try {
-      lock.releaseLock();
-    } catch (e) {}
-  }
-}
-
-function createRecalcTrigger() {
-  var all = ScriptApp.getProjectTriggers();
-  for (var i = 0; i < all.length; i++) {
-    var fn = all[i].getHandlerFunction();
-    if (fn === "recalcTick" || fn === "recalcRowTick")
-      ScriptApp.deleteTrigger(all[i]);
-  }
-  ScriptApp.newTrigger("recalcTick").timeBased().everyMinutes(1).create();
-  return "Trigger recalcTick (gabungan row+wa) dipasang (tiap 1 menit).";
-}
-
-function hapusRecalcTrigger() {
-  var all = ScriptApp.getProjectTriggers();
-  var n = 0;
-  for (var i = 0; i < all.length; i++) {
-    var fn = all[i].getHandlerFunction();
-    if (fn === "recalcTick" || fn === "recalcRowTick") {
-      ScriptApp.deleteTrigger(all[i]);
-      n++;
-    }
-  }
-  return "Trigger recalc gabungan dihapus: " + n;
-}
-
-function recalcRowTick() {
-  return recalcTick();
-}
-function createRecalcRowTrigger() {
-  return createRecalcTrigger();
-}
-function hapusRecalcRowTrigger() {
-  return hapusRecalcTrigger();
-}
-
-/* ═══ BACKSTOP WA ═══ */
-var REFRESH_WA_INTERVAL_MIN = 15;
-
-function createRefreshWaTrigger() {
-  var all = ScriptApp.getProjectTriggers();
-  for (var i = 0; i < all.length; i++) {
-    if (all[i].getHandlerFunction() === "refreshWaHarian")
-      ScriptApp.deleteTrigger(all[i]);
-  }
-  ScriptApp.newTrigger("refreshWaHarian")
-    .timeBased()
-    .everyMinutes(REFRESH_WA_INTERVAL_MIN)
-    .create();
-  return (
-    "Trigger backstop refreshWaHarian dipasang (tiap " +
-    REFRESH_WA_INTERVAL_MIN +
-    " menit)."
-  );
-}
-
-function hapusRefreshWaTrigger() {
-  var all = ScriptApp.getProjectTriggers();
-  var n = 0;
-  for (var i = 0; i < all.length; i++) {
-    if (all[i].getHandlerFunction() === "refreshWaHarian") {
-      ScriptApp.deleteTrigger(all[i]);
-      n++;
-    }
-  }
-  return "Trigger backstop refreshWaHarian dihapus: " + n;
-}
-
-/* ═══ SESI ═══ */
+/* ═══ SESI & LOGIN ═══ */
 function getSesiByToken(token) {
   try {
     if (!token) return null;
@@ -1064,7 +505,6 @@ function doLogout(token) {
   }
 }
 
-/* ═══ LOGIN ═══ */
 function doLogin(username, password) {
   try {
     if (!username || !password)
@@ -1135,341 +575,6 @@ function doLogin(username, password) {
   }
 }
 
-/* ═══ HALAMAN KONTEN ═══ */
-function getPageContent(token, pageName) {
-  try {
-    if (!token)
-      return {
-        success: false,
-        message: "Token tidak ditemukan",
-        redirect: "login",
-      };
-    var sesi = getSesiByToken(token);
-    if (!sesi)
-      return {
-        success: false,
-        message: "Sesi habis, silakan login ulang",
-        redirect: "login",
-      };
-    if (!_bolehAksesMenu(sesi, pageName))
-      return {
-        success: false,
-        message: "Akses ditolak",
-        redirect: "forbidden",
-      };
-
-    var html = _getHtmlOutputFromFileSafe_(pageName).getContent();
-    return {
-      success: true,
-      html: html,
-      sesi: {
-        username: sesi.username,
-        email: sesi.email,
-        role: sesi.role,
-        ulp: sesi.ulp,
-        kodeUlp: sesi.kodeUlp,
-        bidang: sesi.bidang,
-        tim: sesi.tim,
-        subTim: sesi.subTim || "",
-        aksesMenu: sesi.aksesMenu || "",
-      },
-    };
-  } catch (e) {
-    return { success: false, message: "Halaman tidak ditemukan: " + e.message };
-  }
-}
-
-function _pagesByBidang(bidang) {
-  switch (String(bidang || "").trim()) {
-    case "Teknik":
-      return FULL_ACCESS_PAGES;
-    case "PP":
-      return PP_PAGES;
-    case "TE":
-      return TE_PAGES;
-    case "K3":
-      return K3_PAGES;
-    default:
-      return [];
-  }
-}
-
-var TIM_PAGE_MAP = {
-  "Inspeksi Jaringan": "Tek-InsJar",
-  "Inspeksi Gardu": "Tek-InsDu",
-  ROW: "Tek-ROW",
-  Yantek: "Tek-Yandal",
-  Hartek: "Tek-Hartek",
-  Gangguan: "Tek-Gangguan",
-};
-
-function _parseAksesMenu(v) {
-  return String(v || "")
-    .split(",")
-    .map(function (s) {
-      return s.trim();
-    })
-    .filter(function (s) {
-      return s;
-    });
-}
-
-function _bolehAksesMenu(sesi, page) {
-  if (!page) return false;
-  var role = String((sesi && sesi.role) || "").trim();
-  if (role === "Super User") return true;
-  var akses = _parseAksesMenu(sesi && sesi.aksesMenu);
-  if (akses.indexOf(page) >= 0) return true;
-  var parent = PAGE_ACCESS_PARENT[page] || "";
-  return !!parent && akses.indexOf(parent) >= 0;
-}
-
-function _saranAksesMenu(role, bidang, tim) {
-  role = String(role || "").trim();
-  bidang = String(bidang || "").trim();
-  tim = String(tim || "").trim();
-  if (role === "Super User" || role === "Admin")
-    return FULL_ACCESS_PAGES.concat(PP_PAGES, TE_PAGES, K3_PAGES);
-  if (TIM_PAGE_MAP[tim]) return [TIM_PAGE_MAP[tim]];
-  if (role === "Team Leader" || role === "Staff" || role === "Admin ES")
-    return _pagesByBidang(bidang);
-  if (role === "Teknik" || role === "Operator") return FULL_ACCESS_PAGES;
-  switch (role) {
-    case "PP":
-      return PP_PAGES;
-    case "TE":
-      return TE_PAGES;
-    case "K3":
-      return K3_PAGES;
-    default:
-      return [];
-  }
-}
-
-/* ═══ PENGATURAN AKSES AKUN (khusus Super User) ═══ */
-function _akunSheet() {
-  var sh = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName("db_Users");
-  if (!sh) throw new Error("Sheet db_Users tidak ditemukan");
-  return sh;
-}
-
-function _assertSuperUser(token) {
-  var sesi = getSesiByToken(token);
-  if (!sesi) throw new Error("Sesi habis, silakan login ulang.");
-  if (String(sesi.role || "").trim() !== "Super User")
-    throw new Error("Akses ditolak: menu ini khusus Super User.");
-  return sesi;
-}
-
-function _findRowAkun(sh, username) {
-  var data = sh.getDataRange().getValues();
-  var target = String(username || "")
-    .trim()
-    .toLowerCase();
-  for (var i = 1; i < data.length; i++) {
-    if (
-      String(data[i][COL_USERS.userName] || "")
-        .trim()
-        .toLowerCase() === target
-    )
-      return i + 1;
-  }
-  return -1;
-}
-
-function getMenuOptions(token) {
-  _assertSuperUser(token);
-  return [
-    { key: "PP-Dashboard", label: "Dashboard PP" },
-    { key: "Tek-Dashboard", label: "Dashboard Teknik" },
-    { key: "Tek-ROW", label: "Tim ROW" },
-    { key: "Tek-InsDu", label: "Inspeksi Gardu" },
-    { key: "Tek-PengukuranGardu", label: "Pengukuran Gardu" },
-    { key: "Tek-InsJar", label: "Inspeksi Jaringan" },
-    { key: "Temuan-Inspeksi", label: "Temuan Inspeksi" },
-    { key: "Tek-Yandal", label: "Tim Yandal" },
-    { key: "Tek-Hartek", label: "Tim Hartek" },
-    { key: "Tek-Gangguan", label: "Gangguan Penyulang" },
-    { key: "SIE-Teknik", label: "SIE Teknik" },
-    { key: "TE-Dashboard", label: "Dashboard TE" },
-    { key: "K3-Dashboard", label: "Dashboard K3" },
-  ];
-}
-
-function getDaftarAkun(token) {
-  _assertSuperUser(token);
-  var sh = _akunSheet();
-  var data = sh.getDataRange().getValues();
-  var rows = [];
-  for (var i = 1; i < data.length; i++) {
-    var r = data[i];
-    if (!String(r[COL_USERS.userName] || "").trim()) continue;
-    rows.push({
-      no: r[COL_USERS.no],
-      email: String(r[COL_USERS.email] || "").trim(),
-      username: String(r[COL_USERS.userName] || "").trim(),
-      role: String(r[COL_USERS.role] || "").trim(),
-      ulp: String(r[COL_USERS.ulp] || "").trim(),
-      kodeUlp: String(r[COL_USERS.kodeUlp] || "").trim(),
-      bidang: String(r[COL_USERS.bidang] || "").trim(),
-      tim: String(r[COL_USERS.tim] || "").trim(),
-      subTim: String(r[COL_USERS.subTim] || "").trim(),
-      aksesMenu: _parseAksesMenu(r[COL_USERS.aksesMenu]),
-    });
-  }
-  return { ok: true, rows: rows };
-}
-
-function tambahAkun(token, data) {
-  _assertSuperUser(token);
-  data = data || {};
-  var sh = _akunSheet();
-  var uname = String(data.username || "").trim();
-  if (!uname) return { ok: false, message: "Username wajib diisi." };
-  if (!String(data.password || "").trim())
-    return { ok: false, message: "Password wajib diisi." };
-  if (_findRowAkun(sh, uname) !== -1)
-    return { ok: false, message: "Username sudah dipakai." };
-
-  var akses = Array.isArray(data.aksesMenu)
-    ? data.aksesMenu.join(", ")
-    : String(data.aksesMenu || "");
-  var baris = [];
-  baris[COL_USERS.no] = sh.getLastRow();
-  baris[COL_USERS.email] = String(data.email || "").trim();
-  baris[COL_USERS.userName] = uname;
-  baris[COL_USERS.password] = String(data.password || "").trim();
-  baris[COL_USERS.role] = String(data.role || "").trim();
-  baris[COL_USERS.ulp] = String(data.ulp || "").trim();
-  baris[COL_USERS.kodeUlp] = String(data.kodeUlp || "").trim();
-  baris[COL_USERS.bidang] = String(data.bidang || "").trim();
-  baris[COL_USERS.tim] = String(data.tim || "").trim();
-  baris[COL_USERS.subTim] = String(data.subTim || "").trim();
-  baris[COL_USERS.aksesMenu] = akses;
-  sh.appendRow(baris);
-  SpreadsheetApp.flush();
-  return { ok: true };
-}
-
-function updateAkun(token, data) {
-  _assertSuperUser(token);
-  data = data || {};
-  var sh = _akunSheet();
-  var target = String(data.targetUsername || data.username || "").trim();
-  var row = _findRowAkun(sh, target);
-  if (row === -1)
-    return { ok: false, message: "Akun tidak ditemukan: " + target };
-
-  var unameBaru = String(data.username || "").trim() || target;
-  if (
-    unameBaru.toLowerCase() !== target.toLowerCase() &&
-    _findRowAkun(sh, unameBaru) !== -1
-  )
-    return { ok: false, message: "Username baru sudah dipakai." };
-
-  sh.getRange(row, COL_USERS.userName + 1).setValue(unameBaru);
-  if (data.email != null)
-    sh.getRange(row, COL_USERS.email + 1).setValue(String(data.email).trim());
-  if (data.role != null)
-    sh.getRange(row, COL_USERS.role + 1).setValue(String(data.role).trim());
-  if (data.ulp != null)
-    sh.getRange(row, COL_USERS.ulp + 1).setValue(String(data.ulp).trim());
-  if (data.kodeUlp != null)
-    sh.getRange(row, COL_USERS.kodeUlp + 1).setValue(
-      String(data.kodeUlp).trim(),
-    );
-  if (data.bidang != null)
-    sh.getRange(row, COL_USERS.bidang + 1).setValue(String(data.bidang).trim());
-  if (data.tim != null)
-    sh.getRange(row, COL_USERS.tim + 1).setValue(String(data.tim).trim());
-  if (data.subTim != null)
-    sh.getRange(row, COL_USERS.subTim + 1).setValue(String(data.subTim).trim());
-  if (data.aksesMenu != null)
-    sh.getRange(row, COL_USERS.aksesMenu + 1).setValue(
-      Array.isArray(data.aksesMenu)
-        ? data.aksesMenu.join(", ")
-        : String(data.aksesMenu),
-    );
-  if (data.password != null && String(data.password).trim())
-    sh.getRange(row, COL_USERS.password + 1).setValue(
-      String(data.password).trim(),
-    );
-  SpreadsheetApp.flush();
-  return { ok: true };
-}
-
-function hapusAkun(token, username) {
-  var sesi = _assertSuperUser(token);
-  var sh = _akunSheet();
-  var target = String(username || "").trim();
-  if (
-    target.toLowerCase() ===
-    String(sesi.username || "")
-      .trim()
-      .toLowerCase()
-  )
-    return {
-      ok: false,
-      message: "Tidak dapat menghapus akun yang sedang login.",
-    };
-  var row = _findRowAkun(sh, target);
-  if (row === -1)
-    return { ok: false, message: "Akun tidak ditemukan: " + target };
-  sh.deleteRow(row);
-  SpreadsheetApp.flush();
-  return { ok: true };
-}
-
-function resetPasswordAkun(token, username, passwordBaru) {
-  _assertSuperUser(token);
-  var sh = _akunSheet();
-  var row = _findRowAkun(sh, String(username || "").trim());
-  if (row === -1) return { ok: false, message: "Akun tidak ditemukan." };
-  if (!String(passwordBaru || "").trim())
-    return { ok: false, message: "Password baru wajib diisi." };
-  sh.getRange(row, COL_USERS.password + 1).setValue(
-    String(passwordBaru).trim(),
-  );
-  SpreadsheetApp.flush();
-  return { ok: true };
-}
-
-function gantiPassword(token, passwordLama, passwordBaru) {
-  try {
-    var sesi = getSesiByToken(token);
-    if (!sesi)
-      return { ok: false, message: "Sesi habis, silakan login ulang." };
-
-    var pwLama = String(passwordLama || "").trim();
-    var pwBaru = String(passwordBaru || "").trim();
-    if (!pwLama || !pwBaru)
-      return { ok: false, message: "Password lama dan baru wajib diisi." };
-    if (pwBaru.length < 4)
-      return { ok: false, message: "Password baru minimal 4 karakter." };
-    if (pwBaru === pwLama)
-      return {
-        ok: false,
-        message: "Password baru tidak boleh sama dengan password lama.",
-      };
-
-    var sh = _akunSheet();
-    var row = _findRowAkun(sh, String(sesi.username || "").trim());
-    if (row === -1) return { ok: false, message: "Akun tidak ditemukan." };
-
-    var pwTersimpan = String(
-      sh.getRange(row, COL_USERS.password + 1).getValue() || "",
-    ).trim();
-    if (pwTersimpan !== pwLama)
-      return { ok: false, message: "Password lama salah." };
-
-    sh.getRange(row, COL_USERS.password + 1).setValue(pwBaru);
-    SpreadsheetApp.flush();
-    return { ok: true, message: "Password berhasil diganti." };
-  } catch (e) {
-    return { ok: false, message: "Error: " + e.message };
-  }
-}
-
 /* ═══ LAPORAN HARIAN (db_Global_Header) ═══ */
 function getMobileLaporanHarian(token, subTim, tim, tanggal, limit) {
   try {
@@ -1478,37 +583,12 @@ function getMobileLaporanHarian(token, subTim, tim, tanggal, limit) {
       return { success: false, message: "Sesi habis, silakan login ulang." };
 
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    // Cari sheet db_Global_Header secara fleksibel (case-insensitive & trim)
     var sh = ss.getSheetByName("db_Global_Header");
-    if (!sh) {
-      var allSheets = ss.getSheets();
-      for (var s = 0; s < allSheets.length; s++) {
-        var sName = allSheets[s].getName().trim().toLowerCase();
-        if (
-          sName === "db_global_header" ||
-          sName === "global_header" ||
-          sName === "db_header"
-        ) {
-          sh = allSheets[s];
-          break;
-        }
-      }
-    }
-
-    if (!sh) {
-      var sheetNames = ss
-        .getSheets()
-        .map(function (s) {
-          return s.getName();
-        })
-        .join(", ");
+    if (!sh)
       return {
         success: false,
-        message:
-          "Sheet db_Global_Header tidak ditemukan. Sheet yang ada: " +
-          sheetNames,
+        message: "Sheet db_Global_Header tidak ditemukan.",
       };
-    }
 
     var lastRow = sh.getLastRow();
     if (lastRow < 2) return { success: true, data: [] };
@@ -1525,55 +605,37 @@ function getMobileLaporanHarian(token, subTim, tim, tanggal, limit) {
 
     var hasil = [];
 
-    // Baca dari baris terbaru (bawah ke atas)
     for (var i = rawData.length - 1; i >= 0; i--) {
       var r = rawData[i];
       var rKodeHeader = String(r[1] || "").trim();
       if (!rKodeHeader) continue;
 
-      var rUlp = String(r[2] || "").trim();
-      var rHari = String(r[3] || "").trim();
       var rTanggal = _normTgl(r[4]);
       var rTim = String(r[5] || "").trim();
       var rSubTim = String(r[6] || "").trim();
-      var rKoorAwal = String(r[7] || "").trim();
-      var rKoorAkhir = String(r[8] || "").trim();
-      var rKmAwal = String(r[9] || "").trim();
-      var rKmAkhir = String(r[10] || "").trim();
-      var rKendala = String(r[11] || "").trim();
-      var rWaText = String(r[12] || "").trim();
-      var rTimestamp = String(r[13] || "").trim();
-      var rInputBy = String(r[14] || "").trim();
-      var rTglUpdate = String(r[15] || "").trim();
-      var rStatusWa = String(r[16] || "").trim();
 
-      // Filter berdasarkan subTim jika diberikan
       if (filterSubTim && rSubTim.toLowerCase() !== filterSubTim) continue;
-
-      // Filter berdasarkan tim jika diberikan
       if (filterTim && rTim.toLowerCase() !== filterTim) continue;
-
-      // Filter berdasarkan tanggal jika diberikan
       if (filterTgl && rTanggal !== filterTgl) continue;
 
       hasil.push({
         no: r[0],
         kodeHeader: rKodeHeader,
-        ulp: rUlp,
-        hari: rHari,
+        ulp: String(r[2] || "").trim(),
+        hari: String(r[3] || "").trim(),
         tanggal: rTanggal,
         tim: rTim,
         subTim: rSubTim,
-        koordinatAwal: rKoorAwal,
-        koordinatAkhir: rKoorAkhir,
-        kmAwal: rKmAwal,
-        kmAkhir: rKmAkhir,
-        kendala: rKendala,
-        waText: rWaText,
-        timestamp: rTimestamp,
-        inputBy: rInputBy,
-        timestampUpdate: rTglUpdate,
-        statusTextWa: rStatusWa,
+        koordinatAwal: String(r[7] || "").trim(),
+        koordinatAkhir: String(r[8] || "").trim(),
+        kmAwal: String(r[9] || "").trim(),
+        kmAkhir: String(r[10] || "").trim(),
+        kendala: String(r[11] || "").trim(),
+        waText: String(r[12] || "").trim(),
+        timestamp: String(r[13] || "").trim(),
+        inputBy: String(r[14] || "").trim(),
+        timestampUpdate: String(r[15] || "").trim(),
+        statusTextWa: String(r[16] || "").trim(),
       });
 
       if (hasil.length >= maxLimit) break;
@@ -1589,10 +651,6 @@ function getMobileLaporanHarian(token, subTim, tim, tanggal, limit) {
 }
 
 /* ═══ MODUL ROW: DROPDOWN & EKSEKUSI (MOBILE LAYER) ═══ */
-
-/**
- * Mengambil list Penyulang dan pemetaan Section untuk form input ROW di mobile
- */
 function getMobileDropdownRow(token) {
   try {
     var sesi = getSesiByToken(token);
@@ -1607,31 +665,31 @@ function getMobileDropdownRow(token) {
 
     var data = shP.getRange(2, 1, shP.getLastRow() - 1, 6).getValues();
     var penyulangSet = {};
-    var sectionByPenyulang = {};
+    var sectionMap = {};
 
     for (var i = 0; i < data.length; i++) {
-      var peny = String(data[i][2] || "").trim(); // Kolom C = Penyulang
-      var sec = String(data[i][4] || "").trim(); // Kolom E = Section
+      var peny = String(data[i][2] || "").trim();
+      var sec = String(data[i][4] || "").trim();
       if (!peny) continue;
 
       if (!penyulangSet[peny]) {
         penyulangSet[peny] = true;
-        sectionByPenyulang[peny] = [];
+        sectionMap[peny] = [];
       }
-      if (sec && sectionByPenyulang[peny].indexOf(sec) === -1) {
-        sectionByPenyulang[peny].push(sec);
+      if (sec && sectionMap[peny].indexOf(sec) === -1) {
+        sectionMap[peny].push(sec);
       }
     }
 
     var listPenyulang = Object.keys(penyulangSet).sort();
     listPenyulang.forEach(function (p) {
-      sectionByPenyulang[p].sort();
+      sectionMap[p].sort();
     });
 
     return {
       success: true,
       penyulang: listPenyulang,
-      sectionByPenyulang: sectionByPenyulang,
+      sectionByPenyulang: sectionMap,
     };
   } catch (err) {
     return {
@@ -1641,9 +699,6 @@ function getMobileDropdownRow(token) {
   }
 }
 
-/**
- * Mengambil list data eksekusi ROW terfilter per Sub-Tim dan Tanggal
- */
 function getMobileEksekusiRow(token, subTim, tim, tanggal, limit) {
   try {
     var sesi = getSesiByToken(token);
@@ -1668,7 +723,6 @@ function getMobileEksekusiRow(token, subTim, tim, tanggal, limit) {
 
     var hasil = [];
 
-    // Baca dari data terbaru (bawah ke atas)
     for (var i = rawData.length - 1; i >= 0; i--) {
       var r = rawData[i];
       var kodeEksekusi = String(r[3] || "").trim();
@@ -1676,7 +730,7 @@ function getMobileEksekusiRow(token, subTim, tim, tanggal, limit) {
       if (!kodeEksekusi && !noTiang) continue;
 
       var rTanggal = _normTgl(r[6]);
-      var rTim = String(r[7] || "").trim(); // Kolom Tim / Sub-Tim
+      var rTim = String(r[7] || "").trim();
 
       if (filterSubTim && rTim.toLowerCase() !== filterSubTim) continue;
       if (filterTim && rTim.toLowerCase() !== filterTim) continue;
@@ -1730,9 +784,6 @@ function getMobileEksekusiRow(token, subTim, tim, tanggal, limit) {
   }
 }
 
-/**
- * Menyimpan data Eksekusi Pekerjaan ROW baru sesuai 18 spesifikasi mobile
- */
 function simpanMobileEksekusiRow(payload) {
   try {
     payload = payload || {};
@@ -1752,20 +803,14 @@ function simpanMobileEksekusiRow(payload) {
     var now = new Date();
     var tz = Session.getScriptTimeZone();
 
-    // 1. Kode Eksekusi: Unique code seperti UNIQUEID() AppSheet (8 char acak)
     var uniqueKode = Utilities.getUuid()
       .replace(/-/g, "")
       .substring(0, 8)
       .toUpperCase();
 
-    // 2. ULP dari sesi login
     var ulp = String(sesi.ulp || "").trim();
-
-    // 4. Tanggal: Today() (yyyy-MM-dd)
     var tglObj = new Date();
     var tglStr = Utilities.formatDate(tglObj, tz, "yyyy-MM-dd");
-
-    // 3. Hari: index dari tanggal
     var hariList = [
       "Minggu",
       "Senin",
@@ -1776,16 +821,12 @@ function simpanMobileEksekusiRow(payload) {
       "Sabtu",
     ];
     var hari = hariList[tglObj.getDay()];
-
-    // 5. Tim dari subTim login
     var tim = String(sesi.subTim || sesi.tim || "ROW").trim();
 
-    // 6 & 7. Penyulang & Section
     var penyulang = String(payload.penyulang || "").trim();
     var section = String(payload.section || "").trim();
     var nomorTiang = String(payload.nomorTiang || "").trim();
 
-    // 8, 9, 10. Koordinat Tiang (lat,long) & pemisahan Lat Tiang & Long Tiang
     var koorTiang = String(payload.koordinatTiang || "").trim();
     var latTiang = "";
     var longTiang = "";
@@ -1795,7 +836,6 @@ function simpanMobileEksekusiRow(payload) {
       longTiang = parseFloat(splitTiang[1].trim()) || "";
     }
 
-    // 11, 12, 13. Koordinat Pekerjaan (lat,long) & pemisahan Lat & Long Pekerjaan
     var koorPek = String(payload.koordinatPekerjaan || "").trim() || koorTiang;
     var latPek = "";
     var longPek = "";
@@ -1805,10 +845,7 @@ function simpanMobileEksekusiRow(payload) {
       longPek = parseFloat(splitPek[1].trim()) || "";
     }
 
-    // 15. Diameter: format num
     var diameter = Number(payload.diameter) || 0;
-
-    // 16. Jenis Pekerjaan: IFS(diameter=0, "Rabas / Pangkas", diameter<=50, "Tebang Sedang", "Tebang Besar")
     var jenisPekerjaan = "Rabas / Pangkas";
     if (diameter > 50) {
       jenisPekerjaan = "Tebang Besar";
@@ -1816,13 +853,9 @@ function simpanMobileEksekusiRow(payload) {
       jenisPekerjaan = "Tebang Sedang";
     }
 
-    // 17. Input Oleh dari username sesi
     var inputOleh = String(sesi.username || "").trim();
-
-    // 18. Timestamp input
     var timestamp = now;
 
-    // 14. Upload Foto: Kamera / Galeri (Base64) - Pola Hierarki Folder & Format Nama AppSheet
     var fSbl = { nama: "", url: "" };
     var fPkj = { nama: "", url: "" };
     var fSsd = { nama: "", url: "" };
@@ -1838,7 +871,6 @@ function simpanMobileEksekusiRow(payload) {
           ? rootFolders.next()
           : DriveApp.createFolder(baseFolderNama);
 
-        // Format bulan: "08. Agustus"
         var bulanList = [
           "Januari",
           "Februari",
@@ -1859,7 +891,6 @@ function simpanMobileEksekusiRow(payload) {
         var tglHari = String(tglObj.getDate());
         var tahunStr = String(tglObj.getFullYear());
 
-        // Path hierarki: AppSheet SiSi - ULP Toboali / Eksekusi ROW / {Tahun} / {Bulan} / {Tgl} / {Tim} / {uniqueKode}
         var subPath = [
           "Eksekusi ROW",
           tahunStr,
@@ -1894,10 +925,7 @@ function simpanMobileEksekusiRow(payload) {
           rawData = parts[1];
         }
         var decoded = Utilities.base64Decode(rawData);
-
-        // Timestamp format jam: HHmmss (misal: 100508)
         var jamStr = Utilities.formatDate(now, "Asia/Jakarta", "HHmmss");
-        // Format Nama AppSheet: {uniqueKode}.{tagTipe}.{HHmmss}.jpg (misal: e3bc4ff3.Foto Sebelum.100508.jpg)
         var fileNameOnly = uniqueKode + "." + tagTipe + "." + jamStr + ".jpg";
 
         var targetFolder = _getFolderRow_();
@@ -1908,83 +936,64 @@ function simpanMobileEksekusiRow(payload) {
           DriveApp.Permission.VIEW,
         );
 
-        // Relative path lengkap seperti format AppSheet:
-        var relativeFilePath = relativeFolderPath + "/" + fileNameOnly;
-        // Direct stream URL Google Drive (cepat untuk Flutter & tidak pernah expired):
-        var directViewUrl =
-          "https://lh3.googleusercontent.com/d/" + file.getId();
-
         return {
-          nama: relativeFilePath,
-          url: directViewUrl,
+          nama: relativeFolderPath + "/" + fileNameOnly,
+          url: "https://lh3.googleusercontent.com/d/" + file.getId(),
         };
       } catch (eFoto) {
-        Logger.log("[_simpanFotoBase64_] Gagal: " + eFoto.message);
         return { nama: "", url: "" };
       }
     }
 
-    if (payload.fotoSebelumBase64) {
+    if (payload.fotoSebelumBase64)
       fSbl = _simpanFotoBase64_(payload.fotoSebelumBase64, "Foto Sebelum");
-    }
-    if (payload.fotoPekerjaanBase64) {
+    if (payload.fotoPekerjaanBase64)
       fPkj = _simpanFotoBase64_(payload.fotoPekerjaanBase64, "Foto Pekerjaan");
-    }
-    if (payload.fotoSesudahBase64) {
+    if (payload.fotoSesudahBase64)
       fSsd = _simpanFotoBase64_(payload.fotoSesudahBase64, "Foto Sesudah");
-    }
 
-    // Susun baris 30 kolom db_ROW_Eksekusi (0-based)
     var baris = new Array(30).fill("");
-    // baris[0] (No) sengaja dibiarkan kosong untuk formula COUNTA sheet
-    baris[1] = ""; // B: Kode Header (diisi otomatis oleh rantai prosesEksekusiROW)
-    baris[2] = ""; // C: Kode Pekerjaan (diisi otomatis oleh rantai prosesEksekusiROW)
-    baris[3] = uniqueKode; // D: Kode Eksekusi (UNIQUEID)
-    baris[4] = ulp; // E: ULP
-    baris[5] = hari; // F: Hari
-    baris[6] = tglObj; // G: Tanggal
-    baris[7] = tim; // H: Tim / Sub-Tim
-    baris[8] = penyulang; // I: Penyulang
-    baris[9] = section; // J: Section
-    baris[10] = nomorTiang; // K: Nomor Tiang
-    baris[11] = koorTiang; // L: Koordinat Tiang
-    baris[12] = latTiang; // M: Lat Tiang
-    baris[13] = longTiang; // N: Long Tiang
-    baris[14] = koorPek; // O: Koordinat Pekerjaan
-    baris[15] = latPek; // P: Lat Pekerjaan
-    baris[16] = longPek; // Q: Long Pekerjaan
-    baris[17] = fSbl.nama; // R: Foto Sebelum
-    baris[18] = fSbl.url; // S: Foto Sebelum URL
-    baris[19] = fPkj.nama; // T: Foto Pekerjaan
-    baris[20] = fPkj.url; // U: Foto Pekerjaan URL
-    baris[21] = fSsd.nama; // V: Foto Sesudah
-    baris[22] = fSsd.url; // W: Foto Sesudah URL
-    baris[23] = diameter; // X: Diameter
-    baris[24] = jenisPekerjaan; // Y: Jenis Pekerjaan
-    baris[25] = fSbl.url ? "Y" : "N"; // Z: Tampil Foto Sebelum
-    baris[26] = fPkj.url ? "Y" : "N"; // AA: Tampil Foto Pekerjaan
-    baris[27] = fSsd.url ? "Y" : "N"; // AB: Tampil Foto Sesudah
-    baris[28] = inputOleh; // AC: Input Oleh
-    baris[29] = timestamp; // AD: Timestamp
+    baris[1] = "";
+    baris[2] = "";
+    baris[3] = uniqueKode;
+    baris[4] = ulp;
+    baris[5] = hari;
+    baris[6] = tglObj;
+    baris[7] = tim;
+    baris[8] = penyulang;
+    baris[9] = section;
+    baris[10] = nomorTiang;
+    baris[11] = koorTiang;
+    baris[12] = latTiang;
+    baris[13] = longTiang;
+    baris[14] = koorPek;
+    baris[15] = latPek;
+    baris[16] = longPek;
+    baris[17] = fSbl.nama;
+    baris[18] = fSbl.url;
+    baris[19] = fPkj.nama;
+    baris[20] = fPkj.url;
+    baris[21] = fSsd.nama;
+    baris[22] = fSsd.url;
+    baris[23] = diameter;
+    baris[24] = jenisPekerjaan;
+    baris[25] = fSbl.url ? "Y" : "N";
+    baris[26] = fPkj.url ? "Y" : "N";
+    baris[27] = fSsd.url ? "Y" : "N";
+    baris[28] = inputOleh;
+    baris[29] = timestamp;
 
-    // Tulis baris baru ke db_ROW_Eksekusi (kolom B..AD)
     var targetRow = sh.getLastRow() + 1;
     sh.getRange(targetRow, 2, 1, 29).setValues([baris.slice(1)]);
     sh.getRange(targetRow, 30).setNumberFormat("dd/MM/yyyy HH:mm:ss");
     SpreadsheetApp.flush();
 
-    // Trigger otomatis rantai bottom-up prosesEksekusiROW agar Kode Header, Kode Pekerjaan,
-    // Realisasi & WA ter-update seketika
     var hasilRantai = null;
     try {
       if (typeof prosesEksekusiROW === "function") {
         hasilRantai = prosesEksekusiROW(uniqueKode);
       }
-    } catch (eRantai) {
-      Logger.log(
-        "[simpanMobileEksekusiRow] prosesEksekusiROW info: " + eRantai.message,
-      );
-    }
+    } catch (eRantai) {}
 
     return {
       success: true,
