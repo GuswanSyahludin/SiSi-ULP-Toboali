@@ -1,7 +1,7 @@
 /* ═════════════════════════════════════
-   Code.gs — SiSi ULP Toboali (BAGIAN 1: INTI / SHARED)
+   Code.gs — SiSi ULP Toboali (BAGIAN 1: INTI / SHARED & WEB + MOBILE ROUTER)
    Google Apps Script Backend
-   Rev: 19 Agu 2026 (Konsolidasi Bersih + Mobile API Layer + Yandal P0 Approval Router)
+   Rev: 19 Agu 2026 (Lengkap Utuh Web Navigasi + Mobile API Layer + Yandal Router)
 ═════════════════════════════════════ */
 
 /* ── Konstanta ── */
@@ -47,6 +47,7 @@ var PAGE_ACCESS_PARENT = {
   "Tek-Data-Checkpoint": "SIE-Teknik",
 };
 
+/* Helper smart include & createHtmlOutput agar tahan path folder maupun non-folder */
 function _getHtmlOutputFromFileSafe_(filename) {
   var possibleNames = [
     PAGE_FILE_ALIASES[filename] || filename,
@@ -233,65 +234,59 @@ function apiRouter_(e, body) {
       // 4. Verifikasi & Approval P0 (db_Yandal_P0, db_Yandal_Pengecekan_Switching, Pengukuran Gardu)
       case "getMobileApprovalP0List":
       case "getApprovalP0List":
-        if (typeof getApprovalP0List === "function") {
-          result = getApprovalP0List(body || p);
-        } else {
-          result = {
-            success: false,
-            message:
-              "Fungsi getApprovalP0List tidak ditemukan di Tek-Yandal-Code.js",
-          };
-        }
+        result =
+          typeof getApprovalP0List === "function"
+            ? getApprovalP0List(body || p)
+            : {
+                ok: false,
+                error:
+                  "getApprovalP0List tidak ditemukan di Tek-Yandal-Code.js",
+              };
         break;
 
       case "setMobileApprovalP0":
       case "setApprovalP0":
-        if (typeof setApprovalP0 === "function") {
-          result = setApprovalP0(body || p);
-        } else {
-          result = {
-            success: false,
-            message:
-              "Fungsi setApprovalP0 tidak ditemukan di Tek-Yandal-Code.js",
-          };
-        }
+        result =
+          typeof setApprovalP0 === "function"
+            ? setApprovalP0(body || p)
+            : {
+                ok: false,
+                error: "setApprovalP0 tidak ditemukan di Tek-Yandal-Code.js",
+              };
         break;
 
       case "getMobileLampiranPengecekanP0":
       case "getLampiranPengecekanP0":
-        if (typeof getLampiranPengecekanP0 === "function") {
-          result = getLampiranPengecekanP0(body || p);
-        } else {
-          result = {
-            success: false,
-            message:
-              "Fungsi getLampiranPengecekanP0 tidak ditemukan di Tek-Yandal-Code.js",
-          };
-        }
+        result =
+          typeof getLampiranPengecekanP0 === "function"
+            ? getLampiranPengecekanP0(body || p)
+            : {
+                ok: false,
+                error:
+                  "getLampiranPengecekanP0 tidak ditemukan di Tek-Yandal-Code.js",
+              };
         break;
 
       case "getListPekerjaanP0":
-        if (typeof getListPekerjaanP0 === "function") {
-          result = getListPekerjaanP0();
-        } else {
-          result = {
-            success: false,
-            message:
-              "Fungsi getListPekerjaanP0 tidak ditemukan di Tek-Yandal-Code.js",
-          };
-        }
+        result =
+          typeof getListPekerjaanP0 === "function"
+            ? getListPekerjaanP0()
+            : {
+                ok: false,
+                error:
+                  "getListPekerjaanP0 tidak ditemukan di Tek-Yandal-Code.js",
+              };
         break;
 
       case "updateNamaPekerjaanP0":
-        if (typeof updateNamaPekerjaanP0 === "function") {
-          result = updateNamaPekerjaanP0(body || p);
-        } else {
-          result = {
-            success: false,
-            message:
-              "Fungsi updateNamaPekerjaanP0 tidak ditemukan di Tek-Yandal-Code.js",
-          };
-        }
+        result =
+          typeof updateNamaPekerjaanP0 === "function"
+            ? updateNamaPekerjaanP0(body || p)
+            : {
+                ok: false,
+                error:
+                  "updateNamaPekerjaanP0 tidak ditemukan di Tek-Yandal-Code.js",
+              };
         break;
 
       default:
@@ -309,7 +304,7 @@ function apiRouter_(e, body) {
   );
 }
 
-/* ═══ ENTRY POINT ═══ */
+/* ═══ ENTRY POINT (GET) ═══ */
 function doGet(e) {
   if (e && e.parameter && e.parameter.mobile) return apiRouter_(e, null);
 
@@ -350,7 +345,7 @@ function doGet(e) {
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
 }
 
-/* ═══ WEBHOOK (POST) ═══ */
+/* ═══ WEBHOOK & ENTRY POINT (POST) ═══ */
 var WEBHOOK_SECRET = "GANTI_DENGAN_SECRET_KAMU";
 
 function doPost(e) {
@@ -572,6 +567,319 @@ function doLogin(username, password) {
     return { success: false, message: "Username tidak ditemukan" };
   } catch (e) {
     return { success: false, message: "Error: " + e.message };
+  }
+}
+
+/* ═══ HALAMAN KONTEN WEB (PINDAH HALAMAN WEBPAGE) ═══ */
+function getPageContent(token, pageName) {
+  try {
+    if (!token)
+      return {
+        success: false,
+        message: "Token tidak ditemukan",
+        redirect: "login",
+      };
+    var sesi = getSesiByToken(token);
+    if (!sesi)
+      return {
+        success: false,
+        message: "Sesi habis, silakan login ulang",
+        redirect: "login",
+      };
+    if (!_bolehAksesMenu(sesi, pageName))
+      return {
+        success: false,
+        message: "Akses ditolak",
+        redirect: "forbidden",
+      };
+
+    var html = _getHtmlOutputFromFileSafe_(pageName).getContent();
+    return {
+      success: true,
+      html: html,
+      sesi: {
+        username: sesi.username,
+        email: sesi.email,
+        role: sesi.role,
+        ulp: sesi.ulp,
+        kodeUlp: sesi.kodeUlp,
+        bidang: sesi.bidang,
+        tim: sesi.tim,
+        subTim: sesi.subTim || "",
+        aksesMenu: sesi.aksesMenu || "",
+      },
+    };
+  } catch (e) {
+    return { success: false, message: "Halaman tidak ditemukan: " + e.message };
+  }
+}
+
+function _pagesByBidang(bidang) {
+  switch (String(bidang || "").trim()) {
+    case "Teknik":
+      return FULL_ACCESS_PAGES;
+    case "PP":
+      return PP_PAGES;
+    case "TE":
+      return TE_PAGES;
+    case "K3":
+      return K3_PAGES;
+    default:
+      return [];
+  }
+}
+
+var TIM_PAGE_MAP = {
+  "Inspeksi Jaringan": "Tek-InsJar",
+  "Inspeksi Gardu": "Tek-InsDu",
+  ROW: "Tek-ROW",
+  Yantek: "Tek-Yandal",
+  Hartek: "Tek-Hartek",
+  Gangguan: "Tek-Gangguan",
+};
+
+function _parseAksesMenu(v) {
+  return String(v || "")
+    .split(",")
+    .map(function (s) {
+      return s.trim();
+    })
+    .filter(function (s) {
+      return s;
+    });
+}
+
+function _bolehAksesMenu(sesi, page) {
+  if (!page) return false;
+  var role = String((sesi && sesi.role) || "").trim();
+  if (role === "Super User") return true;
+  var akses = _parseAksesMenu(sesi && sesi.aksesMenu);
+  if (akses.indexOf(page) >= 0) return true;
+  var parent = PAGE_ACCESS_PARENT[page] || "";
+  return !!parent && akses.indexOf(parent) >= 0;
+}
+
+/* ═══ PENGATURAN AKSES AKUN (khusus Super User) ═══ */
+function _akunSheet() {
+  var sh = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName("db_Users");
+  if (!sh) throw new Error("Sheet db_Users tidak ditemukan");
+  return sh;
+}
+
+function _assertSuperUser(token) {
+  var sesi = getSesiByToken(token);
+  if (!sesi) throw new Error("Sesi habis, silakan login ulang.");
+  if (String(sesi.role || "").trim() !== "Super User")
+    throw new Error("Akses ditolak: menu ini khusus Super User.");
+  return sesi;
+}
+
+function _findRowAkun(sh, username) {
+  var data = sh.getDataRange().getValues();
+  var target = String(username || "")
+    .trim()
+    .toLowerCase();
+  for (var i = 1; i < data.length; i++) {
+    if (
+      String(data[i][COL_USERS.userName] || "")
+        .trim()
+        .toLowerCase() === target
+    )
+      return i + 1;
+  }
+  return -1;
+}
+
+function getMenuOptions(token) {
+  _assertSuperUser(token);
+  return [
+    { key: "PP-Dashboard", label: "Dashboard PP" },
+    { key: "Tek-Dashboard", label: "Dashboard Teknik" },
+    { key: "Tek-ROW", label: "Tim ROW" },
+    { key: "Tek-InsDu", label: "Inspeksi Gardu" },
+    { key: "Tek-PengukuranGardu", label: "Pengukuran Gardu" },
+    { key: "Tek-InsJar", label: "Inspeksi Jaringan" },
+    { key: "Temuan-Inspeksi", label: "Temuan Inspeksi" },
+    { key: "Tek-Yandal", label: "Tim Yandal" },
+    { key: "Tek-Hartek", label: "Tim Hartek" },
+    { key: "Tek-Gangguan", label: "Gangguan Penyulang" },
+    { key: "SIE-Teknik", label: "SIE Teknik" },
+    { key: "TE-Dashboard", label: "Dashboard TE" },
+    { key: "K3-Dashboard", label: "Dashboard K3" },
+  ];
+}
+
+function getDaftarAkun(token) {
+  _assertSuperUser(token);
+  var sh = _akunSheet();
+  var data = sh.getDataRange().getValues();
+  var rows = [];
+  for (var i = 1; i < data.length; i++) {
+    var r = data[i];
+    if (!String(r[COL_USERS.userName] || "").trim()) continue;
+    rows.push({
+      no: r[COL_USERS.no],
+      email: String(r[COL_USERS.email] || "").trim(),
+      username: String(r[COL_USERS.userName] || "").trim(),
+      role: String(r[COL_USERS.role] || "").trim(),
+      ulp: String(r[COL_USERS.ulp] || "").trim(),
+      kodeUlp: String(r[COL_USERS.kodeUlp] || "").trim(),
+      bidang: String(r[COL_USERS.bidang] || "").trim(),
+      tim: String(r[COL_USERS.tim] || "").trim(),
+      subTim: String(r[COL_USERS.subTim] || "").trim(),
+      aksesMenu: _parseAksesMenu(r[COL_USERS.aksesMenu]),
+    });
+  }
+  return { ok: true, rows: rows };
+}
+
+function tambahAkun(token, data) {
+  _assertSuperUser(token);
+  data = data || {};
+  var sh = _akunSheet();
+  var uname = String(data.username || "").trim();
+  if (!uname) return { ok: false, message: "Username wajib diisi." };
+  if (!String(data.password || "").trim())
+    return { ok: false, message: "Password wajib diisi." };
+  if (_findRowAkun(sh, uname) !== -1)
+    return { ok: false, message: "Username sudah dipakai." };
+
+  var akses = Array.isArray(data.aksesMenu)
+    ? data.aksesMenu.join(", ")
+    : String(data.aksesMenu || "");
+  var baris = [];
+  baris[COL_USERS.no] = sh.getLastRow();
+  baris[COL_USERS.email] = String(data.email || "").trim();
+  baris[COL_USERS.userName] = uname;
+  baris[COL_USERS.password] = String(data.password || "").trim();
+  baris[COL_USERS.role] = String(data.role || "").trim();
+  baris[COL_USERS.ulp] = String(data.ulp || "").trim();
+  baris[COL_USERS.kodeUlp] = String(data.kodeUlp || "").trim();
+  baris[COL_USERS.bidang] = String(data.bidang || "").trim();
+  baris[COL_USERS.tim] = String(data.tim || "").trim();
+  baris[COL_USERS.subTim] = String(data.subTim || "").trim();
+  baris[COL_USERS.aksesMenu] = akses;
+  sh.appendRow(baris);
+  SpreadsheetApp.flush();
+  return { ok: true };
+}
+
+function updateAkun(token, data) {
+  _assertSuperUser(token);
+  data = data || {};
+  var sh = _akunSheet();
+  var target = String(data.targetUsername || data.username || "").trim();
+  var row = _findRowAkun(sh, target);
+  if (row === -1)
+    return { ok: false, message: "Akun tidak ditemukan: " + target };
+
+  var unameBaru = String(data.username || "").trim() || target;
+  if (
+    unameBaru.toLowerCase() !== target.toLowerCase() &&
+    _findRowAkun(sh, unameBaru) !== -1
+  )
+    return { ok: false, message: "Username baru sudah dipakai." };
+
+  sh.getRange(row, COL_USERS.userName + 1).setValue(unameBaru);
+  if (data.email != null)
+    sh.getRange(row, COL_USERS.email + 1).setValue(String(data.email).trim());
+  if (data.role != null)
+    sh.getRange(row, COL_USERS.role + 1).setValue(String(data.role).trim());
+  if (data.ulp != null)
+    sh.getRange(row, COL_USERS.ulp + 1).setValue(String(data.ulp).trim());
+  if (data.kodeUlp != null)
+    sh.getRange(row, COL_USERS.kodeUlp + 1).setValue(
+      String(data.kodeUlp).trim(),
+    );
+  if (data.bidang != null)
+    sh.getRange(row, COL_USERS.bidang + 1).setValue(String(data.bidang).trim());
+  if (data.tim != null)
+    sh.getRange(row, COL_USERS.tim + 1).setValue(String(data.tim).trim());
+  if (data.subTim != null)
+    sh.getRange(row, COL_USERS.subTim + 1).setValue(String(data.subTim).trim());
+  if (data.aksesMenu != null)
+    sh.getRange(row, COL_USERS.aksesMenu + 1).setValue(
+      Array.isArray(data.aksesMenu)
+        ? data.aksesMenu.join(", ")
+        : String(data.aksesMenu),
+    );
+  if (data.password != null && String(data.password).trim())
+    sh.getRange(row, COL_USERS.password + 1).setValue(
+      String(data.password).trim(),
+    );
+  SpreadsheetApp.flush();
+  return { ok: true };
+}
+
+function hapusAkun(token, username) {
+  var sesi = _assertSuperUser(token);
+  var sh = _akunSheet();
+  var target = String(username || "").trim();
+  if (
+    target.toLowerCase() ===
+    String(sesi.username || "")
+      .trim()
+      .toLowerCase()
+  )
+    return {
+      ok: false,
+      message: "Tidak dapat menghapus akun yang sedang login.",
+    };
+  var row = _findRowAkun(sh, target);
+  if (row === -1)
+    return { ok: false, message: "Akun tidak ditemukan: " + target };
+  sh.deleteRow(row);
+  SpreadsheetApp.flush();
+  return { ok: true };
+}
+
+function resetPasswordAkun(token, username, passwordBaru) {
+  _assertSuperUser(token);
+  var sh = _akunSheet();
+  var row = _findRowAkun(sh, String(username || "").trim());
+  if (row === -1) return { ok: false, message: "Akun tidak ditemukan." };
+  if (!String(passwordBaru || "").trim())
+    return { ok: false, message: "Password baru wajib diisi." };
+  sh.getRange(row, COL_USERS.password + 1).setValue(
+    String(passwordBaru).trim(),
+  );
+  SpreadsheetApp.flush();
+  return { ok: true };
+}
+
+function gantiPassword(token, passwordLama, passwordBaru) {
+  try {
+    var sesi = getSesiByToken(token);
+    if (!sesi)
+      return { ok: false, message: "Sesi habis, silakan login ulang." };
+
+    var pwLama = String(passwordLama || "").trim();
+    var pwBaru = String(passwordBaru || "").trim();
+    if (!pwLama || !pwBaru)
+      return { ok: false, message: "Password lama dan baru wajib diisi." };
+    if (pwBaru.length < 4)
+      return { ok: false, message: "Password baru minimal 4 karakter." };
+    if (pwBaru === pwLama)
+      return {
+        ok: false,
+        message: "Password baru tidak boleh sama dengan password lama.",
+      };
+
+    var sh = _akunSheet();
+    var row = _findRowAkun(sh, String(sesi.username || "").trim());
+    if (row === -1) return { ok: false, message: "Akun tidak ditemukan." };
+
+    var pwTersimpan = String(
+      sh.getRange(row, COL_USERS.password + 1).getValue() || "",
+    ).trim();
+    if (pwTersimpan !== pwLama)
+      return { ok: false, message: "Password lama salah." };
+
+    sh.getRange(row, COL_USERS.password + 1).setValue(pwBaru);
+    SpreadsheetApp.flush();
+    return { ok: true, message: "Password berhasil diganti." };
+  } catch (e) {
+    return { ok: false, message: "Error: " + e.message };
   }
 }
 

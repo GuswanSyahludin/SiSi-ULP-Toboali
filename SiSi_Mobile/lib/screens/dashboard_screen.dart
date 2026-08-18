@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-
 import '../theme/app_colors.dart';
 import 'laporan_harian_screen.dart';
 import 'eksekusi_row_screen.dart';
+import 'verifikasi_p0_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final Map<String, dynamic> sesi;
@@ -14,12 +14,11 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen>
     with SingleTickerProviderStateMixin {
-  int selectedIndex = -1; // -1 = no menu, show greeting
+  int selectedIndex = -1;
   int previousIndex = -1;
   late AnimationController _bubbleController;
   late Animation<double> _bubbleAnimation;
 
-  // Sub-layar aktif di dalam Tab Tim (Persistent Bottom Nav)
   Widget? _activeSubScreen;
   Map<String, dynamic>? _selectedTeamDetail;
 
@@ -34,12 +33,12 @@ class _DashboardScreenState extends State<DashboardScreen>
     {
       'name': 'Inspeksi Gardu',
       'category': 'Inspeksi',
-      'icon': Icons.electrical_services_rounded,
+      'icon': Icons.electrical_services_rounded
     },
     {
       'name': 'Inspeksi Jaringan',
       'category': 'Inspeksi',
-      'icon': Icons.alt_route_rounded,
+      'icon': Icons.alt_route_rounded
     },
     {'name': 'Hartek', 'category': 'Hartek', 'icon': Icons.engineering_rounded},
     {'name': 'ROW 01', 'category': 'ROW', 'icon': Icons.park_rounded},
@@ -92,7 +91,10 @@ class _DashboardScreenState extends State<DashboardScreen>
         Icons.settings_outlined,
       ];
     }
-    return [Icons.people_outline_rounded, Icons.settings_outlined];
+    return [
+      Icons.people_outline_rounded,
+      Icons.settings_outlined,
+    ];
   }
 
   void _selectMenu(int index) {
@@ -137,8 +139,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       },
       child: Scaffold(
         backgroundColor: AppColors.neutral100,
-        body:
-            _activeSubScreen ??
+        body: _activeSubScreen ??
             (selectedIndex == -1
                 ? _buildGreetingView()
                 : _buildTabContent(selectedIndex)),
@@ -153,10 +154,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                   builder: (context, child) {
                     double? notchX;
                     if (selectedIndex >= 0) {
-                      final targetX = _getTabCenterX(
-                        selectedIndex,
-                        screenWidth,
-                      );
+                      final targetX =
+                          _getTabCenterX(selectedIndex, screenWidth);
                       final startX = previousIndex >= 0
                           ? _getTabCenterX(previousIndex, screenWidth)
                           : targetX;
@@ -174,10 +173,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                   AnimatedBuilder(
                     animation: _bubbleAnimation,
                     builder: (context, child) {
-                      final targetX = _getTabCenterX(
-                        selectedIndex,
-                        screenWidth,
-                      );
+                      final targetX =
+                          _getTabCenterX(selectedIndex, screenWidth);
                       final startX = previousIndex >= 0
                           ? _getTabCenterX(previousIndex, screenWidth)
                           : targetX;
@@ -268,14 +265,11 @@ class _DashboardScreenState extends State<DashboardScreen>
       appBar: AppBar(
         backgroundColor: AppColors.navy700,
         elevation: 0,
-        title: const Text(
-          'SiSi Dashboard',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
+        title: const Text('SiSi Dashboard',
+            style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white)),
       ),
       body: Center(
         child: Column(
@@ -292,7 +286,10 @@ class _DashboardScreenState extends State<DashboardScreen>
             const SizedBox(height: 8),
             const Text(
               'Semangat Pagi!!!',
-              style: TextStyle(fontSize: 20, color: AppColors.navy700),
+              style: TextStyle(
+                fontSize: 20,
+                color: AppColors.navy700,
+              ),
             ),
           ],
         ),
@@ -334,21 +331,18 @@ class _DashboardScreenState extends State<DashboardScreen>
         appBar: AppBar(
           backgroundColor: AppColors.navy700,
           elevation: 0,
-          title: const Text(
-            'SiSi — Tim Operasional',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
+          title: const Text('SiSi — Tim Operasional',
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white)),
         ),
         body: _buildSuperUserTeamGrid(),
       );
     }
 
-    final userSubTim = (widget.sesi['subTim'] ?? widget.sesi['tim'] ?? 'ROW')
-        .toString();
+    final userSubTim =
+        (widget.sesi['subTim'] ?? widget.sesi['tim'] ?? 'ROW').toString();
     String category = 'ROW';
     if (userSubTim.toLowerCase().contains('yandal')) {
       category = 'Yandal';
@@ -367,8 +361,8 @@ class _DashboardScreenState extends State<DashboardScreen>
       'icon': category == 'Inspeksi Gardu'
           ? Icons.electrical_services_rounded
           : (category == 'Inspeksi Jaringan'
-                ? Icons.alt_route_rounded
-                : Icons.engineering_rounded),
+              ? Icons.alt_route_rounded
+              : Icons.engineering_rounded),
     });
   }
 
@@ -379,10 +373,9 @@ class _DashboardScreenState extends State<DashboardScreen>
         const Text(
           'Daftar 12 Tim Operasional',
           style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: AppColors.navy700,
-          ),
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppColors.navy700),
         ),
         const SizedBox(height: 4),
         Text(
@@ -413,10 +406,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                   border: Border.all(color: Colors.grey.shade200),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
+                        color: Colors.black.withOpacity(0.03),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2)),
                   ],
                 ),
                 child: Column(
@@ -429,11 +421,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                         color: AppColors.navy700.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(
-                        team['icon'],
-                        color: AppColors.navy700,
-                        size: 20,
-                      ),
+                      child: Icon(team['icon'],
+                          color: AppColors.navy700, size: 20),
                     ),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -441,17 +430,14 @@ class _DashboardScreenState extends State<DashboardScreen>
                         Text(
                           team['name'],
                           style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.navy700,
-                          ),
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.navy700),
                         ),
                         Text(
                           team['category'],
                           style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey.shade600,
-                          ),
+                              fontSize: 11, color: Colors.grey.shade600),
                         ),
                       ],
                     ),
@@ -475,12 +461,12 @@ class _DashboardScreenState extends State<DashboardScreen>
         {
           'title': 'Laporan Harian',
           'icon': Icons.description_outlined,
-          'desc': 'Input & pantau laporan inspeksi jaringan harian',
+          'desc': 'Input & pantau laporan inspeksi jaringan harian'
         },
         {
           'title': 'Rekap Temuan',
           'icon': Icons.assessment_outlined,
-          'desc': 'Rekapitulasi dan daftar temuan anomali jaringan',
+          'desc': 'Rekapitulasi dan daftar temuan anomali jaringan'
         },
       ];
     } else if (category == 'Inspeksi Gardu' || name == 'Inspeksi Gardu') {
@@ -488,12 +474,12 @@ class _DashboardScreenState extends State<DashboardScreen>
         {
           'title': 'Laporan Harian',
           'icon': Icons.description_outlined,
-          'desc': 'Input & pantau laporan inspeksi gardu harian',
+          'desc': 'Input & pantau laporan inspeksi gardu harian'
         },
         {
           'title': 'Master Gardu',
           'icon': Icons.account_tree_outlined,
-          'desc': 'Data master gardu distribusi & anomali',
+          'desc': 'Data master gardu distribusi & anomali'
         },
       ];
     } else if (category.contains('ROW')) {
@@ -501,17 +487,17 @@ class _DashboardScreenState extends State<DashboardScreen>
         {
           'title': 'Laporan Harian',
           'icon': Icons.description_outlined,
-          'desc': 'Input & pantau laporan kerja harian',
+          'desc': 'Input & pantau laporan kerja harian'
         },
         {
           'title': 'Tindak Lanjut Temuan',
           'icon': Icons.assignment_turned_in_outlined,
-          'desc': 'Eksekusi temuan pohon / raba-raba',
+          'desc': 'Eksekusi temuan pohon / raba-raba'
         },
         {
           'title': 'Eksekusi Pekerjaan',
           'icon': Icons.cut_rounded,
-          'desc': 'Pekerjaan penebangan & pemangkasan',
+          'desc': 'Pekerjaan penebangan & pemangkasan'
         },
       ];
     } else if (category.contains('Hartek')) {
@@ -519,12 +505,12 @@ class _DashboardScreenState extends State<DashboardScreen>
         {
           'title': 'Laporan Harian',
           'icon': Icons.description_outlined,
-          'desc': 'Logbook pemeliharaan teknis',
+          'desc': 'Logbook pemeliharaan teknis'
         },
         {
           'title': 'Tindak Lanjut Temuan',
           'icon': Icons.assignment_turned_in_outlined,
-          'desc': 'Perbaikan material & konstruksi',
+          'desc': 'Perbaikan material & konstruksi'
         },
       ];
     } else if (category.contains('Yandal')) {
@@ -532,22 +518,22 @@ class _DashboardScreenState extends State<DashboardScreen>
         {
           'title': 'Laporan Harian',
           'icon': Icons.description_outlined,
-          'desc': 'Laporan shift dan pelayanan gangguan',
+          'desc': 'Laporan shift dan pelayanan gangguan'
         },
         {
           'title': 'Tindak Lanjut Temuan',
           'icon': Icons.assignment_turned_in_outlined,
-          'desc': 'Penanganan keluhan & gangguan',
+          'desc': 'Penanganan keluhan & gangguan'
         },
         {
           'title': 'Laporan kWh Siaga',
           'icon': Icons.speed_rounded,
-          'desc': 'Pencatatan monitoring stand kWh',
+          'desc': 'Pencatatan monitoring stand kWh'
         },
         {
           'title': 'Rejected P0',
           'icon': Icons.cancel_outlined,
-          'desc': 'Daftar penugasan P0 yang ditolak',
+          'desc': 'Daftar penugasan P0 yang ditolak'
         },
       ];
     } else {
@@ -555,12 +541,12 @@ class _DashboardScreenState extends State<DashboardScreen>
         {
           'title': 'Laporan Harian',
           'icon': Icons.description_outlined,
-          'desc': 'Laporan inspeksi lapangan',
+          'desc': 'Laporan inspeksi lapangan'
         },
         {
           'title': 'Tindak Lanjut Temuan',
           'icon': Icons.assignment_turned_in_outlined,
-          'desc': 'Evaluasi anomali gardu/jaringan',
+          'desc': 'Evaluasi anomali gardu/jaringan'
         },
       ];
     }
@@ -576,14 +562,11 @@ class _DashboardScreenState extends State<DashboardScreen>
                 onPressed: () => setState(() => _selectedTeamDetail = null),
               )
             : null,
-        title: Text(
-          team['name'],
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
+        title: Text(team['name'],
+            style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white)),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -602,11 +585,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                     color: Colors.white.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(
-                    team['icon'] ?? Icons.people,
-                    color: Colors.white,
-                    size: 28,
-                  ),
+                  child: Icon(team['icon'] ?? Icons.people,
+                      color: Colors.white, size: 28),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -616,18 +596,15 @@ class _DashboardScreenState extends State<DashboardScreen>
                       Text(
                         team['name'],
                         style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         'Kategori: ${team['category']}',
                         style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.white.withOpacity(0.8),
-                        ),
+                            fontSize: 12, color: Colors.white.withOpacity(0.8)),
                       ),
                     ],
                   ),
@@ -639,119 +616,94 @@ class _DashboardScreenState extends State<DashboardScreen>
           const Text(
             'Menu Pekerjaan',
             style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: AppColors.navy700,
-            ),
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: AppColors.navy700),
           ),
           const SizedBox(height: 10),
-          ...subActions.map(
-            (action) => Card(
-              margin: const EdgeInsets.only(bottom: 10),
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: Colors.grey.shade200),
-              ),
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 6,
+          ...subActions.map((action) => Card(
+                margin: const EdgeInsets.only(bottom: 10),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: Colors.grey.shade200),
                 ),
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.navy700.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(8),
+                child: ListTile(
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.navy700.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(action['icon'],
+                        color: AppColors.navy700, size: 22),
                   ),
-                  child: Icon(action['icon'], color: AppColors.navy700),
-                ),
-                title: Text(
-                  action['title'],
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
+                  title: Text(
+                    action['title'],
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: AppColors.navy700),
                   ),
-                ),
-                subtitle: Text(
-                  action['desc'],
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                ),
-                trailing: const Icon(
-                  Icons.chevron_right_rounded,
-                  color: Colors.grey,
-                ),
-                onTap: () {
-                  if (action['title'] == 'Laporan Harian') {
-                    _openSubScreen(
-                      LaporanHarianScreen(
+                  subtitle: Text(
+                    action['desc'],
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
+                  trailing: const Icon(Icons.arrow_forward_ios_rounded,
+                      size: 14, color: Colors.grey),
+                  onTap: () {
+                    final title = action['title'];
+                    if (title == 'Laporan Harian') {
+                      _openSubScreen(LaporanHarianScreen(
                         sesi: widget.sesi,
                         targetSubTim: team['name'],
                         targetTim: team['category'],
-                      ),
-                    );
-                  } else if (action['title'] == 'Eksekusi Pekerjaan') {
-                    _openSubScreen(
-                      EksekusiRowScreen(
+                      ));
+                    } else if (title == 'Eksekusi Pekerjaan') {
+                      _openSubScreen(EksekusiRowScreen(
                         sesi: widget.sesi,
                         targetSubTim: team['name'],
                         targetTim: team['category'],
-                      ),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          '${action['title']} (${team['name']}) akan dibuka',
-                        ),
-                      ),
-                    );
-                  }
-                },
-              ),
-            ),
-          ),
+                      ));
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Menu $title segera hadir')),
+                      );
+                    }
+                  },
+                ),
+              )),
         ],
       ),
     );
   }
 
+  // ══════════════════════════════════════════
+  // TAB 2: MENU TEKNIK (VERIFIKASI P0 ROUTING)
+  // ══════════════════════════════════════════
   Widget _buildMenuTeknik() {
-    final subTeknik = [
-      {
-        'title': 'Penugasan Tim',
-        'icon': Icons.assignment_ind_outlined,
-        'desc': 'Plotting jadwal & penugasan personil lapangan',
-      },
-      {
-        'title': 'Penggantian Tim Yandal',
-        'icon': Icons.swap_horiz_rounded,
-        'desc': 'Rolling shift dan penggantian personil Yandal',
-      },
+    final List<Map<String, dynamic>> subTeknik = [
       {
         'title': 'Verifikasi P0',
         'icon': Icons.verified_outlined,
-        'desc': 'Approval & verifikasi data padam P0',
+        'desc': 'Verifikasi & persetujuan penugasan P0 Yandal',
       },
       {
-        'title': 'Input Temuan Inspeksi',
-        'icon': Icons.add_photo_alternate_outlined,
-        'desc': 'Input temuan anomali gardu / jaringan',
+        'title': 'Checkpoint Jaringan',
+        'icon': Icons.location_on_outlined,
+        'desc': 'Monitoring dan data checkpoint jalur penyulang',
       },
       {
-        'title': 'Pindah Tim Eksekusi TO',
-        'icon': Icons.move_up_rounded,
-        'desc': 'Disposisi target operasi ke tim eksekusi',
+        'title': 'Rekap Gangguan',
+        'icon': Icons.electric_bolt_outlined,
+        'desc': 'Rekapitulasi padam & gangguan distribusi',
       },
       {
-        'title': 'Laporan UP3',
-        'icon': Icons.summarize_outlined,
-        'desc': 'Rekapitulasi dan laporan tingkat UP3',
-      },
-      {
-        'title': 'Laporan UIW',
-        'icon': Icons.analytics_outlined,
-        'desc': 'Rekapitulasi dan laporan tingkat UIW',
+        'title': 'Laporan UP3 / UIW',
+        'icon': Icons.assessment_outlined,
+        'desc': 'Format pelaporan hierarki harian unit induk',
       },
     ];
 
@@ -760,79 +712,68 @@ class _DashboardScreenState extends State<DashboardScreen>
       appBar: AppBar(
         backgroundColor: AppColors.navy700,
         elevation: 0,
-        title: const Text(
-          'SiSi — Teknik',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
+        title: const Text('SiSi — Menu Teknik',
+            style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white)),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           const Text(
-            'Manajemen Operasional Teknik',
+            'Modul Verifikasi & Monitoring Teknik',
             style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.navy700,
-            ),
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: AppColors.navy700),
           ),
-          const SizedBox(height: 4),
-          Text(
-            'Kelola penugasan, verifikasi, dan pelaporan teknik ULP',
-            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-          ),
-          const SizedBox(height: 16),
-          ...subTeknik.map(
-            (item) => Card(
-              margin: const EdgeInsets.only(bottom: 10),
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: Colors.grey.shade200),
-              ),
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 6,
+          const SizedBox(height: 12),
+          ...subTeknik.map((item) => Card(
+                margin: const EdgeInsets.only(bottom: 10),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: Colors.grey.shade200),
                 ),
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.navy700.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(8),
+                child: ListTile(
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.navy700.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child:
+                        Icon(item['icon'], color: AppColors.navy700, size: 22),
                   ),
-                  child: Icon(
-                    item['icon'] as IconData,
-                    color: AppColors.navy700,
+                  title: Text(
+                    item['title'],
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: AppColors.navy700),
                   ),
-                ),
-                title: Text(
-                  item['title'] as String,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
+                  subtitle: Text(
+                    item['desc'],
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                   ),
+                  trailing: const Icon(Icons.arrow_forward_ios_rounded,
+                      size: 14, color: Colors.grey),
+                  onTap: () {
+                    if (item['title'] == 'Verifikasi P0') {
+                      _openSubScreen(VerifikasiP0Screen(sesi: widget.sesi));
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content:
+                                Text('Menu ${item['title']} segera hadir')),
+                      );
+                    }
+                  },
                 ),
-                subtitle: Text(
-                  item['desc'] as String,
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                ),
-                trailing: const Icon(
-                  Icons.chevron_right_rounded,
-                  color: Colors.grey,
-                ),
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('${item['title']} akan dibuka')),
-                  );
-                },
-              ),
-            ),
-          ),
+              )),
         ],
       ),
     );
@@ -844,96 +785,40 @@ class _DashboardScreenState extends State<DashboardScreen>
       appBar: AppBar(
         backgroundColor: AppColors.navy700,
         elevation: 0,
-        title: const Text(
-          'SiSi — Pengaturan',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
+        title: const Text('SiSi — Pengaturan',
+            style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white)),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 26,
-                  backgroundColor: AppColors.navy700,
-                  child: Text(
-                    (widget.sesi['username'] ?? 'U')[0].toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 20,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.sesi['username'] ?? 'Pengguna',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.navy700,
-                        ),
-                      ),
-                      Text(
-                        '${widget.sesi['role'] ?? '-'} • ${widget.sesi['subTim'] ?? widget.sesi['tim'] ?? '-'}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+          Card(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: ListTile(
+              leading: const Icon(Icons.account_circle_outlined,
+                  color: AppColors.navy700),
+              title: Text(widget.sesi['username'] ?? 'User',
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Text('${widget.sesi['role']} • ${widget.sesi['ulp']}'),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: Colors.grey.shade200),
-            ),
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(
-                    Icons.lock_reset_rounded,
-                    color: AppColors.navy700,
-                  ),
-                  title: const Text('Ganti Password'),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () {},
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(
-                    Icons.logout_rounded,
-                    color: Colors.redAccent,
-                  ),
-                  title: const Text(
-                    'Keluar / Logout',
-                    style: TextStyle(color: Colors.redAccent),
-                  ),
-                  onTap: () => Navigator.of(context).pop(),
-                ),
-              ],
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: ListTile(
+              leading:
+                  const Icon(Icons.logout_rounded, color: Colors.redAccent),
+              title: const Text('Keluar dari Akun',
+                  style: TextStyle(
+                      color: Colors.redAccent, fontWeight: FontWeight.bold)),
+              onTap: () {
+                Navigator.of(context)
+                    .pushNamedAndRemoveUntil('/login', (route) => false);
+              },
             ),
           ),
         ],
@@ -944,70 +829,43 @@ class _DashboardScreenState extends State<DashboardScreen>
 
 class NavbarWithNotchPainter extends CustomPainter {
   final double? notchCenterX;
-
   NavbarWithNotchPainter({this.notchCenterX});
 
   @override
   void paint(Canvas canvas, Size size) {
-    final bgPaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
-
+    final bgPaint = Paint()..color = Colors.white;
     final borderPaint = Paint()
-      ..color = AppColors.navy700
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
+      ..color = Colors.grey.shade300
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
 
     final path = Path();
-    final borderPath = Path();
+    path.moveTo(0, 0);
 
-    if (notchCenterX == null) {
-      path.addRect(Rect.fromLTWH(0, 0, size.width, size.height));
-      borderPath.moveTo(0, 0);
-      borderPath.lineTo(size.width, 0);
-    } else {
-      const notchRadius = 30.0;
-      final cx = notchCenterX!;
+    if (notchCenterX != null) {
+      const notchRadius = 28.0;
+      final startX = notchCenterX! - notchRadius;
+      final endX = notchCenterX! + notchRadius;
 
-      path.moveTo(0, 0);
-      borderPath.moveTo(0, 0);
-
-      path.lineTo(cx - notchRadius - 10, 0);
-      borderPath.lineTo(cx - notchRadius - 10, 0);
-
-      path.cubicTo(cx - notchRadius, 0, cx - notchRadius + 6, 18, cx, 18);
-      path.cubicTo(
-        cx + notchRadius - 6,
-        18,
-        cx + notchRadius,
-        0,
-        cx + notchRadius + 10,
-        0,
+      path.lineTo(startX, 0);
+      path.arcToPoint(
+        Offset(endX, 0),
+        radius: const Radius.circular(notchRadius),
+        clockwise: false,
       );
-
-      borderPath.cubicTo(cx - notchRadius, 0, cx - notchRadius + 6, 18, cx, 18);
-      borderPath.cubicTo(
-        cx + notchRadius - 6,
-        18,
-        cx + notchRadius,
-        0,
-        cx + notchRadius + 10,
-        0,
-      );
-
-      path.lineTo(size.width, 0);
-      borderPath.lineTo(size.width, 0);
-
-      path.lineTo(size.width, size.height);
-      path.lineTo(0, size.height);
-      path.close();
     }
 
+    path.lineTo(size.width, 0);
+    path.lineTo(size.width, size.height);
+    path.lineTo(0, size.height);
+    path.close();
+
     canvas.drawPath(path, bgPaint);
-    canvas.drawPath(borderPath, borderPaint);
+    canvas.drawPath(path, borderPaint);
   }
 
   @override
-  bool shouldRepaint(covariant NavbarWithNotchPainter oldDelegate) =>
-      oldDelegate.notchCenterX != notchCenterX;
+  bool shouldRepaint(covariant NavbarWithNotchPainter oldDelegate) {
+    return oldDelegate.notchCenterX != notchCenterX;
+  }
 }
