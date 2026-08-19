@@ -277,8 +277,11 @@ class _LoginSheetState extends State<_LoginSheet> {
                   ),
                 ),
               ),
+              // HEADER: judul & tombol ✕ kini benar-benar sejajar tengah
+              // (tombol ✕ fix 32px tanpa padding bawaan IconButton)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const Text(
                     'Masuk ke akun',
@@ -288,11 +291,17 @@ class _LoginSheetState extends State<_LoginSheet> {
                       color: AppColors.neutral900,
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close, size: 18),
-                    onPressed: () => Navigator.pop(context),
-                    style: IconButton.styleFrom(
-                      backgroundColor: AppColors.neutral100,
+                  InkWell(
+                    onTap: () => Navigator.pop(context),
+                    borderRadius: BorderRadius.circular(100),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: const BoxDecoration(
+                        color: AppColors.neutral100,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.close, size: 18),
                     ),
                   ),
                 ],
@@ -347,15 +356,21 @@ class _LoginSheetState extends State<_LoginSheet> {
                 hint: 'Masukkan kata sandi',
                 icon: Icons.lock_outline,
                 obscure: _obscure,
-                suffix: IconButton(
-                  icon: Icon(
-                    _obscure
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
-                    size: 17,
-                    color: AppColors.neutral500,
+                // Tombol mata: InkWell ringan (bukan IconButton 48px) supaya
+                // tidak mendesak isi kolom — rata dgn kolom Username
+                suffix: InkWell(
+                  onTap: () => setState(() => _obscure = !_obscure),
+                  borderRadius: BorderRadius.circular(100),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Icon(
+                      _obscure
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      size: 17,
+                      color: AppColors.neutral500,
+                    ),
                   ),
-                  onPressed: () => setState(() => _obscure = !_obscure),
                 ),
               ),
               const SizedBox(height: 20),
@@ -407,13 +422,13 @@ class _LoginSheetState extends State<_LoginSheet> {
   }
 
   Widget _buildLabel(String text) => Text(
-    text,
-    style: const TextStyle(
-      fontSize: 12,
-      fontWeight: FontWeight.w700,
-      color: Colors.black87,
-    ),
-  );
+        text,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: Colors.black87,
+        ),
+      );
 
   Widget _buildTextField({
     required TextEditingController controller,
@@ -429,17 +444,28 @@ class _LoginSheetState extends State<_LoginSheet> {
         borderRadius: BorderRadius.circular(11),
         border: Border.all(color: AppColors.neutral200, width: 1.5),
       ),
+      // PERBAIKAN RATA: teks & icon selalu tepat di tengah vertikal kolom,
+      // baik kolom polos (Username) maupun yang punya tombol mata (Kata sandi)
       child: TextField(
         controller: controller,
         obscureText: obscure,
         onChanged: (_) => setState(() {}),
+        textAlignVertical: TextAlignVertical.center,
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: TextStyle(color: AppColors.neutral500, fontSize: 13),
-          prefixIcon: Icon(icon, size: 17, color: AppColors.neutral500),
+          prefixIcon: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Icon(icon, size: 17, color: AppColors.neutral500),
+          ),
+          prefixIconConstraints:
+              const BoxConstraints(minWidth: 40, minHeight: 24),
           suffixIcon: suffix,
+          suffixIconConstraints:
+              const BoxConstraints(minWidth: 40, minHeight: 24),
+          isDense: true,
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+          contentPadding: EdgeInsets.zero,
         ),
       ),
     );
