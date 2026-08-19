@@ -7,7 +7,7 @@
     <uses-feature android:name="android.hardware.location.gps" android:required="true" />
 
     <application
-        android:label="coba_sisi"
+        android:label="SiSi"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
