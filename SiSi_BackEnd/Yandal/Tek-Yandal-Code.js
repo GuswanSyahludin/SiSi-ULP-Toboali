@@ -25,7 +25,11 @@ respons approve TIDAK menyentuh spreadsheet sama sekali (kebal macet backend She
 drainAntreanApprovalP0 mem-flush inbox → db_Approval_Queue (_apprInboxFlush_) lalu memprosesnya.
 Fallback: inbox penuh/gagal → tulis sheet langsung (enqueueApprovalP0_).
 + MALAM 3 — INBOX LOCK-FREE: satu property per kodeP0 (apprInbox_<kodeP0>) → tulis atomik TANPA lock;
-push tidak lagi menunggu userLock yang bisa dipegang drain WM saat sheet sibuk (penyebab fallback lambat di v1). */
+push tidak lagi menunggu userLock yang bisa dipegang drain WM saat sheet sibuk (penyebab fallback lambat di v1).
++ MALAM 4 — SWEEP WM KELUAR DARI DRAIN 1-MENIT: sweepWmBacklogY (scan penuh P0 + Switching) dipindah ke
+trigger terpisah 15 menit (createSweepWmBacklogTriggerY); drainAntreanP0 kini hanya menyentuh sheet antrean kecil.
++ sweepDurasiJarakYandalP0 default 5 → 30 menit. Tujuan: mengurangi okupansi slot eksekusi simultan —
+penyebab request mobile antre slot (gejala: fungsi cepat tapi respons tetap timeout 30 dtk). */
 
 // ====== KONFIG ======
 var SHEET_YANDAL = {
@@ -823,13 +827,10 @@ function sweepWmBacklogY() {
   return n;
 }
 
-// Trigger backend (tiap 1 menit): sweep backlog → proses antrean WM. Klaim → proses tanpa lock → finalisasi.
+// Trigger backend (tiap 1 menit): proses antrean WM saja. Klaim → proses tanpa lock → finalisasi.
 function drainAntreanP0() {
-  try {
-    sweepWmBacklogY();
-  } catch (eSw) {
-    Logger.log("drainAntreanP0: sweep backlog gagal — " + eSw);
-  }
+  // 19 Agu malam 4: sweepWmBacklogY DIPINDAH ke trigger terpisah 15 mnt (createSweepWmBacklogTriggerY) —
+  // sweep = scan PENUH 2 sheet (P0 + Switching); dijalankan tiap 1 mnt di sini = pembeban slot eksekusi terbesar.
   var sh = _wmQueueSheet_();
 
   // Fase 1 — KLAIM item (lock singkat): tandai "processing" agar drain lain tidak ikut memproses item sama.
@@ -945,6 +946,33 @@ function hapusWmDrainTriggerY() {
       n++;
     }
   Logger.log("Trigger drainAntreanP0 dihapus: " + n);
+}
+
+// SETUP sekali (19 Agu malam 4): trigger TERPISAH utk sweepWmBacklogY — default 15 menit.
+// Sebelumnya sweep dipanggil di dalam drainAntreanP0 TIAP 1 MENIT — padahal sweep = scan penuh 2 sheet
+// (db_Yandal_P0 + Switching) → salah satu pembeban slot eksekusi terbesar saat sheet sibuk. Foto tetap masuk
+// antrean seketika lewat webhook enqueueP0Yandal_; sweep ini HANYA backstop celah timing (15 mnt cukup).
+// Setelah deploy: jalankan fungsi ini SEKALI dari editor (pilih namanya → Run) agar trigger terpasang.
+function createSweepWmBacklogTriggerY(minutes) {
+  var m = Number(minutes || 15);
+  if ([1, 5, 10, 15, 30].indexOf(m) < 0) m = 15; // interval valid Apps Script
+  var trs = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < trs.length; i++)
+    if (trs[i].getHandlerFunction() === "sweepWmBacklogY")
+      ScriptApp.deleteTrigger(trs[i]);
+  ScriptApp.newTrigger("sweepWmBacklogY").timeBased().everyMinutes(m).create();
+  Logger.log("Trigger sweepWmBacklogY dibuat: setiap " + m + " menit");
+}
+// Lepas trigger backstop sweep WM.
+function hapusSweepWmBacklogTriggerY() {
+  var trs = ScriptApp.getProjectTriggers(),
+    n = 0;
+  for (var i = 0; i < trs.length; i++)
+    if (trs[i].getHandlerFunction() === "sweepWmBacklogY") {
+      ScriptApp.deleteTrigger(trs[i]);
+      n++;
+    }
+  Logger.log("Trigger sweepWmBacklogY dihapus: " + n);
 }
 
 // ====== (WA builder Yandal di-skip dulu — format WA belum ada) ======
@@ -1913,7 +1941,7 @@ function updateNamaPekerjaanP0(params) {
 // — semua foto diambil dari kolom "Link Download Foto ...", sesuai spesifikasi 12 Agu 2026)
 // + seluruh baris PENGUKURAN GARDU milik P0 (utk "Pengecekan Gardu"; 12 Agu 2026).
 // Foto memakai helper _p0FotoObj_ yg sama dgn getApprovalP0List (Link Download / Foto URL).
-// params: { kodeP0 } → { ok, p0:{...}, switching:[{...}], gardu:[{...}] }
+// params: { kodeP0 } → { ok, p0:{...}, switching:[{...], gardu:[{...] }
 
 // Sumber Pengecekan Gardu: sheet Pengukuran Gardu di spreadsheet TERPISAH (bukan SPREADSHEET_ID
 // utama; satu file dgn spreadsheet BA). Sheet dicari via header kolom E = "Kode Pengukuran Gardu"
@@ -1978,7 +2006,7 @@ function _sheetUkurGardu_(ssU) {
   }
   return null;
 }
-// params: { kodeP0 } → { ok, p0:{...}, switching:[{...}], gardu:[{...}] }
+// params: { kodeP0 } → { ok, p0:{...}, switching:[{...], gardu:[{...] }
 // REV 19 Agu 2026 (hotfix loading lama): bacaan lampiran DI-GATE oleh Nama Pekerjaan —
 //   • spreadsheet KEDUA (pengukuran gardu; openById paling mahal) hanya dibuka bila nama pekerjaan mengandung "Gardu";
 //   • sheet switching hanya di-scan bila nama pekerjaan mengandung "Switching".
@@ -2640,7 +2668,7 @@ function getListPetugasYandal(params) {
 //   • Rank Sepanjang Tahun: peringkat total poin pada TAHUN acuan (1 Jan s/d 31 Des tahun tglAkhir).
 // Peringkat dihitung terhadap SEMUA petugas dalam scope ULP (bukan hanya yang tampil di tabel).
 // params: { tglAwal, tglAkhir, petugas?, ulp? }  → { ok, list:[{no,nama,unit,jumlahP0,totalPoint,rataRata,
-//   pointBulanan,rankBulanan,pointTahunan,rankTahunan}], bulanLabel, tahun, jumlahPetugas }
+//   pointBulanan,rankBulanan,pointTahunan,rankTahunan], bulanLabel, tahun, jumlahPetugas }
 function _padNY_(n) {
   return (n < 10 ? "0" : "") + n;
 }
@@ -4366,10 +4394,10 @@ function recalcPaksaDurasiJarakYandalP0(opts) {
 }
 
 // SETUP sekali (jalankan dari editor): pasang trigger time-driven sweepDurasiJarakYandalP0.
-// minutes: 1/5/10/15/30 (default 5). Recalc hanya baris kosong -> steady-state ringan.
+// minutes: 1/5/10/15/30 (default 30 sejak 19 Agu malam 4). Recalc hanya baris kosong -> steady-state ringan.
 function createRecalcDurasiJarakTriggerY(minutes) {
-  var m = Number(minutes || 5);
-  if ([1, 5, 10, 15, 30].indexOf(m) < 0) m = 5; // interval valid Apps Script
+  var m = Number(minutes || 30);
+  if ([1, 5, 10, 15, 30].indexOf(m) < 0) m = 30; // interval valid Apps Script — 19 Agu malam 4: default 5 → 30 mnt (backstop; prosesP0Yandal sudah menghitung inline)
   var trs = ScriptApp.getProjectTriggers();
   for (var i = 0; i < trs.length; i++)
     if (trs[i].getHandlerFunction() === "sweepDurasiJarakYandalP0")
