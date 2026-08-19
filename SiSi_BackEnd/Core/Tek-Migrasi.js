@@ -6,12 +6,16 @@
      - Kode Header BELUM ada di arsip -> copy + append -> hapus di aktif
      - Kode Header SUDAH ada di arsip -> hapus saja di aktif
    Batch + resume via trigger tiap 1 menit (anti limit 6 menit).
+   Rev 19 Agu 2026 (malam): TICK_GABUNGAN_DAFTAR dirampingkan — recalcTick & sweepPointP0Yandal dilepas
+   dari tick (dobel dgn fastTick / sudah ada trigger 15 mnt sendiri); refreshWaHarian &
+   refreshLaporanHarianHariIni 1 mnt -> 15 mnt. Tujuan: slot eksekusi simultan longgar (penyebab
+   timeout login/approval di jam sibuk).
    ===================================================== */
 
 var SPREADSHEET_ID_ARSIP = "11HzsthxFOA_7BN_fDT7LHAqrjGP9SSzHrtFv24F7P14";
 var MIGRASI_BATCH = 200; // baris diproses per putaran
 var MIGRASI_CURSOR_PROP = "MIGRASI_HEADER_CURSOR";
-var MIGRASI_DRY_RUN = false; // true = SIMULASI saja (log hitungan, tanpa tulis/hapus)
+var MIGRASI_DRY_RUN = false; // false = EKSEKUSI SUNGGUHAN (kondisi live saat ini); true = SIMULASI saja (log hitungan, tanpa tulis/hapus)
 
 /* Kriteria migrasi: TANGGAL <= H-2 (Asia/Jakarta).
    Baris tanpa tanggal terbaca TIDAK dipindah (aman). */
@@ -5816,12 +5820,13 @@ function previewMigrasiYandalSwc() {
    Urutan = prioritas saat waktu sempit (ringan & sering di atas; berat & jarang di bawah).
    Tambah/kurangi tugas cukup edit tabel ini. */
 var TICK_GABUNGAN_DAFTAR = [
-  { fn: "recalcTick", tiapMenit: 1 }, // antrean recalc db_Recalc_Queue (Code.gs)
+  // 19 Agu malam: recalcTick DIHAPUS — sudah ditangani fastTick (Code.js); dobel = rebutan scriptLock tiap menit.
   { fn: "drainLaporanDirty", tiapMenit: 1 }, // antrean rebuild laporan dirty-flag (Tek-LapUP3UIWHarian.gs)
   { fn: "drainFotoRow", tiapMenit: 1 }, // antrean foto ROW (Tek-ROW.gs)
-  { fn: "sweepPointP0Yandal", tiapMenit: 1, berat: true }, // backstop Point P0 (Tek-Yandal-Code.gs) — baca penuh sheet P0
-  { fn: "refreshLaporanHarianHariIni", tiapMenit: 1, berat: true }, // backstop laporan hari ini (Tek-LapUP3UIWHarian.gs) — 11 Agu: dinaikkan 15 mnt -> 1 mnt (laporan selalu segar)
-  { fn: "refreshWaHarian", tiapMenit: 1, berat: true }, // backstop WA sweep db_Global_Header H & H-1 (Code.gs) — 12 Agu: dipindah dari harian 00:30 -> tiap 1 mnt (WA selalu segar)
+  // 19 Agu malam: sweepPointP0Yandal DIHAPUS dari tick — sudah punya trigger terpisah 15 menit (createPointP0DrainTriggerY);
+  // tanpa perubahan ini sheet P0 tetap discan penuh tiap menit lewat jalur belakang.
+  { fn: "refreshLaporanHarianHariIni", tiapMenit: 15, berat: true }, // 19 Agu: 1 mnt -> 15 mnt (webhook refreshLaporan tetap instan; ini hanya backstop)
+  { fn: "refreshWaHarian", tiapMenit: 15, berat: true }, // 19 Agu: 1 mnt -> 15 mnt (webhook recalcWa tetap instan; ini hanya backstop)
   { fn: "validasiUlangFotoTemuan", tiapMenit: 5 }, // validasi ulang foto temuan (Tek-Temuan.gs) — sesuaikan bila interval aslinya beda
   { fn: "pingEngineY", tiapMenit: 5 }, // keep-warm engine watermark (Tek-Yandal-Code.gs)
   { fn: "sweepEksekusiRowBacklog", tiapMenit: 60, berat: true }, // sweep backlog eksekusi ROW mundur 7 hari (Tek-ROW.gs)

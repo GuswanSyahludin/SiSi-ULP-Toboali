@@ -16,7 +16,9 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
   String _selectedStatus = 'Menunggu';
   DateTime _selectedDate =
       DateTime.now(); // Filter tanggal 1 hari (default: hari ini)
-  bool _isLoading = true;
+  bool _isLoading = false; // tidak auto-load — menunggu tombol "Cari"
+  bool _sudahCari =
+      false; // true setelah pencarian pertama (ganti tanggal/tab ikut memuat ulang)
   List<dynamic> _listP0 = [];
   Map<String, dynamic> _counts = {};
 
@@ -42,7 +44,8 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
   @override
   void initState() {
     super.initState();
-    _fetchData();
+    // TIDAK auto-load: halaman dibuka KOSONG sampai pengguna menekan tombol "Cari"
+    // (hemat backend — sebelumnya tiap buka halaman langsung membaca sheet penuh).
   }
 
   // Tanggal terpilih → format API (yyyy-MM-dd)
@@ -107,12 +110,20 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
     );
     if (picked != null) {
       setState(() => _selectedDate = picked);
-      _fetchData();
+      if (_sudahCari)
+        _fetchData(); // setelah pencarian pertama, ganti tanggal langsung memuat ulang
     }
   }
 
   void _kembaliKeHariIni() {
     setState(() => _selectedDate = DateTime.now());
+    if (_sudahCari) _fetchData();
+  }
+
+  // TOMBOL CARI (Rev 19 Agu malam 3): satu-satunya pemicu muat data saat pertama masuk halaman.
+  // Setelah pencarian pertama, ganti tanggal / ganti tab / ikon refresh memuat ulang otomatis.
+  void _cariData() {
+    setState(() => _sudahCari = true);
     _fetchData();
   }
 
@@ -1181,27 +1192,18 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
         foregroundColor: const Color(0xFF0F172A),
         iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
         elevation: 0.5,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Verifikasi P0',
-              style: TextStyle(
-                color: Color(0xFF0F172A),
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            Text(
-              '$_currentUlp • db_Yandal_P0',
-              style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
-            ),
-          ],
+        title: const Text(
+          'Verifikasi P0',
+          style: TextStyle(
+            color: Color(0xFF0F172A),
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh, color: Color(0xFF0284C7)),
-            onPressed: _fetchData,
+            onPressed: _cariData,
           ),
         ],
       ),
@@ -1219,7 +1221,7 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
                   child: GestureDetector(
                     onTap: () {
                       setState(() => _selectedStatus = status);
-                      _fetchData();
+                      if (_sudahCari) _fetchData();
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1247,93 +1249,139 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
               }).toList(),
             ),
           ),
-          // FILTER TANGGAL (1 hari)
+          // FILTER TANGGAL (1 hari) + TOMBOL CARI (data hanya dimuat saat tombol ditekan)
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 0, 8, 8),
-            child: Row(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: Column(
               children: [
-                const Icon(
-                  Icons.calendar_today_rounded,
-                  size: 14,
-                  color: Color(0xFF0284C7),
-                ),
-                const SizedBox(width: 6),
-                const Text(
-                  'Tanggal:',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                ),
-                const SizedBox(width: 6),
-                GestureDetector(
-                  onTap: _pickDate,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.calendar_today_rounded,
+                      size: 14,
+                      color: Color(0xFF0284C7),
                     ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE0F2FE),
-                      borderRadius: BorderRadius.circular(8),
+                    const SizedBox(width: 6),
+                    const Text(
+                      'Tanggal:',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _labelTanggal,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF0284C7),
-                          ),
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: _pickDate,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
                         ),
-                        const SizedBox(width: 4),
-                        const Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          size: 16,
-                          color: Color(0xFF0284C7),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE0F2FE),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                      ],
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _labelTanggal,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF0284C7),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              size: 16,
+                              color: Color(0xFF0284C7),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
+                    const Spacer(),
+                    if (!_isToday)
+                      TextButton.icon(
+                        onPressed: _kembaliKeHariIni,
+                        icon: const Icon(Icons.today_rounded, size: 14),
+                        label: const Text(
+                          'Hari ini',
+                          style: TextStyle(fontSize: 11),
+                        ),
+                        style: TextButton.styleFrom(
+                          foregroundColor: const Color(0xFF0284C7),
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                        ),
+                      ),
+                  ],
                 ),
-                const Spacer(),
-                if (!_isToday)
-                  TextButton.icon(
-                    onPressed: _kembaliKeHariIni,
-                    icon: const Icon(Icons.today_rounded, size: 14),
+                const SizedBox(height: 8),
+                // TOMBOL CARI — satu-satunya pemicu muat data saat pertama masuk halaman
+                SizedBox(
+                  width: double.infinity,
+                  height: 38,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0284C7),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    icon: const Icon(
+                      Icons.search_rounded,
+                      size: 18,
+                      color: Colors.white,
+                    ),
                     label: const Text(
-                      'Hari ini',
-                      style: TextStyle(fontSize: 11),
+                      'Cari',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                    style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFF0284C7),
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                    ),
+                    onPressed: _cariData,
                   ),
+                ),
               ],
             ),
           ),
           // DAFTAR CARD
           Expanded(
-            child: _isLoading
-                ? const CustomLoadingWidget(
-                    message: 'Memuat data verifikasi...',
-                  )
-                : _listP0.isEmpty
-                    ? Center(
-                        child: Text(
-                          'Tidak ada data "$_selectedStatus" pada $_labelTanggal',
-                          style: const TextStyle(color: Color(0xFF94A3B8)),
-                        ),
-                      )
-                    : RefreshIndicator(
-                        onRefresh: _fetchData,
-                        child: ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _listP0.length,
-                          itemBuilder: (ctx, i) => _buildP0Card(_listP0[i]),
+            child: !_sudahCari
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Text(
+                        'Pilih tanggal lalu tekan tombol Cari untuk memuat data. Halaman sengaja dibuka kosong agar tidak membebani server.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Color(0xFF94A3B8),
+                          fontSize: 12,
+                          height: 1.5,
                         ),
                       ),
+                    ),
+                  )
+                : _isLoading
+                    ? const CustomLoadingWidget(
+                        message: 'Memuat data verifikasi...',
+                      )
+                    : _listP0.isEmpty
+                        ? Center(
+                            child: Text(
+                              'Tidak ada data "$_selectedStatus" pada $_labelTanggal',
+                              style: const TextStyle(color: Color(0xFF94A3B8)),
+                            ),
+                          )
+                        : RefreshIndicator(
+                            onRefresh: _fetchData,
+                            child: ListView.builder(
+                              padding: const EdgeInsets.all(16),
+                              itemCount: _listP0.length,
+                              itemBuilder: (ctx, i) => _buildP0Card(_listP0[i]),
+                            ),
+                          ),
           ),
         ],
       ),
