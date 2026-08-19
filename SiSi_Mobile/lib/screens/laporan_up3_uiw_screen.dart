@@ -3,7 +3,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_colors.dart';
 import '../services/api_service.dart';
 import '../widgets/custom_loading_widget.dart';
-import 'dashboard_screen.dart'; // DashboardScreen.loadingBg — sembunyikan bg foto saat loading
 
 // Laporan UP3 / UIW (Rev 20 Agu 2026 — 1 card status petugas) — data dari sheet "Teknik_Laporan Harian"
 // (1 baris per tanggal): kolom G = Laporan UP3, kolom H = Laporan UIW, kolom C..F = input C4A.
@@ -67,9 +66,6 @@ class _LaporanUp3UiwScreenState extends State<LaporanUp3UiwScreen> {
   }
 
   Future<void> _fetchData() async {
-    // Sembunyikan foto background selama loading.gif aktif,
-    // lalu tampilkan kembali setelah loading selesai
-    DashboardScreen.loadingBg.value = true;
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -100,8 +96,6 @@ class _LaporanUp3UiwScreenState extends State<LaporanUp3UiwScreen> {
         _errorMessage = 'Koneksi bermasalah: $e';
         _isLoading = false;
       });
-    } finally {
-      DashboardScreen.loadingBg.value = false;
     }
   }
 
@@ -212,7 +206,13 @@ class _LaporanUp3UiwScreenState extends State<LaporanUp3UiwScreen> {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const CustomLoadingWidget(message: 'Memuat laporan UP3 / UIW...');
+      // Tutup foto background selama loading.gif aktif — otomatis tampil lagi
+      // setelah loading selesai karena konten menggantikan cabang ini
+      return Container(
+        color: AppColors.neutral100,
+        child:
+            const CustomLoadingWidget(message: 'Memuat laporan UP3 / UIW...'),
+      );
     }
     if (_errorMessage != null) {
       return Center(
