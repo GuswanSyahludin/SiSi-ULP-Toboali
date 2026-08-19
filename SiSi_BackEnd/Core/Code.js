@@ -1,7 +1,9 @@
 /* ═════════════════════════════════════
-   Code.gs — SiSi ULP Toboali (BAGIAN 1: INTI / SHARED)
+   Code.js — SiSi ULP Toboali (BAGIAN 1: INTI / SHARED)
    Google Apps Script Backend
-   Rev: 31 Mei 2026 (konsolidasi bersih + modul Inspeksi + MOBILE API LAYER)
+   Rev: 19 Agu 2026 (struktur folder VS Code + clasp · .gs → .js ·
+        perbaikan path pemanggilan file HTML untuk HtmlService)
+   Rev sebelumnya: 31 Mei 2026 (konsolidasi bersih + modul Inspeksi + MOBILE API LAYER)
    Catatan: fungsi per-menu dipindah ke Tek-Code.gs
 ═════════════════════════════════════ */
 
@@ -26,20 +28,30 @@ var FULL_ACCESS_PAGES = [
 
 /* ═══ MAPPING FILE HTML DENGAN STRUKTUR FOLDER ═══ */
 var PAGE_FILE_ALIASES = {
-  "SIE-LaporanTeknik": "Teknik/SIE-Teknik",
-  "SIE-Teknik": "Teknik/SIE-Teknik",
-  "Tek-ROW": "ROW/Tek-ROW",
-  "Tek-InsJar": "Inspeksi_Jaringan/Tek-InsJar",
-  "Tek-InsDu": "Inspeksi_Gardu/Tek-InsDu",
-  "Tek-Yandal": "Yandal/Tek-Yandal",
-  "Tek-Hartek": "Hartek/Tek-Hartek",
-  "Tek-Data-Checkpoint": "Teknik/Tek-Data-Checkpoint",
-  "SIE-BeritaAcara": "SIE-BeritaAcara",
+  // ── Root (tanpa folder) ──
   "PP-Dashboard": "PP-Dashboard",
   "TE-Dashboard": "TE-Dashboard",
   "K3-Dashboard": "K3-Dashboard",
+  "SIE-BeritaAcara": "SIE-BeritaAcara",
+
+  // ── Core ──
   Main: "Core/Main",
   "login-page": "Core/login-page",
+  "Tek-Dashboard": "Core/Tek-Dashboard",
+  "Temuan-Inspeksi": "Core/Temuan-Inspeksi",
+
+  // ── Modul per tim ──
+  "Tek-ROW": "ROW/Tek-ROW",
+  "Tek-InsJar": "Inspeksi_Jaringan/Tek-InsJar",
+  "Tek-InsDu": "Inspeksi_Gardu/Tek-InsDu",
+  "Tek-PengukuranGardu": "Inspeksi_Gardu/Tek-PengukuranGardu",
+  "Tek-Yandal": "Yandal/Tek-Yandal",
+  "Tek-Hartek": "Hartek/Tek-Hartek",
+
+  // ── Teknik ──
+  "SIE-Teknik": "Teknik/SIE-Teknik",
+  "SIE-LaporanTeknik": "Teknik/SIE-Teknik",
+  "Tek-Data-Checkpoint": "Teknik/Tek-Data-Checkpoint",
 };
 
 var PAGE_ACCESS_PARENT = {
@@ -286,7 +298,9 @@ function doGet(e) {
   var svcUrl = ScriptApp.getService().getUrl();
 
   if (!token) {
-    var t1 = HtmlService.createTemplateFromFile("login-page");
+    var t1 = HtmlService.createTemplateFromFile(
+      PAGE_FILE_ALIASES["login-page"],
+    );
     t1.error = "";
     t1.scriptUrl = svcUrl;
     return t1
@@ -296,7 +310,9 @@ function doGet(e) {
 
   var sesi = getSesiByToken(token);
   if (!sesi) {
-    var t2 = HtmlService.createTemplateFromFile("login-page");
+    var t2 = HtmlService.createTemplateFromFile(
+      PAGE_FILE_ALIASES["login-page"],
+    );
     t2.error = "Sesi habis, silakan login ulang.";
     t2.scriptUrl = svcUrl;
     return t2
@@ -310,7 +326,7 @@ function doGet(e) {
     CacheService.getUserCache().put("userToken", token, SESSION_TTL_SEC);
   } catch (e) {}
 
-  return HtmlService.createTemplateFromFile("Main")
+  return HtmlService.createTemplateFromFile(PAGE_FILE_ALIASES["Main"])
     .evaluate()
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
 }
