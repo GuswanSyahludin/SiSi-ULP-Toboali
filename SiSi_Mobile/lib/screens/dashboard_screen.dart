@@ -181,17 +181,23 @@ class _DashboardScreenState extends State<DashboardScreen>
 
                       final currentX =
                           startX + (targetX - startX) * _bubbleAnimation.value;
-                      const bubbleSize = 46.0;
+                      const bubbleSize =
+                          56.0; // bubble diperbesar menampung icon aktif 1,7x
 
                       return Positioned(
                         left: currentX - (bubbleSize / 2),
-                        top: -12,
+                        top: -17,
                         child: Container(
                           width: bubbleSize,
                           height: bubbleSize,
                           decoration: BoxDecoration(
                             color: AppColors.navy700,
                             shape: BoxShape.circle,
+                            // Garis 2px mengikuti batas bubble saat bubble berpindah menu
+                            border: Border.all(
+                              color: AppColors.cyan600,
+                              width: 2.0,
+                            ),
                             boxShadow: [
                               BoxShadow(
                                 color: AppColors.navy700.withOpacity(0.35),
@@ -202,7 +208,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                           ),
                           child: Icon(
                             currentMenuIcons[selectedIndex],
-                            size: 22,
+                            // Icon menu aktif = 1,7x icon non-aktif (22)
+                            size: 37.4,
                             color: Colors.white,
                           ),
                         ),
@@ -834,34 +841,54 @@ class NavbarWithNotchPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final bgPaint = Paint()..color = Colors.white;
-    final borderPaint = Paint()
-      ..color = Colors.grey.shade300
-      ..strokeWidth = 1.0
-      ..style = PaintingStyle.stroke;
+
+    // Garis 3px memanjang dari sisi kiri ke kanan, lengkungan KE ATAS memeluk bubble
+    final linePaint = Paint()
+      ..color = AppColors.navy700
+      ..strokeWidth = 3.0
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
 
     final path = Path();
     path.moveTo(0, 0);
 
-    if (notchCenterX != null) {
-      const notchRadius = 28.0;
-      final startX = notchCenterX! - notchRadius;
-      final endX = notchCenterX! + notchRadius;
+    // Garis hanya di tepi atas navbar (kiri → kanan)
+    final linePath = Path();
+    linePath.moveTo(0, 0);
 
-      path.lineTo(startX, 0);
+    if (notchCenterX != null) {
+      const notchRadius = 33.0; // cekungan background menampung bubble 56px
+      const lineReach =
+          31.0; // garis mulai melengkung 31px sebelum/sesudah pusat bubble
+      const lineArcRadius = 33.0; // radius lengkungan garis memeluk bubble
+      final cx = notchCenterX!;
+
+      // Background: cekungan (notch) di bawah bubble — tidak berubah fungsinya
+      path.lineTo(cx - notchRadius, 0);
       path.arcToPoint(
-        Offset(endX, 0),
+        Offset(cx + notchRadius, 0),
         radius: const Radius.circular(notchRadius),
         clockwise: false,
+      );
+
+      // Garis: melengkung KE ATAS bubble (bukan mengikuti cekungan)
+      linePath.lineTo(cx - lineReach, 0);
+      linePath.arcToPoint(
+        Offset(cx + lineReach, 0),
+        radius: const Radius.circular(lineArcRadius),
+        clockwise: true,
       );
     }
 
     path.lineTo(size.width, 0);
+    linePath.lineTo(size.width, 0);
+
     path.lineTo(size.width, size.height);
     path.lineTo(0, size.height);
     path.close();
 
     canvas.drawPath(path, bgPaint);
-    canvas.drawPath(path, borderPaint);
+    canvas.drawPath(linePath, linePaint);
   }
 
   @override
