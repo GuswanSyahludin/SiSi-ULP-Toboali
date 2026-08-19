@@ -4,12 +4,16 @@ import '../theme/app_colors.dart';
 import '../services/api_service.dart';
 import '../widgets/custom_loading_widget.dart';
 
-// Laporan UP3 / UIW (Rev 19 Agu 2026 malam) — data dari sheet "Teknik_Laporan Harian"
+// Laporan UP3 / UIW (Rev 20 Agu 2026 — 1 card status petugas) — data dari sheet "Teknik_Laporan Harian"
 // (1 baris per tanggal): kolom G = Laporan UP3, kolom H = Laporan UIW, kolom C..F = input C4A.
 // Tab 1 UIW: ROW 01-04, Hartek, Inspeksi Jaringan. Tab 2 UP3: sama + Inspeksi Gardu.
+// Tiap tab hanya SATU card: di dalamnya 1 baris per petugas/tim dgn status sudah/belum ada laporan.
+// Tombol + / edit C4A (tab UP3) ada di kanan bawah card, tepat di atas garis batas.
 class LaporanUp3UiwScreen extends StatefulWidget {
   final Map<String, dynamic> sesi;
-  const LaporanUp3UiwScreen({super.key, required this.sesi});
+  // Dipasang dari dashboard: menutup sub-screen kembali ke Menu Teknik
+  final VoidCallback? onBack;
+  const LaporanUp3UiwScreen({super.key, required this.sesi, this.onBack});
 
   @override
   State<LaporanUp3UiwScreen> createState() => _LaporanUp3UiwScreenState();
@@ -147,12 +151,21 @@ class _LaporanUp3UiwScreenState extends State<LaporanUp3UiwScreen> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: AppColors.neutral100,
+        // Transparan agar foto background dashboard terlihat
+        backgroundColor: Colors.transparent,
         appBar: AppBar(
           backgroundColor: AppColors.navy700,
           foregroundColor: Colors.white,
           iconTheme: const IconThemeData(color: Colors.white),
           elevation: 0,
+          // Tombol back di sisi kiri header menu
+          leading: widget.onBack == null
+              ? null
+              : IconButton(
+                  icon:
+                      const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                  onPressed: widget.onBack,
+                ),
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -233,54 +246,25 @@ class _LaporanUp3UiwScreenState extends State<LaporanUp3UiwScreen> {
         ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            _buildInfoBanner(
-                'Pesan WA dari kolom H (Laporan UIW) • Teknik_Laporan Harian • hari ini ($_tanggal).'),
-            const SizedBox(height: 12),
-            ..._timUiw
-                .map((t) => _buildTimCard(t, _waUiw, bisaInputC4A: false)),
+            _buildStatusCard(_timUiw, _waUiw, bisaInputC4A: false),
           ],
         ),
         // TAB 2 — UP3 (pesan dari kolom G) + input C4A
         ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            _buildInfoBanner(
-                'Pesan WA dari kolom G (Laporan UP3) • hari ini ($_tanggal). Ikon + / pensil = input C4A (kolom C–F).'),
-            const SizedBox(height: 12),
-            ..._timUp3.map((t) => _buildTimCard(t, _waUp3, bisaInputC4A: true)),
+            _buildStatusCard(_timUp3, _waUp3, bisaInputC4A: true),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildInfoBanner(String text) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: AppColors.navy700.withOpacity(0.06),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.info_outline_rounded,
-              size: 14, color: AppColors.navy700),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(text,
-                style: const TextStyle(fontSize: 11, color: AppColors.navy700)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTimCard(String tim, String waText,
+  // SATU card berisi status tiap petugas/tim (bukan card per tim).
+  Widget _buildStatusCard(List<String> daftarTim, String waText,
       {required bool bisaInputC4A}) {
-    final sudahAda = _statusTim[tim] == true;
     final siapKirim = waText.trim().isNotEmpty;
+    final jumlahSudah = daftarTim.where((t) => _statusTim[t] == true).length;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
@@ -301,61 +285,56 @@ class _LaporanUp3UiwScreenState extends State<LaporanUp3UiwScreen> {
         children: [
           Row(
             children: [
-              Expanded(
+              const Expanded(
                 child: Text(
-                  tim,
-                  style: const TextStyle(
+                  'Status Laporan Petugas',
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: AppColors.navy700,
                   ),
                 ),
               ),
-              if (bisaInputC4A && _editable)
-                IconButton(
-                  tooltip: _c4aTerisi ? 'Edit input C4A' : 'Tambah input C4A',
-                  icon: Icon(
-                    _c4aTerisi ? Icons.edit_rounded : Icons.add_rounded,
-                    color: AppColors.navy700,
-                  ),
-                  onPressed: _bukaFormC4A,
-                ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: sudahAda
-                      ? const Color(0xFFECFDF5)
-                      : const Color(0xFFFEF2F2),
+                  color: AppColors.navy700.withOpacity(0.06),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      sudahAda
-                          ? Icons.check_circle_rounded
-                          : Icons.cancel_rounded,
-                      size: 12,
-                      color: sudahAda
-                          ? const Color(0xFF059669)
-                          : const Color(0xFFDC2626),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      sudahAda ? 'Sudah ada laporan' : 'Belum ada laporan',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: sudahAda
-                            ? const Color(0xFF059669)
-                            : const Color(0xFFDC2626),
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  '$jumlahSudah/${daftarTim.length} sudah lapor',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.navy700,
+                  ),
                 ),
               ),
             ],
           ),
+          const SizedBox(height: 4),
+          const Divider(height: 1),
+          ...daftarTim.map(_buildStatusRow),
+          // Tombol + / edit di kanan bawah, tepat di atas garis batas
+          if (bisaInputC4A && _editable) ...[
+            const SizedBox(height: 6),
+            Align(
+              alignment: Alignment.centerRight,
+              child: IconButton(
+                tooltip: _c4aTerisi ? 'Edit input C4A' : 'Tambah input C4A',
+                style: IconButton.styleFrom(
+                  backgroundColor: AppColors.navy700,
+                  foregroundColor: Colors.white,
+                ),
+                icon: Icon(
+                  _c4aTerisi ? Icons.edit_rounded : Icons.add_rounded,
+                ),
+                onPressed: _bukaFormC4A,
+              ),
+            ),
+          ],
+          const SizedBox(height: 6),
+          const Divider(height: 1),
           const SizedBox(height: 10),
           SizedBox(
             width: double.infinity,
@@ -389,6 +368,58 @@ class _LaporanUp3UiwScreenState extends State<LaporanUp3UiwScreen> {
       ),
     );
   }
+
+  // 1 baris per petugas/tim: nama + badge "Sudah/Belum ada laporan".
+  Widget _buildStatusRow(String tim) {
+    final sudahAda = _statusTim[tim] == true;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              tim,
+              style: const TextStyle(fontSize: 13, color: Colors.black87),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color:
+                  sudahAda ? const Color(0xFFECFDF5) : const Color(0xFFFEF2F2),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  sudahAda ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                  size: 12,
+                  color: sudahAda
+                      ? const Color(0xFF059669)
+                      : const Color(0xFFDC2626),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  sudahAda ? 'Sudah ada laporan' : 'Belum ada laporan',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: sudahAda
+                        ? const Color(0xFF059669)
+                        : const Color(0xFFDC2626),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ==========================================
@@ -414,29 +445,44 @@ class _FormC4aSheet extends StatefulWidget {
 }
 
 class _FormC4aSheetState extends State<_FormC4aSheet> {
-  late final TextEditingController _penyulangCtrl;
   late final TextEditingController _realisasiCtrl;
   late final TextEditingController _temuanCtrl;
   late final TextEditingController _eksekusiCtrl;
   bool _saving = false;
   String? _error;
 
+  // Dropdown Penyulang dari db_Penyulang (pola sama dgn eksekusi_row_screen)
+  List<String> _listPenyulang = [];
+  String? _selectedPenyulang;
+
   @override
   void initState() {
     super.initState();
-    _penyulangCtrl =
-        TextEditingController(text: (widget.c4a['penyulang'] ?? '').toString());
+    final awal = (widget.c4a['penyulang'] ?? '').toString().trim();
+    _selectedPenyulang = awal.isEmpty ? null : awal;
     _realisasiCtrl =
         TextEditingController(text: (widget.c4a['realisasi'] ?? '').toString());
     _temuanCtrl =
         TextEditingController(text: (widget.c4a['temuan'] ?? '').toString());
     _eksekusiCtrl =
         TextEditingController(text: (widget.c4a['eksekusi'] ?? '').toString());
+    _loadPenyulang();
+  }
+
+  Future<void> _loadPenyulang() async {
+    try {
+      final res = await ApiService.getDropdownRow(token: widget.token);
+      if (!mounted) return;
+      if (res['success'] == true) {
+        setState(() {
+          _listPenyulang = List<String>.from(res['penyulang'] ?? []);
+        });
+      }
+    } catch (_) {}
   }
 
   @override
   void dispose() {
-    _penyulangCtrl.dispose();
     _realisasiCtrl.dispose();
     _temuanCtrl.dispose();
     _eksekusiCtrl.dispose();
@@ -452,7 +498,7 @@ class _FormC4aSheetState extends State<_FormC4aSheet> {
       final res = await ApiService.simpanLaporanC4A(
         token: widget.token,
         tanggal: widget.tanggal,
-        penyulang: _penyulangCtrl.text.trim(),
+        penyulang: _selectedPenyulang ?? '',
         realisasi: _realisasiCtrl.text.trim(),
         temuan: _temuanCtrl.text.trim(),
         eksekusi: _eksekusiCtrl.text.trim(),
@@ -551,7 +597,7 @@ class _FormC4aSheetState extends State<_FormC4aSheet> {
                         ),
                       ),
                       Text(
-                        'Kolom C–F • Teknik_Laporan Harian • ${widget.tanggal}',
+                        'Teknik_Laporan Harian • ${widget.tanggal}',
                         style: TextStyle(
                             fontSize: 12, color: Colors.grey.shade600),
                       ),
@@ -578,14 +624,35 @@ class _FormC4aSheetState extends State<_FormC4aSheet> {
               ),
               const SizedBox(height: 12),
             ],
-            _field('Penyulang (kolom C)', _penyulangCtrl,
-                hint: 'Mis. Paku / LBS Air Sampik'),
-            _field('Panjang kmS Inspeksi (kolom D)', _realisasiCtrl,
-                hint: 'Mis. 4,6'),
-            _field('Temuan (kolom E)', _temuanCtrl,
-                hint: 'Mis. 2 Titik', maxLines: 2),
-            _field('Eksekusi (kolom F)', _eksekusiCtrl,
-                hint: 'Mis. 1 Titik', maxLines: 2),
+            // Penyulang — dropdown dari db_Penyulang (seperti eksekusi_row_screen)
+            const Text('Penyulang',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 6),
+            DropdownButtonFormField<String>(
+              isExpanded: true,
+              decoration: InputDecoration(
+                hintText: '--Pilih Penyulang--',
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              ),
+              value: _listPenyulang.contains(_selectedPenyulang)
+                  ? _selectedPenyulang
+                  : null,
+              items: _listPenyulang
+                  .map((p) => DropdownMenuItem(
+                        value: p,
+                        child: Text(p, overflow: TextOverflow.ellipsis),
+                      ))
+                  .toList(),
+              onChanged: (val) => setState(() => _selectedPenyulang = val),
+            ),
+            const SizedBox(height: 12),
+            _field('Panjang kmS Inspeksi', _realisasiCtrl, hint: 'Mis. 4,6'),
+            _field('Temuan', _temuanCtrl, hint: 'Mis. 2 Titik', maxLines: 2),
+            _field('Tim Eksekusi', _eksekusiCtrl,
+                hint: 'Mis. 1 Tim', maxLines: 2),
             const SizedBox(height: 4),
             SizedBox(
               width: double.infinity,

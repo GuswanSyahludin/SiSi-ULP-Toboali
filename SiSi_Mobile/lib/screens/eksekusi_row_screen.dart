@@ -901,8 +901,7 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
           const Divider(height: 20),
           Expanded(
             child: _loadingDropdown
-                ? const CustomLoadingWidget(
-                    message: 'Memuat data penyulang & section...')
+                ? const CustomLoadingWidget(message: 'Memuat Form Inputan.')
                 : ListView(
                     children: [
                       if (_error != null) ...[
@@ -981,14 +980,14 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
                       const SizedBox(height: 12),
 
                       // No Tiang (Opsional)
-                      const Text('Nomor Tiang (Opsional)',
+                      const Text('Nomor Tiang',
                           style: TextStyle(
                               fontSize: 12, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 6),
                       TextField(
                         controller: _tiangCtrl,
                         decoration: InputDecoration(
-                          hintText: 'Contoh: 28/A/12',
+                          hintText: 'Optional',
                           border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10)),
                           contentPadding: const EdgeInsets.symmetric(
@@ -1005,7 +1004,7 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
                       TextField(
                         controller: _koorTiangCtrl,
                         decoration: InputDecoration(
-                          hintText: 'Lat, Long',
+                          hintText: '-2.xxxx, 106.xxxx',
                           border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10)),
                           contentPadding: const EdgeInsets.symmetric(
@@ -1028,7 +1027,7 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
                       TextField(
                         controller: _koorPekerjaanCtrl,
                         decoration: InputDecoration(
-                          hintText: 'Lat, Long (Opsional, default sama)',
+                          hintText: '-2.xxxx, 106.xxxx',
                           border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10)),
                           contentPadding: const EdgeInsets.symmetric(

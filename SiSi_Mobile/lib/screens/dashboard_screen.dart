@@ -1,4 +1,9 @@
+import 'dart:async';
+import 'dart:io';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart'; // SpringSimulation & SpringDescription (animasi pegas navbar)
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_colors.dart';
 import '../services/api_service.dart';
@@ -21,7 +26,11 @@ class _DashboardScreenState extends State<DashboardScreen>
   int selectedIndex = -1;
   int previousIndex = -1;
   late AnimationController _bubbleController;
-  late Animation<double> _bubbleAnimation;
+  // Transisi memakai simulasi pegas (spring) — controller langsung dipakai sbg nilai animasi
+
+  // Status koneksi untuk indikator Online/Offline di navbar
+  bool _isOnline = true;
+  Timer? _onlineTimer;
 
   Widget? _activeSubScreen;
   Map<String, dynamic>? _selectedTeamDetail;
@@ -60,17 +69,19 @@ class _DashboardScreenState extends State<DashboardScreen>
   void initState() {
     super.initState();
     _bubbleController = AnimationController(
-      duration: const Duration(milliseconds: 350),
       vsync: this,
+      // duration tidak dipakai — gerakan diatur simulasi pegas (spring)
     );
-    _bubbleAnimation = CurvedAnimation(
-      parent: _bubbleController,
-      curve: Curves.easeInOutCubic,
+    _cekKoneksi();
+    _onlineTimer = Timer.periodic(
+      const Duration(seconds: 10),
+      (_) => _cekKoneksi(),
     );
   }
 
   @override
   void dispose() {
+    _onlineTimer?.cancel();
     _bubbleController.dispose();
     super.dispose();
   }
@@ -111,7 +122,16 @@ class _DashboardScreenState extends State<DashboardScreen>
       _selectedTeamDetail = null;
     });
 
-    _bubbleController.forward(from: 0.0);
+    // Transisi garis & icon: simulasi pegas (spring) — gerakan mengalir halus
+    // tanpa hentakan; damping 26 ≈ critical (nyaris tanpa pantulan berlebih)
+    _bubbleController.animateWith(
+      SpringSimulation(
+        const SpringDescription(mass: 1.0, stiffness: 200.0, damping: 26.0),
+        0.0,
+        1.0,
+        0.0,
+      ),
+    );
   }
 
   double _getTabCenterX(int index, double screenWidth) {
@@ -123,6 +143,64 @@ class _DashboardScreenState extends State<DashboardScreen>
     setState(() {
       _activeSubScreen = screen;
     });
+  }
+
+  // Kembali ke tampilan awal (greeting) — dipakai tombol back di header menu
+  void _kembaliKeAwal() {
+    setState(() {
+      previousIndex = -1;
+      selectedIndex = -1;
+      _activeSubScreen = null;
+      _selectedTeamDetail = null;
+    });
+  }
+
+  // ═══ INDIKATOR ONLINE/OFFLINE (Rev 20 Agu 2026) — cek koneksi tiap 10 dtk via
+  // DNS lookup (tanpa package tambahan); indikator tampil di kanan atas header
+  // (actions tiap AppBar dashboard) sehingga standby di semua menu.
+  Future<void> _cekKoneksi() async {
+    bool online;
+    try {
+      final hasil = await InternetAddress.lookup('google.com')
+          .timeout(const Duration(seconds: 4));
+      online = hasil.isNotEmpty && hasil.first.rawAddress.isNotEmpty;
+    } catch (_) {
+      online = false;
+    }
+    if (mounted && online != _isOnline) {
+      setState(() => _isOnline = online);
+    }
+  }
+
+  Widget _buildIndikatorOnline() {
+    final warna = _isOnline ? const Color(0xFF059669) : const Color(0xFFDC2626);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: _isOnline ? const Color(0xFFECFDF5) : const Color(0xFFFEF2F2),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: warna, width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: warna),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            _isOnline ? 'Online' : 'Offline',
+            style: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.bold,
+              color: warna,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -142,11 +220,25 @@ class _DashboardScreenState extends State<DashboardScreen>
         return true;
       },
       child: Scaffold(
-        backgroundColor: AppColors.neutral100,
-        body: _activeSubScreen ??
-            (selectedIndex == -1
-                ? _buildGreetingView()
-                : _buildTabContent(selectedIndex)),
+        backgroundColor:
+            Colors.transparent, // transparan: foto background terlihat
+        // Foto background 1080x1920 untuk SEMUA screen (opacity 0,5 agar konten
+        // tetap terbaca; inner Scaffold dibuat transparan agar foto terlihat)
+        body: Container(
+          decoration: BoxDecoration(
+            color: AppColors.neutral100,
+            image: DecorationImage(
+              image: const AssetImage('assets/images/bg-sisi.png'),
+              fit: BoxFit.cover,
+              opacity: 0.5,
+              onError: (_, __) {},
+            ),
+          ),
+          child: _activeSubScreen ??
+              (selectedIndex == -1
+                  ? _buildGreetingView()
+                  : _buildTabContent(selectedIndex)),
+        ),
         bottomNavigationBar: SafeArea(
           child: SizedBox(
             height: 80,
@@ -154,7 +246,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               clipBehavior: Clip.none,
               children: [
                 AnimatedBuilder(
-                  animation: _bubbleAnimation,
+                  animation: _bubbleController,
                   builder: (context, child) {
                     double? notchX;
                     if (selectedIndex >= 0) {
@@ -164,7 +256,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                           ? _getTabCenterX(previousIndex, screenWidth)
                           : targetX;
                       notchX =
-                          startX + (targetX - startX) * _bubbleAnimation.value;
+                          startX + (targetX - startX) * _bubbleController.value;
                     }
 
                     return CustomPaint(
@@ -175,7 +267,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ),
                 if (selectedIndex >= 0)
                   AnimatedBuilder(
-                    animation: _bubbleAnimation,
+                    animation: _bubbleController,
                     builder: (context, child) {
                       final targetX =
                           _getTabCenterX(selectedIndex, screenWidth);
@@ -184,7 +276,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                           : targetX;
 
                       final currentX =
-                          startX + (targetX - startX) * _bubbleAnimation.value;
+                          startX + (targetX - startX) * _bubbleController.value;
                       const bubbleSize =
                           56.0; // bubble diperbesar menampung icon aktif 1,7x
 
@@ -244,13 +336,16 @@ class _DashboardScreenState extends State<DashboardScreen>
                               Text(
                                 currentMenuItems[index],
                                 style: TextStyle(
-                                  fontSize: 11,
+                                  // Label aktif: lebih besar, lebih tebal, lebih terang
+                                  fontSize: selectedIndex == index ? 14.5 : 11,
                                   fontWeight: selectedIndex == index
-                                      ? FontWeight.bold
+                                      ? FontWeight.w800
                                       : FontWeight.w500,
                                   color: selectedIndex == index
-                                      ? AppColors.navy700
+                                      ? AppColors.cyan600
                                       : AppColors.navy700.withOpacity(0.6),
+                                  letterSpacing:
+                                      selectedIndex == index ? 0.3 : 0,
                                 ),
                               ),
                               const SizedBox(height: 10),
@@ -272,7 +367,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   Widget _buildGreetingView() {
     final subTim = widget.sesi['subTim'] ?? 'Tim';
     return Scaffold(
-      backgroundColor: AppColors.neutral100,
+      backgroundColor:
+          Colors.transparent, // transparan: foto background terlihat
       appBar: AppBar(
         backgroundColor: AppColors.navy700,
         elevation: 0,
@@ -281,6 +377,13 @@ class _DashboardScreenState extends State<DashboardScreen>
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Colors.white)),
+        // Indikator Online/Offline — selalu di kanan atas header
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Center(child: _buildIndikatorOnline()),
+          ),
+        ],
       ),
       body: Center(
         child: Column(
@@ -338,15 +441,28 @@ class _DashboardScreenState extends State<DashboardScreen>
         return _buildTeamSubMenuActions(_selectedTeamDetail!);
       }
       return Scaffold(
-        backgroundColor: AppColors.neutral100,
+        backgroundColor:
+            Colors.transparent, // transparan: foto background terlihat
         appBar: AppBar(
           backgroundColor: AppColors.navy700,
           elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+            tooltip: 'Kembali ke beranda',
+            onPressed: _kembaliKeAwal,
+          ),
           title: const Text('SiSi — Tim Operasional',
               style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Colors.white)),
+          // Indikator Online/Offline — selalu di kanan atas header
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Center(child: _buildIndikatorOnline()),
+            ),
+          ],
         ),
         body: _buildSuperUserTeamGrid(),
       );
@@ -563,21 +679,34 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
 
     return Scaffold(
-      backgroundColor: AppColors.neutral100,
+      backgroundColor:
+          Colors.transparent, // transparan: foto background terlihat
       appBar: AppBar(
         backgroundColor: AppColors.navy700,
         elevation: 0,
-        leading: _selectedTeamDetail != null
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-                onPressed: () => setState(() => _selectedTeamDetail = null),
-              )
-            : null,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          tooltip: 'Kembali',
+          onPressed: () {
+            if (_selectedTeamDetail != null) {
+              setState(() => _selectedTeamDetail = null);
+            } else {
+              _kembaliKeAwal();
+            }
+          },
+        ),
         title: Text(team['name'],
             style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Colors.white)),
+        // Indikator Online/Offline — selalu di kanan atas header
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Center(child: _buildIndikatorOnline()),
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -719,15 +848,28 @@ class _DashboardScreenState extends State<DashboardScreen>
     ];
 
     return Scaffold(
-      backgroundColor: AppColors.neutral100,
+      backgroundColor:
+          Colors.transparent, // transparan: foto background terlihat
       appBar: AppBar(
         backgroundColor: AppColors.navy700,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          tooltip: 'Kembali ke beranda',
+          onPressed: _kembaliKeAwal,
+        ),
         title: const Text('SiSi — Menu Teknik',
             style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Colors.white)),
+        // Indikator Online/Offline — selalu di kanan atas header
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Center(child: _buildIndikatorOnline()),
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -776,7 +918,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                     if (item['title'] == 'Verifikasi P0') {
                       _openSubScreen(VerifikasiP0Screen(sesi: widget.sesi));
                     } else if (item['title'] == 'Laporan UP3 / UIW') {
-                      _openSubScreen(LaporanUp3UiwScreen(sesi: widget.sesi));
+                      _openSubScreen(LaporanUp3UiwScreen(
+                        sesi: widget.sesi,
+                        onBack: () => setState(() => _activeSubScreen = null),
+                      ));
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
@@ -794,15 +939,28 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Widget _buildMenuPengaturan() {
     return Scaffold(
-      backgroundColor: AppColors.neutral100,
+      backgroundColor:
+          Colors.transparent, // transparan: foto background terlihat
       appBar: AppBar(
         backgroundColor: AppColors.navy700,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          tooltip: 'Kembali ke beranda',
+          onPressed: _kembaliKeAwal,
+        ),
         title: const Text('SiSi — Pengaturan',
             style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Colors.white)),
+        // Indikator Online/Offline — selalu di kanan atas header
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Center(child: _buildIndikatorOnline()),
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -896,53 +1054,88 @@ class NavbarWithNotchPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final bgPaint = Paint()..color = Colors.white;
 
-    // Garis 3px memanjang dari sisi kiri ke kanan, lengkungan KE ATAS memeluk bubble
+    // Garis 3px DOUBLE kiri→kanan dgn jarak terpisah & RAPI: kedua garis adalah
+    // busur lingkaran yang KONSENTRIS dgn bubble (pusat garis = pusat bubble),
+    // jadi jarak garis ke icon seragam mengelilingi bubble. Garis ATAS lurus di
+    // tepi atas navbar (y=0); garis BAWAH sejajar bottomBaseY px di bawahnya.
+    // Background navbar ikut MENONJOL ke atas memeluk bubble (setengah lingkaran
+    // putih di belakang icon) agar garis atas tidak tampak mengambang/tertinggal.
     final linePaint = Paint()
       ..color = AppColors.navy700
       ..strokeWidth = 3.0
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
+    const bottomBaseY = 14.0; // jarak garis bawah: 14px di bawah garis atas
+    const bubbleCenterY = 11.0; // pusat bubble: top -17 + tinggi 56/2
+    const topGapRadius =
+        40.0; // garis atas + tonjolan background: radius 40 (jarak 12px dari bubble)
+    const bottomGapRadius =
+        38.0; // garis bawah: lingkaran radius 38 (jarak 10px dari bubble)
+
     final path = Path();
     path.moveTo(0, 0);
 
-    // Garis hanya di tepi atas navbar (kiri → kanan)
-    final linePath = Path();
-    linePath.moveTo(0, 0);
+    final topLinePath = Path();
+    topLinePath.moveTo(0, 0);
+    final bottomLinePath = Path();
+    bottomLinePath.moveTo(0, bottomBaseY);
 
     if (notchCenterX != null) {
-      const notchRadius = 33.0; // cekungan background menampung bubble 56px
-      const lineReach =
-          31.0; // garis mulai melengkung 31px sebelum/sesudah pusat bubble
-      const lineArcRadius = 33.0; // radius lengkungan garis memeluk bubble
       final cx = notchCenterX!;
 
-      // Background: cekungan (notch) di bawah bubble — tidak berubah fungsinya
-      path.lineTo(cx - notchRadius, 0);
+      // Background: tepi atas navbar NAIK memeluk bubble — setengah lingkaran putih
+      // di belakang icon, sekaligus jadi alas garis atas
+      const dyTop = 0 - bubbleCenterY; // garis lurus di y=0
+      final reachTop =
+          math.sqrt(topGapRadius * topGapRadius - dyTop * dyTop); // ≈38,5
+      path.lineTo(cx - reachTop, 0);
       path.arcToPoint(
-        Offset(cx + notchRadius, 0),
-        radius: const Radius.circular(notchRadius),
-        clockwise: false,
+        Offset(cx + reachTop, 0),
+        radius: const Radius.circular(topGapRadius),
+        clockwise: true, // menonjol ke atas mengikuti busur garis atas
       );
 
-      // Garis: melengkung KE ATAS bubble (bukan mengikuti cekungan)
-      linePath.lineTo(cx - lineReach, 0);
-      linePath.arcToPoint(
-        Offset(cx + lineReach, 0),
-        radius: const Radius.circular(lineArcRadius),
-        clockwise: true,
+      // Garis ATAS — busur konsentris tepat di tepi tonjolan background
+      final topStart = math.pi - math.atan2(dyTop, reachTop);
+      final topEnd = math.atan2(dyTop, reachTop);
+      topLinePath.lineTo(cx - reachTop, 0);
+      topLinePath.arcTo(
+        Rect.fromCircle(
+            center: Offset(cx, bubbleCenterY), radius: topGapRadius),
+        topStart,
+        (topEnd - topStart) +
+            2 * math.pi, // sweep searah jarum jam → lewat atas
+        false,
+      );
+
+      // Garis BAWAH — busur konsentris melewati bawah bubble
+      const dyBot = bottomBaseY - bubbleCenterY; // 3
+      final reachBot =
+          math.sqrt(bottomGapRadius * bottomGapRadius - dyBot * dyBot); // ≈37,9
+      final botStart = math.pi - math.atan2(dyBot, reachBot);
+      final botEnd = math.atan2(dyBot, reachBot);
+      bottomLinePath.lineTo(cx - reachBot, bottomBaseY);
+      bottomLinePath.arcTo(
+        Rect.fromCircle(
+            center: Offset(cx, bubbleCenterY), radius: bottomGapRadius),
+        botStart,
+        botEnd - botStart, // sweep negatif → lewat bawah
+        false,
       );
     }
 
     path.lineTo(size.width, 0);
-    linePath.lineTo(size.width, 0);
+    topLinePath.lineTo(size.width, 0);
+    bottomLinePath.lineTo(size.width, bottomBaseY);
 
     path.lineTo(size.width, size.height);
     path.lineTo(0, size.height);
     path.close();
 
     canvas.drawPath(path, bgPaint);
-    canvas.drawPath(linePath, linePaint);
+    canvas.drawPath(topLinePath, linePaint);
+    canvas.drawPath(bottomLinePath, linePaint);
   }
 
   @override
