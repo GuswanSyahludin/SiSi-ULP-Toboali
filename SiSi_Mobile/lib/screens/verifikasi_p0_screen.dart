@@ -287,8 +287,7 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
               controller: reasonCtrl,
               maxLines: 3,
               decoration: InputDecoration(
-                hintText:
-                    'Tuliskan alasan penolakan (Wajib disimpan di kolom AQ)...',
+                hintText: 'Tuliskan alasan penolakan...',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
