@@ -15,6 +15,8 @@ import 'laporan_up3_uiw_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final Map<String, dynamic> sesi;
+  // Kontrol background foto global: true = sembunyikan bg (dipakai saat loading.gif aktif)
+  static final ValueNotifier<bool> loadingBg = ValueNotifier(false);
   const DashboardScreen({super.key, required this.sesi});
 
   @override
@@ -223,21 +225,29 @@ class _DashboardScreenState extends State<DashboardScreen>
         backgroundColor:
             Colors.transparent, // transparan: foto background terlihat
         // Foto background 1080x1920 untuk SEMUA screen (opacity 0,5 agar konten
-        // tetap terbaca; inner Scaffold dibuat transparan agar foto terlihat)
-        body: Container(
-          decoration: BoxDecoration(
-            color: AppColors.neutral100,
-            image: DecorationImage(
-              image: const AssetImage('assets/images/bg-sisi.png'),
-              fit: BoxFit.cover,
-              opacity: 0.5,
-              onError: (_, __) {},
-            ),
-          ),
-          child: _activeSubScreen ??
-              (selectedIndex == -1
-                  ? _buildGreetingView()
-                  : _buildTabContent(selectedIndex)),
+        // tetap terbaca; inner Scaffold dibuat transparan agar foto terlihat).
+        // Saat loading.gif aktif (loadingBg = true) bg disembunyikan, tampil lagi setelah selesai.
+        body: ValueListenableBuilder<bool>(
+          valueListenable: DashboardScreen.loadingBg,
+          builder: (context, sedangLoading, _) {
+            return Container(
+              decoration: BoxDecoration(
+                color: AppColors.neutral100,
+                image: sedangLoading
+                    ? null
+                    : DecorationImage(
+                        image: const AssetImage('assets/images/bg-sisi.png'),
+                        fit: BoxFit.cover,
+                        opacity: 0.5,
+                        onError: (_, __) {},
+                      ),
+              ),
+              child: _activeSubScreen ??
+                  (selectedIndex == -1
+                      ? _buildGreetingView()
+                      : _buildTabContent(selectedIndex)),
+            );
+          },
         ),
         bottomNavigationBar: SafeArea(
           child: SizedBox(
@@ -385,27 +395,49 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
         ],
       ),
+      // Greeting dibungkus card putih agar tidak tertimpa foto background
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              'Halo, $subTim',
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: AppColors.navy700,
-              ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Colors.grey.shade200),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            const Text(
-              'Semangat Pagi!!!',
-              style: TextStyle(
-                fontSize: 20,
-                color: AppColors.navy700,
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Halo, $subTim',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.navy700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Semangat Pagi!!!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 20,
+                    color: AppColors.navy700,
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
