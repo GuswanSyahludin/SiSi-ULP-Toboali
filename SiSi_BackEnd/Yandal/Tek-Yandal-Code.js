@@ -16,7 +16,10 @@
    + setApprovalP0 JADI ANTREAN (db_Approval_Queue): keputusan hanya DICATAT lalu balas seketika (~0,5 dtk) —
    UI mobile tidak lagi menunggu scan sheet + hitung point (penyebab timeout). Penulisan Status Approval +
    hitung Point dikerjakan backend oleh drainAntreanApprovalP0 tiap 1 menit (pasang trigger SEKALI via
-   createApprovalDrainTriggerY() dari editor Apps Script). */
+   createApprovalDrainTriggerY() dari editor Apps Script).
+   + sweepPointP0Yandal diturunkan ke default 15 menit (createPointP0DrainTriggerY(minutes)) — ia hanya
+   BACKSTOP (point tetap dihitung seketika oleh antrean approval); scan sheet penuh tiap menit ikut
+   membebani limit eksekusi simultan (penyebab timeout login/approval saat ramai). */
 
 // ====== KONFIG ======
 var SHEET_YANDAL = {
@@ -2324,8 +2327,12 @@ function hentikanRecalcPointBertahap() {
   );
 }
 
-// SETUP sekali: pasang trigger time-driven sweepPointP0Yandal setiap 1 menit.
-function createPointP0DrainTriggerY() {
+// SETUP sekali: pasang trigger time-driven sweepPointP0Yandal.
+// Rev 19 Agu malam: default 1 menit → 15 menit (ia hanya BACKSTOP — point dihitung seketika oleh
+// antrean approval saat Approved). Scan penuh db_Yandal_P0 tiap menit membebani limit eksekusi simultan.
+function createPointP0DrainTriggerY(minutes) {
+  var m = Number(minutes || 15);
+  if ([1, 5, 10, 15, 30].indexOf(m) < 0) m = 15; // interval valid Apps Script
   var trs = ScriptApp.getProjectTriggers();
   for (var i = 0; i < trs.length; i++) {
     if (trs[i].getHandlerFunction() === "sweepPointP0Yandal")
@@ -2333,9 +2340,9 @@ function createPointP0DrainTriggerY() {
   }
   ScriptApp.newTrigger("sweepPointP0Yandal")
     .timeBased()
-    .everyMinutes(1)
+    .everyMinutes(m)
     .create();
-  Logger.log("Trigger sweepPointP0Yandal dibuat: setiap 1 menit");
+  Logger.log("Trigger sweepPointP0Yandal dibuat: setiap " + m + " menit");
 }
 
 // Lepas trigger backstop point P0.

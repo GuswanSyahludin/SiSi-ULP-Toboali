@@ -10,6 +10,10 @@
    Rev 19 Agu 2026 (sore): doLogin memakai cache db_Users 10 menit (_usersRowsCache_) — login tidak
         lagi openById + scan sheet tiap kali (cold start jauh lebih ringan); fungsi tulis akun
         (tambah/update/hapus/reset/ganti password) mem-bust cache agar perubahan langsung efektif.
+   Rev 19 Agu 2026 (malam): fastTick — SATU trigger 1-menit menggantikan trigger terpisah recalcTick +
+        drainAntreanApprovalP0 (tekanan eksekusi simultan turun — penyebab login/approval timeout saat
+        project ramai). Pasang via createFastTickTrigger() SEKALI dari editor — otomatis melepas trigger
+        lama yang digantikan (recalcTick / recalcRowTick / drainAntreanApprovalP0).
    Rev sebelumnya: 31 Mei 2026 (konsolidasi bersih + modul Inspeksi + MOBILE API LAYER)
    Catatan: fungsi per-menu dipindah ke Tek-Code.gs
 ═════════════════════════════════════ */
@@ -932,6 +936,61 @@ function createRecalcRowTrigger() {
 }
 function hapusRecalcRowTrigger() {
   return hapusRecalcTrigger();
+}
+
+/* ═══ FAST TICK (Rev 19 Agu malam) — SATU trigger 1-menit untuk antrean RINGAN ═══
+   Menggantikan trigger terpisah recalcTick + drainAntreanApprovalP0. Setiap trigger 1-menit
+   memakan 1 slot eksekusi simultan; dengan banyak trigger serupa, request web app (login,
+   approval) kehabisan slot → mobile menampilkan "timeout/jaringan". Konsolidasi ini menekan
+   jumlah eksekusi per menit. Antrean BERAT (watermark: drainAntreanP0) SENGAJA tetap terpisah
+   agar approval/recalc tidak antre di belakang proses watermark.
+   Overlap terkendali: kedua fungsi punya lock internal sendiri — bila tick sebelumnya belum
+   selesai, klaim antrean berikutnya hanya menunggu singkat lalu dilewati. */
+function fastTick() {
+  try {
+    if (typeof drainAntreanApprovalP0 === "function") drainAntreanApprovalP0();
+  } catch (e) {
+    Logger.log("fastTick: antrean approval — " + e);
+  }
+  try {
+    recalcTick();
+  } catch (e) {
+    Logger.log("fastTick: recalc — " + e);
+  }
+}
+
+// SETUP sekali (jalankan dari editor): pasang fastTick tiap 1 menit, SEKALIGUS melepas trigger
+// lama yang digantikannya (recalcTick / recalcRowTick / drainAntreanApprovalP0).
+function createFastTickTrigger() {
+  var ganti = [
+    "fastTick",
+    "drainAntreanApprovalP0",
+    "recalcTick",
+    "recalcRowTick",
+  ];
+  var trs = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < trs.length; i++) {
+    if (ganti.indexOf(trs[i].getHandlerFunction()) >= 0)
+      ScriptApp.deleteTrigger(trs[i]);
+  }
+  ScriptApp.newTrigger("fastTick").timeBased().everyMinutes(1).create();
+  Logger.log(
+    "Trigger fastTick dipasang (tiap 1 menit): antrean approval + recalc",
+  );
+}
+
+// Lepas fastTick (mis. ingin kembali ke trigger terpisah — pasang ulang lewat createRecalcTrigger
+// + createApprovalDrainTriggerY).
+function hapusFastTickTrigger() {
+  var trs = ScriptApp.getProjectTriggers(),
+    n = 0;
+  for (var i = 0; i < trs.length; i++) {
+    if (trs[i].getHandlerFunction() === "fastTick") {
+      ScriptApp.deleteTrigger(trs[i]);
+      n++;
+    }
+  }
+  Logger.log("Trigger fastTick dihapus: " + n);
 }
 
 /* ═══ BACKSTOP WA ═══ */
