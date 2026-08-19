@@ -133,22 +133,17 @@ class ApiService {
     required String username,
     String alasan = '',
   }) async {
-    final uri = Uri.parse('$baseUrl?mobile=1');
-    final bodyData = {
-      'action': 'setMobileApprovalP0',
-      'kodeP0': kodeP0,
-      'keputusan': keputusan,
-      'username': username,
-      'alasan': alasan,
-    };
-    final res = await http
-        .post(
-          uri,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode(bodyData),
-        )
-        // Rev 19 Agu sore: 20 → 30 dtk (dgn backend antrean respons << 1 dtk; ini pengaman)
-        .timeout(const Duration(seconds: 30));
+    // Rev 19 Agu malam: POST -> GET. Backend sudah membaca e.parameter (doGet -> apiRouter_),
+    // jadi backend TIDAK perlu deploy ulang. GET terbukti lancar di jalur redirect Apps Script
+    // (login/list/detail semuanya GET); POST -> 302 berulang kali menggantung di emulator.
+    final uri = Uri.parse(
+      '$baseUrl?mobile=1&action=setMobileApprovalP0'
+      '&kodeP0=${Uri.encodeComponent(kodeP0)}'
+      '&keputusan=${Uri.encodeComponent(keputusan)}'
+      '&username=${Uri.encodeComponent(username)}'
+      '&alasan=${Uri.encodeComponent(alasan)}',
+    );
+    final res = await http.get(uri).timeout(const Duration(seconds: 30));
     return jsonDecode(res.body);
   }
 

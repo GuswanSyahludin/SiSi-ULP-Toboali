@@ -345,7 +345,7 @@ function doGet(e) {
 }
 
 /* ═══ WEBHOOK (POST) — dipanggil oleh Bot AppSheet ═══ */
-var WEBHOOK_SECRET = "GANTI_DENGAN_SECRET_KAMU";
+var WEBHOOK_SECRET = "P@ssw0rd`123";
 
 function doPost(e) {
   // MOBILE API LAYER: rute semua request POST Flutter (?mobile=1) ke apiRouter_, balikan JSON murni.
