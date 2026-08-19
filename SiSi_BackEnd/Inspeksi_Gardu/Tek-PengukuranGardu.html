@@ -77,9 +77,9 @@
   .pgr-card-nomor{font-size:1.145rem;font-weight:700;line-height:1.2;word-break:break-word}
   .pgr-card-ulp{font-size:.845rem;opacity:.85}
   .pgr-card-body{padding:13px 15px;display:flex;flex-direction:column;gap:9px}
-  .pgr-row{display:flex;gap:10px;font-size:.965rem;line-height:1.35}
-  .pgr-row .pgr-k{color:var(--text-3);min-width:118px;flex-shrink:0}
-  .pgr-row .pgr-v{color:var(--text);font-weight:600;word-break:break-word}
+  .pgr-row{display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px;font-size:.965rem;line-height:1.35;align-items:baseline}
+  .pgr-row .pgr-k{color:var(--text-3)}
+  .pgr-row .pgr-v{color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .pgr-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
   .pgr-badge{font-size:.845rem;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--surface-3);color:var(--primary);border:1px solid var(--border)}
   .pgr-state{text-align:center;padding:48px 20px;color:var(--text-3);overflow:hidden}
@@ -1109,7 +1109,7 @@
 
   function _row(k,v,full){
     if(v==null || String(v).trim()==='') v='-';
-    return '<div class="pgr-row'+(full?' pgr-full':'')+'"><span class="pgr-k">'+k+'</span><span class="pgr-v">'+_esc(v)+'</span></div>';
+    return '<div class="pgr-row'+(full?' pgr-full':'')+'"><span class="pgr-k">'+k+'</span><span class="pgr-v" title="'+_esc(v)+'">'+_esc(v)+'</span></div>';
   }
 
   function _mcell(k,v){

@@ -7,6 +7,9 @@
         didefer ke db_Recalc_Queue (jenis baru "eksekusiRow", diproses recalcTick tiap 1 menit; trigger
         recalcTick yang sudah ada LANGSUNG bisa memprosesnya — tanpa trigger baru) + cache folder Drive
         harian per tim (hemat ~6 round-trip Drive per input). UI mobile balas seketika setelah foto+baris tertulis.
+   Rev 19 Agu 2026 (sore): doLogin memakai cache db_Users 10 menit (_usersRowsCache_) — login tidak
+        lagi openById + scan sheet tiap kali (cold start jauh lebih ringan); fungsi tulis akun
+        (tambah/update/hapus/reset/ganti password) mem-bust cache agar perubahan langsung efektif.
    Rev sebelumnya: 31 Mei 2026 (konsolidasi bersih + modul Inspeksi + MOBILE API LAYER)
    Catatan: fungsi per-menu dipindah ke Tek-Code.gs
 ═════════════════════════════════════ */
@@ -987,17 +990,51 @@ function doLogout(token) {
 }
 
 /* ═══ LOGIN ═══ */
+/* CACHE db_Users (Rev 19 Agu sore) — login adalah request paling sering & paling sensitif
+   terhadap cold start Apps Script. Baris db_Users di-cache 10 menit: login tidak lagi
+   openById + scan sheet tiap kali (openById = bagian paling lambat). Semua fungsi yang
+   menulis db_Users memanggil _bustUsersCache_() (dipasang di tambahAkun, updateAkun,
+   hapusAkun, resetPasswordAkun, gantiPassword) agar perubahan akun langsung efektif. */
+var USERS_CACHE_KEY = "usersRows_v1";
+var USERS_CACHE_TTL = 600; // 10 menit
+
+function _usersRowsCache_() {
+  var cache = CacheService.getScriptCache();
+  var hit = cache.get(USERS_CACHE_KEY);
+  if (hit) {
+    try {
+      return JSON.parse(hit);
+    } catch (e) {}
+  }
+  var sh = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName("db_Users");
+  if (!sh) return null;
+  var data = sh.getDataRange().getValues();
+  // Ratakan Date → ISO string agar JSON.stringify aman & konsisten saat dibaca ulang
+  var plain = data.map(function (r) {
+    return r.map(function (c) {
+      return c instanceof Date ? c.toISOString() : c;
+    });
+  });
+  try {
+    cache.put(USERS_CACHE_KEY, JSON.stringify(plain), USERS_CACHE_TTL);
+  } catch (e) {}
+  return plain;
+}
+
+function _bustUsersCache_() {
+  try {
+    CacheService.getScriptCache().remove(USERS_CACHE_KEY);
+  } catch (e) {}
+}
+
 function doLogin(username, password) {
   try {
     if (!username || !password)
       return { success: false, message: "Username dan password wajib diisi" };
 
-    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    var sh = ss.getSheetByName("db_Users");
-    if (!sh)
+    var data = _usersRowsCache_(); // cache 10 mnt — tanpa openById + scan tiap login
+    if (!data)
       return { success: false, message: "Sheet db_Users tidak ditemukan" };
-
-    var data = sh.getDataRange().getValues();
     for (var i = 1; i < data.length; i++) {
       var r = data[i];
       var eml = String(r[COL_USERS.email] || "").trim();
@@ -1271,6 +1308,7 @@ function tambahAkun(token, data) {
   baris[COL_USERS.aksesMenu] = akses;
   sh.appendRow(baris);
   SpreadsheetApp.flush();
+  _bustUsersCache_(); // perubahan akun langsung terlihat login
   return { ok: true };
 }
 
@@ -1318,6 +1356,7 @@ function updateAkun(token, data) {
       String(data.password).trim(),
     );
   SpreadsheetApp.flush();
+  _bustUsersCache_(); // perubahan akun langsung terlihat login
   return { ok: true };
 }
 
@@ -1340,6 +1379,7 @@ function hapusAkun(token, username) {
     return { ok: false, message: "Akun tidak ditemukan: " + target };
   sh.deleteRow(row);
   SpreadsheetApp.flush();
+  _bustUsersCache_(); // perubahan akun langsung terlihat login
   return { ok: true };
 }
 
@@ -1354,6 +1394,7 @@ function resetPasswordAkun(token, username, passwordBaru) {
     String(passwordBaru).trim(),
   );
   SpreadsheetApp.flush();
+  _bustUsersCache_(); // perubahan akun langsung terlihat login
   return { ok: true };
 }
 
@@ -1387,6 +1428,7 @@ function gantiPassword(token, passwordLama, passwordBaru) {
 
     sh.getRange(row, COL_USERS.password + 1).setValue(pwBaru);
     SpreadsheetApp.flush();
+    _bustUsersCache_(); // perubahan akun langsung terlihat login
     return { ok: true, message: "Password berhasil diganti." };
   } catch (e) {
     return { ok: false, message: "Error: " + e.message };

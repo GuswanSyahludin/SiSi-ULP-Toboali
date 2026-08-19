@@ -15,7 +15,8 @@ class ApiService {
     final uri = Uri.parse(
       '$baseUrl?mobile=1&action=login&username=${Uri.encodeComponent(username)}&password=${Uri.encodeComponent(password)}',
     );
-    final res = await http.get(uri).timeout(const Duration(seconds: 15));
+    // Rev 19 Agu sore: 15 → 30 dtk (cold start Apps Script bisa lewat 15 dtk)
+    final res = await http.get(uri).timeout(const Duration(seconds: 30));
     return jsonDecode(res.body);
   }
 
@@ -121,7 +122,8 @@ class ApiService {
     final uri = Uri.parse(
       '$baseUrl?mobile=1&action=getMobileApprovalP0List&ulp=${Uri.encodeComponent(ulp)}&status=${Uri.encodeComponent(status)}&tanggal=${Uri.encodeComponent(tanggal ?? '')}',
     );
-    final res = await http.get(uri).timeout(const Duration(seconds: 15));
+    // Rev 19 Agu sore: 15 → 30 dtk (jaring pengaman saat server sibuk)
+    final res = await http.get(uri).timeout(const Duration(seconds: 30));
     return jsonDecode(res.body);
   }
 
@@ -145,7 +147,8 @@ class ApiService {
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode(bodyData),
         )
-        .timeout(const Duration(seconds: 20));
+        // Rev 19 Agu sore: 20 → 30 dtk (dgn backend antrean respons << 1 dtk; ini pengaman)
+        .timeout(const Duration(seconds: 30));
     return jsonDecode(res.body);
   }
 
@@ -154,7 +157,8 @@ class ApiService {
     final uri = Uri.parse(
       '$baseUrl?mobile=1&action=getMobileLampiranPengecekanP0&kodeP0=${Uri.encodeComponent(kodeP0)}',
     );
-    final res = await http.get(uri).timeout(const Duration(seconds: 20));
+    // Rev 19 Agu sore: 20 → 30 dtk (detail Gardu membaca spreadsheet kedua)
+    final res = await http.get(uri).timeout(const Duration(seconds: 30));
     return jsonDecode(res.body);
   }
 }
