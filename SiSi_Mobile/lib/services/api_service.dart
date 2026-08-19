@@ -156,4 +156,33 @@ class ApiService {
     final res = await http.get(uri).timeout(const Duration(seconds: 30));
     return jsonDecode(res.body);
   }
+
+  // ==========================================
+  // 5. LAPORAN UP3 / UIW (Teknik_Laporan Harian)
+  // ==========================================
+  // Baca baris (default hari ini): C4A + kolom G/H + status per tim. GET (jalur terbukti lancar).
+  static Future<Map<String, dynamic>> getLaporanUp3Uiw(
+      {String? tanggal}) async {
+    final uri = Uri.parse(
+      '$baseUrl?mobile=1&action=getMobileLaporanUp3Uiw&tanggal=${Uri.encodeComponent(tanggal ?? '')}',
+    );
+    final res = await http.get(uri).timeout(const Duration(seconds: 30));
+    return jsonDecode(res.body);
+  }
+
+  // Simpan input C4A (kolom C..F) + server me-regenerate kolom G & H. GET — regenerate berat → 45 dtk.
+  static Future<Map<String, dynamic>> simpanLaporanC4A({
+    required String token,
+    String? tanggal,
+    required String penyulang,
+    required String realisasi,
+    required String temuan,
+    required String eksekusi,
+  }) async {
+    final uri = Uri.parse(
+      '$baseUrl?mobile=1&action=simpanMobileLaporanC4A&token=${Uri.encodeComponent(token)}&tanggal=${Uri.encodeComponent(tanggal ?? '')}&penyulang=${Uri.encodeComponent(penyulang)}&realisasi=${Uri.encodeComponent(realisasi)}&temuan=${Uri.encodeComponent(temuan)}&eksekusi=${Uri.encodeComponent(eksekusi)}',
+    );
+    final res = await http.get(uri).timeout(const Duration(seconds: 45));
+    return jsonDecode(res.body);
+  }
 }

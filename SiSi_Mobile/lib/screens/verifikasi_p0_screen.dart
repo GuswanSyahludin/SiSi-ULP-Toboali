@@ -178,8 +178,8 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
           SnackBar(
             content: Text(
               keputusan == 'Approved'
-                  ? 'Data $kodeP0 disetujui!.'
-                  : 'Data $kodeP0 ditolak.',
+                  ? 'Data $kodeP0 disetujui! Tersimpan ke antrean — status & poin diproses di latar belakang (±1 menit).'
+                  : 'Data $kodeP0 ditolak. Tersimpan ke antrean — diproses di latar belakang (±1 menit).',
             ),
             backgroundColor: keputusan == 'Approved'
                 ? const Color(0xFF10B981)
@@ -287,7 +287,8 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
               controller: reasonCtrl,
               maxLines: 3,
               decoration: InputDecoration(
-                hintText: 'Tuliskan alasan penolakan...',
+                hintText:
+                    'Tuliskan alasan penolakan (Wajib disimpan di kolom AQ)...',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -963,67 +964,283 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
     );
   }
 
+  // Label kecil untuk kelompok metrik di dalam card lampiran (Rev malam 2 — tampilan lega).
+  Widget _buildMiniLabel(String text) {
+    return Text(
+      text,
+      style: TextStyle(
+        fontSize: 10,
+        letterSpacing: 0.8,
+        fontWeight: FontWeight.w700,
+        color: Colors.grey.shade500,
+      ),
+    );
+  }
+
+  // Sel metrik ber-label (label kecil di atas, nilai tebal di bawah, latar tinted) — menggantikan
+  // baris teks rapat agar lampiran lebih lega & mudah dibaca.
+  Widget _buildMetricCell(String label, String value) {
+    final v = value.trim();
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade500,
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              v.isEmpty ? '-' : v,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF0F172A),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // CARD SWITCHING (Rev malam 2): header berikon + chip jam, kelompok metrik ber-label
+  // (Arus R/S/T, 4 Indikator), dan 6 FOTO pengecekan (Arus + Gangguan 1-5) dalam grid 3×2
+  // — ketuk foto untuk popup zoom (memakai _showPhotoPopup yang sama dgn foto P0).
   Widget _buildSwitchingCard(dynamic s) {
+    String str(String k) => (s[k] ?? '').toString().trim();
     return Container(
-      margin: const EdgeInsets.only(top: 8),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFBAE6FD)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '${s['namaSwitching']} (${s['jamPengecekan']})',
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF0284C7),
-            ),
+          Row(
+            children: [
+              const Icon(Icons.electric_bolt_rounded,
+                  size: 16, color: Color(0xFF0284C7)),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  str('namaSwitching').isEmpty
+                      ? 'Pengecekan Switching'
+                      : str('namaSwitching'),
+                  style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0369A1)),
+                ),
+              ),
+              if (str('jamPengecekan').isNotEmpty)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE0F2FE),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.schedule_rounded,
+                          size: 11, color: Color(0xFF0284C7)),
+                      const SizedBox(width: 3),
+                      Text(
+                        str('jamPengecekan'),
+                        style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF0284C7)),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           ),
+          if (str('penyulang').isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(str('penyulang'),
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+          ],
+          const SizedBox(height: 12),
+          _buildMiniLabel('ARUS (A)'),
           const SizedBox(height: 6),
-          Text(
-            'Arus R/S/T: ${s['arusR']} / ${s['arusS']} / ${s['arusT']} A',
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          Row(
+            children: [
+              _buildMetricCell('R', str('arusR')),
+              const SizedBox(width: 8),
+              _buildMetricCell('S', str('arusS')),
+              const SizedBox(width: 8),
+              _buildMetricCell('T', str('arusT')),
+            ],
           ),
+          const SizedBox(height: 12),
+          _buildMiniLabel('INDIKATOR'),
           const SizedBox(height: 6),
-          Text(
-            'Indikator: Remote (${s['indikatorRemote']}) • Local (${s['indikatorLocal']}) • Protection (${s['indicatorProtection']})',
-            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+          Row(
+            children: [
+              _buildMetricCell('REMOTE', str('indikatorRemote')),
+              const SizedBox(width: 8),
+              _buildMetricCell('LOCAL', str('indikatorLocal')),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _buildMetricCell('PROTECTION', str('indicatorProtection')),
+              const SizedBox(width: 8),
+              _buildMetricCell('RECLOSE', str('indicatorReclose')),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildMiniLabel('FOTO PENGECEKAN (6)'),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _buildPhotoBox('Arus', s['fotoArus']?['thumb'], height: 90),
+              const SizedBox(width: 8),
+              _buildPhotoBox('Gangguan 1', s['fotoG1']?['thumb'], height: 90),
+              const SizedBox(width: 8),
+              _buildPhotoBox('Gangguan 2', s['fotoG2']?['thumb'], height: 90),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _buildPhotoBox('Gangguan 3', s['fotoG3']?['thumb'], height: 90),
+              const SizedBox(width: 8),
+              _buildPhotoBox('Gangguan 4', s['fotoG4']?['thumb'], height: 90),
+              const SizedBox(width: 8),
+              _buildPhotoBox('Gangguan 5', s['fotoG5']?['thumb'], height: 90),
+            ],
           ),
         ],
       ),
     );
   }
 
+  // CARD GARDU (Rev malam 2): header berikon + chip jam ukur, konteks (penyulang/section/petugas),
+  // Beban R/S/T/N dan Tegangan 6 nilai LENGKAP (R-S, R-T, S-T, R-N, S-N, T-N — sebelumnya hanya 3).
   Widget _buildGarduCard(dynamic g) {
+    String str(String k) => (g[k] ?? '').toString().trim();
+    final konteks = [
+      if (str('penyulang').isNotEmpty)
+        str('section').isEmpty
+            ? str('penyulang')
+            : '${str('penyulang')} / ${str('section')}',
+      if (str('petugas').isNotEmpty) 'Petugas: ${str('petugas')}',
+    ].join('  •  ');
     return Container(
-      margin: const EdgeInsets.only(top: 8),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFBEB),
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFFDE68A)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Gardu ${g['noGardu']} - ${g['alamat']}',
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Color(0xFFD97706),
-            ),
+          Row(
+            children: [
+              const Icon(Icons.electrical_services_rounded,
+                  size: 16, color: Color(0xFFD97706)),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Gardu ${str('noGardu').isEmpty ? '-' : str('noGardu')}',
+                  style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFFB45309)),
+                ),
+              ),
+              if (str('jamUkur').isNotEmpty)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF3C7),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.schedule_rounded,
+                          size: 11, color: Color(0xFFB45309)),
+                      const SizedBox(width: 3),
+                      Text(
+                        str('jamUkur'),
+                        style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFFB45309)),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           ),
-          const SizedBox(height: 4),
-          Text(
-            'Beban Utama (A): R:${g['bebanR']} S:${g['bebanS']} T:${g['bebanT']} N:${g['bebanN']}',
-            style: const TextStyle(fontSize: 12),
+          if (str('alamat').isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(str('alamat'),
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+          ],
+          if (konteks.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(konteks,
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+          ],
+          const SizedBox(height: 12),
+          _buildMiniLabel('BEBAN UTAMA (A)'),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              _buildMetricCell('R', str('bebanR')),
+              const SizedBox(width: 8),
+              _buildMetricCell('S', str('bebanS')),
+              const SizedBox(width: 8),
+              _buildMetricCell('T', str('bebanT')),
+              const SizedBox(width: 8),
+              _buildMetricCell('N', str('bebanN')),
+            ],
           ),
-          Text(
-            'Tegangan (V): R-S:${g['tegRS']} S-T:${g['tegST']} R-N:${g['tegRN']}',
-            style: const TextStyle(fontSize: 11, color: Color(0xFF78350F)),
+          const SizedBox(height: 12),
+          _buildMiniLabel('TEGANGAN (V)'),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              _buildMetricCell('R-S', str('tegRS')),
+              const SizedBox(width: 8),
+              _buildMetricCell('R-T', str('tegRT')),
+              const SizedBox(width: 8),
+              _buildMetricCell('S-T', str('tegST')),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _buildMetricCell('R-N', str('tegRN')),
+              const SizedBox(width: 8),
+              _buildMetricCell('S-N', str('tegSN')),
+              const SizedBox(width: 8),
+              _buildMetricCell('T-N', str('tegTN')),
+            ],
           ),
         ],
       ),

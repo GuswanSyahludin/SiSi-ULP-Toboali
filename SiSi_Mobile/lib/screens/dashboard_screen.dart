@@ -6,6 +6,7 @@ import 'laporan_harian_screen.dart';
 import 'login_screen.dart';
 import 'eksekusi_row_screen.dart';
 import 'verifikasi_p0_screen.dart';
+import 'laporan_up3_uiw_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final Map<String, dynamic> sesi;
@@ -774,6 +775,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                   onTap: () {
                     if (item['title'] == 'Verifikasi P0') {
                       _openSubScreen(VerifikasiP0Screen(sesi: widget.sesi));
+                    } else if (item['title'] == 'Laporan UP3 / UIW') {
+                      _openSubScreen(LaporanUp3UiwScreen(sesi: widget.sesi));
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(

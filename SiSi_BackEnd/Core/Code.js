@@ -345,7 +345,7 @@ function doGet(e) {
 }
 
 /* ═══ WEBHOOK (POST) — dipanggil oleh Bot AppSheet ═══ */
-var WEBHOOK_SECRET = "P@ssw0rd`123";
+var WEBHOOK_SECRET = "P@ssw0rd`123"; // secret asli — disamakan dgn versi arsip & yang ter-deploy. Repo GitHub sengaja berisi placeholder (keamanan); jangan commit nilai ini ke repo publik.
 
 function doPost(e) {
   // MOBILE API LAYER: rute semua request POST Flutter (?mobile=1) ke apiRouter_, balikan JSON murni.
@@ -2232,6 +2232,29 @@ function apiRouter_(e, body) {
                 ok: false,
                 error:
                   "updateNamaPekerjaanP0 tidak tersedia di Tek-Yandal-Code.js",
+              };
+        break;
+
+      // 5. Laporan UP3 / UIW (sheet Teknik_Laporan Harian — sub-menu mobile)
+      case "getMobileLaporanUp3Uiw":
+        result =
+          typeof getMobileLaporanUp3Uiw === "function"
+            ? getMobileLaporanUp3Uiw(p)
+            : {
+                ok: false,
+                error:
+                  "getMobileLaporanUp3Uiw tidak tersedia di Tek-LapUP3UIWHarian.js",
+              };
+        break;
+
+      case "simpanMobileLaporanC4A":
+        result =
+          typeof simpanMobileLaporanC4A === "function"
+            ? simpanMobileLaporanC4A(p)
+            : {
+                ok: false,
+                error:
+                  "simpanMobileLaporanC4A tidak tersedia di Tek-LapUP3UIWHarian.js",
               };
         break;
 
