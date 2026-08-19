@@ -14,6 +14,8 @@
         drainAntreanApprovalP0 (tekanan eksekusi simultan turun — penyebab login/approval timeout saat
         project ramai). Pasang via createFastTickTrigger() SEKALI dari editor — otomatis melepas trigger
         lama yang digantikan (recalcTick / recalcRowTick / drainAntreanApprovalP0).
+        + aturIntervalTrigger(fn, menit) + aturDrainWatermark5Menit(): turunkan drain watermark
+        1 menit → 5 menit dari editor (drain WM memindai 2 sheet penuh tiap run — beban sheet terberat).
    Rev sebelumnya: 31 Mei 2026 (konsolidasi bersih + modul Inspeksi + MOBILE API LAYER)
    Catatan: fungsi per-menu dipindah ke Tek-Code.gs
 ═════════════════════════════════════ */
@@ -991,6 +993,26 @@ function hapusFastTickTrigger() {
     }
   }
   Logger.log("Trigger fastTick dihapus: " + n);
+}
+
+// Ubah interval trigger apa pun dari editor (helper umum).
+function aturIntervalTrigger(fnName, menit) {
+  var m = Number(menit || 5);
+  if ([1, 5, 10, 15, 30].indexOf(m) < 0) m = 5; // interval valid Apps Script
+  var trs = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < trs.length; i++) {
+    if (trs[i].getHandlerFunction() === fnName) ScriptApp.deleteTrigger(trs[i]);
+  }
+  ScriptApp.newTrigger(fnName).timeBased().everyMinutes(m).create();
+  Logger.log("Trigger " + fnName + " dipasang: setiap " + m + " menit");
+}
+
+// Jalankan SEKALI dari editor: drain watermark tiap 1 menit → 5 menit.
+// Drain WM memindai 2 sheet penuh tiap run — beban sheet terberat yang tersisa; menurunkannya
+// mempercepat SEMUA request lain (login, list, approval) saat jam sibuk. Watermark tetap diproses,
+// hanya dengan jeda maks 5 menit (mobile/AppSheet memang tidak menunggu watermark — aman).
+function aturDrainWatermark5Menit() {
+  aturIntervalTrigger("drainAntreanP0", 5);
 }
 
 /* ═══ BACKSTOP WA ═══ */

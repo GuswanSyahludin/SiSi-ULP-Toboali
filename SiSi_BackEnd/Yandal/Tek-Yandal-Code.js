@@ -19,7 +19,11 @@
    createApprovalDrainTriggerY() dari editor Apps Script).
    + sweepPointP0Yandal diturunkan ke default 15 menit (createPointP0DrainTriggerY(minutes)) — ia hanya
    BACKSTOP (point tetap dihitung seketika oleh antrean approval); scan sheet penuh tiap menit ikut
-   membebani limit eksekusi simultan (penyebab timeout login/approval saat ramai). */
+   membebani limit eksekusi simultan (penyebab timeout login/approval saat ramai).
++ INBOX PROPERTY (malam 2): setApprovalP0 menitipkan keputusan ke ScriptProperties (_apprInboxPush_) —
+respons approve TIDAK menyentuh spreadsheet sama sekali (kebal macet backend Sheets);
+drainAntreanApprovalP0 mem-flush inbox → db_Approval_Queue (_apprInboxFlush_) lalu memprosesnya.
+Fallback: inbox penuh/gagal → tulis sheet langsung (enqueueApprovalP0_). */
 
 // ====== KONFIG ======
 var SHEET_YANDAL = {
@@ -1464,7 +1468,12 @@ function setApprovalP0(params) {
       return { ok: false, error: "Keputusan harus Approved atau Rejected." };
     if (keputusan === "Rejected" && !alasan)
       return { ok: false, error: "Alasan penolakan wajib diisi." };
-    var antre = enqueueApprovalP0_(kodeP0, keputusan, approver, alasan);
+    // JALUR CEPAT (malam 2): titipkan ke inbox PROPERTY (ScriptProperties) dulu — TANPA menyentuh spreadsheet,
+    // jadi kebal macetnya backend Sheets (openById = bagian yang macet saat project sibuk).
+    // Fallback langka (inbox penuh/lock gagal): baris enqueueApprovalP0_ di bawah menulis langsung ke sheet.
+    var antre = _apprInboxPush_(kodeP0, keputusan, approver, alasan);
+    if (antre !== true)
+      antre = enqueueApprovalP0_(kodeP0, keputusan, approver, alasan);
     return {
       ok: true,
       queued: antre,
@@ -1589,7 +1598,141 @@ function _prosesAntreanApprovalY_(item) {
 }
 
 // Trigger backend (tiap 1 menit): klaim (lock singkat) → proses tanpa lock → finalisasi. (Pola drainAntreanP0.)
+// ====== INBOX CEPAT APPROVAL (ScriptProperties) — Rev 19 Agu 2026 (malam 2) ======
+// Tujuan: respons approve TIDAK menyentuh spreadsheet (openById = bagian yang macet saat backend sibuk).
+// Keputusan dititipkan ke ScriptProperties (sub-detik); drainAntreanApprovalP0 mem-flush-nya ke
+// db_Approval_Queue tiap menit. Item yang gagal dipindah TETAP di inbox → dicoba lagi (tidak hilang).
+var APPR_INBOX_KEY = "apprInbox_v1";
+var APPR_INBOX_MAX = 7000; // jaga di bawah limit ~9KB per property (≈30 antrean)
+
+function _apprInboxRead_() {
+  try {
+    var raw =
+      PropertiesService.getScriptProperties().getProperty(APPR_INBOX_KEY);
+    var arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function _apprInboxWrite_(arr) {
+  PropertiesService.getScriptProperties().setProperty(
+    APPR_INBOX_KEY,
+    JSON.stringify(arr),
+  );
+}
+
+// Push 1 keputusan ke inbox (dipakai setApprovalP0). Dedup by kodeP0 (keputusan terbaru menang; retry aman).
+// Return true bila tersimpan; false → caller fallback ke enqueueApprovalP0_ (tulis sheet langsung).
+// getUserLock (sama dgn enqueue/drain lain): pemegangnya hanya operasi antrean yang SINGKAT — beda dgn
+// scriptLock yang dipegang proses watermark (lama), jadi push hampir tak pernah menunggu.
+function _apprInboxPush_(kodeP0, keputusan, username, alasan) {
+  var lock = LockService.getUserLock();
+  if (!lock.tryLock(8000)) return false;
+  try {
+    var arr = _apprInboxRead_();
+    var nowIso = new Date().toISOString();
+    var found = false;
+    for (var i = 0; i < arr.length; i++) {
+      if (arr[i] && arr[i].kodeP0 === kodeP0) {
+        arr[i].keputusan = keputusan;
+        arr[i].username = String(username || "");
+        arr[i].alasan = String(alasan || "");
+        arr[i].enqueuedAt = nowIso;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      arr.push({
+        kodeP0: String(kodeP0),
+        keputusan: String(keputusan),
+        username: String(username || ""),
+        alasan: String(alasan || ""),
+        enqueuedAt: nowIso,
+      });
+    }
+    var json = JSON.stringify(arr);
+    if (json.length > APPR_INBOX_MAX) return false; // penuh → fallback sheet
+    PropertiesService.getScriptProperties().setProperty(APPR_INBOX_KEY, json);
+    return true;
+  } catch (e) {
+    Logger.log("_apprInboxPush_: " + e);
+    return false;
+  } finally {
+    try {
+      lock.releaseLock();
+    } catch (e2) {}
+  }
+}
+
+// Pindahkan isi inbox → db_Approval_Queue (dipanggil di awal drainAntreanApprovalP0 / fastTick tiap 1 menit).
+// Dedup sama dgn enqueueApprovalP0_: baris pending/processing dgn kodeP0 sama DIPERBARUI, bukan digandakan.
+function _apprInboxFlush_() {
+  var lock = LockService.getUserLock();
+  if (!lock.tryLock(10000)) return;
+  try {
+    var arr = _apprInboxRead_();
+    if (!arr.length) return;
+    var sh = _apprQueueSheet_();
+    var d = sh.getDataRange().getValues();
+    var remain = [];
+    for (var i = 0; i < arr.length; i++) {
+      var it = arr[i];
+      if (!it || !it.kodeP0) continue;
+      try {
+        var foundRow = -1;
+        for (var r = 1; r < d.length; r++) {
+          var st = String(d[r][1]);
+          if (
+            (st === "pending" || st === "processing") &&
+            String(d[r][2]) === String(it.kodeP0)
+          ) {
+            foundRow = r + 1;
+            break;
+          }
+        }
+        if (foundRow > 0) {
+          sh.getRange(foundRow, 4).setValue(String(it.keputusan));
+          sh.getRange(foundRow, 5).setValue(String(it.username || ""));
+          sh.getRange(foundRow, 6).setValue(String(it.alasan || ""));
+        } else {
+          var id =
+            String(Date.now()) + "-" + Math.floor(Math.random() * 100000);
+          sh.appendRow([
+            id,
+            "pending",
+            String(it.kodeP0),
+            String(it.keputusan),
+            String(it.username || ""),
+            String(it.alasan || ""),
+            _nowY_(),
+            "",
+            0,
+          ]);
+          d.push([id, "pending", String(it.kodeP0), "", "", "", "", "", ""]); // agar item berikutnya dgn kodeP0 sama ikut ter-dedup
+        }
+      } catch (eItem) {
+        remain.push(it);
+      } // gagal pindah → tetap di inbox, dicoba flush berikutnya
+    }
+    _apprInboxWrite_(remain);
+  } catch (e) {
+    Logger.log("_apprInboxFlush_: " + e);
+  } finally {
+    try {
+      lock.releaseLock();
+    } catch (e2) {}
+  }
+}
+
 function drainAntreanApprovalP0() {
+  try {
+    _apprInboxFlush_();
+  } catch (eFl) {
+    Logger.log("drainAntreanApprovalP0: flush inbox gagal — " + eFl);
+  }
   var sh = _apprQueueSheet_();
   var claimed = [];
   var lock = LockService.getUserLock();
