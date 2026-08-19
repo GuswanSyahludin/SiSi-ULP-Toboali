@@ -12,7 +12,11 @@
    Kriteria status ditulis eksplisit — satu sumber untuk web SIE-Teknik & mobile (apiRouter_).
    + getLampiranPengecekanP0 & _sheetUkurGardu_ (hotfix siang): pembacaan lampiran di-gate jenis pekerjaan —
    spreadsheet gardu hanya dibuka utk "Pengecekan Gardu", sheet switching hanya di-scan utk "Pengecekan Switching";
-   nama sheet gardu di-cache 6 jam (detail tidak lagi timeout/loading selamanya). */
+   nama sheet gardu di-cache 6 jam (detail tidak lagi timeout/loading selamanya).
+   + setApprovalP0 JADI ANTREAN (db_Approval_Queue): keputusan hanya DICATAT lalu balas seketika (~0,5 dtk) —
+   UI mobile tidak lagi menunggu scan sheet + hitung point (penyebab timeout). Penulisan Status Approval +
+   hitung Point dikerjakan backend oleh drainAntreanApprovalP0 tiap 1 menit (pasang trigger SEKALI via
+   createApprovalDrainTriggerY() dari editor Apps Script). */
 
 // ====== KONFIG ======
 var SHEET_YANDAL = {
@@ -1442,6 +1446,9 @@ function getApprovalP0List(params) {
 
 // Set keputusan approval. params: { kodeP0, keputusan:'Approved'|'Rejected', username?, alasan? }
 // alasan (khusus Rejected) → kolom "Alasan Rejected" (AQ / indeks 42); dikosongkan lagi saat Approved.
+// REV 19 Agu 2026 — MODE ANTREAN (backlog): fungsi ini HANYA mencatat keputusan ke db_Approval_Queue lalu
+// balas SEKETIKA — UI mobile tidak menunggu. Penulisan Status Approval + hitung Point dikerjakan backend
+// oleh drainAntreanApprovalP0 (tiap 1 menit). Web SIE-Teknik TIDAK terpengaruh (response tetap ok:true).
 function setApprovalP0(params) {
   try {
     params = params || {};
@@ -1452,42 +1459,245 @@ function setApprovalP0(params) {
     if (!kodeP0) return { ok: false, error: "kodeP0 wajib diisi." };
     if (["Approved", "Rejected"].indexOf(keputusan) < 0)
       return { ok: false, error: "Keputusan harus Approved atau Rejected." };
-    var sh = _shY_(SHEET_YANDAL.P0);
-    var f = _findRowY_(sh, COL_P0.kodeP0, kodeP0);
-    if (!f) return { ok: false, error: "Baris P0 tidak ditemukan: " + kodeP0 };
-    _setY_(sh, f.rowNum, COL_P0.statusApproval, keputusan);
-    _setTextY_(sh, f.rowNum, COL_P0.approvedBy, approver);
-    _setDateFmtY_(sh, f.rowNum, COL_P0.timestampApprove, _nowY_());
-    // Alasan penolakan → kolom "Alasan Rejected" (AQ): diisi saat Rejected, dikosongkan saat Approved.
-    _setTextY_(
-      sh,
-      f.rowNum,
-      COL_P0.alasanRejected,
-      keputusan === "Rejected" ? alasan : "",
-    );
-    // TRIGGER 1 (web): saat Approved → hitung & set Point (AR); saat Rejected → kosongkan Point.
-    var pointRes = null;
-    if (keputusan === "Approved") {
-      try {
-        pointRes = hitungPointP0Yandal(kodeP0);
-      } catch (ePt) {
-        Logger.log("setApprovalP0: hitung point gagal — " + ePt);
-      }
-    } else {
-      try {
-        _setY_(sh, f.rowNum, COL_P0.point, "");
-      } catch (eClr) {}
-    }
+    if (keputusan === "Rejected" && !alasan)
+      return { ok: false, error: "Alasan penolakan wajib diisi." };
+    var antre = enqueueApprovalP0_(kodeP0, keputusan, approver, alasan);
     return {
       ok: true,
+      queued: antre,
+      mode: "queued",
       kodeP0: kodeP0,
       status: keputusan,
       approvedBy: approver,
-      point: pointRes && pointRes.ok ? pointRes.point : null,
     };
   } catch (e) {
     return { ok: false, error: e.message };
   }
+}
+
+// ====== ANTREAN APPROVAL P0 (backend — UI tidak menunggu) ======
+// Pola sama dgn antrean WM (db_WM_Queue): request hanya mencatat; trigger tiap 1 menit memproses.
+// Sheet antrean db_Approval_Queue dikelola skrip sendiri (dibuat otomatis) — TIDAK perlu ditambah ke AppSheet.
+var APPR_QUEUE_SHEET = "db_Approval_Queue";
+var APPR_QUEUE_MAX_ATTEMPTS = 5; // setelah gagal sekian kali → status "failed" (berhenti dicoba)
+var APPR_QUEUE_BATCH = 25; // maksimum item diproses per putaran
+var APPR_QUEUE_STALE_MS = 10 * 60 * 1000; // item "processing" lebih tua dari ini dianggap macet → diklaim ulang
+// Kolom db_Approval_Queue (0-based): id | status | kodeP0 | keputusan | username | alasan | enqueuedAt | lastTriedAt | attempts
+
+function _apprQueueSheet_() {
+  var ss = _ssY_();
+  var sh = ss.getSheetByName(APPR_QUEUE_SHEET);
+  if (!sh) {
+    sh = ss.insertSheet(APPR_QUEUE_SHEET);
+    sh.getRange(1, 1, 1, 9).setValues([
+      [
+        "id",
+        "status",
+        "kodeP0",
+        "keputusan",
+        "username",
+        "alasan",
+        "enqueuedAt",
+        "lastTriedAt",
+        "attempts",
+      ],
+    ]);
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+// Catat 1 keputusan ke antrean. Dedup: kodeP0 yang masih "pending"/"processing" → barisnya DIPERBARUI
+// (keputusan terbaru menang), tidak digandakan. getUserLock (BUKAN script lock) → tidak antre di belakang job berat.
+function enqueueApprovalP0_(kodeP0, keputusan, username, alasan) {
+  if (!kodeP0) return false;
+  var lock = LockService.getUserLock();
+  try {
+    lock.waitLock(10000);
+  } catch (e) {
+    Logger.log("enqueueApprovalP0_: gagal lock — " + e);
+  }
+  try {
+    var sh = _apprQueueSheet_();
+    var d = sh.getDataRange().getValues();
+    for (var i = 1; i < d.length; i++) {
+      var st = String(d[i][1]);
+      if (
+        (st === "pending" || st === "processing") &&
+        String(d[i][2]) === String(kodeP0)
+      ) {
+        var rowNum = i + 1;
+        sh.getRange(rowNum, 4).setValue(String(keputusan));
+        sh.getRange(rowNum, 5).setValue(String(username || ""));
+        sh.getRange(rowNum, 6).setValue(String(alasan || ""));
+        return true;
+      }
+    }
+    var id = String(Date.now()) + "-" + Math.floor(Math.random() * 100000);
+    sh.appendRow([
+      id,
+      "pending",
+      String(kodeP0),
+      String(keputusan),
+      String(username || ""),
+      String(alasan || ""),
+      _nowY_(),
+      "",
+      0,
+    ]);
+    return true;
+  } catch (e) {
+    Logger.log("enqueueApprovalP0_: ERROR — " + e);
+    return false;
+  } finally {
+    try {
+      lock.releaseLock();
+    } catch (e2) {}
+  }
+}
+
+// Eksekutor 1 item antrean (dipanggil drain): tulis Status/ApprovedBy/Timestamp/Alasan + Point (bila Approved).
+function _prosesAntreanApprovalY_(item) {
+  var sh = _shY_(SHEET_YANDAL.P0);
+  var f = _findRowY_(sh, COL_P0.kodeP0, item.kodeP0);
+  if (!f) throw new Error("Baris P0 tidak ditemukan: " + item.kodeP0);
+  _setY_(sh, f.rowNum, COL_P0.statusApproval, item.keputusan);
+  _setTextY_(sh, f.rowNum, COL_P0.approvedBy, item.username);
+  _setDateFmtY_(sh, f.rowNum, COL_P0.timestampApprove, _nowY_());
+  // Alasan penolakan → kolom "Alasan Rejected" (AQ): diisi saat Rejected, dikosongkan saat Approved.
+  _setTextY_(
+    sh,
+    f.rowNum,
+    COL_P0.alasanRejected,
+    item.keputusan === "Rejected" ? item.alasan : "",
+  );
+  // Point (AR): dihitung saat Approved; dikosongkan saat Rejected.
+  if (item.keputusan === "Approved") {
+    try {
+      hitungPointP0Yandal(item.kodeP0);
+    } catch (ePt) {
+      Logger.log("antrean approval: hitung point gagal — " + ePt);
+    }
+  } else {
+    try {
+      _setY_(sh, f.rowNum, COL_P0.point, "");
+    } catch (eClr) {}
+  }
+}
+
+// Trigger backend (tiap 1 menit): klaim (lock singkat) → proses tanpa lock → finalisasi. (Pola drainAntreanP0.)
+function drainAntreanApprovalP0() {
+  var sh = _apprQueueSheet_();
+  var claimed = [];
+  var lock = LockService.getUserLock();
+  try {
+    lock.waitLock(15000);
+  } catch (e) {
+    Logger.log("drainAntreanApprovalP0: gagal lock klaim — " + e);
+    return;
+  }
+  try {
+    var d = sh.getDataRange().getValues();
+    var nowMs = Date.now();
+    for (var i = 1; i < d.length && claimed.length < APPR_QUEUE_BATCH; i++) {
+      var st = String(d[i][1]);
+      var lastMs = _toMillisY_(d[i][7]);
+      var staleProc =
+        st === "processing" &&
+        !isNaN(lastMs) &&
+        nowMs - lastMs > APPR_QUEUE_STALE_MS;
+      if (st === "pending" || staleProc) {
+        d[i][1] = "processing";
+        d[i][7] = new Date(nowMs);
+        claimed.push({
+          id: String(d[i][0]),
+          kodeP0: String(d[i][2]),
+          keputusan: String(d[i][3]),
+          username: String(d[i][4]),
+          alasan: String(d[i][5]),
+        });
+      }
+    }
+    if (claimed.length) sh.getDataRange().setValues(d);
+  } catch (e) {
+    Logger.log("drainAntreanApprovalP0: ERROR klaim — " + e);
+  } finally {
+    try {
+      lock.releaseLock();
+    } catch (e2) {}
+  }
+  if (!claimed.length) return;
+
+  var hasil = {};
+  for (var j = 0; j < claimed.length; j++) {
+    var it = claimed[j];
+    try {
+      _prosesAntreanApprovalY_(it);
+      hasil[it.id] = "done";
+    } catch (e) {
+      Logger.log(
+        "drainAntreanApprovalP0: proses gagal kode=" + it.kodeP0 + " — " + e,
+      );
+      hasil[it.id] = "retry";
+    }
+  }
+
+  try {
+    lock.waitLock(15000);
+  } catch (e) {
+    Logger.log("drainAntreanApprovalP0: gagal lock final — " + e);
+    return;
+  }
+  try {
+    var d2 = sh.getDataRange().getValues();
+    var delRows = [];
+    for (var k = 1; k < d2.length; k++) {
+      var id = String(d2[k][0]);
+      if (!(id in hasil)) continue;
+      if (hasil[id] === "done") {
+        delRows.push(k + 1);
+      } else {
+        var att = Number(d2[k][8] || 0) + 1;
+        d2[k][8] = att;
+        d2[k][1] = att >= APPR_QUEUE_MAX_ATTEMPTS ? "failed" : "pending";
+      }
+    }
+    sh.getDataRange().setValues(d2);
+    delRows.sort(function (a, b) {
+      return b - a;
+    }); // hapus dari bawah agar indeks tidak bergeser
+    for (var m = 0; m < delRows.length; m++) sh.deleteRow(delRows[m]);
+  } catch (e) {
+    Logger.log("drainAntreanApprovalP0: ERROR final — " + e);
+  } finally {
+    try {
+      lock.releaseLock();
+    } catch (e2) {}
+  }
+}
+
+// SETUP sekali: pasang trigger time-driven drainAntreanApprovalP0 setiap 1 menit (jalankan manual dari editor).
+function createApprovalDrainTriggerY() {
+  var trs = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < trs.length; i++)
+    if (trs[i].getHandlerFunction() === "drainAntreanApprovalP0")
+      ScriptApp.deleteTrigger(trs[i]);
+  ScriptApp.newTrigger("drainAntreanApprovalP0")
+    .timeBased()
+    .everyMinutes(1)
+    .create();
+  Logger.log("Trigger drainAntreanApprovalP0 dibuat: setiap 1 menit");
+}
+// Lepas trigger antrean approval. CATATAN: tanpa trigger ini keputusan HANYA tercatat di antrean, TIDAK diproses.
+function hapusApprovalDrainTriggerY() {
+  var trs = ScriptApp.getProjectTriggers(),
+    n = 0;
+  for (var i = 0; i < trs.length; i++)
+    if (trs[i].getHandlerFunction() === "drainAntreanApprovalP0") {
+      ScriptApp.deleteTrigger(trs[i]);
+      n++;
+    }
+  Logger.log("Trigger drainAntreanApprovalP0 dihapus: " + n);
 }
 
 // ====== EDIT NAMA PEKERJAAN P0 (modal Edit di SIE-Teknik tab "Approval P0", 12 Agu 2026) ======

@@ -831,8 +831,14 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
       if (res['success'] == true) {
         if (!mounted) return;
         Navigator.pop(context);
+        // BACKLOG: baris + foto sudah tertulis; rantai Realisasi/Header/WA
+        // diproses backend (recalcTick, tiap 1 menit) — tidak perlu menunggu.
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Eksekusi pekerjaan berhasil disimpan')),
+          SnackBar(
+            content: Text(
+              'Eksekusi tersimpan (Kode: ${res['kodeEksekusi'] ?? '-'}). Sinkronisasi Realisasi, WA & laporan diproses di latar belakang (±1 menit).',
+            ),
+          ),
         );
         widget.onSuccess();
       } else {

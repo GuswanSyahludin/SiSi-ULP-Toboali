@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_colors.dart';
+import '../services/api_service.dart';
 import 'laporan_harian_screen.dart';
+import 'login_screen.dart';
 import 'eksekusi_row_screen.dart';
 import 'verifikasi_p0_screen.dart';
 
@@ -822,14 +825,62 @@ class _DashboardScreenState extends State<DashboardScreen>
               title: const Text('Keluar dari Akun',
                   style: TextStyle(
                       color: Colors.redAccent, fontWeight: FontWeight.bold)),
-              onTap: () {
-                Navigator.of(context)
-                    .pushNamedAndRemoveUntil('/login', (route) => false);
-              },
+              onTap: _handleLogout,
             ),
           ),
         ],
       ),
+    );
+  }
+
+  // ═══ LOGOUT (Rev 19 Agu siang) — sebelumnya pushNamedAndRemoveUntil('/login') tapi named route
+  // '/login' tidak pernah didaftarkan di main.dart → error saat diklik. Kini: konfirmasi → hapus sesi
+  // di server → hapus SharedPreferences → kembali ke LoginScreen.
+  Future<void> _handleLogout() async {
+    final yakin = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Keluar dari akun?',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        content: const Text('Sesi kamu akan dihapus dari perangkat ini.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Keluar'),
+          ),
+        ],
+      ),
+    );
+    if (yakin != true || !mounted) return;
+
+    // Hapus sesi di server (abaikan jika gagal — logout lokal tetap jalan)
+    try {
+      final token = widget.sesi['token'] ?? '';
+      if (token.toString().isNotEmpty) {
+        await ApiService.logout(token.toString());
+      }
+    } catch (_) {}
+
+    // Hapus sesi lokal
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('token');
+    await prefs.remove('username');
+    await prefs.remove('role');
+    await prefs.remove('aksesMenu');
+
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
     );
   }
 }

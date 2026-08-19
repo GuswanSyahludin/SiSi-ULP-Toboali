@@ -3,6 +3,10 @@
    Google Apps Script Backend
    Rev: 19 Agu 2026 (struktur folder VS Code + clasp · .gs → .js ·
         perbaikan path pemanggilan file HTML untuk HtmlService)
+   Rev 19 Agu 2026 (siang): simpanMobileEksekusiRow jadi BACKLOG — rantai bottom-up prosesEksekusiROW
+        didefer ke db_Recalc_Queue (jenis baru "eksekusiRow", diproses recalcTick tiap 1 menit; trigger
+        recalcTick yang sudah ada LANGSUNG bisa memprosesnya — tanpa trigger baru) + cache folder Drive
+        harian per tim (hemat ~6 round-trip Drive per input). UI mobile balas seketika setelah foto+baris tertulis.
    Rev sebelumnya: 31 Mei 2026 (konsolidasi bersih + modul Inspeksi + MOBILE API LAYER)
    Catatan: fungsi per-menu dipindah ke Tek-Code.gs
 ═════════════════════════════════════ */
@@ -332,7 +336,7 @@ function doGet(e) {
 }
 
 /* ═══ WEBHOOK (POST) — dipanggil oleh Bot AppSheet ═══ */
-var WEBHOOK_SECRET = "P@ssw0rd`123";
+var WEBHOOK_SECRET = "GANTI_DENGAN_SECRET_KAMU";
 
 function doPost(e) {
   // MOBILE API LAYER: rute semua request POST Flutter (?mobile=1) ke apiRouter_, balikan JSON murni.
@@ -825,6 +829,15 @@ function recalcTick() {
       if (claimed[j].jenis === "wa") {
         if (typeof recalcWaByHeader === "function" && claimed[j].kodeHeader) {
           recalcWaByHeader(claimed[j].kodeHeader);
+          claimed[j].ok = true;
+        } else {
+          claimed[j].ok = false;
+        }
+      } else if (claimed[j].jenis === "eksekusiRow") {
+        // Rantai bottom-up per Kode Eksekusi (input mobile) — didefer ke sini agar UI tidak menunggu
+        var kodeEks = String(claimed[j].key || "").split("|")[1] || "";
+        if (typeof prosesEksekusiROW === "function" && kodeEks) {
+          prosesEksekusiROW(kodeEks);
           claimed[j].ok = true;
         } else {
           claimed[j].ok = false;
@@ -1743,10 +1756,6 @@ function simpanMobileEksekusiRow(payload) {
     function _getFolderRow_() {
       if (!folderUpload) {
         var baseFolderNama = "AppSheet SiSi - ULP Toboali";
-        var rootFolders = DriveApp.getFoldersByName(baseFolderNama);
-        var curFolder = rootFolders.hasNext()
-          ? rootFolders.next()
-          : DriveApp.createFolder(baseFolderNama);
 
         // Format bulan: "08. Agustus"
         var bulanList = [
@@ -1769,25 +1778,54 @@ function simpanMobileEksekusiRow(payload) {
         var tglHari = String(tglObj.getDate());
         var tahunStr = String(tglObj.getFullYear());
 
-        // Path hierarki: AppSheet SiSi - ULP Toboali / Eksekusi ROW / {Tahun} / {Bulan} / {Tgl} / {Tim} / {uniqueKode}
-        var subPath = [
-          "Eksekusi ROW",
-          tahunStr,
-          blnStr,
-          tglHari,
-          tim,
-          uniqueKode,
-        ];
-        relativeFolderPath = baseFolderNama + "/" + subPath.join("/");
-
-        for (var p = 0; p < subPath.length; p++) {
-          var subName = subPath[p];
-          var subs = curFolder.getFoldersByName(subName);
-          curFolder = subs.hasNext()
-            ? subs.next()
-            : curFolder.createFolder(subName);
+        // CACHE folder induk harian per tim (Rev 19 Agu siang): folder
+        // "…/Eksekusi ROW/{Tahun}/{Bulan}/{Tgl}/{Tim}" stabil sepanjang hari → id-nya di-cache 6 jam,
+        // hemat ~6 round-trip Drive per input. Folder per kode (unik) tetap dibuat baru di bawahnya.
+        var cache = CacheService.getScriptCache();
+        var ckey = "rowFld_" + tglStr + "_" + tim;
+        var parentFolder = null;
+        var cid = cache.get(ckey);
+        if (cid) {
+          try {
+            parentFolder = DriveApp.getFolderById(cid);
+          } catch (eC) {}
         }
-        folderUpload = curFolder;
+        if (!parentFolder) {
+          var rootFolders = DriveApp.getFoldersByName(baseFolderNama);
+          var curFolder = rootFolders.hasNext()
+            ? rootFolders.next()
+            : DriveApp.createFolder(baseFolderNama);
+          var parentPath = ["Eksekusi ROW", tahunStr, blnStr, tglHari, tim];
+          for (var p = 0; p < parentPath.length; p++) {
+            var subName = parentPath[p];
+            var subs = curFolder.getFoldersByName(subName);
+            curFolder = subs.hasNext()
+              ? subs.next()
+              : curFolder.createFolder(subName);
+          }
+          parentFolder = curFolder;
+          try {
+            cache.put(ckey, parentFolder.getId(), 21600);
+          } catch (eP) {}
+        }
+
+        // Path hierarki: AppSheet SiSi - ULP Toboali / Eksekusi ROW / {Tahun} / {Bulan} / {Tgl} / {Tim} / {uniqueKode}
+        relativeFolderPath =
+          baseFolderNama +
+          "/Eksekusi ROW/" +
+          tahunStr +
+          "/" +
+          blnStr +
+          "/" +
+          tglHari +
+          "/" +
+          tim +
+          "/" +
+          uniqueKode;
+        var subsKode = parentFolder.getFoldersByName(uniqueKode);
+        folderUpload = subsKode.hasNext()
+          ? subsKode.next()
+          : parentFolder.createFolder(uniqueKode);
       }
       return folderUpload;
     }
@@ -1883,27 +1921,30 @@ function simpanMobileEksekusiRow(payload) {
     sh.getRange(targetRow, 30).setNumberFormat("dd/MM/yyyy HH:mm:ss");
     SpreadsheetApp.flush();
 
-    // Trigger otomatis rantai bottom-up prosesEksekusiROW agar Kode Header, Kode Pekerjaan,
-    // Realisasi & WA ter-update seketika
-    var hasilRantai = null;
+    // ANTREAN (BACKLOG) — rantai bottom-up prosesEksekusiROW (bangun Realisasi + Header,
+    // tulis-balik kode, sinkron WA) DIDEFER ke antrean db_Recalc_Queue (jenis "eksekusiRow")
+    // → diproses recalcTick tiap 1 menit. UI mobile balas SEKETIKA setelah foto terupload
+    // & baris tertulis — tidak lagi menunggu rantai (penyebab input terasa lama).
+    var antreRantai = false;
     try {
-      if (typeof prosesEksekusiROW === "function") {
-        hasilRantai = prosesEksekusiROW(uniqueKode);
-      }
+      antreRantai = _enqueueRecalc_({
+        jenis: "eksekusiRow",
+        key: "eksekusiRow|" + uniqueKode,
+        tim: tim,
+        tanggal: tglStr,
+      });
     } catch (eRantai) {
       Logger.log(
-        "[simpanMobileEksekusiRow] prosesEksekusiROW info: " + eRantai.message,
+        "[simpanMobileEksekusiRow] enqueue rantai gagal: " + eRantai.message,
       );
     }
 
     return {
       success: true,
       message: "Data eksekusi pekerjaan berhasil disimpan.",
-      kodeEksekusi:
-        hasilRantai && hasilRantai.kodeEksekusi
-          ? hasilRantai.kodeEksekusi
-          : uniqueKode,
-      rantai: hasilRantai,
+      kodeEksekusi: uniqueKode,
+      queued: antreRantai,
+      mode: "queued",
     };
   } catch (err) {
     return {

@@ -154,19 +154,28 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
     if (mounted) {
       Navigator.pop(context); // Tutup loader
       if (res['ok'] == true) {
+        // OPTIMISTIC: keputusan sudah tercatat di antrean backend — hapus card dari
+        // daftar & geser badge SEGERA, tanpa menunggu proses backend (±1 menit).
+        setState(() {
+          _listP0.removeWhere((e) => (e['kodeP0'] ?? '').toString() == kodeP0);
+          final asal = _counts[_selectedStatus];
+          if (asal is int && asal > 0) _counts[_selectedStatus] = asal - 1;
+          final tujuan = _counts[keputusan];
+          if (tujuan is int) _counts[keputusan] = tujuan + 1;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
               keputusan == 'Approved'
-                  ? 'Data $kodeP0 berhasil disetujui! Bobot poin: ${res['point'] ?? '-'}'
-                  : 'Data $kodeP0 berhasil ditolak.',
+                  ? 'Data $kodeP0 disetujui! Tersimpan ke antrean — status & poin diproses di latar belakang (±1 menit).'
+                  : 'Data $kodeP0 ditolak. Tersimpan ke antrean — diproses di latar belakang (±1 menit).',
             ),
             backgroundColor: keputusan == 'Approved'
                 ? const Color(0xFF10B981)
                 : const Color(0xFFEF4444),
           ),
         );
-        _fetchData();
+        // Tidak perlu _fetchData(): card sudah hilang secara lokal. Refresh manual bila perlu.
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -316,271 +325,389 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
     );
   }
 
-  // DETAIL — info dasar dari card; lampiran Switching/Gardu dari API getLampiranPengecekanP0
-  void _showDetailModal(Map<String, dynamic> item) async {
+  // DETAIL (Rev 19 Agu sore) — modal LANGSUNG terbuka dengan data dasar dari card
+  // (selalu tampil, tanpa menunggu API). Lampiran Switching/Gardu dimuat terpisah DI DALAM
+  // modal (lazy) dengan status loading/error + tombol Coba Lagi — kegagalan lampiran
+  // TIDAK PERNAH lagi menghalangi detail dasar.
+  void _showDetailModal(Map<String, dynamic> item) {
     final kodeP0 = (item['kodeP0'] ?? '').toString();
     final status = (item['status'] ?? 'Menunggu').toString();
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Dialog(
-        backgroundColor: Colors.transparent,
-        child: CustomLoadingWidget(message: 'Memuat lampiran detail P0...'),
-      ),
-    );
-
-    Map<String, dynamic> res;
-    try {
-      res = await ApiService.getLampiranPengecekanP0(kodeP0);
-    } catch (e) {
-      // Timeout / jaringan putus / respon bukan JSON — WAJIB tutup loader,
-      // tanpa ini loading.gif tampil SELAMANYA saat request gagal.
-      if (!mounted) return;
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Gagal memuat detail (timeout/jaringan). Coba lagi.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-    if (!mounted) return;
-    Navigator.pop(context); // Tutup loader
-
-    if (res['ok'] != true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Gagal memuat detail: ${res['error']}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    final List switching = res['switching'] ?? [];
-    final List gardu = res['gardu'] ?? [];
+    // State lampiran — closure di luar builder agar bertahan saat StatefulBuilder rebuild
+    Map<String, dynamic>? lampiranRes;
+    String? lampiranError;
+    var lampiranLoading = true;
+    var lampiranStarted = false;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        height: MediaQuery.of(ctx).size.height * 0.88,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          children: [
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 10),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          Future<void> muatLampiran() async {
+            try {
+              final res = await ApiService.getLampiranPengecekanP0(kodeP0);
+              if (!ctx.mounted) return;
+              setSheetState(() {
+                lampiranLoading = false;
+                if (res['ok'] == true) {
+                  lampiranRes = res;
+                  lampiranError = null;
+                } else {
+                  lampiranError =
+                      (res['error'] ?? 'Lampiran tidak tersedia').toString();
+                }
+              });
+            } catch (e) {
+              if (!ctx.mounted) return;
+              setSheetState(() {
+                lampiranLoading = false;
+                lampiranError = 'timeout/jaringan — $e';
+              });
+            }
+          }
+
+          // Mulai fetch SEKALI saat sheet pertama dibangun
+          if (!lampiranStarted) {
+            lampiranStarted = true;
+            muatLampiran();
+          }
+
+          final List switching = lampiranRes != null
+              ? (lampiranRes!['switching'] ?? <dynamic>[])
+              : <dynamic>[];
+          final List gardu = lampiranRes != null
+              ? (lampiranRes!['gardu'] ?? <dynamic>[])
+              : <dynamic>[];
+
+          return Container(
+            height: MediaQuery.of(ctx).size.height * 0.88,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Detail Verifikasi P0',
+            child: Column(
+              children: [
+                Container(
+                  margin: const EdgeInsets.symmetric(vertical: 10),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Detail Verifikasi P0',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              kodeP0,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF0284C7),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      _buildStatusChip(status),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.all(20),
+                    children: [
+                      _buildSectionHeader(
+                        Icons.info_outline,
+                        '1. Informasi Pekerjaan',
+                      ),
+                      _buildDetailRow('Pekerjaan',
+                          (item['namaPekerjaan'] ?? '-').toString()),
+                      _buildDetailRow(
+                        'Penyulang / Section',
+                        _gabungPenyulangSection(item),
+                      ),
+                      _buildDetailRow(
+                        'Hari / Tanggal',
+                        '${item['hari'] ?? '-'}, ${_fmtTglId((item['tanggal'] ?? '').toString())}',
+                      ),
+                      _buildDetailRow(
+                          'Tim', _timLabel((item['tim'] ?? '').toString())),
+                      _buildDetailRow(
+                          'Petugas', (item['petugas'] ?? '-').toString()),
+                      _buildDetailRow(
+                          'Daerah', (item['daerah'] ?? '-').toString()),
+                      _buildDetailRow(
+                          'Durasi', (item['durasi'] ?? '-').toString()),
+                      _buildDetailRow('Jarak Antar P0',
+                          (item['jarakAntarP0'] ?? '-').toString()),
+                      _buildDetailRow('Jarak Closing',
+                          (item['jarakClosing'] ?? '-').toString()),
+                      _buildDetailRow(
+                          'Koordinat', (item['koordinat'] ?? '-').toString()),
+                      if (status != 'Menunggu') ...[
+                        _buildDetailRow('Diputuskan oleh',
+                            (item['approvedBy'] ?? '-').toString()),
+                        _buildDetailRow('Tanggal Keputusan',
+                            (item['timestampApprove'] ?? '-').toString()),
+                        if ((item['point'] ?? '').toString().isNotEmpty)
+                          _buildDetailRow(
+                              'Point', (item['point'] ?? '-').toString()),
+                        if ((item['alasanRejected'] ?? '')
+                            .toString()
+                            .isNotEmpty)
+                          _buildDetailRow('Alasan Rejected',
+                              (item['alasanRejected'] ?? '-').toString()),
+                      ],
+                      const SizedBox(height: 16),
+                      _buildSectionHeader(
+                          Icons.notes_rounded, '2. Catatan Inputan'),
+                      const SizedBox(height: 6),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Text(
+                          (item['catatan'] ?? '').toString().isNotEmpty
+                              ? (item['catatan']).toString()
+                              : 'Tidak ada catatan.',
                           style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: (item['catatan'] ?? '').toString().isNotEmpty
+                                ? const Color(0xFF0F172A)
+                                : const Color(0xFF94A3B8),
+                            fontStyle:
+                                (item['catatan'] ?? '').toString().isNotEmpty
+                                    ? FontStyle.normal
+                                    : FontStyle.italic,
                           ),
                         ),
-                        Text(
-                          kodeP0,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF0284C7),
-                            fontWeight: FontWeight.w600,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildSectionHeader(
+                        Icons.photo_library_outlined,
+                        '3. Tiga Foto Watermark P0',
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          _buildPhotoBox(
+                              'Sebelum', item['fotoSebelum']?['thumb'],
+                              height: 100),
+                          const SizedBox(width: 8),
+                          _buildPhotoBox(
+                              'Pekerjaan', item['fotoPekerjaan']?['thumb'],
+                              height: 100),
+                          const SizedBox(width: 8),
+                          _buildPhotoBox(
+                              'Sesudah', item['fotoSesudah']?['thumb'],
+                              height: 100),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      _buildSectionHeader(
+                        Icons.tune,
+                        '4. Lampiran Pengecekan (Switching / Gardu)',
+                      ),
+                      const SizedBox(height: 8),
+                      if (lampiranLoading)
+                        _buildLampiranLoading()
+                      else if (lampiranError != null)
+                        _buildLampiranError(lampiranError!, () {
+                          setSheetState(() {
+                            lampiranLoading = true;
+                            lampiranError = null;
+                          });
+                          muatLampiran();
+                        })
+                      else ...[
+                        ...switching.map((s) => _buildSwitchingCard(s)),
+                        ...gardu.map((g) => _buildGarduCard(g)),
+                        if (switching.isEmpty && gardu.isEmpty)
+                          _buildLampiranKosong(),
+                      ],
+                    ],
+                  ),
+                ),
+                if (status == 'Menunggu')
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: const BoxDecoration(
+                      border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFFEF4444),
+                              side: const BorderSide(color: Color(0xFFEF4444)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              _showRejectDialog(kodeP0);
+                            },
+                            child: const Text(
+                              'Tolak (Reject)',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF10B981),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              _konfirmasiApprove(kodeP0);
+                            },
+                            child: const Text(
+                              'Setujui (Approve)',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  _buildStatusChip(status),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(ctx),
-                  ),
-                ],
-              ),
+              ],
             ),
-            const Divider(height: 1),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(20),
-                children: [
-                  _buildSectionHeader(
-                    Icons.info_outline,
-                    '1. Informasi Pekerjaan',
-                  ),
-                  _buildDetailRow(
-                      'Pekerjaan', (item['namaPekerjaan'] ?? '-').toString()),
-                  _buildDetailRow(
-                    'Penyulang / Section',
-                    _gabungPenyulangSection(item),
-                  ),
-                  _buildDetailRow(
-                    'Hari / Tanggal',
-                    '${item['hari'] ?? '-'}, ${_fmtTglId((item['tanggal'] ?? '').toString())}',
-                  ),
-                  _buildDetailRow(
-                      'Tim', _timLabel((item['tim'] ?? '').toString())),
-                  _buildDetailRow(
-                      'Petugas', (item['petugas'] ?? '-').toString()),
-                  _buildDetailRow('Daerah', (item['daerah'] ?? '-').toString()),
-                  _buildDetailRow('Durasi', (item['durasi'] ?? '-').toString()),
-                  _buildDetailRow('Jarak Antar P0',
-                      (item['jarakAntarP0'] ?? '-').toString()),
-                  _buildDetailRow('Jarak Closing',
-                      (item['jarakClosing'] ?? '-').toString()),
-                  _buildDetailRow(
-                      'Koordinat', (item['koordinat'] ?? '-').toString()),
-                  if (status != 'Menunggu') ...[
-                    _buildDetailRow('Diputuskan oleh',
-                        (item['approvedBy'] ?? '-').toString()),
-                    _buildDetailRow('Tanggal Keputusan',
-                        (item['timestampApprove'] ?? '-').toString()),
-                    if ((item['point'] ?? '').toString().isNotEmpty)
-                      _buildDetailRow(
-                          'Point', (item['point'] ?? '-').toString()),
-                    if ((item['alasanRejected'] ?? '').toString().isNotEmpty)
-                      _buildDetailRow('Alasan Rejected',
-                          (item['alasanRejected'] ?? '-').toString()),
-                  ],
-                  const SizedBox(height: 16),
-                  _buildSectionHeader(
-                      Icons.notes_rounded, '2. Catatan Inputan'),
-                  const SizedBox(height: 6),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: Text(
-                      (item['catatan'] ?? '').toString().isNotEmpty
-                          ? (item['catatan']).toString()
-                          : 'Tidak ada catatan.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: (item['catatan'] ?? '').toString().isNotEmpty
-                            ? const Color(0xFF0F172A)
-                            : const Color(0xFF94A3B8),
-                        fontStyle: (item['catatan'] ?? '').toString().isNotEmpty
-                            ? FontStyle.normal
-                            : FontStyle.italic,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildSectionHeader(
-                    Icons.photo_library_outlined,
-                    '3. Tiga Foto Watermark P0',
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      _buildPhotoBox('Sebelum', item['fotoSebelum']?['thumb'],
-                          height: 100),
-                      const SizedBox(width: 8),
-                      _buildPhotoBox(
-                          'Pekerjaan', item['fotoPekerjaan']?['thumb'],
-                          height: 100),
-                      const SizedBox(width: 8),
-                      _buildPhotoBox('Sesudah', item['fotoSesudah']?['thumb'],
-                          height: 100),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  if (switching.isNotEmpty) ...[
-                    _buildSectionHeader(
-                      Icons.tune,
-                      '4. Lampiran Pengecekan Switching',
-                    ),
-                    ...switching.map((s) => _buildSwitchingCard(s)),
-                    const SizedBox(height: 16),
-                  ],
-                  if (gardu.isNotEmpty) ...[
-                    _buildSectionHeader(
-                      Icons.electric_bolt_outlined,
-                      '5. Lampiran Pengukuran Gardu',
-                    ),
-                    ...gardu.map((g) => _buildGarduCard(g)),
-                  ],
-                ],
-              ),
-            ),
-            if (status == 'Menunggu')
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: const BoxDecoration(
-                  border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFFEF4444),
-                          side: const BorderSide(color: Color(0xFFEF4444)),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        onPressed: () {
-                          Navigator.pop(ctx);
-                          _showRejectDialog(kodeP0);
-                        },
-                        child: const Text(
-                          'Tolak (Reject)',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF10B981),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        onPressed: () {
-                          Navigator.pop(ctx);
-                          _konfirmasiApprove(kodeP0);
-                        },
-                        child: const Text(
-                          'Setujui (Approve)',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+          );
+        },
+      ),
+    );
+  }
+
+  // ── Lampiran pengecekan: status loading / error (dgn Coba Lagi) / kosong ──
+  Widget _buildLampiranLoading() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: const Row(
+        children: [
+          SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          SizedBox(width: 10),
+          Text(
+            'Memuat data pengecekan...',
+            style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLampiranError(String pesan, VoidCallback onRetry) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF2F2),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFFECACA)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.error_outline, size: 15, color: Color(0xFFDC2626)),
+              SizedBox(width: 6),
+              Text(
+                'Data pengecekan gagal dimuat',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFDC2626),
                 ),
               ),
-          ],
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            pesan,
+            style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8)),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 30,
+            child: OutlinedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh, size: 14),
+              label: const Text('Coba Lagi', style: TextStyle(fontSize: 12)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFDC2626),
+                side: const BorderSide(color: Color(0xFFDC2626)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLampiranKosong() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: const Text(
+        'Tidak ada data pengecekan Switching/Gardu untuk pekerjaan ini.',
+        style: TextStyle(
+          fontSize: 12,
+          color: Color(0xFF94A3B8),
+          fontStyle: FontStyle.italic,
         ),
       ),
     );
@@ -709,46 +836,118 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
     );
   }
 
-  Widget _buildPhotoBox(String title, String? url, {double height = 75}) {
-    return Expanded(
-      child: Container(
-        height: height,
-        decoration: BoxDecoration(
-          color: Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.grey.shade300),
-        ),
-        clipBehavior: Clip.antiAlias,
+  // POPUP FOTO — ketuk thumbnail → tampil layar penuh + pinch-zoom (InteractiveViewer)
+  void _showPhotoPopup(String url, String title) {
+    // Thumbnail Drive default sz=w400 → minta resolusi lebih besar saat popup
+    final bigUrl = url.replaceAll('sz=w400', 'sz=w1600');
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.92),
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(10),
         child: Stack(
-          fit: StackFit.expand,
+          alignment: Alignment.center,
           children: [
-            if (url != null && url.isNotEmpty)
-              Image.network(
-                url,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Icon(Icons.broken_image),
-              )
-            else
-              const Icon(Icons.image, color: Colors.grey),
+            InteractiveViewer(
+              maxScale: 5.0,
+              child: Image.network(
+                bigUrl,
+                fit: BoxFit.contain,
+                loadingBuilder: (context, child, progress) {
+                  if (progress == null) return child;
+                  return const SizedBox(
+                    height: 120,
+                    child: Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    ),
+                  );
+                },
+                errorBuilder: (_, __, ___) => const Icon(
+                  Icons.broken_image,
+                  color: Colors.white,
+                  size: 48,
+                ),
+              ),
+            ),
             Positioned(
               bottom: 0,
               left: 0,
               right: 0,
               child: Container(
-                color: Colors.black.withOpacity(0.65),
-                padding: const EdgeInsets.symmetric(vertical: 2),
+                color: Colors.black54,
+                padding: const EdgeInsets.symmetric(vertical: 6),
                 child: Text(
                   title,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 9,
+                    fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
             ),
+            Positioned(
+              top: 0,
+              right: 0,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 26),
+                onPressed: () => Navigator.pop(ctx),
+              ),
+            ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhotoBox(String title, String? url, {double height = 75}) {
+    return Expanded(
+      child: GestureDetector(
+        // Ketuk foto → popup layar penuh (tidak ikut membuka detail card)
+        onTap: (url != null && url.isNotEmpty)
+            ? () => _showPhotoPopup(url, title)
+            : null,
+        child: Container(
+          height: height,
+          decoration: BoxDecoration(
+            color: Colors.grey.shade200,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (url != null && url.isNotEmpty)
+                Image.network(
+                  url,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const Icon(Icons.broken_image),
+                )
+              else
+                const Icon(Icons.image, color: Colors.grey),
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  color: Colors.black.withOpacity(0.65),
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
