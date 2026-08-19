@@ -130,12 +130,26 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
       ),
     );
 
-    final res = await ApiService.setApprovalP0(
-      kodeP0: kodeP0,
-      keputusan: keputusan,
-      username: _currentUsername,
-      alasan: alasan,
-    );
+    Map<String, dynamic> res;
+    try {
+      res = await ApiService.setApprovalP0(
+        kodeP0: kodeP0,
+        keputusan: keputusan,
+        username: _currentUsername,
+        alasan: alasan,
+      );
+    } catch (e) {
+      // WAJIB tutup loader saat error/timeout — jangan biarkan loading selamanya
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Gagal memproses (timeout/jaringan). Coba lagi.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     if (mounted) {
       Navigator.pop(context); // Tutup loader
@@ -316,7 +330,22 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
       ),
     );
 
-    final res = await ApiService.getLampiranPengecekanP0(kodeP0);
+    Map<String, dynamic> res;
+    try {
+      res = await ApiService.getLampiranPengecekanP0(kodeP0);
+    } catch (e) {
+      // Timeout / jaringan putus / respon bukan JSON — WAJIB tutup loader,
+      // tanpa ini loading.gif tampil SELAMANYA saat request gagal.
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Gagal memuat detail (timeout/jaringan). Coba lagi.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
     if (!mounted) return;
     Navigator.pop(context); // Tutup loader
 

@@ -9,7 +9,10 @@
    bergeser +1 mulai approvedBy; setApprovalP0 menulis alasan Reject ke AQ (dikosongkan saat Approved).
    Rev 19 Agu 2026 — getApprovalP0List: tambah field catatan (AM), alasanRejected (AQ) & point (AR) ke response
    + objek counts {Menunggu, Approved, Rejected} (mengikuti filter ulp+tanggal) untuk badge tab di mobile.
-   Kriteria status ditulis eksplisit — satu sumber untuk web SIE-Teknik & mobile (apiRouter_). */
+   Kriteria status ditulis eksplisit — satu sumber untuk web SIE-Teknik & mobile (apiRouter_).
+   + getLampiranPengecekanP0 & _sheetUkurGardu_ (hotfix siang): pembacaan lampiran di-gate jenis pekerjaan —
+   spreadsheet gardu hanya dibuka utk "Pengecekan Gardu", sheet switching hanya di-scan utk "Pengecekan Switching";
+   nama sheet gardu di-cache 6 jam (detail tidak lagi timeout/loading selamanya). */
 
 // ====== KONFIG ======
 var SHEET_YANDAL = {
@@ -1610,7 +1613,15 @@ var COL_UKUR_GARDU = {
   petugas: 23,
 };
 // Cari sheet pengukuran gardu di spreadsheet tsb (cocokkan header kolom E; return null bila tak ada).
+// REV 19 Agu 2026: nama sheet DI-CACHE 6 jam — scan header semua tab hanya sekali (sebelumnya: tiap panggilan).
 function _sheetUkurGardu_(ssU) {
+  var cache = CacheService.getScriptCache(),
+    ckey = "ukurGarduSheetName";
+  var cname = cache.get(ckey);
+  if (cname) {
+    var shc = ssU.getSheetByName(cname);
+    if (shc) return shc; // cache hit → langsung pakai
+  }
   var sheets = ssU.getSheets();
   for (var i = 0; i < sheets.length; i++) {
     var sh = sheets[i];
@@ -1621,11 +1632,20 @@ function _sheetUkurGardu_(ssU) {
       String(head || "")
         .trim()
         .toLowerCase() === "kode pengukuran gardu"
-    )
+    ) {
+      try {
+        cache.put(ckey, sh.getName(), 21600);
+      } catch (eP) {}
       return sh;
+    }
   }
   return null;
 }
+// params: { kodeP0 } → { ok, p0:{...}, switching:[{...}], gardu:[{...}] }
+// REV 19 Agu 2026 (hotfix loading lama): bacaan lampiran DI-GATE oleh Nama Pekerjaan —
+//   • spreadsheet KEDUA (pengukuran gardu; openById paling mahal) hanya dibuka bila nama pekerjaan mengandung "Gardu";
+//   • sheet switching hanya di-scan bila nama pekerjaan mengandung "Switching".
+// Pekerjaan biasa (ROW, dsb) → detail langsung balik tanpa menyentuh spreadsheet lain.
 function getLampiranPengecekanP0(params) {
   try {
     var kodeP0 = String((params && params.kodeP0) || "").trim();
@@ -1662,73 +1682,78 @@ function getLampiranPengecekanP0(params) {
         COL_P0.fotoSesudahUrl,
       ),
     };
+    var namaPekLower = p0.namaPekerjaan.toLowerCase();
 
-    // 2) Anak-anak Pengecekan Switching milik P0 ini (1 P0 bisa punya > 1 baris switching).
+    // 2) Anak-anak Pengecekan Switching — HANYA bila pekerjaan ini berkaitan switching.
     var switching = [];
-    var shS = _shY_(SHEET_YANDAL.SWITCHING);
-    if (shS && shS.getLastRow() > 1) {
-      var ds = _allY_(shS),
-        S = COL_SWITCHING;
-      for (var i = 1; i < ds.length; i++) {
-        if (String(ds[i][S.kodeP0] || "").trim() !== kodeP0) continue;
-        switching.push({
-          kodeSwitching: String(ds[i][S.kodeSwitching] || "").trim(),
-          penyulang: String(ds[i][S.penyulang] || "").trim(),
-          namaSwitching: String(ds[i][S.namaSwitching] || "").trim(),
-          jamPengecekan:
-            _jamHHmm_(ds[i][S.jamPengecekan]) ||
-            String(ds[i][S.jamPengecekan] || ""),
-          indikatorRemote: String(ds[i][S.indikatorRemote] || ""),
-          indikatorLocal: String(ds[i][S.indikatorLocal] || ""),
-          indicatorProtection: String(ds[i][S.indicatorProtection] || ""),
-          indicatorReclose: String(ds[i][S.indicatorReclose] || ""),
-          arusR: String(ds[i][S.arusR] || ""),
-          arusS: String(ds[i][S.arusS] || ""),
-          arusT: String(ds[i][S.arusT] || ""),
-          fotoArus: _p0FotoObj_(ds[i], S.linkDownloadArus, S.fotoArusUrl),
-          fotoG1: _p0FotoObj_(ds[i], S.linkDownloadG1, S.fotoG1Url),
-          fotoG2: _p0FotoObj_(ds[i], S.linkDownloadG2, S.fotoG2Url),
-          fotoG3: _p0FotoObj_(ds[i], S.linkDownloadG3, S.fotoG3Url),
-          fotoG4: _p0FotoObj_(ds[i], S.linkDownloadG4, S.fotoG4Url),
-          fotoG5: _p0FotoObj_(ds[i], S.linkDownloadG5, S.fotoG5Url),
-        });
-      }
-    }
-    // 3) Baris-baris Pengukuran Gardu milik P0 ini (utk "Pengecekan Gardu") — spreadsheet terpisah.
-    var gardu = [];
-    try {
-      var shU = _sheetUkurGardu_(SpreadsheetApp.openById(YANDAL_UKUR_SS_ID));
-      if (shU && shU.getLastRow() > 1) {
-        var du = shU.getDataRange().getValues(),
-          U = COL_UKUR_GARDU;
-        for (var u = 1; u < du.length; u++) {
-          if (String(du[u][U.kodeP0] || "").trim() !== kodeP0) continue;
-          gardu.push({
-            kodeUkur: String(du[u][U.kodeUkur] || "").trim(),
-            penyulang: String(du[u][U.penyulang] || "").trim(),
-            section: String(du[u][U.section] || "").trim(),
-            noGardu: String(du[u][U.noGardu] || "").trim(),
-            alamat: String(du[u][U.alamat] || "").trim(),
-            jamUkur:
-              _jamHHmm_(du[u][U.jamUkur]) || String(du[u][U.jamUkur] || ""),
-            bebanR: String(du[u][U.bebanR] || ""),
-            bebanS: String(du[u][U.bebanS] || ""),
-            bebanT: String(du[u][U.bebanT] || ""),
-            bebanN: String(du[u][U.bebanN] || ""),
-            tegRS: String(du[u][U.tegRS] || ""),
-            tegRT: String(du[u][U.tegRT] || ""),
-            tegST: String(du[u][U.tegST] || ""),
-            tegRN: String(du[u][U.tegRN] || ""),
-            tegSN: String(du[u][U.tegSN] || ""),
-            tegTN: String(du[u][U.tegTN] || ""),
-            petugas: String(du[u][U.petugas] || "").trim(),
+    if (namaPekLower.indexOf("switching") >= 0) {
+      var shS = _shY_(SHEET_YANDAL.SWITCHING);
+      if (shS && shS.getLastRow() > 1) {
+        var ds = _allY_(shS),
+          S = COL_SWITCHING;
+        for (var i = 1; i < ds.length; i++) {
+          if (String(ds[i][S.kodeP0] || "").trim() !== kodeP0) continue;
+          switching.push({
+            kodeSwitching: String(ds[i][S.kodeSwitching] || "").trim(),
+            penyulang: String(ds[i][S.penyulang] || "").trim(),
+            namaSwitching: String(ds[i][S.namaSwitching] || "").trim(),
+            jamPengecekan:
+              _jamHHmm_(ds[i][S.jamPengecekan]) ||
+              String(ds[i][S.jamPengecekan] || ""),
+            indikatorRemote: String(ds[i][S.indikatorRemote] || ""),
+            indikatorLocal: String(ds[i][S.indikatorLocal] || ""),
+            indicatorProtection: String(ds[i][S.indicatorProtection] || ""),
+            indicatorReclose: String(ds[i][S.indicatorReclose] || ""),
+            arusR: String(ds[i][S.arusR] || ""),
+            arusS: String(ds[i][S.arusS] || ""),
+            arusT: String(ds[i][S.arusT] || ""),
+            fotoArus: _p0FotoObj_(ds[i], S.linkDownloadArus, S.fotoArusUrl),
+            fotoG1: _p0FotoObj_(ds[i], S.linkDownloadG1, S.fotoG1Url),
+            fotoG2: _p0FotoObj_(ds[i], S.linkDownloadG2, S.fotoG2Url),
+            fotoG3: _p0FotoObj_(ds[i], S.linkDownloadG3, S.fotoG3Url),
+            fotoG4: _p0FotoObj_(ds[i], S.linkDownloadG4, S.fotoG4Url),
+            fotoG5: _p0FotoObj_(ds[i], S.linkDownloadG5, S.fotoG5Url),
           });
         }
       }
-    } catch (eU) {
-      Logger.log(
-        "getLampiranPengecekanP0: baca pengukuran gardu gagal — " + eU,
-      );
+    }
+    // 3) Baris-baris Pengukuran Gardu — HANYA bila pekerjaan "Pengecekan Gardu" (spreadsheet terpisah).
+    var gardu = [];
+    if (namaPekLower.indexOf("gardu") >= 0) {
+      try {
+        var shU = _sheetUkurGardu_(SpreadsheetApp.openById(YANDAL_UKUR_SS_ID));
+        if (shU && shU.getLastRow() > 1) {
+          var du = shU.getDataRange().getValues(),
+            U = COL_UKUR_GARDU;
+          for (var u = 1; u < du.length; u++) {
+            if (String(du[u][U.kodeP0] || "").trim() !== kodeP0) continue;
+            gardu.push({
+              kodeUkur: String(du[u][U.kodeUkur] || "").trim(),
+              penyulang: String(du[u][U.penyulang] || "").trim(),
+              section: String(du[u][U.section] || "").trim(),
+              noGardu: String(du[u][U.noGardu] || "").trim(),
+              alamat: String(du[u][U.alamat] || "").trim(),
+              jamUkur:
+                _jamHHmm_(du[u][U.jamUkur]) || String(du[u][U.jamUkur] || ""),
+              bebanR: String(du[u][U.bebanR] || ""),
+              bebanS: String(du[u][U.bebanS] || ""),
+              bebanT: String(du[u][U.bebanT] || ""),
+              bebanN: String(du[u][U.bebanN] || ""),
+              tegRS: String(du[u][U.tegRS] || ""),
+              tegRT: String(du[u][U.tegRT] || ""),
+              tegST: String(du[u][U.tegST] || ""),
+              tegRN: String(du[u][U.tegRN] || ""),
+              tegSN: String(du[u][U.tegSN] || ""),
+              tegTN: String(du[u][U.tegTN] || ""),
+              petugas: String(du[u][U.petugas] || "").trim(),
+            });
+          }
+        }
+      } catch (eU) {
+        Logger.log(
+          "getLampiranPengecekanP0: baca pengukuran gardu gagal — " + eU,
+        );
+      }
     }
     return { ok: true, p0: p0, switching: switching, gardu: gardu };
   } catch (e) {
