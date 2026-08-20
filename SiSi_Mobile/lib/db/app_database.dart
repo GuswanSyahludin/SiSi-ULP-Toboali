@@ -19,10 +19,11 @@ import 'package:drift_flutter/drift_flutter.dart';
 
 import 'tables/global_header.dart';
 import 'tables/master_penyulang.dart';
+import 'tables/laporan_harian.dart';
 
 part 'app_database.g.dart'; // file hasil generate build_runner (jangan diedit manual)
 
-@DriftDatabase(tables: [GlobalHeaders, MasterPenyulangs])
+@DriftDatabase(tables: [GlobalHeaders, MasterPenyulangs, LaporanHarians])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(driftDatabase(name: 'sisi_db'));
 
