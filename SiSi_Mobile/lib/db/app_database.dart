@@ -21,14 +21,16 @@ import 'package:drift_flutter/drift_flutter.dart';
 import 'tables/global_header.dart';
 import 'tables/master_penyulang.dart';
 import 'tables/laporan_harian.dart';
+import 'tables/sync_info.dart';
 import 'daos/master_dao.dart';
 import 'daos/laporan_dao.dart';
+import 'daos/sync_dao.dart';
 
 part 'app_database.g.dart'; // file hasil generate build_runner (jangan diedit manual)
 
 @DriftDatabase(
-  tables: [GlobalHeaders, MasterPenyulangs, LaporanHarians],
-  daos: [MasterDao, LaporanDao],
+  tables: [GlobalHeaders, MasterPenyulangs, LaporanHarians, SyncInfos],
+  daos: [MasterDao, LaporanDao, SyncDao],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(driftDatabase(name: 'sisi_db'));
