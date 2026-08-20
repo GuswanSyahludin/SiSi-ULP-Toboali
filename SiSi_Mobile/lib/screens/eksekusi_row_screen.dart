@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_colors.dart';
 import '../services/api_service.dart';
+import '../db/repositories/master_repository.dart';
 import '../widgets/custom_loading_widget.dart';
 
 class EksekusiRowScreen extends StatefulWidget {
@@ -691,18 +692,43 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
   }
 
   Future<void> _loadDropdown() async {
+    // OFFLINE-FIRST (Project Dart): baca master penyulang/section dari SQLite
+    // lokal dulu — instan & jalan tanpa internet. Fallback ke server hanya bila
+    // lokal kosong (HP baru / belum pernah download master data).
+    try {
+      final repo = MasterRepository();
+      final listLokal = await repo.daftarPenyulang();
+      final mapLokal = await repo.sectionByPenyulang();
+      if (listLokal.isNotEmpty) {
+        if (!mounted) return;
+        setState(() {
+          _listPenyulang = listLokal;
+          _sectionMap = mapLokal;
+          _loadingDropdown = false;
+        });
+        return;
+      }
+    } catch (_) {}
+
+    // Fallback ke server (perilaku lama), lalu cache hasilnya ke lokal agar
+    // buka berikutnya dropdown jalan offline.
     try {
       final token = widget.sesi['token'] ?? '';
       final res = await ApiService.getDropdownRow(token: token);
       if (res['success'] == true) {
+        final listP = List<String>.from(res['penyulang'] ?? []);
+        final mapS = Map<String, dynamic>.from(res['sectionByPenyulang'] ?? {});
+        if (!mounted) return;
         setState(() {
-          _listPenyulang = List<String>.from(res['penyulang'] ?? []);
-          _sectionMap =
-              Map<String, dynamic>.from(res['sectionByPenyulang'] ?? {});
+          _listPenyulang = listP;
+          _sectionMap = mapS;
           _loadingDropdown = false;
         });
+        // READ-THROUGH: simpan ke SQLite untuk pemakaian offline berikutnya.
+        MasterRepository().simpanDariApi(listP, mapS);
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() => _loadingDropdown = false);
     }
   }

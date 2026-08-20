@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_colors.dart';
 import '../services/api_service.dart';
+import '../db/repositories/laporan_repository.dart';
+import '../db/repositories/master_repository.dart';
 import '../widgets/custom_loading_widget.dart';
 
 // Laporan UP3 / UIW (Rev 20 Agu 2026 — 1 card status petugas) — data dari sheet "Teknik_Laporan Harian"
@@ -9,6 +11,7 @@ import '../widgets/custom_loading_widget.dart';
 // Tab 1 UIW: ROW 01-04, Hartek, Inspeksi Jaringan. Tab 2 UP3: sama + Inspeksi Gardu.
 // Tiap tab hanya SATU card: di dalamnya 1 baris per petugas/tim dgn status sudah/belum ada laporan.
 // Tombol + / edit C4A (tab UP3) ada di kanan bawah card, tepat di atas garis batas.
+// Project Dart: baca lewat LaporanRepository (server dulu -> cache SQLite -> fallback offline).
 class LaporanUp3UiwScreen extends StatefulWidget {
   final Map<String, dynamic> sesi;
   // Dipasang dari dashboard: menutup sub-screen kembali ke Menu Teknik
@@ -28,6 +31,7 @@ class _LaporanUp3UiwScreenState extends State<LaporanUp3UiwScreen> {
   String _waUiw = '';
   String _waUp3 = '';
   bool _editable = true;
+  bool _offline = false; // true bila data berasal dari cache SQLite (tanpa internet)
   late String _tanggal;
 
   static const List<String> _timUiw = [
@@ -71,7 +75,9 @@ class _LaporanUp3UiwScreenState extends State<LaporanUp3UiwScreen> {
       _errorMessage = null;
     });
     try {
-      final res = await ApiService.getLaporanUp3Uiw(tanggal: _tanggal);
+      // Project Dart: lewat LaporanRepository — server dulu (statusTim hanya ada
+      // di server), otomatis fallback ke cache SQLite saat offline.
+      final res = await LaporanRepository().bacaUp3Uiw(_tanggal);
       if (!mounted) return;
       if (res['ok'] == true) {
         setState(() {
@@ -80,6 +86,7 @@ class _LaporanUp3UiwScreenState extends State<LaporanUp3UiwScreen> {
           _waUiw = (res['waUiw'] ?? '').toString();
           _waUp3 = (res['waUp3'] ?? '').toString();
           _editable = res['editable'] == true;
+          _offline = res['offline'] == true;
           _isLoading = false;
         });
       } else {
@@ -301,26 +308,45 @@ class _LaporanUp3UiwScreenState extends State<LaporanUp3UiwScreen> {
                   ),
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.navy700.withOpacity(0.06),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  '$jumlahSudah/${daftarTim.length} sudah lapor',
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.navy700,
+              if (!_offline)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.navy700.withOpacity(0.06),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    '$jumlahSudah/${daftarTim.length} sudah lapor',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.navy700,
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
           const SizedBox(height: 4),
           const Divider(height: 1),
-          ...daftarTim.map(_buildStatusRow),
+          // Offline: status per tim tidak tersedia (dihitung server) — tampilkan catatan.
+          if (_offline)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF7ED),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFFED7AA)),
+              ),
+              child: const Text(
+                'Mode offline — menampilkan data yang tersimpan di HP. Status per tim & input C4A tersedia saat online.',
+                style: TextStyle(fontSize: 11, color: Color(0xFF9A3412)),
+              ),
+            )
+          else
+            ...daftarTim.map(_buildStatusRow),
           // Tombol + / edit di kanan bawah, tepat di atas garis batas
           if (bisaInputC4A && _editable) ...[
             const SizedBox(height: 6),
@@ -457,7 +483,7 @@ class _FormC4aSheetState extends State<_FormC4aSheet> {
   bool _saving = false;
   String? _error;
 
-  // Dropdown Penyulang dari db_Penyulang (pola sama dgn eksekusi_row_screen)
+  // Dropdown Penyulang dari master lokal (Project Dart), fallback server
   List<String> _listPenyulang = [];
   String? _selectedPenyulang;
 
@@ -476,6 +502,15 @@ class _FormC4aSheetState extends State<_FormC4aSheet> {
   }
 
   Future<void> _loadPenyulang() async {
+    // Project Dart: baca dari SQLite lokal dulu (offline), fallback server.
+    try {
+      final listLokal = await MasterRepository().daftarPenyulang();
+      if (listLokal.isNotEmpty) {
+        if (!mounted) return;
+        setState(() => _listPenyulang = listLokal);
+        return;
+      }
+    } catch (_) {}
     try {
       final res = await ApiService.getDropdownRow(token: widget.token);
       if (!mounted) return;
@@ -630,7 +665,7 @@ class _FormC4aSheetState extends State<_FormC4aSheet> {
               ),
               const SizedBox(height: 12),
             ],
-            // Penyulang — dropdown dari db_Penyulang (seperti eksekusi_row_screen)
+            // Penyulang — dropdown dari master lokal (seperti eksekusi_row_screen)
             const Text('Penyulang',
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
