@@ -26,13 +26,18 @@ class EksekusiRowScreen extends StatefulWidget {
 }
 
 class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
-  bool _isLoading = true;
+  bool _isLoading = false; // tidak auto-load untuk Admin/Super User — menunggu tombol "Cari"
   String? _errorMessage;
   List<dynamic> _eksekusiList = [];
 
   // Tanggal yang sedang ditampilkan (default: hari ini). Hanya bisa diubah
-  // oleh role Admin / Super User lewat tombol kalender di kanan atas.
+  // oleh role Admin / Super User lewat chip tanggal di bar filter.
   DateTime _tanggalDipilih = DateTime.now();
+
+  // true setelah pencarian pertama via tombol "Cari" (konsep verifikasi_p0:
+  // halaman dibuka KOSONG agar tidak membebani server; setelah cari pertama,
+  // ganti tanggal ikut memuat ulang otomatis)
+  bool _sudahCari = false;
 
   static const List<String> _namaBulan = [
     'Jan',
@@ -76,14 +81,21 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
         _tanggalDipilih.day == now.day;
   }
 
+  // Label ramah untuk subtitle AppBar & kartu ringkasan
   String get _labelTanggal => _adalahHariIni
       ? 'Hari Ini'
       : '${_tanggalDipilih.day} ${_namaBulan[_tanggalDipilih.month - 1]} ${_tanggalDipilih.year}';
 
+  // Label chip tanggal di bar filter (selalu tanggal aktual, konsep P0)
+  String get _labelTanggalChip =>
+      '${_tanggalDipilih.day} ${_namaBulan[_tanggalDipilih.month - 1]} ${_tanggalDipilih.year}';
+
   @override
   void initState() {
     super.initState();
-    _fetchEksekusiList();
+    // Petugas biasa: auto-load hari ini (perilaku lama). Admin/Super User:
+    // halaman dibuka kosong sampai tombol "Cari" ditekan (hemat server).
+    if (!_bisaFilterTanggal) _fetchEksekusiList();
   }
 
   // Pemilih tanggal (khusus Admin/Super User). Batas kanan = hari ini,
@@ -97,8 +109,20 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
     );
     if (dipilih != null) {
       setState(() => _tanggalDipilih = dipilih);
-      _fetchEksekusiList();
+      if (_sudahCari)
+        _fetchEksekusiList(); // setelah cari pertama, ganti tanggal = muat ulang
     }
+  }
+
+  void _kembaliKeHariIni() {
+    setState(() => _tanggalDipilih = DateTime.now());
+    if (_sudahCari) _fetchEksekusiList();
+  }
+
+  // TOMBOL CARI — satu-satunya pemicu muat data untuk tampilan Admin/Super User.
+  void _cariData() {
+    setState(() => _sudahCari = true);
+    _fetchEksekusiList();
   }
 
   Future<void> _fetchEksekusiList() async {
@@ -161,6 +185,156 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
     } catch (_) {}
   }
 
+  // ═══ BAR FILTER TANGGAL + STATUS SINKRON (khusus Admin/Super User) ═══
+  // Konsep verifikasi_p0: bar putih di bawah AppBar — chip tanggal, tombol
+  // "Hari ini", STATUS SINKRON sebaris, lalu tombol CARI full-width.
+  Widget _buildFilterBar() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.calendar_today_rounded,
+                  size: 14, color: AppColors.navy700),
+              const SizedBox(width: 6),
+              const Text(
+                'Tanggal:',
+                style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+              ),
+              const SizedBox(width: 6),
+              GestureDetector(
+                onTap: _pilihTanggal,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.navy700.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _labelTanggalChip,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.navy700,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.keyboard_arrow_down_rounded,
+                          size: 16, color: AppColors.navy700),
+                    ],
+                  ),
+                ),
+              ),
+              if (!_adalahHariIni)
+                GestureDetector(
+                  onTap: _kembaliKeHariIni,
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 6),
+                    child: Icon(Icons.today_rounded,
+                        size: 16, color: AppColors.cyan600),
+                  ),
+                ),
+              const Spacer(),
+              _buildSyncChip(),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // TOMBOL CARI — pemicu muat data (konsep P0: hemat server)
+          SizedBox(
+            width: double.infinity,
+            height: 38,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.navy700,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              icon: const Icon(Icons.search_rounded,
+                  size: 18, color: Colors.white),
+              label: const Text(
+                'Cari',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              onPressed: _cariData,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ═══ CHIP STATUS SINKRON — sebaris dengan tanggal ═══
+  // Update (hijau) = data baru saja ditarik dari server • Proses Sync (amber)
+  // = sedang memuat • Belum Update (merah) = belum pernah cari / gagal.
+  Widget _buildSyncChip() {
+    final String label;
+    final Color warna;
+    final Widget ikon;
+
+    if (_isLoading) {
+      label = 'Proses Sync';
+      warna = const Color(0xFFD97706); // amber
+      ikon = const SizedBox(
+        width: 10,
+        height: 10,
+        child: CircularProgressIndicator(strokeWidth: 1.5),
+      );
+    } else if (_sudahCari && _errorMessage == null) {
+      label = 'Update';
+      warna = const Color(0xFF059669); // hijau
+      ikon = const Icon(Icons.check_circle_rounded,
+          size: 11, color: Color(0xFF059669));
+    } else {
+      label = 'Belum Update';
+      warna = const Color(0xFFDC2626); // merah
+      ikon = const Icon(Icons.sync_rounded,
+          size: 11, color: Color(0xFFDC2626));
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: warna.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: warna, width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ikon,
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: warna,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -187,21 +361,21 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
           ],
         ),
         actions: [
-          // Filter tanggal — HANYA tampil untuk Admin & Super User
-          if (_bisaFilterTanggal)
-            IconButton(
-              icon:
-                  const Icon(Icons.calendar_month_rounded, color: Colors.white),
-              tooltip: 'Pilih tanggal',
-              onPressed: _pilihTanggal,
-            ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: Colors.white),
-            onPressed: _fetchEksekusiList,
+            // Admin/Super User: refresh = jalankan Cari (konsep P0)
+            onPressed: _bisaFilterTanggal ? _cariData : _fetchEksekusiList,
           ),
         ],
       ),
-      body: _buildBody(),
+      body: Column(
+        children: [
+          // Bar filter tanggal + status sinkron + tombol Cari — HANYA
+          // untuk Admin & Super User
+          if (_bisaFilterTanggal) _buildFilterBar(),
+          Expanded(child: _buildBody()),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppColors.amber600,
         foregroundColor: AppColors.navy950,
@@ -214,6 +388,24 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
   }
 
   Widget _buildBody() {
+    // Tampilan Admin/Super User dibuka KOSONG sampai tombol "Cari" (konsep P0)
+    if (_bisaFilterTanggal && !_sudahCari) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text(
+            'Pilih tanggal lalu tekan tombol Cari untuk memuat data. Halaman sengaja dibuka kosong agar tidak membebani server.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Color(0xFF94A3B8),
+              fontSize: 12,
+              height: 1.5,
+            ),
+          ),
+        ),
+      );
+    }
+
     if (_isLoading) {
       return const CustomLoadingWidget(message: 'Memuat data eksekusi...');
     }
@@ -239,7 +431,8 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
                 ),
-                onPressed: _fetchEksekusiList,
+                onPressed:
+                    _bisaFilterTanggal ? _cariData : _fetchEksekusiList,
                 icon: const Icon(Icons.refresh_rounded,
                     size: 18, color: Colors.white),
                 label: const Text('Coba Lagi'),
@@ -270,15 +463,19 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // Summary Header Card
+        // Summary Header Card — aksen gradasi navy agar lebih hidup
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           decoration: BoxDecoration(
-            color: AppColors.navy700,
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppColors.navy700, AppColors.navy950],
+            ),
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: AppColors.navy700.withOpacity(0.2),
+                color: AppColors.navy700.withOpacity(0.25),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -312,7 +509,7 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    'PROSES SYNC',
+                    'TANGGAL DATA',
                     style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
@@ -320,13 +517,13 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
                         letterSpacing: 0.5),
                   ),
                   const SizedBox(height: 2),
-                  const Row(
+                  Row(
                     children: [
-                      Icon(Icons.check_circle_rounded,
-                          size: 14, color: Color(0xFF10B981)),
-                      SizedBox(width: 4),
-                      Text('Update',
-                          style: TextStyle(
+                      const Icon(Icons.event_rounded,
+                          size: 14, color: AppColors.cyan600),
+                      const SizedBox(width: 4),
+                      Text(_labelTanggal,
+                          style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
                               color: Colors.white)),
