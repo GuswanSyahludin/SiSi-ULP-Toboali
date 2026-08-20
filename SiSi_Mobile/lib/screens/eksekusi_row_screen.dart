@@ -26,17 +26,20 @@ class EksekusiRowScreen extends StatefulWidget {
 }
 
 class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
-  bool _isLoading = false; // tidak auto-load untuk Admin/Super User — menunggu tombol "Cari"
+  bool _isLoading =
+      false; // tidak auto-load untuk Admin/Super User — menunggu tanggal dimasukkan
   String? _errorMessage;
   List<dynamic> _eksekusiList = [];
 
-  // Tanggal yang sedang ditampilkan (default: hari ini). Hanya bisa diubah
-  // oleh role Admin / Super User lewat chip tanggal di bar filter.
-  DateTime _tanggalDipilih = DateTime.now();
+  // Tanggal yang sedang ditampilkan.
+  // - Admin/Super User: NULL saat halaman dibuka — WAJIB masukkan tanggal
+  //   dahulu untuk melihat data (meminimalisir beban server).
+  // - Role user (petugas biasa): selalu today() agar data langsung tampil.
+  DateTime? _tanggalDipilih;
 
-  // true setelah pencarian pertama via tombol "Cari" (konsep verifikasi_p0:
-  // halaman dibuka KOSONG agar tidak membebani server; setelah cari pertama,
-  // ganti tanggal ikut memuat ulang otomatis)
+  // true setelah pencarian pertama (tanggal dimasukkan / tombol "Cari"):
+  // halaman dibuka KOSONG agar tidak membebani server; setelah itu ganti
+  // tanggal ikut memuat ulang otomatis.
   bool _sudahCari = false;
 
   static const List<String> _namaBulan = [
@@ -60,8 +63,8 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
       widget.sesi['tim'] ??
       'ROW 01';
 
-  // Filter tanggal HANYA untuk role Admin & Super User — petugas biasa
-  // selalu melihat hari ini (perilaku lama tidak berubah).
+  // Filter tanggal HANYA untuk role Admin & Super User — role user (petugas
+  // biasa) selalu melihat hari ini (today) dan datanya langsung tampil.
   bool get _bisaFilterTanggal {
     final role = (widget.sesi['role'] ?? '').toString().toLowerCase();
     return role == 'admin' || role == 'super user';
@@ -75,27 +78,40 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
   }
 
   bool get _adalahHariIni {
+    final t = _tanggalDipilih;
+    if (t == null) return false;
     final now = DateTime.now();
-    return _tanggalDipilih.year == now.year &&
-        _tanggalDipilih.month == now.month &&
-        _tanggalDipilih.day == now.day;
+    return t.year == now.year && t.month == now.month && t.day == now.day;
   }
 
   // Label ramah untuk subtitle AppBar & kartu ringkasan
-  String get _labelTanggal => _adalahHariIni
-      ? 'Hari Ini'
-      : '${_tanggalDipilih.day} ${_namaBulan[_tanggalDipilih.month - 1]} ${_tanggalDipilih.year}';
+  String get _labelTanggal {
+    final t = _tanggalDipilih;
+    if (t == null) return 'Pilih Tanggal';
+    return _adalahHariIni
+        ? 'Hari Ini'
+        : '${t.day} ${_namaBulan[t.month - 1]} ${t.year}';
+  }
 
-  // Label chip tanggal di bar filter (selalu tanggal aktual, konsep P0)
-  String get _labelTanggalChip =>
-      '${_tanggalDipilih.day} ${_namaBulan[_tanggalDipilih.month - 1]} ${_tanggalDipilih.year}';
+  // Label chip tanggal di bar filter (kosong = wajib pilih tanggal dulu)
+  String get _labelTanggalChip {
+    final t = _tanggalDipilih;
+    if (t == null) return 'Pilih Tanggal';
+    return '${t.day} ${_namaBulan[t.month - 1]} ${t.year}';
+  }
 
   @override
   void initState() {
     super.initState();
-    // Petugas biasa: auto-load hari ini (perilaku lama). Admin/Super User:
-    // halaman dibuka kosong sampai tombol "Cari" ditekan (hemat server).
-    if (!_bisaFilterTanggal) _fetchEksekusiList();
+    if (_bisaFilterTanggal) {
+      // Admin/Super User: halaman dibuka KOSONG tanpa tanggal default —
+      // wajib masukkan tanggal dahulu untuk melihat data (hemat server).
+      _tanggalDipilih = null;
+    } else {
+      // Role user: set tanggal today() agar data langsung tampil.
+      _tanggalDipilih = DateTime.now();
+      _fetchEksekusiList();
+    }
   }
 
   // Pemilih tanggal (khusus Admin/Super User). Batas kanan = hari ini,
@@ -103,24 +119,33 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
   Future<void> _pilihTanggal() async {
     final dipilih = await showDatePicker(
       context: context,
-      initialDate: _tanggalDipilih,
+      initialDate: _tanggalDipilih ?? DateTime.now(),
       firstDate: DateTime(2025, 1, 1),
       lastDate: DateTime.now(),
     );
-    if (dipilih != null) {
-      setState(() => _tanggalDipilih = dipilih);
-      if (_sudahCari)
-        _fetchEksekusiList(); // setelah cari pertama, ganti tanggal = muat ulang
-    }
+    if (dipilih == null) return;
+    setState(() {
+      _tanggalDipilih = dipilih;
+      _sudahCari = true;
+    });
+    // Masukkan tanggal = pemicu melihat data: pencarian pertama maupun ganti
+    // tanggal berikutnya sama-sama langsung memuat dari server.
+    _fetchEksekusiList();
   }
 
-  // TOMBOL CARI — satu-satunya pemicu muat data untuk tampilan Admin/Super User.
+  // TOMBOL CARI — bila tanggal belum diisi, wajib masukkan tanggal dulu.
   void _cariData() {
+    if (_tanggalDipilih == null) {
+      _pilihTanggal();
+      return;
+    }
     setState(() => _sudahCari = true);
     _fetchEksekusiList();
   }
 
   Future<void> _fetchEksekusiList() async {
+    final tgl = _tanggalDipilih;
+    if (tgl == null) return; // belum masukkan tanggal — jangan query server
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -131,7 +156,7 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
       final response = await ApiService.getEksekusiRow(
         token: token,
         subTim: _activeSubTim,
-        tanggal: _formatApiTanggal(_tanggalDipilih),
+        tanggal: _formatApiTanggal(tgl),
       );
 
       if (response['success'] == true) {
@@ -181,8 +206,8 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
   }
 
   // ═══ BAR FILTER TANGGAL + STATUS SINKRON (khusus Admin/Super User) ═══
-  // Konsep verifikasi_p0: bar putih di bawah AppBar — chip tanggal dan
-  // STATUS SINKRON sebaris, lalu tombol CARI full-width.
+  // Bar putih di bawah AppBar — chip tanggal (wajib diisi dulu), STATUS
+  // SINKRON sebaris, lalu tombol CARI full-width.
   Widget _buildFilterBar() {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
@@ -374,13 +399,13 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
   }
 
   Widget _buildBody() {
-    // Tampilan Admin/Super User dibuka KOSONG sampai tombol "Cari" (konsep P0)
+    // Tampilan Admin/Super User dibuka KOSONG sampai tanggal dimasukkan
     if (_bisaFilterTanggal && !_sudahCari) {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(24),
           child: Text(
-            'Pilih tanggal lalu tekan tombol Cari untuk memuat data. Halaman sengaja dibuka kosong agar tidak membebani server.',
+            'Masukkan tanggal terlebih dahulu untuk melihat data. Halaman sengaja dibuka kosong agar tidak membebani server.',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Color(0xFF94A3B8),
