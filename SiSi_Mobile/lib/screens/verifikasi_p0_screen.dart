@@ -178,8 +178,8 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
           SnackBar(
             content: Text(
               keputusan == 'Approved'
-                  ? 'Data $kodeP0 disetujui! Tersimpan ke antrean — status & poin diproses di latar belakang (±1 menit).'
-                  : 'Data $kodeP0 ditolak. Tersimpan ke antrean — diproses di latar belakang (±1 menit).',
+                  ? 'Data $kodeP0 disetujui!.'
+                  : 'Data $kodeP0 ditolak.',
             ),
             backgroundColor: keputusan == 'Approved'
                 ? const Color(0xFF10B981)

@@ -438,14 +438,14 @@ class _LoginSheetState extends State<_LoginSheet> {
     Widget? suffix,
   }) {
     return Container(
-      height: 44,
       decoration: BoxDecoration(
         color: AppColors.neutral100,
         borderRadius: BorderRadius.circular(11),
         border: Border.all(color: AppColors.neutral200, width: 1.5),
       ),
-      // PERBAIKAN RATA: teks & icon selalu tepat di tengah vertikal kolom,
-      // baik kolom polos (Username) maupun yang punya tombol mata (Kata sandi)
+      // PERBAIKAN RATA & TENGAH: tinggi kolom mengikuti isi (tanpa height fix)
+      // + padding atas-bawah sama besar → teks & icon selalu tepat di tengah
+      // vertikal, baik kolom polos maupun yang ada tombol mata
       child: TextField(
         controller: controller,
         obscureText: obscure,
@@ -465,7 +465,8 @@ class _LoginSheetState extends State<_LoginSheet> {
               const BoxConstraints(minWidth: 40, minHeight: 24),
           isDense: true,
           border: InputBorder.none,
-          contentPadding: EdgeInsets.zero,
+          // Padding atas-bawah sama besar = teks benar-benar di tengah kolom
+          contentPadding: const EdgeInsets.symmetric(vertical: 13),
         ),
       ),
     );

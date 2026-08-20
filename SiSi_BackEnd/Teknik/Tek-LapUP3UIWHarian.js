@@ -13,6 +13,10 @@
    refreshLaporanHarian diguard _tglSudahDiarsip_ (tanggal <= H-2 tidak dibuat ulang di
    aktif); getLaporanHarianRow diberi fallback ARSIP (Pola A) agar laporan lama tetap bisa
    dilihat read-only.
+   Rev 20 Agu 2026 — OPTIMASI BACA mobile Laporan UP3/UIW: getMobileLaporanUp3Uiw
+   di-cache (CacheService) 2 menit per (ULP, tanggal) + _statusTimLaporan_ hanya
+   memindai 1000 baris terakhir tiap sheet (_lapRecentRows_). Cache dibuang
+   otomatis saat simpanMobileLaporanC4A.
    ################################################################# */
 
 /* =====================================================
@@ -1470,15 +1474,39 @@ function pasangTriggerLaporanHarian() {
 }
 
 /* =====================================================
-   TAMBAHAN Rev 19 Agu 2026 (malam) — MOBILE "Laporan UP3 / UIW"
+   MOBILE "Laporan UP3 / UIW" — Rev 20 Agu 2026 (OPTIMASI BACA)
    Jembatan sub-menu mobile Laporan UP3 / UIW (SiSi Mobile):
      - getMobileLaporanUp3Uiw  : baca baris Teknik_Laporan Harian (default hari ini) —
                                  C4A (kolom C..F) + kolom G (UP3) + kolom H (UIW)
                                  + statusTim per tim (sudah/belum ada laporan hari ini).
      - simpanMobileLaporanC4A  : tulis kolom C..F (input C4A) HARI INI + regenerate kolom
-                                 G (UP3) & H (UIW) — delegasi ke simpanLaporanHarianWeb
-                                 (guard hanya-hari-ini sudah ada di sana). Wajib token sesi.
+                                 G (UP3) & H (UIW) — delegasi ke simpanLaporanHarianWeb.
+   OPTIMASI Rev 20 Agu:
+     1) Hasil baca di-cache (CacheService) per (ULP, tanggal) selama 2 menit —
+        buka ulang sub-menu di bawah 1 detik. Cache dibuang otomatis saat C4A disimpan.
+     2) statusTim hanya memindai 1000 baris TERAKHIR tiap sheet (data terbaru
+        selalu di bawah) — tidak lagi getDataRange() penuh pada sheet yang
+        terus membesar (inilah penyebab bacaan menembus 30 detik).
    ===================================================== */
+
+var LAP_MOBILE_CACHE_TTL = 120; // detik — kesegaran data maks 2 menit
+var LAP_MOBILE_STATUS_MAXROWS = 1000; // jendela baris terakhir utk statusTim
+
+function _lapMobileCacheKey_(ulp, tglIso) {
+  return "lapUp3Uiw_" + ulp + "_" + tglIso;
+}
+
+// Baca hanya N baris TERAKHIR sheet (data terbaru selalu di bawah) — jauh lebih
+// cepat daripada memindai seluruh sheet yang terus membesar dari waktu ke waktu.
+function _lapRecentRows_(sh, maxRows) {
+  if (!sh) return [];
+  var lastRow = sh.getLastRow();
+  if (lastRow <= 1) return [];
+  var startRow = Math.max(2, lastRow - maxRows + 1);
+  return sh
+    .getRange(startRow, 1, lastRow - startRow + 1, sh.getLastColumn())
+    .getValues();
+}
 
 // Status per tim utk tanggal: true = tim tsb SUDAH punya data/laporan hari ini (masuk laporan).
 // Sumber: ROW 01-04 = db_ROW_Realisasi (kolom Tim); Hartek = db_Hartek_PenyulangGardu;
@@ -1496,69 +1524,68 @@ function _statusTimLaporan_(ss, ulp, tglIso) {
   var ulpMap = _lapUlpMapDual_();
   // ROW per tim (db_ROW_Realisasi)
   try {
-    var shR = ss.getSheetByName(LAP_UP3.ROW_RLZ);
-    if (shR && shR.getLastRow() > 1) {
-      var dR = shR.getDataRange().getValues();
-      for (var i = 1; i < dR.length; i++) {
-        var kh = String(dR[i][COL_ROW_RLZ.kodeHeader] || "").trim();
-        if ((ulpMap[kh] || "") !== ulp) continue;
-        if (_normTgl(dR[i][COL_ROW_RLZ.tanggal]) !== tglIso) continue;
-        var tim = String(dR[i][COL_ROW_RLZ.tim] || "").trim();
-        if (Object.prototype.hasOwnProperty.call(status, tim))
-          status[tim] = true;
-      }
+    var dR = _lapRecentRows_(
+      ss.getSheetByName(LAP_UP3.ROW_RLZ),
+      LAP_MOBILE_STATUS_MAXROWS,
+    );
+    for (var i = 0; i < dR.length; i++) {
+      var kh = String(dR[i][COL_ROW_RLZ.kodeHeader] || "").trim();
+      if ((ulpMap[kh] || "") !== ulp) continue;
+      if (_normTgl(dR[i][COL_ROW_RLZ.tanggal]) !== tglIso) continue;
+      var tim = String(dR[i][COL_ROW_RLZ.tim] || "").trim();
+      if (Object.prototype.hasOwnProperty.call(status, tim)) status[tim] = true;
     }
   } catch (eR) {
     Logger.log("_statusTimLaporan_ ROW: " + eR);
   }
   // Hartek (db_Hartek_PenyulangGardu)
   try {
-    var shH = ss.getSheetByName(LAP_UP3.HTK_PG);
-    if (shH && shH.getLastRow() > 1) {
-      var dH = shH.getDataRange().getValues();
-      for (var h = 1; h < dH.length; h++) {
-        if (String(dH[h][COL_HTK.PG.ulp] || "").trim() !== ulp) continue;
-        if (_normTgl(dH[h][COL_HTK.PG.tanggal]) !== tglIso) continue;
-        status["Hartek"] = true;
-        break;
-      }
+    var dH = _lapRecentRows_(
+      ss.getSheetByName(LAP_UP3.HTK_PG),
+      LAP_MOBILE_STATUS_MAXROWS,
+    );
+    for (var h = 0; h < dH.length; h++) {
+      if (String(dH[h][COL_HTK.PG.ulp] || "").trim() !== ulp) continue;
+      if (_normTgl(dH[h][COL_HTK.PG.tanggal]) !== tglIso) continue;
+      status["Hartek"] = true;
+      break;
     }
   } catch (eH) {
     Logger.log("_statusTimLaporan_ Hartek: " + eH);
   }
   // Inspeksi Jaringan (db_InsJar_Realisasi)
   try {
-    var shJ = ss.getSheetByName(LAP_UP3.INSJAR);
-    if (shJ && shJ.getLastRow() > 1) {
-      var dJ = shJ.getDataRange().getValues();
-      for (var j = 1; j < dJ.length; j++) {
-        var khJ = String(dJ[j][COL_INS.REALISASI.kodeHeader] || "").trim();
-        if ((ulpMap[khJ] || "") !== ulp) continue;
-        if (_normTgl(dJ[j][COL_INS.REALISASI.tanggal]) !== tglIso) continue;
-        status["Inspeksi Jaringan"] = true;
-        break;
-      }
+    var dJ = _lapRecentRows_(
+      ss.getSheetByName(LAP_UP3.INSJAR),
+      LAP_MOBILE_STATUS_MAXROWS,
+    );
+    for (var j = 0; j < dJ.length; j++) {
+      var khJ = String(dJ[j][COL_INS.REALISASI.kodeHeader] || "").trim();
+      if ((ulpMap[khJ] || "") !== ulp) continue;
+      if (_normTgl(dJ[j][COL_INS.REALISASI.tanggal]) !== tglIso) continue;
+      status["Inspeksi Jaringan"] = true;
+      break;
     }
   } catch (eJ) {
     Logger.log("_statusTimLaporan_ InsJar: " + eJ);
   }
   // Inspeksi Gardu (db_InsDu_Realisasi) — hanya baris ber-identitas gardu (sama dgn builder)
   try {
-    var shG = ss.getSheetByName(LAP_UP3.INSDU);
-    if (shG && shG.getLastRow() > 1) {
-      var dG = shG.getDataRange().getValues();
-      for (var g = 1; g < dG.length; g++) {
-        var khG = String(dG[g][COL_INSDU.REALISASI.kodeHeader] || "").trim();
-        if ((ulpMap[khG] || "") !== ulp) continue;
-        if (_normTgl(dG[g][COL_INSDU.REALISASI.tanggal]) !== tglIso) continue;
-        if (
-          !String(dG[g][COL_INSDU.REALISASI.nomorGardu] || "").trim() &&
-          !String(dG[g][COL_INSDU.REALISASI.kodePekerjaanGardu] || "").trim()
-        )
-          continue;
-        status["Inspeksi Gardu"] = true;
-        break;
-      }
+    var dG = _lapRecentRows_(
+      ss.getSheetByName(LAP_UP3.INSDU),
+      LAP_MOBILE_STATUS_MAXROWS,
+    );
+    for (var g = 0; g < dG.length; g++) {
+      var khG = String(dG[g][COL_INSDU.REALISASI.kodeHeader] || "").trim();
+      if ((ulpMap[khG] || "") !== ulp) continue;
+      if (_normTgl(dG[g][COL_INSDU.REALISASI.tanggal]) !== tglIso) continue;
+      if (
+        !String(dG[g][COL_INSDU.REALISASI.nomorGardu] || "").trim() &&
+        !String(dG[g][COL_INSDU.REALISASI.kodePekerjaanGardu] || "").trim()
+      )
+        continue;
+      status["Inspeksi Gardu"] = true;
+      break;
     }
   } catch (eG) {
     Logger.log("_statusTimLaporan_ InsDu: " + eG);
@@ -1567,11 +1594,22 @@ function _statusTimLaporan_(ss, ulp, tglIso) {
 }
 
 // BACA utk mobile: baris Teknik_Laporan Harian (default hari ini) + statusTim.
+// Rev 20 Agu: hasil di-cache 2 menit per (ULP, tanggal) — buka ulang di bawah 1 detik.
 // params: { tanggal? } -> { ok, tanggal, editable, exists, c4a, waUp3, waUiw, statusTim }
 function getMobileLaporanUp3Uiw(params) {
   try {
     params = params || {};
     var tglIso = _normTgl(params.tanggal) || _lhToday();
+    var cache = CacheService.getScriptCache();
+    var key = _lapMobileCacheKey_(LH.ULP, tglIso);
+    var cached = cache.get(key);
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch (eParse) {
+        /* cache rusak -> hitung ulang */
+      }
+    }
     var row = getLaporanHarianRow({ tanggal: tglIso });
     if (!row || row.ok !== true)
       return {
@@ -1580,7 +1618,7 @@ function getMobileLaporanUp3Uiw(params) {
       };
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     var statusTim = _statusTimLaporan_(ss, LH.ULP, tglIso);
-    return {
+    var result = {
       ok: true,
       tanggal: row.tanggal,
       editable: row.editable,
@@ -1590,12 +1628,19 @@ function getMobileLaporanUp3Uiw(params) {
       waUiw: row.waTextUiw, // kolom H — Laporan UIW
       statusTim: statusTim,
     };
+    try {
+      cache.put(key, JSON.stringify(result), LAP_MOBILE_CACHE_TTL);
+    } catch (ePut) {
+      Logger.log("cache put: " + ePut);
+    }
+    return result;
   } catch (e) {
     return { ok: false, message: e.message };
   }
 }
 
 // TULIS C4A (kolom C..F) dari mobile + regenerate kolom G & H (trigger laporan harian UIW/UP3).
+// Rev 20 Agu: cache bacaan untuk tanggal tsb dibuang supaya status/teks berikutnya segar.
 // params: { token, tanggal?, penyulang, realisasi, temuan, eksekusi }
 function simpanMobileLaporanC4A(params) {
   try {
@@ -1603,7 +1648,7 @@ function simpanMobileLaporanC4A(params) {
     var sesi = getSesiByToken(String(params.token || "").trim());
     if (!sesi)
       return { ok: false, message: "Sesi habis, silakan login ulang." };
-    return simpanLaporanHarianWeb({
+    var res = simpanLaporanHarianWeb({
       tanggal: params.tanggal,
       c4a: {
         penyulang: params.penyulang,
@@ -1612,6 +1657,13 @@ function simpanMobileLaporanC4A(params) {
         eksekusi: params.eksekusi,
       },
     });
+    try {
+      var tglIso = _normTgl(params.tanggal) || _lhToday();
+      CacheService.getScriptCache().remove(_lapMobileCacheKey_(LH.ULP, tglIso));
+    } catch (eRem) {
+      Logger.log("cache remove: " + eRem);
+    }
+    return res;
   } catch (e) {
     return { ok: false, message: e.message };
   }
