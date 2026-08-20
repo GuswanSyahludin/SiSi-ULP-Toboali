@@ -30,24 +30,75 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
   String? _errorMessage;
   List<dynamic> _eksekusiList = [];
 
+  // Tanggal yang sedang ditampilkan (default: hari ini). Hanya bisa diubah
+  // oleh role Admin / Super User lewat tombol kalender di kanan atas.
+  DateTime _tanggalDipilih = DateTime.now();
+
+  static const List<String> _namaBulan = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'Mei',
+    'Jun',
+    'Jul',
+    'Agu',
+    'Sep',
+    'Okt',
+    'Nov',
+    'Des',
+  ];
+
   String get _activeSubTim =>
       widget.targetSubTim ??
       widget.sesi['subTim'] ??
       widget.sesi['tim'] ??
       'ROW 01';
 
-  String _getTodayString() {
-    final now = DateTime.now();
-    final y = now.year.toString().padLeft(4, '0');
-    final m = now.month.toString().padLeft(2, '0');
-    final d = now.day.toString().padLeft(2, '0');
+  // Filter tanggal HANYA untuk role Admin & Super User — petugas biasa
+  // selalu melihat hari ini (perilaku lama tidak berubah).
+  bool get _bisaFilterTanggal {
+    final role = (widget.sesi['role'] ?? '').toString().toLowerCase();
+    return role == 'admin' || role == 'super user';
+  }
+
+  String _formatApiTanggal(DateTime t) {
+    final y = t.year.toString().padLeft(4, '0');
+    final m = t.month.toString().padLeft(2, '0');
+    final d = t.day.toString().padLeft(2, '0');
     return '$y-$m-$d';
   }
+
+  bool get _adalahHariIni {
+    final now = DateTime.now();
+    return _tanggalDipilih.year == now.year &&
+        _tanggalDipilih.month == now.month &&
+        _tanggalDipilih.day == now.day;
+  }
+
+  String get _labelTanggal => _adalahHariIni
+      ? 'Hari Ini'
+      : '${_tanggalDipilih.day} ${_namaBulan[_tanggalDipilih.month - 1]} ${_tanggalDipilih.year}';
 
   @override
   void initState() {
     super.initState();
     _fetchEksekusiList();
+  }
+
+  // Pemilih tanggal (khusus Admin/Super User). Batas kanan = hari ini,
+  // karena laporan harian tidak punya data masa depan.
+  Future<void> _pilihTanggal() async {
+    final dipilih = await showDatePicker(
+      context: context,
+      initialDate: _tanggalDipilih,
+      firstDate: DateTime(2025, 1, 1),
+      lastDate: DateTime.now(),
+    );
+    if (dipilih != null) {
+      setState(() => _tanggalDipilih = dipilih);
+      _fetchEksekusiList();
+    }
   }
 
   Future<void> _fetchEksekusiList() async {
@@ -61,7 +112,7 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
       final response = await ApiService.getEksekusiRow(
         token: token,
         subTim: _activeSubTim,
-        tanggal: _getTodayString(),
+        tanggal: _formatApiTanggal(_tanggalDipilih),
       );
 
       if (response['success'] == true) {
@@ -130,12 +181,20 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
                   color: Colors.white),
             ),
             Text(
-              '$_activeSubTim • Hari Ini',
+              '$_activeSubTim • $_labelTanggal',
               style: const TextStyle(fontSize: 12, color: Colors.white70),
             ),
           ],
         ),
         actions: [
+          // Filter tanggal — HANYA tampil untuk Admin & Super User
+          if (_bisaFilterTanggal)
+            IconButton(
+              icon:
+                  const Icon(Icons.calendar_month_rounded, color: Colors.white),
+              tooltip: 'Pilih tanggal',
+              onPressed: _pilihTanggal,
+            ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: Colors.white),
             onPressed: _fetchEksekusiList,
@@ -199,7 +258,9 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
             Icon(Icons.nature_people_rounded,
                 size: 56, color: Colors.grey.shade400),
             const SizedBox(height: 12),
-            Text('Belum ada eksekusi pekerjaan hari ini untuk $_activeSubTim',
+            Text(
+                'Belum ada eksekusi pekerjaan untuk $_activeSubTim ($_labelTanggal)',
+                textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
           ],
         ),
@@ -230,7 +291,7 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'TOTAL HARI INI',
+                    'TOTAL ${_labelTanggal.toUpperCase()}',
                     style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
