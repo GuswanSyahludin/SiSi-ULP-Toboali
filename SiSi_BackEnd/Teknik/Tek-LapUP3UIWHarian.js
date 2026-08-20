@@ -182,7 +182,7 @@ function _lapC4A(c4a) {
 }
 
 // G. Tindak Lanjut dari daftar gangguan harian (Bagian A & G saling terkait).
-// list: [{penyulang, temuan}] urut server; tlArr: teks tindak lanjut manual per indeks.
+// list: [{penyulang, temuan] urut server; tlArr: teks tindak lanjut manual per indeks.
 function _lapTindakLanjutGangguan(list, tlArr) {
   if (!list || !list.length) return "Nihil";
   tlArr = tlArr || [];
@@ -865,7 +865,7 @@ function _wilDataHartek_(ss, ulp, tglIso) {
   };
 }
 
-// Render satu seksi Hartek UIW. arr: [{gardu, body}]. Kosong -> 'Pekerjaan : -' / 'Material : -'.
+// Render satu seksi Hartek UIW. arr: [{gardu, body]. Kosong -> 'Pekerjaan : -' / 'Material : -'.
 // withGardu=true menampilkan baris 'Gardu : *<no>*' (objek Gardu). Body (daftar
 // pekerjaan+material) ditempel apa adanya dari kolom TextWA, diawali label 'Pekerjaan :'.
 function _wilRenderHartekSeksi_(judul, arr, withGardu) {
