@@ -59,13 +59,6 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
     return '${d.day} ${_bulanPendek[d.month - 1]} ${d.year}';
   }
 
-  bool get _isToday {
-    final now = DateTime.now();
-    return _selectedDate.year == now.year &&
-        _selectedDate.month == now.month &&
-        _selectedDate.day == now.day;
-  }
-
   String _fmtTglId(String iso) {
     if (iso.isEmpty) return '-';
     try {
@@ -113,11 +106,6 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
       if (_sudahCari)
         _fetchData(); // setelah pencarian pertama, ganti tanggal langsung memuat ulang
     }
-  }
-
-  void _kembaliKeHariIni() {
-    setState(() => _selectedDate = DateTime.now());
-    if (_sudahCari) _fetchData();
   }
 
   // TOMBOL CARI (Rev 19 Agu malam 3): satu-satunya pemicu muat data saat pertama masuk halaman.
@@ -1517,19 +1505,6 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
                       ),
                     ),
                     const Spacer(),
-                    if (!_isToday)
-                      TextButton.icon(
-                        onPressed: _kembaliKeHariIni,
-                        icon: const Icon(Icons.today_rounded, size: 14),
-                        label: const Text(
-                          'Hari ini',
-                          style: TextStyle(fontSize: 11),
-                        ),
-                        style: TextButton.styleFrom(
-                          foregroundColor: const Color(0xFF0284C7),
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                        ),
-                      ),
                   ],
                 ),
                 const SizedBox(height: 8),

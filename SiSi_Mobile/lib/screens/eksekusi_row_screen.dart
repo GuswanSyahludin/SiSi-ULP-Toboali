@@ -114,11 +114,6 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
     }
   }
 
-  void _kembaliKeHariIni() {
-    setState(() => _tanggalDipilih = DateTime.now());
-    if (_sudahCari) _fetchEksekusiList();
-  }
-
   // TOMBOL CARI — satu-satunya pemicu muat data untuk tampilan Admin/Super User.
   void _cariData() {
     setState(() => _sudahCari = true);
@@ -186,8 +181,8 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
   }
 
   // ═══ BAR FILTER TANGGAL + STATUS SINKRON (khusus Admin/Super User) ═══
-  // Konsep verifikasi_p0: bar putih di bawah AppBar — chip tanggal, tombol
-  // "Hari ini", STATUS SINKRON sebaris, lalu tombol CARI full-width.
+  // Konsep verifikasi_p0: bar putih di bawah AppBar — chip tanggal dan
+  // STATUS SINKRON sebaris, lalu tombol CARI full-width.
   Widget _buildFilterBar() {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
@@ -240,15 +235,6 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
                   ),
                 ),
               ),
-              if (!_adalahHariIni)
-                GestureDetector(
-                  onTap: _kembaliKeHariIni,
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 6),
-                    child: Icon(Icons.today_rounded,
-                        size: 16, color: AppColors.cyan600),
-                  ),
-                ),
               const Spacer(),
               _buildSyncChip(),
             ],
