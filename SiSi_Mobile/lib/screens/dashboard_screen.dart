@@ -7,6 +7,8 @@ import 'package:flutter/physics.dart'; // SpringSimulation & SpringDescription (
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_colors.dart';
 import '../services/api_service.dart';
+import '../db/repositories/master_repository.dart';
+import '../widgets/sync_section_pengaturan.dart';
 import 'laporan_harian_screen.dart';
 import 'login_screen.dart';
 import 'eksekusi_row_screen.dart';
@@ -145,6 +147,23 @@ class _DashboardScreenState extends State<DashboardScreen>
     setState(() {
       _activeSubScreen = screen;
     });
+  }
+
+  // ═══ INTERLOCK (Project Dart): menu modul TERKUNCI sebelum master data
+  // di-download (Pengaturan → Download Master Data). Setelah data ada, terbuka.
+  Future<void> _bukaMenuTerproteksi(String title, Widget screen) async {
+    final siap = await MasterRepository().sudahAdaData();
+    if (!mounted) return;
+    if (!siap) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Menu terkunci — buka Pengaturan lalu "Download Master Data" dahulu.'),
+        ),
+      );
+      return;
+    }
+    _openSubScreen(screen);
   }
 
   // Kembali ke tampilan awal (greeting) — dipakai tombol back di header menu
@@ -827,22 +846,27 @@ class _DashboardScreenState extends State<DashboardScreen>
                       size: 14, color: Colors.grey),
                   onTap: () {
                     final title = action['title'];
+                    Widget? tujuan;
                     if (title == 'Laporan Harian') {
-                      _openSubScreen(LaporanHarianScreen(
+                      tujuan = LaporanHarianScreen(
                         sesi: widget.sesi,
                         targetSubTim: team['name'],
                         targetTim: team['category'],
-                      ));
+                      );
                     } else if (title == 'Eksekusi Pekerjaan') {
-                      _openSubScreen(EksekusiRowScreen(
+                      tujuan = EksekusiRowScreen(
                         sesi: widget.sesi,
                         targetSubTim: team['name'],
                         targetTim: team['category'],
-                      ));
-                    } else {
+                      );
+                    }
+                    if (tujuan == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('Menu $title segera hadir')),
                       );
+                    } else {
+                      // INTERLOCK: cek master data dulu sebelum menu dibuka
+                      _bukaMenuTerproteksi(title, tujuan);
                     }
                   },
                 ),
@@ -947,19 +971,23 @@ class _DashboardScreenState extends State<DashboardScreen>
                   trailing: const Icon(Icons.arrow_forward_ios_rounded,
                       size: 14, color: Colors.grey),
                   onTap: () {
-                    if (item['title'] == 'Verifikasi P0') {
-                      _openSubScreen(VerifikasiP0Screen(sesi: widget.sesi));
-                    } else if (item['title'] == 'Laporan UP3 / UIW') {
-                      _openSubScreen(LaporanUp3UiwScreen(
+                    final title = item['title'];
+                    Widget? tujuan;
+                    if (title == 'Verifikasi P0') {
+                      tujuan = VerifikasiP0Screen(sesi: widget.sesi);
+                    } else if (title == 'Laporan UP3 / UIW') {
+                      tujuan = LaporanUp3UiwScreen(
                         sesi: widget.sesi,
                         onBack: () => setState(() => _activeSubScreen = null),
-                      ));
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                            content:
-                                Text('Menu ${item['title']} segera hadir')),
                       );
+                    }
+                    if (tujuan == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Menu $title segera hadir')),
+                      );
+                    } else {
+                      // INTERLOCK: cek master data dulu sebelum menu dibuka
+                      _bukaMenuTerproteksi(title, tujuan);
                     }
                   },
                 ),
@@ -1008,6 +1036,10 @@ class _DashboardScreenState extends State<DashboardScreen>
               subtitle: Text('${widget.sesi['role']} • ${widget.sesi['ulp']}'),
             ),
           ),
+          const SizedBox(height: 16),
+          // ═══ DATA & SERVER LOKAL (Project Dart): card Download Master Data
+          // (penanda ✅/❌ + interlock) + kartu status sync per modul
+          SyncSectionPengaturan(sesi: widget.sesi),
           const SizedBox(height: 16),
           Card(
             shape:
