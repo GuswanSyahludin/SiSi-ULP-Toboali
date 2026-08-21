@@ -7,8 +7,8 @@
 
 import 'package:drift/drift.dart' show Value;
 
+import '../app_database.dart'; // wajib: Companion class hasil generate ada di sini
 import '../db_provider.dart';
-import '../tables/master_penyulang.dart';
 
 class MasterRepository {
   /// Daftar nama penyulang unik (dropdown Penyulang). Baca lokal.

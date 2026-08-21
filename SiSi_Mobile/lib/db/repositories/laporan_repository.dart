@@ -8,8 +8,8 @@
 import 'package:drift/drift.dart' show Value;
 
 import '../../services/api_service.dart';
+import '../app_database.dart'; // wajib: Companion class hasil generate ada di sini
 import '../db_provider.dart';
-import '../tables/laporan_harian.dart';
 
 class LaporanRepository {
   /// Baca laporan UP3/UIW untuk 1 tanggal.
