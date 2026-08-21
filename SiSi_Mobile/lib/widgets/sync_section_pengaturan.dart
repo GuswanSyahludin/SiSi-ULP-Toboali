@@ -2,14 +2,18 @@
 // ─────────────────────────────────────────────────────────────
 // Bagian "Data & Server Lokal" di menu Pengaturan (Project Dart).
 //
-//  Card DOWNLOAD MASTER DATA — ketuk: siapkan database lokal + tarik
-//  master data secara online. Penanda di kanan kartu:
-//    ✅ hijau = data & server lokal SUDAH ada
-//    ❌ merah = BELUM ada (menu modul masih terkunci / interlock)
+//  Card MASTER DATA (dua wajah):
+//   • BELUM ada data lokal → judul "Download Master Data" (❌ merah)
+//     ketuk: siapkan database lokal + tarik master data secara online.
+//   • SUDAH ada data lokal → judul berubah "Sinkron Data" (✅ hijau)
+//     ketuk: tarik ulang master data terbaru.
+//     Subtitle: "Terakhir sinkron <jam>".
 //
-//  Rev 21 Agu 2026: card status sync per modul (Laporan Harian Teknik)
-//  DIHAPUS dari Pengaturan — sinkron modul berjalan otomatis saat menu
-//  dibuka (prinsip "sinkron per menu"), bukan lewat kartu di sini.
+//  Rev 21 Agu 2026:
+//   1) Card status sync per modul (Laporan Harian Teknik) DIHAPUS —
+//      sinkron modul berjalan otomatis saat menu dibuka ("sinkron per menu").
+//   2) Card master data berganti nama, ikon & subtitle sesuai kondisi
+//      data lokal (Download Master Data → Sinkron Data).
 // ─────────────────────────────────────────────────────────────
 
 import 'dart:async';
@@ -79,9 +83,8 @@ class _SyncSectionPengaturanState extends State<SyncSectionPengaturan> {
     final ok = res['ok'] == true;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(ok
-            ? pesanSukses
-            : (res['message'] ?? 'Proses gagal').toString()),
+        content: Text(
+            ok ? pesanSukses : (res['message'] ?? 'Proses gagal').toString()),
         backgroundColor: ok ? const Color(0xFF059669) : Colors.redAccent,
       ),
     );
@@ -110,7 +113,9 @@ class _SyncSectionPengaturanState extends State<SyncSectionPengaturan> {
     );
   }
 
-  // ═══ CARD DOWNLOAD MASTER DATA (+ penanda ✅ / ❌) ═══
+  // ═══ CARD MASTER DATA — dua wajah ═══
+  // Belum ada data lokal -> "Download Master Data" (❌ merah)
+  // Sudah ada data lokal -> "Sinkron Data" (✅ hijau, "Terakhir sinkron <jam>")
   Widget _buildCardMasterData() {
     final info = _status[SyncRepository.modulMasterData];
     final siap = info != null && info.lastSyncAt.isNotEmpty;
@@ -125,29 +130,34 @@ class _SyncSectionPengaturanState extends State<SyncSectionPengaturan> {
         ),
       ),
       child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: AppColors.navy700.withOpacity(0.08),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: const Icon(Icons.cloud_download_rounded,
-              color: AppColors.navy700, size: 22),
+          // Ikon ikut berganti: download saat pertama, sync setelah data ada
+          child: Icon(
+            siap ? Icons.sync_rounded : Icons.cloud_download_rounded,
+            color: AppColors.navy700,
+            size: 22,
+          ),
         ),
-        title: const Text(
-          'Download Master Data',
-          style: TextStyle(
+        title: Text(
+          siap ? 'Sinkron Data' : 'Download Master Data',
+          style: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 14,
               color: AppColors.navy700),
         ),
         subtitle: Text(
           proses
-              ? 'Menyiapkan server lokal & menarik data…'
+              ? (siap
+                  ? 'Menyinkron data…'
+                  : 'Menyiapkan server lokal & menarik data…')
               : siap
-                  ? '${info.jumlahData} penyulang • terakhir ${_formatJam(info.lastSyncAt)}'
+                  ? 'Terakhir sinkron ${_formatJam(info.lastSyncAt)}'
                   : 'Belum ada data — ketuk untuk download (butuh internet)',
           style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
         ),
@@ -160,8 +170,7 @@ class _SyncSectionPengaturanState extends State<SyncSectionPengaturan> {
               )
             : Icon(
                 siap ? Icons.check_circle_rounded : Icons.cancel_rounded,
-                color:
-                    siap ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                color: siap ? const Color(0xFF059669) : const Color(0xFFDC2626),
                 size: 26,
               ),
         onTap: proses
@@ -169,7 +178,9 @@ class _SyncSectionPengaturanState extends State<SyncSectionPengaturan> {
             : () => _jalankan(
                   SyncRepository.modulMasterData,
                   () => _repo.downloadMasterData(_token),
-                  'Master data tersimpan — menu modul terbuka',
+                  siap
+                      ? 'Sinkron selesai — data lokal diperbarui'
+                      : 'Master data tersimpan — menu modul terbuka',
                 ),
       ),
     );
