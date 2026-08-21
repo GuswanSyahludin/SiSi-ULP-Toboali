@@ -2,16 +2,14 @@
 // ─────────────────────────────────────────────────────────────
 // Bagian "Data & Server Lokal" di menu Pengaturan (Project Dart).
 //
-//  1) Card DOWNLOAD MASTER DATA — ketuk: siapkan database lokal + tarik
-//     master data secara online. Penanda di kanan kartu:
-//       ✅ hijau = data & server lokal SUDAH ada
-//       ❌ merah = BELUM ada (menu modul masih terkunci / interlock)
-//  2) Card STATUS SYNC per modul — 3 kriteria:
-//       Update      = sudah tersinkron HARI INI (hijau)
-//       Proses Sync = sedang berjalan (amber + spinner)
-//       Belum Update= belum/bukan hari ini (merah)
-//     Ketuk kartu untuk sinkron. Proses DIKUNCI 1x per modul — klik berulang
-//     saat proses berjalan ditolak, jadi server tidak menerima request berlipat.
+//  Card DOWNLOAD MASTER DATA — ketuk: siapkan database lokal + tarik
+//  master data secara online. Penanda di kanan kartu:
+//    ✅ hijau = data & server lokal SUDAH ada
+//    ❌ merah = BELUM ada (menu modul masih terkunci / interlock)
+//
+//  Rev 21 Agu 2026: card status sync per modul (Laporan Harian Teknik)
+//  DIHAPUS dari Pengaturan — sinkron modul berjalan otomatis saat menu
+//  dibuka (prinsip "sinkron per menu"), bukan lewat kartu di sini.
 // ─────────────────────────────────────────────────────────────
 
 import 'dart:async';
@@ -40,14 +38,6 @@ class _SyncSectionPengaturanState extends State<SyncSectionPengaturan> {
 
   String get _token => (widget.sesi['token'] ?? '').toString();
 
-  String _todayString() {
-    final now = DateTime.now();
-    final y = now.year.toString().padLeft(4, '0');
-    final m = now.month.toString().padLeft(2, '0');
-    final d = now.day.toString().padLeft(2, '0');
-    return '$y-$m-$d';
-  }
-
   @override
   void initState() {
     super.initState();
@@ -65,15 +55,6 @@ class _SyncSectionPengaturanState extends State<SyncSectionPengaturan> {
   void dispose() {
     _sub?.cancel();
     super.dispose();
-  }
-
-  // Kriteria "Update" = sudah tersinkron HARI INI; selain itu "Belum Update".
-  bool _syncHariIni(String iso) {
-    if (iso.isEmpty) return false;
-    final t = DateTime.tryParse(iso);
-    if (t == null) return false;
-    final now = DateTime.now();
-    return t.year == now.year && t.month == now.month && t.day == now.day;
   }
 
   String _formatJam(String iso) {
@@ -125,23 +106,11 @@ class _SyncSectionPengaturanState extends State<SyncSectionPengaturan> {
         ),
         const SizedBox(height: 10),
         _buildCardMasterData(),
-        const SizedBox(height: 10),
-        _buildCardModul(
-          modul: SyncRepository.modulLaporanTeknik,
-          nama: 'Laporan Harian Teknik',
-          ikon: Icons.assessment_outlined,
-          aksi: () => _repo.sinkronLaporanTeknik(_todayString()),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Ketuk kartu untuk sinkron • Update = sudah hari ini • Belum Update = perlu sinkron',
-          style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
-        ),
       ],
     );
   }
 
-  // ═══ CARD 1: DOWNLOAD MASTER DATA (+ penanda ✅ / ❌) ═══
+  // ═══ CARD DOWNLOAD MASTER DATA (+ penanda ✅ / ❌) ═══
   Widget _buildCardMasterData() {
     final info = _status[SyncRepository.modulMasterData];
     final siap = info != null && info.lastSyncAt.isNotEmpty;
@@ -202,92 +171,6 @@ class _SyncSectionPengaturanState extends State<SyncSectionPengaturan> {
                   () => _repo.downloadMasterData(_token),
                   'Master data tersimpan — menu modul terbuka',
                 ),
-      ),
-    );
-  }
-
-  // ═══ CARD 2: STATUS SYNC PER MODUL (Update / Proses Sync / Belum Update) ═══
-  Widget _buildCardModul({
-    required String modul,
-    required String nama,
-    required IconData ikon,
-    required Future<Map<String, dynamic>> Function() aksi,
-  }) {
-    final info = _status[modul];
-    final update = info != null && _syncHariIni(info.lastSyncAt);
-    final proses = _proses.contains(modul);
-
-    final label =
-        proses ? 'Proses Sync' : (update ? 'Update' : 'Belum Update');
-    final warna = proses
-        ? const Color(0xFFD97706) // amber
-        : (update ? const Color(0xFF059669) : const Color(0xFFDC2626));
-
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey.shade200),
-      ),
-      child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: AppColors.navy700.withOpacity(0.08),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(ikon, color: AppColors.navy700, size: 22),
-        ),
-        title: Text(
-          nama,
-          style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-              color: AppColors.navy700),
-        ),
-        subtitle: Text(
-          update
-              ? 'Sinkron terakhir hari ini ${_formatJam(info!.lastSyncAt)}'
-              : (info != null && info.lastSyncAt.isNotEmpty
-                  ? 'Sinkron terakhir bukan hari ini (${_formatJam(info.lastSyncAt)})'
-                  : 'Belum pernah sinkron'),
-          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-        ),
-        trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: warna.withOpacity(0.10),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: warna, width: 1),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (proses)
-                const SizedBox(
-                  width: 10,
-                  height: 10,
-                  child: CircularProgressIndicator(strokeWidth: 1.5),
-                )
-              else
-                Icon(
-                  update ? Icons.check_rounded : Icons.sync_rounded,
-                  size: 12,
-                  color: warna,
-                ),
-              const SizedBox(width: 4),
-              Text(
-                label,
-                style: TextStyle(
-                    fontSize: 10, fontWeight: FontWeight.bold, color: warna),
-              ),
-            ],
-          ),
-        ),
-        onTap:
-            proses ? null : () => _jalankan(modul, aksi, '$nama tersinkron'),
       ),
     );
   }
