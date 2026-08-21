@@ -168,8 +168,10 @@ class _PlnBadge extends StatelessWidget {
       width: 42,
       height: 42,
       decoration: BoxDecoration(
-        color: AppColors.plnYellow,
+        // Rev 21 Agu sore: kuning PLN → abu lembut agar logo PLN tampil dominan
+        color: AppColors.neutral100,
         borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.neutral200, width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.15),
@@ -347,6 +349,7 @@ class _LoginSheetState extends State<_LoginSheet> {
                 controller: _userCtrl,
                 hint: 'cth. 16130.ROW01',
                 icon: Icons.person_outline,
+                accentColor: AppColors.navy700,
               ),
               const SizedBox(height: 16),
               _buildLabel('Kata sandi'),
@@ -355,6 +358,7 @@ class _LoginSheetState extends State<_LoginSheet> {
                 controller: _passCtrl,
                 hint: 'Masukkan kata sandi',
                 icon: Icons.lock_outline,
+                accentColor: AppColors.amber600,
                 obscure: _obscure,
                 // Tombol mata: InkWell ringan (bukan IconButton 48px) supaya
                 // tidak mendesak isi kolom — rata dgn kolom Username
@@ -368,7 +372,7 @@ class _LoginSheetState extends State<_LoginSheet> {
                           ? Icons.visibility_outlined
                           : Icons.visibility_off_outlined,
                       size: 17,
-                      color: AppColors.neutral500,
+                      color: AppColors.amber600,
                     ),
                   ),
                 ),
@@ -430,18 +434,21 @@ class _LoginSheetState extends State<_LoginSheet> {
         ),
       );
 
+  // Rev 21 Agu sore: tiap kolom punya WARNA aksen sendiri (latar lembut +
+  // border + icon senada) — Username navy, Kata sandi amber.
   Widget _buildTextField({
     required TextEditingController controller,
     required String hint,
     required IconData icon,
+    required Color accentColor,
     bool obscure = false,
     Widget? suffix,
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.neutral100,
+        color: accentColor.withOpacity(0.06),
         borderRadius: BorderRadius.circular(11),
-        border: Border.all(color: AppColors.neutral200, width: 1.5),
+        border: Border.all(color: accentColor.withOpacity(0.35), width: 1.5),
       ),
       // PERBAIKAN RATA & TENGAH: tinggi kolom mengikuti isi (tanpa height fix)
       // + padding atas-bawah sama besar → teks & icon selalu tepat di tengah
@@ -456,7 +463,7 @@ class _LoginSheetState extends State<_LoginSheet> {
           hintStyle: TextStyle(color: AppColors.neutral500, fontSize: 13),
           prefixIcon: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Icon(icon, size: 17, color: AppColors.neutral500),
+            child: Icon(icon, size: 17, color: accentColor),
           ),
           prefixIconConstraints:
               const BoxConstraints(minWidth: 40, minHeight: 24),
