@@ -16,6 +16,10 @@
         lama yang digantikan (recalcTick / recalcRowTick / drainAntreanApprovalP0).
         + aturIntervalTrigger(fn, menit) + aturDrainWatermark5Menit(): turunkan drain watermark
         1 menit → 5 menit dari editor (drain WM memindai 2 sheet penuh tiap run — beban sheet terberat).
+   Rev 21 Agu 2026: getMobileDropdownRow DUAL-READ — db_Penyulang dibaca dari 2 DB (AKTIF + ARSIP,
+        pola Tek-Migrasi: tulis hanya ke AKTIF, baca dari keduanya), merge + dedup per pasangan
+        (Nama Penyulang, Section) + cache 10 menit (dropdownPenyulang_v2) & bustCacheDropdownPenyulang().
+        Respons tidak berubah → mobile/APK tidak perlu update.
    Rev sebelumnya: 31 Mei 2026 (konsolidasi bersih + modul Inspeksi + MOBILE API LAYER)
    Catatan: fungsi per-menu dipindah ke Tek-Code.gs
 ═════════════════════════════════════ */
@@ -1636,8 +1640,27 @@ function getMobileLaporanHarian(token, subTim, tim, tanggal, limit) {
 
 /* ═══ MODUL ROW: DROPDOWN & EKSEKUSI (MOBILE LAYER) ═══ */
 
+/* CACHE dropdown penyulang + DUAL-READ (Rev 21 Agu 2026):
+   db_Penyulang kini dibaca dari 2 DB — spreadsheet AKTIF + ARSIP (pola Tek-Migrasi:
+   TULIS hanya ke AKTIF, BACA dari keduanya). Hasil gabungan di-cache 10 menit karena
+   dual-read menambah 1 openById (file ARSIP) — form Eksekusi ROW & kartu Sinkron Data
+   tetap seketika. Dedup mengikuti pasangan (Nama Penyulang, Section): pasangan yang sama
+   di kedua file hanya dihitung sekali (AKTIF dibaca lebih dulu).
+   Bila db_Penyulang di ARSIP tidak ada / kosong → otomatis dilewati (hasil = AKTIF saja).
+   Bila sheet master baru saja diedit & perlu efek segera: jalankan bustCacheDropdownPenyulang()
+   sekali dari editor. */
+var DROPDOWN_PENY_CACHE_KEY = "dropdownPenyulang_v2";
+var DROPDOWN_PENY_CACHE_TTL = 600; // 10 menit (selaras cache db_Users)
+
+function bustCacheDropdownPenyulang() {
+  try {
+    CacheService.getScriptCache().remove(DROPDOWN_PENY_CACHE_KEY);
+  } catch (e) {}
+}
+
 /**
- * Mengambil list Penyulang dan pemetaan Section untuk form input ROW di mobile
+ * Mengambil list Penyulang dan pemetaan Section untuk form input ROW di mobile.
+ * DUAL-READ (AKTIF + ARSIP) — 21 Agu 2026. Respons: { success, penyulang, sectionByPenyulang }.
  */
 function getMobileDropdownRow(token) {
   try {
@@ -1645,27 +1668,55 @@ function getMobileDropdownRow(token) {
     if (!sesi)
       return { success: false, message: "Sesi habis, silakan login ulang." };
 
-    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    var shP = ss.getSheetByName("db_Penyulang");
-    if (!shP || shP.getLastRow() < 2) {
-      return { success: true, penyulang: [], sectionByPenyulang: {} };
+    // Cache dulu: hasil GABUNGAN AKTIF+ARSIP (bukan per-file) agar konsisten.
+    var cache = CacheService.getScriptCache();
+    var hit = cache.get(DROPDOWN_PENY_CACHE_KEY);
+    if (hit) {
+      try {
+        var cached = JSON.parse(hit);
+        cached.success = true;
+        return cached;
+      } catch (eCache) {}
     }
 
-    var data = shP.getRange(2, 1, shP.getLastRow() - 1, 6).getValues();
     var penyulangSet = {};
     var sectionMap = {};
 
-    for (var i = 0; i < data.length; i++) {
-      var peny = String(data[i][2] || "").trim(); // Kolom C = Penyulang
-      var sec = String(data[i][4] || "").trim(); // Kolom E = Section
-      if (!peny) continue;
+    // Sumber bacaan: AKTIF dulu, lalu ARSIP (bila konstanta Tek-Migrasi tersedia).
+    var sumber = [SPREADSHEET_ID];
+    if (typeof SPREADSHEET_ID_ARSIP !== "undefined" && SPREADSHEET_ID_ARSIP) {
+      sumber.push(SPREADSHEET_ID_ARSIP);
+    }
 
-      if (!penyulangSet[peny]) {
-        penyulangSet[peny] = true;
-        sectionMap[peny] = [];
+    for (var s = 0; s < sumber.length; s++) {
+      var shP = null;
+      try {
+        shP = SpreadsheetApp.openById(sumber[s]).getSheetByName("db_Penyulang");
+      } catch (eBuka) {
+        Logger.log(
+          "getMobileDropdownRow: buka db_Penyulang gagal (sumber " +
+            s +
+            ") — " +
+            eBuka,
+        );
       }
-      if (sec && sectionMap[peny].indexOf(sec) === -1) {
-        sectionMap[peny].push(sec);
+      if (!shP || shP.getLastRow() < 2) continue; // arsip tanpa db_Penyulang → lewati
+
+      var data = shP.getRange(2, 1, shP.getLastRow() - 1, 6).getValues();
+      for (var i = 0; i < data.length; i++) {
+        var peny = String(data[i][2] || "").trim(); // Kolom C = Nama Penyulang
+        var sec = String(data[i][4] || "").trim(); // Kolom E = Section
+        if (!peny) continue;
+
+        if (!penyulangSet[peny]) {
+          penyulangSet[peny] = true;
+          sectionMap[peny] = [];
+        }
+        // Dedup section per penyulang — pasangan (peny, sec) yang sudah ada
+        // (termasuk yang dibawa dari file sebelumnya) tidak ditambah dua kali.
+        if (sec && sectionMap[peny].indexOf(sec) === -1) {
+          sectionMap[peny].push(sec);
+        }
       }
     }
 
@@ -1674,11 +1725,19 @@ function getMobileDropdownRow(token) {
       sectionMap[p].sort();
     });
 
-    return {
-      success: true,
+    var out = {
       penyulang: listPenyulang,
       sectionByPenyulang: sectionMap,
     };
+    try {
+      cache.put(
+        DROPDOWN_PENY_CACHE_KEY,
+        JSON.stringify(out),
+        DROPDOWN_PENY_CACHE_TTL,
+      );
+    } catch (eSimpan) {}
+    out.success = true;
+    return out;
   } catch (err) {
     return {
       success: false,
