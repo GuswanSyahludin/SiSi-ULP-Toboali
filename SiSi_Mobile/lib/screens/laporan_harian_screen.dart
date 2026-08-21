@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_colors.dart';
-import '../services/api_service.dart';
+import '../db/repositories/header_repository.dart';
 import '../widgets/custom_loading_widget.dart';
 
+// Laporan Harian (Rev 21 Agu 2026) — db_Global_Header dibaca lewat
+// HeaderRepository (Project Dart): server dulu → cache SQLite (global_header)
+// → fallback offline (banner oranye). Layar tidak memanggil API langsung.
 class LaporanHarianScreen extends StatefulWidget {
   final Map<String, dynamic> sesi;
   final String? targetSubTim;
@@ -24,6 +27,7 @@ class _LaporanHarianScreenState extends State<LaporanHarianScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   List<dynamic> _laporanList = [];
+  bool _offline = false; // true bila data berasal dari cache SQLite
 
   String get _activeSubTim =>
       widget.targetSubTim ??
@@ -53,7 +57,9 @@ class _LaporanHarianScreenState extends State<LaporanHarianScreen> {
 
     try {
       final token = widget.sesi['token'] ?? '';
-      final response = await ApiService.getLaporanHarian(
+      // Project Dart: lewat HeaderRepository — server dulu, hasilnya di-cache
+      // ke SQLite (global_header); saat offline, baca cache lokal.
+      final response = await HeaderRepository().bacaLaporanHarian(
         token: token,
         subTim: _activeSubTim,
         tanggal: _getTodayString(),
@@ -62,6 +68,7 @@ class _LaporanHarianScreenState extends State<LaporanHarianScreen> {
       if (response['success'] == true) {
         setState(() {
           _laporanList = response['data'] ?? [];
+          _offline = response['offline'] == true;
           _isLoading = false;
         });
       } else {
@@ -219,6 +226,23 @@ class _LaporanHarianScreenState extends State<LaporanHarianScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        // Banner mode offline — data berasal dari cache SQLite di HP
+        if (_offline)
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF7ED),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFFED7AA)),
+            ),
+            child: const Text(
+              'Mode offline — menampilkan data yang tersimpan di HP. Data diperbarui otomatis saat online.',
+              style: TextStyle(fontSize: 11, color: Color(0xFF9A3412)),
+            ),
+          ),
+
         // Summary Header Card
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),

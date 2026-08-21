@@ -1919,6 +1919,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final MasterDao masterDao = MasterDao(this as AppDatabase);
   late final LaporanDao laporanDao = LaporanDao(this as AppDatabase);
   late final SyncDao syncDao = SyncDao(this as AppDatabase);
+  late final HeaderDao headerDao = HeaderDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();

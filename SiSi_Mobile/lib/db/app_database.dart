@@ -13,6 +13,9 @@
 //   2) jalankan: dart run build_runner build   (file .g.dart dibuat ulang)
 //   3) bila struktur berubah (tambah/hapus kolom), naikkan schemaVersion
 //      dan tulis migrasinya di migration()
+//
+// Rev 21 Agu 2026: + HeaderDao (akses tabel global_header utk menu Laporan
+// Harian). Tambah DAO TIDAK mengubah skema tabel → schemaVersion tetap 1.
 // ─────────────────────────────────────────────────────────────
 
 import 'package:drift/drift.dart';
@@ -25,12 +28,13 @@ import 'tables/sync_info.dart';
 import 'daos/master_dao.dart';
 import 'daos/laporan_dao.dart';
 import 'daos/sync_dao.dart';
+import 'daos/header_dao.dart';
 
 part 'app_database.g.dart'; // file hasil generate build_runner (jangan diedit manual)
 
 @DriftDatabase(
   tables: [GlobalHeaders, MasterPenyulangs, LaporanHarians, SyncInfos],
-  daos: [MasterDao, LaporanDao, SyncDao],
+  daos: [MasterDao, LaporanDao, SyncDao, HeaderDao],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(driftDatabase(name: 'sisi_db'));
