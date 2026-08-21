@@ -111,6 +111,33 @@ class ApiService {
     return jsonDecode(res.body);
   }
 
+  // Update bertahap foto eksekusi ROW (sistem progres 21 Agu 2026):
+  // tahap 2 = foto pekerjaan, tahap 3 = foto sesudah (selesai).
+  // POST karena mengirim base64 foto; timeout 45 dtk seperti simpan.
+  static Future<Map<String, dynamic>> updateEksekusiRow({
+    required String token,
+    required String kodeEksekusi,
+    String? fotoPekerjaanBase64,
+    String? fotoSesudahBase64,
+  }) async {
+    final uri = Uri.parse('$baseUrl?mobile=1');
+    final bodyData = {
+      'action': 'updateMobileEksekusiRow',
+      'token': token,
+      'kodeEksekusi': kodeEksekusi,
+      'fotoPekerjaanBase64': fotoPekerjaanBase64 ?? '',
+      'fotoSesudahBase64': fotoSesudahBase64 ?? '',
+    };
+    final res = await http
+        .post(
+          uri,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(bodyData),
+        )
+        .timeout(const Duration(seconds: 45));
+    return jsonDecode(res.body);
+  }
+
   // ==========================================
   // 4. VERIFIKASI P0 (db_Yandal_P0, Switching, Gardu)
   // ==========================================

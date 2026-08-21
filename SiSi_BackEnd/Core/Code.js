@@ -20,6 +20,10 @@
         pola Tek-Migrasi: tulis hanya ke AKTIF, baca dari keduanya), merge + dedup per pasangan
         (Nama Penyulang, Section) + cache 10 menit (dropdownPenyulang_v2) & bustCacheDropdownPenyulang().
         Respons tidak berubah → mobile/APK tidak perlu update.
+   Rev 21 Agu 2026 (siang): + updateMobileEksekusiRow — update BERTAHAP foto eksekusi ROW (sistem
+        progres 3 tahap): cari baris by Kode Eksekusi, unggah foto lanjutan ke folder Drive yang sama,
+        tulis kolom T/U/AA & V/W/AB, refresh rantai Realisasi/WA via antrean (dedup by key).
+        + 1 case router updateEksekusiRow.
    Rev sebelumnya: 31 Mei 2026 (konsolidasi bersih + modul Inspeksi + MOBILE API LAYER)
    Catatan: fungsi per-menu dipindah ke Tek-Code.gs
 ═════════════════════════════════════ */
@@ -2136,6 +2140,213 @@ function simpanMobileEksekusiRow(payload) {
   }
 }
 
+/**
+ * Update BERTAHAP foto eksekusi ROW — SISTEM PROGRES (21 Agu 2026).
+ * Tahap 1 = foto sebelum (input baru via simpanMobileEksekusiRow),
+ * tahap 2 = foto pekerjaan, tahap 3 = foto sesudah = SELESAI.
+ * Status progres diturunkan dari kelengkapan 3 foto — TANPA kolom baru di sheet.
+ * Prinsip migrasi: TULIS hanya ke AKTIF (baris progres = pekerjaan hari ini).
+ *
+ * payload: { token, kodeEksekusi, fotoPekerjaanBase64?, fotoSesudahBase64? }
+ * return : { success, kodeEksekusi, tahap (0-3), fotoPekerjaanUrl?, fotoSesudahUrl?, message }
+ */
+function updateMobileEksekusiRow(payload) {
+  try {
+    payload = payload || {};
+    var sesi = getSesiByToken(String(payload.token || "").trim());
+    if (!sesi)
+      return { success: false, message: "Sesi habis, silakan login ulang." };
+
+    var kodeEksekusi = String(payload.kodeEksekusi || "").trim();
+    if (!kodeEksekusi)
+      return { success: false, message: "kodeEksekusi wajib diisi." };
+
+    var b64Pkj = String(payload.fotoPekerjaanBase64 || "");
+    var b64Ssd = String(payload.fotoSesudahBase64 || "");
+    if (b64Pkj.length < 50 && b64Ssd.length < 50)
+      return { success: false, message: "Tidak ada foto yang dikirim." };
+
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sh = ss.getSheetByName("db_ROW_Eksekusi");
+    if (!sh)
+      return {
+        success: false,
+        message: "Sheet db_ROW_Eksekusi tidak ditemukan.",
+      };
+
+    // 1) Cari baris by Kode Eksekusi (kolom D) — scan dari bawah karena baris
+    //    progres hampir selalu yang terbaru.
+    var lastRow = sh.getLastRow();
+    if (lastRow < 2)
+      return { success: false, message: "Data eksekusi masih kosong." };
+    var kodeList = sh.getRange(2, 4, lastRow - 1, 1).getValues();
+    var rowIdx = -1;
+    for (var i = kodeList.length - 1; i >= 0; i--) {
+      if (String(kodeList[i][0] || "").trim() === kodeEksekusi) {
+        rowIdx = i + 2;
+        break;
+      }
+    }
+    if (rowIdx === -1)
+      return {
+        success: false,
+        message: "Kode Eksekusi tidak ditemukan: " + kodeEksekusi,
+      };
+
+    // 2) Konteks baris utk membangun ulang folder upload (hierarki sama dgn
+    //    simpanMobileEksekusiRow: .../Eksekusi ROW/{Tahun}/{Bln}/{Tgl}/{Tim}/{Kode}).
+    var tglCell = sh.getRange(rowIdx, 7).getValue(); // G: Tanggal
+    var tim = String(sh.getRange(rowIdx, 8).getValue() || "").trim(); // H: Tim
+    var tglObj =
+      tglCell instanceof Date && !isNaN(tglCell.getTime())
+        ? tglCell
+        : new Date();
+
+    var now = new Date();
+    var folderUpload = null;
+    var relativeFolderPath = "";
+
+    function _getFolderUpdate_() {
+      if (!folderUpload) {
+        var baseFolderNama = "AppSheet SiSi - ULP Toboali";
+        var bulanList = [
+          "Januari",
+          "Februari",
+          "Maret",
+          "April",
+          "Mei",
+          "Juni",
+          "Juli",
+          "Agustus",
+          "September",
+          "Oktober",
+          "November",
+          "Desember",
+        ];
+        var blnStr =
+          ("0" + (tglObj.getMonth() + 1)).slice(-2) +
+          ". " +
+          bulanList[tglObj.getMonth()];
+        var tglHari = String(tglObj.getDate());
+        var tahunStr = String(tglObj.getFullYear());
+
+        var rootFolders = DriveApp.getFoldersByName(baseFolderNama);
+        var curFolder = rootFolders.hasNext()
+          ? rootFolders.next()
+          : DriveApp.createFolder(baseFolderNama);
+        var parentPath = ["Eksekusi ROW", tahunStr, blnStr, tglHari, tim];
+        for (var p = 0; p < parentPath.length; p++) {
+          var subName = parentPath[p];
+          var subs = curFolder.getFoldersByName(subName);
+          curFolder = subs.hasNext()
+            ? subs.next()
+            : curFolder.createFolder(subName);
+        }
+        relativeFolderPath =
+          baseFolderNama +
+          "/Eksekusi ROW/" +
+          tahunStr +
+          "/" +
+          blnStr +
+          "/" +
+          tglHari +
+          "/" +
+          tim +
+          "/" +
+          kodeEksekusi;
+        var subsKode = curFolder.getFoldersByName(kodeEksekusi);
+        folderUpload = subsKode.hasNext()
+          ? subsKode.next()
+          : curFolder.createFolder(kodeEksekusi);
+      }
+      return folderUpload;
+    }
+
+    function _unggahFoto_(base64Str, tagTipe) {
+      try {
+        var rawData = base64Str;
+        var mimeType = "image/jpeg";
+        if (rawData.indexOf(";base64,") >= 0) {
+          var parts = rawData.split(";base64,");
+          mimeType = parts[0].replace("data:", "");
+          rawData = parts[1];
+        }
+        var decoded = Utilities.base64Decode(rawData);
+        var jamStr = Utilities.formatDate(now, "Asia/Jakarta", "HHmmss");
+        var fileNameOnly = kodeEksekusi + "." + tagTipe + "." + jamStr + ".jpg";
+        var file = _getFolderUpdate_().createFile(
+          Utilities.newBlob(decoded, mimeType, fileNameOnly),
+        );
+        file.setSharing(
+          DriveApp.Access.ANYONE_WITH_LINK,
+          DriveApp.Permission.VIEW,
+        );
+        return {
+          nama: relativeFolderPath + "/" + fileNameOnly,
+          url: "https://lh3.googleusercontent.com/d/" + file.getId(),
+        };
+      } catch (eFoto) {
+        Logger.log(
+          "[updateMobileEksekusiRow._unggahFoto_] Gagal: " + eFoto.message,
+        );
+        return { nama: "", url: "" };
+      }
+    }
+
+    // 3) Tulis kolom foto sesuai tahap yang dikirim.
+    //    Pekerjaan: T(20)=nama, U(21)=url, AA(27)=flag. Sesudah: V(22)=nama, W(23)=url, AB(28)=flag.
+    var out = { success: true, kodeEksekusi: kodeEksekusi };
+    if (b64Pkj.length >= 50) {
+      var fP = _unggahFoto_(b64Pkj, "Foto Pekerjaan");
+      if (fP.url) {
+        sh.getRange(rowIdx, 20).setValue(fP.nama);
+        sh.getRange(rowIdx, 21).setValue(fP.url);
+        sh.getRange(rowIdx, 27).setValue("Y");
+        out.fotoPekerjaanUrl = fP.url;
+      }
+    }
+    if (b64Ssd.length >= 50) {
+      var fS = _unggahFoto_(b64Ssd, "Foto Sesudah");
+      if (fS.url) {
+        sh.getRange(rowIdx, 22).setValue(fS.nama);
+        sh.getRange(rowIdx, 23).setValue(fS.url);
+        sh.getRange(rowIdx, 28).setValue("Y");
+        out.fotoSesudahUrl = fS.url;
+      }
+    }
+    SpreadsheetApp.flush();
+
+    // 4) Rantai Realisasi/Header/WA di-refresh lewat antrean yang sama
+    //    (dedup by key membuat enqueue ulang murah — recalcTick memproses kondisi terbaru).
+    try {
+      _enqueueRecalc_({
+        jenis: "eksekusiRow",
+        key: "eksekusiRow|" + kodeEksekusi,
+        tim: tim,
+        tanggal: _normTgl(tglObj),
+      });
+    } catch (eQ) {
+      Logger.log("[updateMobileEksekusiRow] enqueue gagal: " + eQ.message);
+    }
+
+    // 5) Tahap terbaru utk balasan UI (dibaca dari kelengkapan foto di sheet).
+    var sAda = String(sh.getRange(rowIdx, 19).getValue() || "").trim() !== ""; // S
+    var pAda = String(sh.getRange(rowIdx, 21).getValue() || "").trim() !== ""; // U
+    var dAda = String(sh.getRange(rowIdx, 23).getValue() || "").trim() !== ""; // W
+    out.tahap = dAda ? 3 : pAda ? 2 : sAda ? 1 : 0;
+    out.message =
+      out.tahap >= 3
+        ? "Pekerjaan selesai — dokumentasi 3 foto lengkap."
+        : "Progres tersimpan (tahap " + out.tahap + "/3).";
+    return out;
+  } catch (err) {
+    return {
+      success: false,
+      message: "Error updateMobileEksekusiRow: " + err.message,
+    };
+  }
+}
+
 /* ═══ MOBILE API LAYER & ROUTER UNTUK FLUTTER (SiSi Mobile) ═══ */
 function apiRouter_(e, body) {
   var p = (e && e.parameter) || {};
@@ -2235,6 +2446,12 @@ function apiRouter_(e, body) {
       case "simpanMobileEksekusiRow":
       case "simpanEksekusiRow":
         result = simpanMobileEksekusiRow(body || p);
+        break;
+
+      // Update bertahap foto eksekusi ROW (sistem progres 21 Agu 2026)
+      case "updateMobileEksekusiRow":
+      case "updateEksekusiRow":
+        result = updateMobileEksekusiRow(body || p);
         break;
 
       // 4. Verifikasi & Approval P0 (db_Yandal_P0, db_Yandal_Pengecekan_Switching, Pengukuran Gardu)

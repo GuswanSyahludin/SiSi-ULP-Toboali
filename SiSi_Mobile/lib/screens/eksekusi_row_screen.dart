@@ -9,6 +9,10 @@ import '../services/api_service.dart';
 import '../db/repositories/master_repository.dart';
 import '../widgets/custom_loading_widget.dart';
 
+// Eksekusi ROW (Rev 21 Agu 2026) — SISTEM PROGRES 3 TAHAP:
+// input baru cukup FOTO SEBELUM → card chip amber "1/3"; lanjut FOTO PEKERJAAN
+// dari detail card → chip biru "2/3"; FOTO SESUDAH → chip hijau "3/3 • Selesai".
+// Tahap diturunkan dari kelengkapan foto (tanpa kolom status baru).
 class EksekusiRowScreen extends StatefulWidget {
   final Map<String, dynamic> sesi;
   final String? targetSubTim;
@@ -98,6 +102,47 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
     final t = _tanggalDipilih;
     if (t == null) return 'Pilih Tanggal';
     return '${t.day} ${_namaBulan[t.month - 1]} ${t.year}';
+  }
+
+  // ═══ SISTEM PROGRES 3 TAHAP (Rev 21 Agu 2026) ═══
+  // Tahap diturunkan dari kelengkapan foto: 1 = sebelum, 2 = pekerjaan,
+  // 3 = sesudah (SELESAI). 0 = belum ada foto sama sekali (data lama).
+  int _tahapOf(Map<String, dynamic> item) {
+    final s = (item['fotoSebelumUrl'] ?? '').toString().trim().isNotEmpty;
+    final p = (item['fotoPekerjaanUrl'] ?? '').toString().trim().isNotEmpty;
+    final d = (item['fotoSesudahUrl'] ?? '').toString().trim().isNotEmpty;
+    if (d) return 3;
+    if (p) return 2;
+    if (s) return 1;
+    return 0;
+  }
+
+  String _labelTahap(int t) => const [
+        'Belum Ada Foto',
+        'Foto Sebelum',
+        'Foto Pekerjaan',
+        'Selesai',
+      ][t];
+
+  Color _warnaTahap(int t) => const [
+        Color(0xFF94A3B8), // abu — belum ada foto
+        Color(0xFFD97706), // amber — tahap 1
+        Color(0xFF0284C7), // biru — tahap 2
+        Color(0xFF059669), // hijau — selesai
+      ][t];
+
+  // Buka sheet lanjut progres (tahap 2 / 3) dari detail card.
+  void _lanjutProgres(Map<String, dynamic> item) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _LanjutProgresSheet(
+        sesi: widget.sesi,
+        item: item,
+        onSuccess: _fetchEksekusiList,
+      ),
+    );
   }
 
   @override
@@ -317,8 +362,7 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
     } else {
       label = 'Belum Update';
       warna = const Color(0xFFDC2626); // merah
-      ikon = const Icon(Icons.sync_rounded,
-          size: 11, color: Color(0xFFDC2626));
+      ikon = const Icon(Icons.sync_rounded, size: 11, color: Color(0xFFDC2626));
     }
 
     return Container(
@@ -442,8 +486,7 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
                 ),
-                onPressed:
-                    _bisaFilterTanggal ? _cariData : _fetchEksekusiList,
+                onPressed: _bisaFilterTanggal ? _cariData : _fetchEksekusiList,
                 icon: const Icon(Icons.refresh_rounded,
                     size: 18, color: Colors.white),
                 label: const Text('Coba Lagi'),
@@ -564,6 +607,10 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
     final fotoSsd = item['fotoSesudahUrl'] ?? '';
     final inputBy = item['inputOleh'] ?? '-';
 
+    // Sistem progres: tahap & warna indikator dari kelengkapan foto
+    final tahap = _tahapOf(item);
+    final warnaTahap = _warnaTahap(tahap);
+
     return InkWell(
       onTap: () => _showDetailModal(item),
       borderRadius: BorderRadius.circular(14),
@@ -573,7 +620,13 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.grey.shade200),
+          // Garis aksen warna tahap di tepi kiri card
+          border: Border(
+            left: BorderSide(color: warnaTahap, width: 4),
+            top: BorderSide(color: Colors.grey.shade200),
+            right: BorderSide(color: Colors.grey.shade200),
+            bottom: BorderSide(color: Colors.grey.shade200),
+          ),
           boxShadow: [
             BoxShadow(
                 color: Colors.black.withOpacity(0.02),
@@ -598,24 +651,33 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
+                // Chip tahap progres — warna berbeda per tahap
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFECFDF5),
+                    color: warnaTahap.withOpacity(0.10),
                     borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: warnaTahap, width: 1),
                   ),
-                  child: const Row(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.check_circle,
-                          size: 12, color: Color(0xFF059669)),
-                      SizedBox(width: 4),
+                      Icon(
+                        tahap >= 3
+                            ? Icons.check_circle_rounded
+                            : Icons.timelapse_rounded,
+                        size: 12,
+                        color: warnaTahap,
+                      ),
+                      const SizedBox(width: 4),
                       Text(
-                        'Update',
+                        '$tahap/3 • ${_labelTahap(tahap)}',
                         style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF059669)),
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: warnaTahap,
+                        ),
                       ),
                     ],
                   ),
@@ -723,7 +785,25 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
+
+            // Progress bar 3 segmen — terisi mengikuti tahap
+            Row(
+              children: List.generate(3, (i) {
+                final terisi = tahap > i;
+                return Expanded(
+                  child: Container(
+                    height: 4,
+                    margin: EdgeInsets.only(right: i < 2 ? 4 : 0),
+                    decoration: BoxDecoration(
+                      color: terisi ? warnaTahap : const Color(0xFFE2E8F0),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                );
+              }),
+            ),
+            const SizedBox(height: 10),
 
             // Foto Preview Row (3 Foto)
             Row(
@@ -742,6 +822,7 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
   }
 
   void _showDetailModal(Map<String, dynamic> item) {
+    final tahap = _tahapOf(item);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -789,6 +870,7 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
             _buildDetailSection('3. Data Pekerjaan', [
               _buildDetailItem('Diameter Pohon', '${item['diameter']} cm'),
               _buildDetailItem('Jenis Pekerjaan', item['jenisPekerjaan']),
+              _buildDetailItem('Progres', '$tahap/3 • ${_labelTahap(tahap)}'),
             ]),
             const SizedBox(height: 16),
             const Text('Foto Dokumentasi',
@@ -809,6 +891,34 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
                         'Sesudah', item['fotoSesudahUrl'] ?? '')),
               ],
             ),
+            // Tombol lanjut progres — tampil selama belum selesai (tahap < 3)
+            if (tahap < 3) ...[
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                height: 46,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _warnaTahap(tahap + 1),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                  icon: const Icon(Icons.add_a_photo_rounded,
+                      size: 18, color: Colors.white),
+                  label: Text(
+                    tahap <= 1
+                        ? 'Lanjutkan — Foto Pekerjaan'
+                        : 'Selesaikan — Foto Sesudah',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _lanjutProgres(item);
+                  },
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -916,7 +1026,7 @@ class _EksekusiRowScreenState extends State<EksekusiRowScreen> {
 }
 
 // ==========================================
-// FORM INPUT SHEET
+// FORM INPUT SHEET — TAHAP 1 (Foto Sebelum saja)
 // ==========================================
 class _FormEksekusiSheet extends StatefulWidget {
   final Map<String, dynamic> sesi;
@@ -948,9 +1058,9 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
   String? _selectedPenyulang;
   String? _selectedSection;
 
+  // Sistem progres: input baru cukup FOTO SEBELUM; foto pekerjaan & sesudah
+  // dilanjutkan bertahap dari card (_LanjutProgresSheet).
   File? _fotoSebelum;
-  File? _fotoPekerjaan;
-  File? _fotoSesudah;
 
   final ImagePicker _picker = ImagePicker();
 
@@ -1024,7 +1134,7 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
     targetCtrl.text = '${position.latitude}, ${position.longitude}';
   }
 
-  Future<void> _pickImage(String tipe) async {
+  Future<void> _pickImage() async {
     showModalBottomSheet(
       context: context,
       builder: (ctx) => SafeArea(
@@ -1039,11 +1149,7 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
                 final picked = await _picker.pickImage(
                     source: ImageSource.camera, imageQuality: 70);
                 if (picked != null) {
-                  setState(() {
-                    if (tipe == 'sebelum') _fotoSebelum = File(picked.path);
-                    if (tipe == 'pekerjaan') _fotoPekerjaan = File(picked.path);
-                    if (tipe == 'sesudah') _fotoSesudah = File(picked.path);
-                  });
+                  setState(() => _fotoSebelum = File(picked.path));
                 }
               },
             ),
@@ -1056,11 +1162,7 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
                 final picked = await _picker.pickImage(
                     source: ImageSource.gallery, imageQuality: 70);
                 if (picked != null) {
-                  setState(() {
-                    if (tipe == 'sebelum') _fotoSebelum = File(picked.path);
-                    if (tipe == 'pekerjaan') _fotoPekerjaan = File(picked.path);
-                    if (tipe == 'sesudah') _fotoSesudah = File(picked.path);
-                  });
+                  setState(() => _fotoSebelum = File(picked.path));
                 }
               },
             ),
@@ -1087,11 +1189,10 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
       return;
     }
 
-    if (_fotoSebelum == null ||
-        _fotoPekerjaan == null ||
-        _fotoSesudah == null) {
-      setState(() =>
-          _error = 'Semua 3 Foto (Sebelum, Pekerjaan, Sesudah) wajib diisi');
+    // Sistem progres: tahap 1 hanya mewajibkan FOTO SEBELUM.
+    if (_fotoSebelum == null) {
+      setState(
+          () => _error = 'Foto Sebelum wajib diisi (tahap 1 dari 3 progres)');
       return;
     }
 
@@ -1103,8 +1204,6 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
     try {
       final token = widget.sesi['token'] ?? '';
       String b64Sbl = base64Encode(await _fotoSebelum!.readAsBytes());
-      String b64Pkj = base64Encode(await _fotoPekerjaan!.readAsBytes());
-      String b64Ssd = base64Encode(await _fotoSesudah!.readAsBytes());
 
       final diaNum = num.tryParse(_diameterCtrl.text.trim()) ?? 0;
 
@@ -1119,19 +1218,17 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
             : _koorTiangCtrl.text.trim(),
         diameter: diaNum,
         fotoSebelumBase64: b64Sbl,
-        fotoPekerjaanBase64: b64Pkj,
-        fotoSesudahBase64: b64Ssd,
       );
 
       if (res['success'] == true) {
         if (!mounted) return;
         Navigator.pop(context);
-        // BACKLOG: baris + foto sudah tertulis; rantai Realisasi/Header/WA
-        // diproses backend (recalcTick, tiap 1 menit) — tidak perlu menunggu.
+        // BACKLOG + PROGRES: tahap 1 tertulis; rantai Realisasi/Header/WA
+        // diproses backend (recalcTick ±1 menit). Foto berikutnya dari card.
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Eksekusi tersimpan (Kode: ${res['kodeEksekusi'] ?? '-'}). Sinkronisasi Realisasi, WA & laporan diproses di latar belakang (±1 menit).',
+              'Tahap 1/3 tersimpan (Kode: ${res['kodeEksekusi'] ?? '-'}). Lanjutkan Foto Pekerjaan dari card kapan saja.',
             ),
           ),
         );
@@ -1178,7 +1275,7 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Input Eksekusi ROW',
+                  const Text('Input Eksekusi ROW — Tahap 1/3',
                       style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -1404,22 +1501,23 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
                       ),
                       const SizedBox(height: 16),
 
-                      // 3 Foto Upload
-                      const Text('3 Foto Dokumentasi (Wajib Semua)',
+                      // Foto Tahap 1 — SISTEM PROGRES (Rev 21 Agu 2026): input
+                      // baru cukup FOTO SEBELUM; 2 foto berikutnya dari card.
+                      const Text('Foto Sebelum — Tahap 1 dari 3 (Wajib)',
                           style: TextStyle(
                               fontSize: 12, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          _buildImagePickerBtn('Sebelum', _fotoSebelum,
-                              () => _pickImage('sebelum')),
-                          const SizedBox(width: 8),
-                          _buildImagePickerBtn('Pekerjaan', _fotoPekerjaan,
-                              () => _pickImage('pekerjaan')),
-                          const SizedBox(width: 8),
-                          _buildImagePickerBtn('Sesudah', _fotoSesudah,
-                              () => _pickImage('sesudah')),
+                          _buildImagePickerBtn(
+                              'Sebelum', _fotoSebelum, _pickImage),
                         ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Foto Pekerjaan & Foto Sesudah diunggah bertahap dari card setelah tersimpan.',
+                        style: TextStyle(
+                            fontSize: 10, color: Colors.grey.shade500),
                       ),
                       const SizedBox(height: 24),
 
@@ -1441,7 +1539,7 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
                                   child: CircularProgressIndicator(
                                       strokeWidth: 2, color: Colors.white),
                                 )
-                              : const Text('Simpan & Sinkron Data',
+                              : const Text('Simpan & Mulai Progres',
                                   style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       color: Colors.white)),
@@ -1489,6 +1587,258 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
                   ],
                 ),
         ),
+      ),
+    );
+  }
+}
+
+// ==========================================
+// SHEET LANJUTKAN PROGRES — TAHAP 2 & 3
+// ==========================================
+class _LanjutProgresSheet extends StatefulWidget {
+  final Map<String, dynamic> sesi;
+  final Map<String, dynamic> item;
+  final VoidCallback onSuccess;
+
+  const _LanjutProgresSheet({
+    required this.sesi,
+    required this.item,
+    required this.onSuccess,
+  });
+
+  @override
+  State<_LanjutProgresSheet> createState() => _LanjutProgresSheetState();
+}
+
+class _LanjutProgresSheetState extends State<_LanjutProgresSheet> {
+  File? _foto;
+  bool _saving = false;
+  String? _error;
+  final ImagePicker _picker = ImagePicker();
+
+  String get _kode => (widget.item['kodeEksekusi'] ?? '').toString();
+
+  // Tahap berikutnya: 2 bila foto pekerjaan belum ada; 3 bila tinggal foto sesudah.
+  int get _tahapBerikutnya {
+    final p =
+        (widget.item['fotoPekerjaanUrl'] ?? '').toString().trim().isNotEmpty;
+    return p ? 3 : 2;
+  }
+
+  String get _labelFoto =>
+      _tahapBerikutnya == 2 ? 'Foto Pekerjaan' : 'Foto Sesudah';
+
+  Color get _warna =>
+      _tahapBerikutnya == 2 ? const Color(0xFF0284C7) : const Color(0xFF059669);
+
+  Future<void> _pickImage(ImageSource source) async {
+    final picked = await _picker.pickImage(source: source, imageQuality: 70);
+    if (picked != null) setState(() => _foto = File(picked.path));
+  }
+
+  void _pilihSumber() {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt_rounded,
+                  color: AppColors.navy700),
+              title: const Text('Ambil dari Kamera Lapangan'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickImage(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_rounded,
+                  color: AppColors.navy700),
+              title: const Text('Pilih dari Galeri'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickImage(ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _simpan() async {
+    if (_foto == null) {
+      setState(() => _error =
+          '$_labelFoto wajib diisi untuk lanjut ke tahap $_tahapBerikutnya/3');
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      final token = widget.sesi['token'] ?? '';
+      final b64 = base64Encode(await _foto!.readAsBytes());
+      final res = await ApiService.updateEksekusiRow(
+        token: token,
+        kodeEksekusi: _kode,
+        fotoPekerjaanBase64: _tahapBerikutnya == 2 ? b64 : null,
+        fotoSesudahBase64: _tahapBerikutnya == 3 ? b64 : null,
+      );
+      if (!mounted) return;
+      if (res['success'] == true) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text((res['message'] ?? 'Progres tersimpan').toString()),
+            backgroundColor: _warna,
+          ),
+        );
+        widget.onSuccess();
+      } else {
+        setState(() {
+          _error = (res['message'] ?? 'Gagal menyimpan progres').toString();
+          _saving = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Koneksi bermasalah: $e';
+        _saving = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        top: 14,
+        left: 20,
+        right: 20,
+      ),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Lanjutkan Progres — Tahap $_tahapBerikutnya/3',
+                        style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.navy700)),
+                    Text(_kode,
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey.shade600)),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close_rounded),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+          const Divider(height: 20),
+          if (_error != null) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(_error!,
+                  style: const TextStyle(color: Colors.red, fontSize: 12)),
+            ),
+            const SizedBox(height: 12),
+          ],
+          Text('$_labelFoto (Wajib)',
+              style:
+                  const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          InkWell(
+            onTap: _pilihSumber,
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              height: 140,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                    color: _foto != null
+                        ? const Color(0xFF10B981)
+                        : const Color(0xFFCBD5E1)),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: _foto != null
+                  ? Image.file(_foto!, fit: BoxFit.cover)
+                  : Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.add_a_photo,
+                            size: 26, color: Color(0xFF64748B)),
+                        const SizedBox(height: 6),
+                        Text('Ambil / pilih $_labelFoto',
+                            style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF64748B))),
+                      ],
+                    ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _warna,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: _saving ? null : _simpan,
+              child: _saving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : Text(
+                      _tahapBerikutnya == 3
+                          ? 'Selesaikan Pekerjaan'
+                          : 'Simpan Progres Tahap 2/3',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, color: Colors.white)),
+            ),
+          ),
+        ],
       ),
     );
   }
