@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+import 'sesi_store.dart';
+
 class ApiService {
   static const String baseUrl =
       'https://script.google.com/macros/s/AKfycby4kkqmlpmzlvh-WRMbkqgVg4fNdQhECHm6QKyhaBqMcNebsJbaHLmZYYvb6nAcJ2CpyA/exec';
@@ -20,16 +22,45 @@ class ApiService {
     return jsonDecode(res.body);
   }
 
+  /// Login ulang SENYAP memakai kredensial tersimpan (Rev 22 Agu 2026).
+  ///
+  /// Dipakai SplashGate saat aplikasi dibuka: sesi backend hanya berlaku 15
+  /// menit (SESSION_TTL_SEC di Code.js), jadi token tersimpan hampir selalu
+  /// basi keesokan harinya. Dengan ini user tidak perlu mengetik ulang selama
+  /// belum menekan "Keluar dari Akun".
+  ///
+  /// null = tidak ada kredensial tersimpan (belum pernah login / sudah logout).
+  static Future<Map<String, dynamic>?> loginTersimpan() async {
+    final kred = await SesiStore.kredensial();
+    if (kred == null) return null;
+    final u = kred['username'] ?? '';
+    final p = kred['password'] ?? '';
+    if (u.isEmpty || p.isEmpty) return null;
+
+    final hasil = await login(u, p);
+    if (hasil['success'] == true) {
+      await SesiStore.simpan(hasil, username: u, password: p);
+    }
+    return hasil;
+  }
+
   static Future<Map<String, dynamic>> cekSesi(String token) async {
     final uri = Uri.parse('$baseUrl?mobile=1&action=cekSesi&token=$token');
     final res = await http.get(uri).timeout(const Duration(seconds: 15));
     return jsonDecode(res.body);
   }
 
+  /// Logout. Rev 22 Agu 2026: SEKALIGUS membersihkan sesi & kredensial di
+  /// perangkat (blok finally) supaya tombol "Keluar dari Akun" benar-benar
+  /// memutus auto-login SplashGate — termasuk bila permintaan ke server gagal.
   static Future<Map<String, dynamic>> logout(String token) async {
-    final uri = Uri.parse('$baseUrl?mobile=1&action=logout&token=$token');
-    final res = await http.get(uri).timeout(const Duration(seconds: 15));
-    return jsonDecode(res.body);
+    try {
+      final uri = Uri.parse('$baseUrl?mobile=1&action=logout&token=$token');
+      final res = await http.get(uri).timeout(const Duration(seconds: 15));
+      return jsonDecode(res.body);
+    } finally {
+      await SesiStore.hapus();
+    }
   }
 
   // ==========================================
