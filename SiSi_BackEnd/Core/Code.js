@@ -2353,14 +2353,20 @@ function apiRouter_(e, body) {
   var action = (body && body.action) || p.action || "";
   var result;
 
+  // HOTFIX: route device-token and mobile extension endpoints first.
+  // Unknown actions return null, preserving the legacy switch below.
+  if (typeof authPerangkatRouter_ === "function") {
+    var lewatAuth = authPerangkatRouter_(e, body);
+    if (lewatAuth) return lewatAuth;
+  }
+
   try {
     switch (action) {
       // 1. Autentikasi & Akun
       case "login":
-        result = doLogin(
-          body ? body.username : p.username,
-          body ? body.password : p.password,
-        );
+        result = body
+          ? doLogin(body.username, body.password)
+          : { success: false, message: "Login wajib menggunakan POST JSON." };
         break;
 
       case "logout":
