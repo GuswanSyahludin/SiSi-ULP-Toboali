@@ -1,5 +1,9 @@
 import 'dart:convert';
+import 'dart:io' show Platform;
+
 import 'package:http/http.dart' as http;
+
+import 'sesi_store.dart';
 
 class ApiService {
   static const String baseUrl =
@@ -8,6 +12,133 @@ class ApiService {
   // ==========================================
   // 1. AUTENTIKASI & SESI
   // ==========================================
+  //
+  // Rev 22 Agu 2026 (tahap 2 — DEVICE TOKEN):
+  // Jalur utama kini loginPerangkat / cekPerangkat / logoutPerangkat
+  // (Core/Auth-Perangkat.js). Perangkat menyimpan deviceToken tanpa masa
+  // berlaku, jadi password TIDAK perlu disimpan di HP.
+  //
+  // Setiap fungsi baru punya JALUR MUNDUR ke endpoint lama: bila backend belum
+  // di-deploy ulang, Apps Script menjawab "Action API tidak dikenal" dan
+  // aplikasi otomatis kembali ke perilaku sesi lama. Jadi APK ini aman dipasang
+  // sebelum maupun sesudah deploy backend.
+
+  /// Deteksi balasan router lama yang belum mengenal endpoint sesi perangkat.
+  static bool _belumAdaEndpoint(Map<String, dynamic> res) {
+    final pesan = (res['message'] ?? '').toString().toLowerCase();
+    return pesan.contains('tidak dikenal');
+  }
+
+  /// Nama perangkat singkat untuk catatan Super User (daftarPerangkat).
+  /// Memakai dart:io agar tidak menambah dependensi baru di pubspec.
+  static String _namaPerangkat() {
+    try {
+      return '${Platform.operatingSystem} ${Platform.operatingSystemVersion}';
+    } catch (_) {
+      return 'perangkat';
+    }
+  }
+
+  /// Login manual (user mengetik username + password).
+  /// Sekali berhasil, server menerbitkan deviceToken yang disimpan di HP —
+  /// sesudah ini password tidak dibutuhkan lagi.
+  static Future<Map<String, dynamic>> loginPerangkat(
+    String username,
+    String password,
+  ) async {
+    final uri = Uri.parse(
+      '$baseUrl?mobile=1&action=loginPerangkat'
+      '&username=${Uri.encodeComponent(username)}'
+      '&password=${Uri.encodeComponent(password)}'
+      '&perangkat=${Uri.encodeComponent(_namaPerangkat())}',
+    );
+    // 30 dtk: cold start Apps Script bisa lewat 15 dtk.
+    final res = await http.get(uri).timeout(const Duration(seconds: 30));
+    final hasil = Map<String, dynamic>.from(jsonDecode(res.body));
+
+    // Backend belum di-deploy ulang → pakai login lama (tanpa deviceToken).
+    if (hasil['success'] != true && _belumAdaEndpoint(hasil)) {
+      return await login(username, password);
+    }
+    return hasil;
+  }
+
+  /// Tukar deviceToken tersimpan menjadi sesi segar. Dipanggil SplashGate saat
+  /// aplikasi dibuka. Balasan gagal menyertakan `kode` (PERANGKAT_TIDAK_DIKENAL,
+  /// PASSWORD_BERUBAH, AKUN_TIDAK_ADA) yang menandakan perangkat sudah dicabut.
+  static Future<Map<String, dynamic>> cekPerangkat() async {
+    final dev = await SesiStore.deviceToken();
+    if (dev.isEmpty) {
+      return {
+        'success': false,
+        'kode': 'TANPA_TOKEN',
+        'message': 'Belum ada sesi perangkat.',
+      };
+    }
+
+    final uri = Uri.parse(
+      '$baseUrl?mobile=1&action=cekPerangkat'
+      '&deviceToken=${Uri.encodeComponent(dev)}',
+    );
+    final res = await http.get(uri).timeout(const Duration(seconds: 30));
+    final hasil = Map<String, dynamic>.from(jsonDecode(res.body));
+
+    if (hasil['success'] == true) {
+      // Sesi selalu dibangun ulang dari db_Users terbaru → perubahan role/ULP/
+      // Tim/Akses Menu oleh Super User langsung ikut tersimpan.
+      await SesiStore.simpan(hasil, deviceToken: dev);
+      return hasil;
+    }
+
+    // Backend belum di-deploy ulang → coba cekSesi lama dengan token biasa.
+    if (_belumAdaEndpoint(hasil)) {
+      final sesiLokal = await SesiStore.muat();
+      final token = (sesiLokal?['token'] ?? '').toString();
+      if (token.isNotEmpty) {
+        final lama = await cekSesi(token);
+        if (lama['success'] == true) {
+          final gabung = Map<String, dynamic>.from(sesiLokal!);
+          final dariServer = lama['sesi'];
+          if (dariServer is Map) {
+            gabung.addAll(Map<String, dynamic>.from(dariServer));
+          }
+          await SesiStore.simpan(gabung);
+          return {...gabung, 'success': true};
+        }
+      }
+    }
+    return hasil;
+  }
+
+  /// Logout: cabut perangkat di server, lalu bersihkan seluruh sesi lokal.
+  /// Pembersihan lokal ada di blok `finally` supaya tombol "Keluar dari Akun"
+  /// tetap memutus sesi walau permintaan ke server gagal.
+  static Future<Map<String, dynamic>> logoutPerangkat({String token = ''}) async {
+    final dev = await SesiStore.deviceToken();
+    try {
+      final uri = Uri.parse(
+        '$baseUrl?mobile=1&action=logoutPerangkat'
+        '&deviceToken=${Uri.encodeComponent(dev)}'
+        '&token=${Uri.encodeComponent(token)}',
+      );
+      final res = await http.get(uri).timeout(const Duration(seconds: 15));
+      final hasil = Map<String, dynamic>.from(jsonDecode(res.body));
+
+      // Backend belum di-deploy ulang → pakai logout lama.
+      if (hasil['success'] != true && _belumAdaEndpoint(hasil)) {
+        final uriLama =
+            Uri.parse('$baseUrl?mobile=1&action=logout&token=$token');
+        final resLama =
+            await http.get(uriLama).timeout(const Duration(seconds: 15));
+        return Map<String, dynamic>.from(jsonDecode(resLama.body));
+      }
+      return hasil;
+    } finally {
+      await SesiStore.hapus();
+    }
+  }
+
+  /// Login lama (tanpa deviceToken) — tetap ada sebagai jalur mundur.
   static Future<Map<String, dynamic>> login(
     String username,
     String password,
@@ -26,10 +157,11 @@ class ApiService {
     return jsonDecode(res.body);
   }
 
-  static Future<Map<String, dynamic>> logout(String token) async {
-    final uri = Uri.parse('$baseUrl?mobile=1&action=logout&token=$token');
-    final res = await http.get(uri).timeout(const Duration(seconds: 15));
-    return jsonDecode(res.body);
+  /// Pembungkus agar pemanggil lama (dashboard_screen.dart → _handleLogout)
+  /// tidak perlu diubah: diarahkan ke logoutPerangkat, yang sekaligus mencabut
+  /// perangkat di server dan membersihkan sesi di HP.
+  static Future<Map<String, dynamic>> logout(String token) {
+    return logoutPerangkat(token: token);
   }
 
   // ==========================================

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'screens/login_screen.dart';
+import 'screens/splash_gate.dart';
 
 void main() {
   runApp(const SiSiApp());
@@ -14,7 +14,10 @@ class SiSiApp extends StatelessWidget {
       title: 'SiSi Mobile',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(fontFamily: 'Inter', useMaterial3: true),
-      home: const LoginScreen(),
+      // Rev 22 Agu 2026: halaman awal TIDAK lagi langsung LoginScreen.
+      // SplashGate yang memutuskan: sesi tersimpan → Dashboard, sudah logout /
+      // belum pernah login → LoginScreen.
+      home: const SplashGate(),
     );
   }
 }

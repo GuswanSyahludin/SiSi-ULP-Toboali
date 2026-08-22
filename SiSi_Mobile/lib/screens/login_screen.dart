@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/api_service.dart';
+import '../services/sesi_store.dart';
 import '../theme/app_colors.dart';
 import 'dashboard_screen.dart';
 
@@ -220,15 +220,18 @@ class _LoginSheetState extends State<_LoginSheet> {
     });
 
     try {
-      final result = await ApiService.login(username, password);
+      // Rev 22 Agu 2026 (tahap 2): loginPerangkat menerbitkan deviceToken tanpa
+      // masa berlaku. Ini SATU-SATUNYA tempat password disentuh — ia tidak
+      // pernah ikut disimpan ke perangkat.
+      final result = await ApiService.loginPerangkat(username, password);
       if (!mounted) return;
 
       if (result['success'] == true) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('token', result['token']);
-        await prefs.setString('username', result['username'] ?? '');
-        await prefs.setString('role', result['role'] ?? '');
-        await prefs.setString('aksesMenu', result['aksesMenu'] ?? '');
+        // Simpan SELURUH field sesi (termasuk ulp/tim/subTim yang dipakai
+        // dashboard) + deviceToken. Sesi inilah yang dipakai SplashGate agar
+        // aplikasi tidak meminta login lagi sampai user benar-benar menekan
+        // "Keluar dari Akun".
+        await SesiStore.simpan(Map<String, dynamic>.from(result));
 
         if (!mounted) return;
         Navigator.pop(context); // tutup popup login DULU
