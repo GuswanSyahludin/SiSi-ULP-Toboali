@@ -46,14 +46,20 @@ class ApiService {
     String username,
     String password,
   ) async {
-    final uri = Uri.parse(
-      '$baseUrl?mobile=1&action=loginPerangkat'
-      '&username=${Uri.encodeComponent(username)}'
-      '&password=${Uri.encodeComponent(password)}'
-      '&perangkat=${Uri.encodeComponent(_namaPerangkat())}',
-    );
-    // 30 dtk: cold start Apps Script bisa lewat 15 dtk.
-    final res = await http.get(uri).timeout(const Duration(seconds: 30));
+    final uri = Uri.parse('$baseUrl?mobile=1');
+    // Kredensial wajib di body POST: tidak masuk URL, history, atau access log.
+    final res = await http
+        .post(
+          uri,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'action': 'loginPerangkat',
+            'username': username,
+            'password': password,
+            'perangkat': _namaPerangkat(),
+          }),
+        )
+        .timeout(const Duration(seconds: 30));
     final hasil = Map<String, dynamic>.from(jsonDecode(res.body));
 
     // Backend belum di-deploy ulang → pakai login lama (tanpa deviceToken).
@@ -143,11 +149,18 @@ class ApiService {
     String username,
     String password,
   ) async {
-    final uri = Uri.parse(
-      '$baseUrl?mobile=1&action=login&username=${Uri.encodeComponent(username)}&password=${Uri.encodeComponent(password)}',
-    );
-    // Rev 19 Agu sore: 15 → 30 dtk (cold start Apps Script bisa lewat 15 dtk)
-    final res = await http.get(uri).timeout(const Duration(seconds: 30));
+    final uri = Uri.parse('$baseUrl?mobile=1');
+    final res = await http
+        .post(
+          uri,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'action': 'login',
+            'username': username,
+            'password': password,
+          }),
+        )
+        .timeout(const Duration(seconds: 30));
     return jsonDecode(res.body);
   }
 
