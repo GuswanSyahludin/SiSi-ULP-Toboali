@@ -1,5 +1,5 @@
 // lib/widgets/sync_section_pengaturan.dart
-// ─────────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────
 // Bagian "Data & Server Lokal" di menu Pengaturan (Project Dart).
 //
 //  Card MASTER DATA (dua wajah):
@@ -9,12 +9,17 @@
 //     ketuk: tarik ulang master data terbaru.
 //     Subtitle: "Terakhir sinkron <jam>".
 //
+//  Card KIRIM KEPUTUSAN P0 (Rev 22 Agu 2026):
+//   Muncul HANYA bila ada keputusan Verifikasi P0 yang belum terkirim.
+//   Reaktif terhadap tabel p0_outbox — jumlah antrean & pesan galat percobaan
+//   terakhir tampil apa adanya. Ketuk untuk mengirim ke Apps Script + gsheet.
+//
 //  Rev 21 Agu 2026:
 //   1) Card status sync per modul (Laporan Harian Teknik) DIHAPUS —
 //      sinkron modul berjalan otomatis saat menu dibuka ("sinkron per menu").
 //   2) Card master data berganti nama, ikon & subtitle sesuai kondisi
 //      data lokal (Download Master Data → Sinkron Data).
-// ─────────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────
 
 import 'dart:async';
 
@@ -22,6 +27,7 @@ import 'package:flutter/material.dart';
 
 import '../db/app_database.dart';
 import '../db/db_provider.dart';
+import '../db/repositories/p0_repository.dart';
 import '../db/repositories/sync_repository.dart';
 import '../theme/app_colors.dart';
 
@@ -36,7 +42,9 @@ class SyncSectionPengaturan extends StatefulWidget {
 class _SyncSectionPengaturanState extends State<SyncSectionPengaturan> {
   final _repo = SyncRepository();
   StreamSubscription<List<SyncInfo>>? _sub;
+  StreamSubscription<List<P0Outbox>>? _subP0;
   Map<String, SyncInfo> _status = {};
+  List<P0Outbox> _antreanP0 = [];
   String _perangkatId = '…';
   final Set<String> _proses = {};
 
@@ -50,6 +58,11 @@ class _SyncSectionPengaturanState extends State<SyncSectionPengaturan> {
       if (!mounted) return;
       setState(() => _status = {for (final r in rows) r.key: r});
     });
+    // Antrean keputusan P0 — kartu kirim muncul/menghilang sendiri.
+    _subP0 = P0Repository().pantauAntrean().listen((rows) {
+      if (!mounted) return;
+      setState(() => _antreanP0 = rows);
+    });
     _repo.perangkatId().then((id) {
       if (mounted) setState(() => _perangkatId = id);
     });
@@ -58,6 +71,7 @@ class _SyncSectionPengaturanState extends State<SyncSectionPengaturan> {
   @override
   void dispose() {
     _sub?.cancel();
+    _subP0?.cancel();
     super.dispose();
   }
 
@@ -81,10 +95,14 @@ class _SyncSectionPengaturanState extends State<SyncSectionPengaturan> {
     if (!mounted) return;
     setState(() => _proses.remove(modul));
     final ok = res['ok'] == true;
+    // Pesan dari repository lebih informatif (mis. "3 terkirim, 1 gagal") —
+    // pakai itu bila ada, baru jatuh ke pesan bawaan pemanggil.
+    final pesan = (res['message'] ?? '').toString();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-            ok ? pesanSukses : (res['message'] ?? 'Proses gagal').toString()),
+          ok ? (pesan.isNotEmpty ? pesan : pesanSukses) : (pesan.isNotEmpty ? pesan : 'Proses gagal'),
+        ),
         backgroundColor: ok ? const Color(0xFF059669) : Colors.redAccent,
       ),
     );
@@ -109,6 +127,10 @@ class _SyncSectionPengaturanState extends State<SyncSectionPengaturan> {
         ),
         const SizedBox(height: 10),
         _buildCardMasterData(),
+        if (_antreanP0.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          _buildCardKirimP0(),
+        ],
       ],
     );
   }
@@ -181,6 +203,79 @@ class _SyncSectionPengaturanState extends State<SyncSectionPengaturan> {
                   siap
                       ? 'Sinkron selesai — data lokal diperbarui'
                       : 'Master data tersimpan — menu modul terbuka',
+                ),
+      ),
+    );
+  }
+
+  // ═══ CARD KIRIM KEPUTUSAN VERIFIKASI P0 ═══
+  // Hanya tampil bila antrean tidak kosong. Warna amber = ada pekerjaan
+  // menggantung; merah bila percobaan sebelumnya gagal.
+  Widget _buildCardKirimP0() {
+    final proses = _proses.contains(SyncRepository.modulVerifikasiP0);
+    final jumlah = _antreanP0.length;
+    final adaGagal = _antreanP0.any((a) => a.status == 'gagal');
+    final pesanGagal = adaGagal
+        ? _antreanP0.firstWhere((a) => a.status == 'gagal').pesanGagal
+        : '';
+    final warnaTepi =
+        adaGagal ? const Color(0xFFFECACA) : const Color(0xFFFDE68A);
+    final warnaIkon =
+        adaGagal ? const Color(0xFFDC2626) : const Color(0xFFB45309);
+
+    final approve = _antreanP0.where((a) => a.keputusan == 'Approved').length;
+    final reject = jumlah - approve;
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: warnaTepi),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: warnaIkon.withOpacity(0.10),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(Icons.cloud_upload_rounded, color: warnaIkon, size: 22),
+        ),
+        title: Text(
+          'Kirim Keputusan Verifikasi P0 ($jumlah)',
+          style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              color: AppColors.navy700),
+        ),
+        subtitle: Text(
+          proses
+              ? 'Mengirim ke server & gsheet…'
+              : adaGagal
+                  ? 'Percobaan terakhir gagal: $pesanGagal — ketuk untuk ulangi'
+                  : '$approve disetujui · $reject ditolak — tersimpan di HP, ketuk untuk kirim',
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+        ),
+        trailing: proses
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Icon(
+                adaGagal
+                    ? Icons.error_rounded
+                    : Icons.pending_actions_rounded,
+                color: warnaIkon,
+                size: 26,
+              ),
+        onTap: proses
+            ? null
+            : () => _jalankan(
+                  SyncRepository.modulVerifikasiP0,
+                  () => _repo.sinkronVerifikasiP0(),
+                  'Keputusan terkirim',
                 ),
       ),
     );

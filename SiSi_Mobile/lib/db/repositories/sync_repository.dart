@@ -1,20 +1,26 @@
 // lib/db/repositories/sync_repository.dart
-// ─────────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────
 // Pusat kendali sinkronisasi — dipanggil UI (kartu di Pengaturan).
 //
 // ATURAN KUNCI: setiap proses DIKUNCI 1x per modul (Set _kunci). Klik
 // berulang saat proses masih berjalan DITOLAK, sehingga server tidak
 // menerima request berlipat saat kartu di-spam.
-// ─────────────────────────────────────────────────────────────
+//
+// Rev 22 Agu 2026: + modulVerifikasiP0 — arah sinkronnya KE ATAS (kirim), bukan
+// tarik seperti modul lain: keputusan Approve/Reject yang sudah tersimpan di
+// server lokal dikirim ke Apps Script lalu diteruskan ke gsheet.
+// ───────────────────────────────────────────────────
 
 import '../../services/api_service.dart';
 import '../db_provider.dart';
 import 'laporan_repository.dart';
 import 'master_repository.dart';
+import 'p0_repository.dart';
 
 class SyncRepository {
   static const modulMasterData = 'masterData';
   static const modulLaporanTeknik = 'laporanTeknik';
+  static const modulVerifikasiP0 = 'verifikasiP0';
 
   /// Kunci proses yang sedang berjalan (in-memory, satu per modul).
   static final Set<String> _kunci = {};
@@ -90,6 +96,39 @@ class SyncRepository {
         'ok': false,
         'message': (res['message'] ?? 'Gagal sinkron').toString()
       };
+    } catch (e) {
+      return {'ok': false, 'message': 'Koneksi bermasalah: $e'};
+    } finally {
+      _kunci.remove(modul);
+    }
+  }
+
+  /// KIRIM keputusan Verifikasi P0 dari server lokal ke Apps Script + gsheet.
+  ///
+  /// Berbeda dari modul lain: ini sinkron KE ATAS. Baris yang gagal tetap
+  /// tersimpan di antrean beserta pesannya, jadi menekan kartu lagi hanya
+  /// mengulang sisa yang belum tuntas — tidak ada risiko keputusan terkirim
+  /// dobel karena baris yang sukses langsung dihapus dari antrean.
+  Future<Map<String, dynamic>> sinkronVerifikasiP0() async {
+    const modul = modulVerifikasiP0;
+    if (_kunci.contains(modul)) {
+      return {'ok': false, 'message': 'Pengiriman keputusan sedang berjalan.'};
+    }
+    _kunci.add(modul);
+    try {
+      final res = await P0Repository().kirimAntrean();
+      if (res['kosong'] == true) {
+        return {'ok': true, 'message': 'Tidak ada keputusan yang menunggu.'};
+      }
+      final terkirim = (res['terkirim'] ?? 0) as int;
+      if (terkirim > 0) {
+        await DbProvider.instance.syncDao.tandaiTersinkron(
+          modul,
+          jumlah: terkirim,
+          keterangan: 'keputusan P0 terkirim',
+        );
+      }
+      return res;
     } catch (e) {
       return {'ok': false, 'message': 'Koneksi bermasalah: $e'};
     } finally {
