@@ -265,10 +265,16 @@ function authPerangkatRouter_(e, body) {
           (body && body.username) || p.username);
         break;
       case "getMasterGarduMobile":
-        hasil = typeof getMasterGarduMobile === "function"
-          ? getMasterGarduMobile((body && body.token) || p.token,
-              (body && body.ulp) || p.ulp)
-          : { success: false, message: "Master-Gardu-Mobile.js belum terpasang." };
+        if (body && body.mode === "update") {
+          hasil = typeof updateMasterGarduMobile === "function"
+            ? updateMasterGarduMobile(body.token, body.payload || {})
+            : { success: false, message: "Master-Gardu-Sync-Mobile.js belum terpasang." };
+        } else {
+          hasil = typeof getMasterGarduMobile === "function"
+            ? getMasterGarduMobile((body && body.token) || p.token,
+                (body && body.ulp) || p.ulp)
+            : { success: false, message: "Master-Gardu-Mobile.js belum terpasang." };
+        }
         break;
       default:
         return null;
