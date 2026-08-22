@@ -1,0 +1,35 @@
+name: Apply Apps Script router hotfix once
+on:
+  push:
+    branches: [fix/predeploy-appscript-audit-v2]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/predeploy-appscript-audit-v2
+      - name: Patch apiRouter without rewriting Code.js
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('SiSi_BackEnd/Core/Code.js')
+          s=p.read_text()
+          needle='''function apiRouter_(e, body) {\n  var p = (e && e.parameter) || {};\n  var action = (body && body.action) || p.action || "";\n  var result;\n'''
+          replacement=needle+'''\n  // HOTFIX: route device-token and mobile extension endpoints first.\n  // Unknown actions return null, preserving the legacy switch below.\n  if (typeof authPerangkatRouter_ === "function") {\n    var lewatAuth = authPerangkatRouter_(e, body);\n    if (lewatAuth) return lewatAuth;\n  }\n'''
+          if 'var lewatAuth = authPerangkatRouter_' not in s:
+              if needle not in s: raise SystemExit('apiRouter signature not found')
+              s=s.replace(needle,replacement,1)
+              p.write_text(s)
+          PY
+      - name: Remove one-time workflow and commit
+        run: |
+          rm .github/workflows/apply-router-hotfix-once.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "fix(router): activate mobile extension router in Code.js" || exit 0
+          git push
