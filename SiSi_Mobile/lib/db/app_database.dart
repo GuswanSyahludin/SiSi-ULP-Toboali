@@ -1,13 +1,14 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
-import 'tables/global_header.dart';import 'tables/master_penyulang.dart';import 'tables/laporan_harian.dart';import 'tables/sync_info.dart';import 'tables/p0_lokal.dart';import 'tables/p0_outbox.dart';import 'tables/master_gardu.dart';import 'tables/gardu_outbox.dart';
-import 'daos/master_dao.dart';import 'daos/laporan_dao.dart';import 'daos/sync_dao.dart';import 'daos/header_dao.dart';import 'daos/p0_dao.dart';import 'daos/master_gardu_dao.dart';
+import 'tables/global_header.dart';import 'tables/master_penyulang.dart';import 'tables/laporan_harian.dart';import 'tables/sync_info.dart';import 'tables/p0_lokal.dart';import 'tables/p0_outbox.dart';import 'tables/master_gardu.dart';import 'tables/gardu_outbox.dart';import 'tables/inspeksi_gardu_lokal.dart';
+import 'daos/master_dao.dart';import 'daos/laporan_dao.dart';import 'daos/sync_dao.dart';import 'daos/header_dao.dart';import 'daos/p0_dao.dart';import 'daos/master_gardu_dao.dart';import 'daos/inspeksi_gardu_dao.dart';
 part 'app_database.g.dart';
-@DriftDatabase(tables:[GlobalHeaders,MasterPenyulangs,LaporanHarians,SyncInfos,P0Lokals,P0Outboxes,MasterGardus,GarduOutboxes],daos:[MasterDao,LaporanDao,SyncDao,HeaderDao,P0Dao,MasterGarduDao])
+@DriftDatabase(tables:[GlobalHeaders,MasterPenyulangs,LaporanHarians,SyncInfos,P0Lokals,P0Outboxes,MasterGardus,GarduOutboxes,InsGarduHeaders,InsGarduRealisasis,InsGarduTemuans,ListTemuans],daos:[MasterDao,LaporanDao,SyncDao,HeaderDao,P0Dao,MasterGarduDao,InspeksiGarduDao])
 class AppDatabase extends _$AppDatabase{
-  AppDatabase():super(driftDatabase(name:'sisi_db')); @override int get schemaVersion=>5;
+  AppDatabase():super(driftDatabase(name:'sisi_db'));@override int get schemaVersion=>6;
   @override MigrationStrategy get migration=>MigrationStrategy(onUpgrade:(m,from,to)async{
-    if(from<2){await m.createTable(p0Lokals);await m.createTable(p0Outboxes);} if(from<3)await m.createTable(masterGardus);if(from<4)await m.createTable(garduOutboxes);
+    if(from<2){await m.createTable(p0Lokals);await m.createTable(p0Outboxes);}if(from<3)await m.createTable(masterGardus);if(from<4)await m.createTable(garduOutboxes);
     if(from<5){await m.addColumn(masterGardus,masterGardus.arusMaxPerFasa);await m.addColumn(masterGardus,masterGardus.pembebananKva);await m.addColumn(masterGardus,masterGardus.pembebananKw);await m.addColumn(masterGardus,masterGardus.persentaseBeban);await m.addColumn(masterGardus,masterGardus.kategoriBeban);}
+    if(from<6){await m.addColumn(masterGardus,masterGardus.penyulang);await m.addColumn(masterGardus,masterGardus.section);await m.addColumn(masterGardus,masterGardus.beratTrafo);await m.addColumn(masterGardus,masterGardus.volumeMinyak);await m.createTable(insGarduHeaders);await m.createTable(insGarduRealisasis);await m.createTable(insGarduTemuans);await m.createTable(listTemuans);}
   });
 }
