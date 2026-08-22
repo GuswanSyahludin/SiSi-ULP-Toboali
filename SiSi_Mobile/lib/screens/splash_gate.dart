@@ -6,19 +6,22 @@ import '../theme/app_colors.dart';
 import 'dashboard_screen.dart';
 import 'login_screen.dart';
 
-/// SplashGate — halaman pertama aplikasi (Rev 22 Agu 2026).
+/// SplashGate — halaman pertama aplikasi.
 ///
-/// Menentukan tujuan awal SEBELUM user melihat form login, sehingga halaman
-/// login hanya muncul kalau memang belum ada sesi (baru install / sudah
-/// logout). Urutan usaha:
+/// Rev 22 Agu 2026 (tahap 2 — DEVICE TOKEN): tujuan awal ditentukan SEBELUM
+/// user melihat form login, cukup dengan SATU panggilan `cekPerangkat`.
+/// Token perangkat tidak punya masa berlaku, jadi selama belum dicabut, user
+/// tidak akan pernah melihat layar login lagi.
 ///
-///   1. Token tersimpan masih hidup di server (cekSesi) → langsung Dashboard.
-///      Panggilan ini sekaligus memperpanjang sesi di CacheService backend.
-///   2. Token basi (masa berlaku server 15 menit) → login senyap memakai
-///      kredensial tersimpan → Dashboard, tanpa mengetik apa pun.
-///   3. Tidak ada koneksi → tetap masuk Dashboard dengan sesi lokal (aplikasi
-///      sudah punya mode offline lewat master data lokal).
-///   4. Akun/password sudah diubah admin → sesi dibersihkan → LoginScreen.
+/// Urutan keputusan:
+///   1. Ada deviceToken → cekPerangkat → dapat sesi segar → Dashboard.
+///   2. Server mencabut perangkat (kode PERANGKAT_TIDAK_DIKENAL /
+///      PASSWORD_BERUBAH / AKUN_TIDAK_ADA) → sesi dibersihkan → LoginScreen.
+///   3. Tidak ada jaringan / server sedang bermasalah → TETAP masuk Dashboard
+///      dengan sesi lokal (aplikasi punya mode offline lewat master data
+///      lokal). Petugas lapangan tidak boleh terjebak di layar login hanya
+///      karena sinyal hilang.
+///   4. Belum pernah login → LoginScreen.
 class SplashGate extends StatefulWidget {
   const SplashGate({super.key});
 
@@ -27,6 +30,15 @@ class SplashGate extends StatefulWidget {
 }
 
 class _SplashGateState extends State<SplashGate> {
+  /// Kode dari backend yang berarti perangkat memang sudah dicabut — hanya
+  /// kode inilah yang boleh memaksa user login manual.
+  static const _kodeDicabut = {
+    'PERANGKAT_TIDAK_DIKENAL',
+    'PASSWORD_BERUBAH',
+    'AKUN_TIDAK_ADA',
+    'TANPA_TOKEN',
+  };
+
   @override
   void initState() {
     super.initState();
@@ -35,59 +47,40 @@ class _SplashGateState extends State<SplashGate> {
 
   Future<void> _tentukanTujuan() async {
     final sesiLokal = await SesiStore.muat();
-    if (sesiLokal == null) {
+    final punyaDevice = await SesiStore.adaDeviceToken();
+
+    // Belum pernah login (atau sudah logout): tidak ada apa pun untuk dipakai.
+    if (sesiLokal == null && !punyaDevice) {
       _keLogin();
       return;
     }
 
-    // 1) Token masih hidup di server?
-    final token = (sesiLokal['token'] ?? '').toString();
-    if (token.isNotEmpty) {
+    if (punyaDevice) {
       try {
-        final cek = await ApiService.cekSesi(token);
-        if (cek['success'] == true) {
-          final sesi = Map<String, dynamic>.from(sesiLokal);
-          final dariServer = cek['sesi'];
-          if (dariServer is Map) {
-            sesi.addAll(Map<String, dynamic>.from(dariServer));
-          }
-          await SesiStore.simpan(sesi);
-          _keDashboard(sesi);
+        final hasil = await ApiService.cekPerangkat();
+        if (hasil['success'] == true) {
+          _keDashboard(Map<String, dynamic>.from(hasil));
           return;
         }
-      } catch (_) {
-        // Server lambat / tidak ada jaringan → coba jalur berikutnya.
-      }
-    }
 
-    // 2) Token basi → login senyap dengan kredensial tersimpan.
-    if (await SesiStore.adaKredensial()) {
-      try {
-        final hasil = await ApiService.loginTersimpan();
-        if (hasil != null && hasil['success'] == true) {
-          _keDashboard(hasil);
-          return;
-        }
-        // Ditolak server: hanya paksa login manual bila memang soal akun,
-        // bukan gangguan server sesaat.
-        final pesan = (hasil?['message'] ?? '').toString().toLowerCase();
-        final soalAkun = pesan.contains('salah') ||
-            pesan.contains('tidak ditemukan') ||
-            pesan.contains('wajib diisi');
-        if (soalAkun) {
+        // Perangkat dicabut server → baru boleh minta login manual.
+        final kode = (hasil['kode'] ?? '').toString().toUpperCase();
+        if (_kodeDicabut.contains(kode)) {
           await SesiStore.hapus();
           _keLogin();
           return;
         }
+        // Galat lain (mis. kuota / gangguan sesaat): jangan usir user.
       } catch (_) {
-        // 3) Offline → masuk dengan sesi lokal.
-        _keDashboard(sesiLokal);
-        return;
+        // Tidak ada jaringan → lanjut ke mode offline di bawah.
       }
     }
 
-    // Sesi lokal masih ada tapi server tak bisa dipastikan → jangan usir user.
-    _keDashboard(sesiLokal);
+    if (sesiLokal != null) {
+      _keDashboard(sesiLokal);
+      return;
+    }
+    _keLogin();
   }
 
   void _keDashboard(Map<String, dynamic> sesi) {

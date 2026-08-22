@@ -2,68 +2,36 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// SesiStore — penyimpan sesi login SiSi Mobile (Rev 22 Agu 2026).
+/// SesiStore — penyimpan sesi login SiSi Mobile.
 ///
-/// MASALAH YANG DIPERBAIKI: halaman login muncul setiap kali aplikasi dibuka,
-/// padahal seharusnya HANYA muncul saat user belum pernah login atau sudah
-/// menekan "Keluar dari Akun" (Pengaturan → logout).
+/// Rev 22 Agu 2026 (tahap 2 — DEVICE TOKEN):
+/// Perangkat kini menyimpan **deviceToken** yang diterbitkan backend
+/// (Core/Auth-Perangkat.js), BUKAN username+password lagi. Token itu tidak
+/// punya masa berlaku, jadi sesi login benar-benar tanpa batas waktu, dan
+/// hanya hangus bila:
+///   1. user menekan "Keluar dari Akun",
+///   2. password diganti user / di-reset admin,
+///   3. akun dihapus dari db_Users,
+///   4. dicabut Super User.
 ///
-/// Dua sebabnya:
-///  1. main.dart selalu membuka LoginScreen (kini lewat SplashGate).
-///  2. Login hanya menyimpan 4 field (token/username/role/aksesMenu), padahal
-///     dashboard membaca juga ulp/tim/subTim → sesi lokal tak layak dipakai.
+/// Tahap 1 sebelumnya menyimpan kredensial (diacak) untuk login senyap. Kunci
+/// lama itu kini DIHAPUS otomatis saat sesi dimuat — jadi APK yang naik dari
+/// versi sebelumnya tidak meninggalkan password di perangkat.
 ///
-/// Kelas ini menyimpan sesi UTUH apa adanya dari server (semua field balasan
-/// doLogin) + kredensial untuk login-ulang senyap. Login senyap dibutuhkan
-/// karena backend menyimpan sesi di CacheService dengan masa berlaku 15 menit
-/// (SESSION_TTL_SEC di Code.js): token yang tersimpan di perangkat PASTI basi
-/// keesokan harinya, jadi tidak cukup hanya menyimpan token.
-///
-/// CATATAN KEAMANAN: kredensial hanya DIACAK (obfuscation XOR + base64), BUKAN
-/// dienkripsi. Ini menahan pembacaan sekilas isi SharedPreferences, bukan
-/// pengamanan kriptografis. Langkah lanjutan yang disarankan: "device token"
-/// di backend (ScriptProperties) supaya password tidak perlu disimpan di
-/// perangkat sama sekali — perubahan itu butuh clasp push + deploy ulang.
+/// Kunci lama 'token', 'username', 'role', 'aksesMenu' tetap ditulis karena
+/// masih dibaca kode/menu yang sudah ada.
 class SesiStore {
   static const _kSesi = 'sesiJson';
-  static const _kUser = 'kredU';
-  static const _kPass = 'kredP';
+  static const _kDevice = 'deviceToken';
 
-  /// Kunci pengacak — sekadar penyamar, bukan kunci kriptografi.
-  static const _kunciAcak = 'SiSi.ULP.Toboali.2026';
+  /// Kunci kredensial dari tahap 1 — hanya untuk DIBERSIHKAN, tidak diisi lagi.
+  static const _kKredLama = ['kredU', 'kredP'];
 
-  static String _acak(String nilai) {
-    if (nilai.isEmpty) return '';
-    final data = utf8.encode(nilai);
-    final kunci = utf8.encode(_kunciAcak);
-    final hasil = List<int>.generate(
-      data.length,
-      (i) => data[i] ^ kunci[i % kunci.length],
-    );
-    return base64Encode(hasil);
-  }
-
-  static String _buka(String tersimpan) {
-    if (tersimpan.isEmpty) return '';
-    try {
-      final data = base64Decode(tersimpan);
-      final kunci = utf8.encode(_kunciAcak);
-      final hasil = List<int>.generate(
-        data.length,
-        (i) => data[i] ^ kunci[i % kunci.length],
-      );
-      return utf8.decode(hasil);
-    } catch (_) {
-      return '';
-    }
-  }
-
-  /// Simpan sesi (dan kredensial bila diberikan). Nilai non-primitif
-  /// diratakan ke String agar jsonEncode selalu aman.
+  /// Simpan sesi (dan deviceToken bila server mengirimkannya).
+  /// Nilai non-primitif diratakan ke String agar jsonEncode selalu aman.
   static Future<void> simpan(
     Map<String, dynamic> sesi, {
-    String? username,
-    String? password,
+    String? deviceToken,
   }) async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -80,11 +48,15 @@ class SesiStore {
     await prefs.setString('role', (bersih['role'] ?? '').toString());
     await prefs.setString('aksesMenu', (bersih['aksesMenu'] ?? '').toString());
 
-    if (username != null && username.isNotEmpty) {
-      await prefs.setString(_kUser, _acak(username));
-    }
-    if (password != null && password.isNotEmpty) {
-      await prefs.setString(_kPass, _acak(password));
+    // deviceToken bisa datang lewat parameter ATAU ikut di dalam balasan server.
+    final dev = (deviceToken != null && deviceToken.isNotEmpty)
+        ? deviceToken
+        : (bersih['deviceToken'] ?? '').toString();
+    if (dev.isNotEmpty) await prefs.setString(_kDevice, dev);
+
+    // Buang sisa kredensial dari versi sebelumnya, kalau masih ada.
+    for (final k in _kKredLama) {
+      await prefs.remove(k);
     }
   }
 
@@ -92,9 +64,15 @@ class SesiStore {
   ///
   /// Kunci lama 'token' ikut diperiksa sebagai jaring pengaman: proses logout
   /// menghapusnya, jadi bila kunci itu hilang sesi dianggap sudah ditutup dan
-  /// sisa data (termasuk kredensial) langsung dibersihkan.
+  /// sisa datanya langsung dibersihkan.
   static Future<Map<String, dynamic>?> muat() async {
     final prefs = await SharedPreferences.getInstance();
+
+    // Bersih-bersih warisan tahap 1 pada setiap pemuatan.
+    for (final k in _kKredLama) {
+      if (prefs.containsKey(k)) await prefs.remove(k);
+    }
+
     final mentah = prefs.getString(_kSesi);
     if (mentah == null || mentah.isEmpty) return null;
 
@@ -106,34 +84,29 @@ class SesiStore {
 
     try {
       final hasil = jsonDecode(mentah);
-      if (hasil is Map && (hasil['token'] ?? '').toString().isNotEmpty) {
-        return Map<String, dynamic>.from(hasil);
-      }
+      if (hasil is Map) return Map<String, dynamic>.from(hasil);
     } catch (_) {}
     return null;
   }
 
-  static Future<bool> adaKredensial() async {
-    final kred = await kredensial();
-    return kred != null;
-  }
-
-  /// Kredensial tersimpan untuk login senyap; null bila belum ada.
-  static Future<Map<String, String>?> kredensial() async {
+  /// Token perangkat tanpa masa berlaku; kosong = belum ada / sudah dicabut.
+  static Future<String> deviceToken() async {
     final prefs = await SharedPreferences.getInstance();
-    final u = _buka(prefs.getString(_kUser) ?? '');
-    final p = _buka(prefs.getString(_kPass) ?? '');
-    if (u.isEmpty || p.isEmpty) return null;
-    return {'username': u, 'password': p};
+    return prefs.getString(_kDevice) ?? '';
   }
 
-  /// Bersihkan SEMUA jejak sesi — dipanggil saat logout.
+  static Future<bool> adaDeviceToken() async {
+    return (await deviceToken()).isNotEmpty;
+  }
+
+  /// Bersihkan SEMUA jejak sesi — dipanggil saat logout atau saat perangkat
+  /// dicabut server.
   static Future<void> hapus() async {
     final prefs = await SharedPreferences.getInstance();
     for (final k in [
       _kSesi,
-      _kUser,
-      _kPass,
+      _kDevice,
+      ..._kKredLama,
       'token',
       'username',
       'role',
