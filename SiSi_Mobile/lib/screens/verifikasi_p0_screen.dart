@@ -1,8 +1,25 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../db/app_database.dart';
+import '../db/repositories/p0_repository.dart';
 import '../services/api_service.dart';
 import '../widgets/custom_loading_widget.dart';
 
+/// VERIFIKASI P0 — OFFLINE-FIRST (Rev 22 Agu 2026, Project Dart).
+///
+/// Perubahan pola pada menu ini:
+///   • MEMBACA daftar lewat P0Repository: server dulu → cermin SQLite
+///     disegarkan → saat offline daftar dibaca dari cermin.
+///   • MENULIS keputusan Approve/Reject ke SERVER LOKAL (SQLite) saja. Tidak ada
+///     permintaan jaringan saat tombol ditekan, jadi keputusan terasa seketika
+///     dan verifikasi bisa dikerjakan tanpa sinyal.
+///   • MENGIRIM ke Apps Script + gsheet HANYA lewat
+///     Pengaturan → "Kirim Keputusan Verifikasi P0".
+///
+/// Satu kali tekan "Cari" mengisi ketiga tab sekaligus (repository menarik semua
+/// status), sehingga berpindah tab tidak lagi menembak backend.
 class VerifikasiP0Screen extends StatefulWidget {
   final Map<String, dynamic> sesi;
 
@@ -13,14 +30,22 @@ class VerifikasiP0Screen extends StatefulWidget {
 }
 
 class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
+  final _repo = P0Repository();
+
   String _selectedStatus = 'Menunggu';
   DateTime _selectedDate =
       DateTime.now(); // Filter tanggal 1 hari (default: hari ini)
   bool _isLoading = false; // tidak auto-load — menunggu tombol "Cari"
   bool _sudahCari =
       false; // true setelah pencarian pertama (ganti tanggal/tab ikut memuat ulang)
+  bool _offline = false; // daftar sedang disajikan dari cermin lokal
   List<dynamic> _listP0 = [];
   Map<String, dynamic> _counts = {};
+
+  // Antrean keputusan yang belum terkirim — dipantau reaktif agar spanduk
+  // langsung berubah setiap keputusan dibuat/dibatalkan/terkirim.
+  StreamSubscription<List<P0Outbox>>? _subAntrean;
+  int _antrean = 0;
 
   String get _currentUlp => widget.sesi['ulp'] ?? 'Toboali';
   String get _currentUsername => widget.sesi['username'] ?? 'Admin';
@@ -46,6 +71,16 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
     super.initState();
     // TIDAK auto-load: halaman dibuka KOSONG sampai pengguna menekan tombol "Cari"
     // (hemat backend — sebelumnya tiap buka halaman langsung membaca sheet penuh).
+    _subAntrean = _repo.pantauAntrean().listen((rows) {
+      if (!mounted) return;
+      setState(() => _antrean = rows.length);
+    });
+  }
+
+  @override
+  void dispose() {
+    _subAntrean?.cancel();
+    super.dispose();
   }
 
   // Tanggal terpilih → format API (yyyy-MM-dd)
@@ -74,9 +109,10 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
     return tim.toLowerCase().startsWith('tim') ? tim : 'Tim $tim';
   }
 
+  /// Muat daftar lewat repository (server → cermin lokal → offline).
   Future<void> _fetchData() async {
     setState(() => _isLoading = true);
-    final res = await ApiService.getApprovalP0List(
+    final res = await _repo.bacaList(
       ulp: _currentUlp,
       status: _selectedStatus,
       tanggal: _tanggalApi,
@@ -84,14 +120,42 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
     if (mounted) {
       setState(() {
         _isLoading = false;
+        _offline = res['offline'] == true;
         if (res['ok'] == true) {
           _listP0 = res['list'] ?? [];
           _counts = Map<String, dynamic>.from(res['counts'] ?? {});
         } else {
           _listP0 = [];
+          _counts = {};
         }
       });
+      // Belum ada apa pun untuk ditampilkan → sampaikan alasannya.
+      if (res['ok'] != true && (res['message'] ?? '').toString().isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res['message'].toString()),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     }
+  }
+
+  /// Ganti tab TANPA menembak server: daftar disaring dari cermin lokal yang
+  /// sudah lengkap (repository menarik semua status sekali jalan).
+  Future<void> _gantiTab(String status) async {
+    setState(() => _selectedStatus = status);
+    if (!_sudahCari) return;
+    final res = await _repo.bacaListLokal(
+      ulp: _currentUlp,
+      status: status,
+      tanggal: _tanggalApi,
+    );
+    if (!mounted) return;
+    setState(() {
+      _listP0 = res['list'] ?? [];
+      _counts = Map<String, dynamic>.from(res['counts'] ?? {});
+    });
   }
 
   Future<void> _pickDate() async {
@@ -103,87 +167,87 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
     );
     if (picked != null) {
       setState(() => _selectedDate = picked);
-      if (_sudahCari)
+      if (_sudahCari) {
         _fetchData(); // setelah pencarian pertama, ganti tanggal langsung memuat ulang
+      }
     }
   }
 
   // TOMBOL CARI (Rev 19 Agu malam 3): satu-satunya pemicu muat data saat pertama masuk halaman.
-  // Setelah pencarian pertama, ganti tanggal / ganti tab / ikon refresh memuat ulang otomatis.
+  // Setelah pencarian pertama, ganti tanggal / ikon refresh memuat ulang otomatis.
   void _cariData() {
     setState(() => _sudahCari = true);
     _fetchData();
   }
 
+  /// Catat keputusan ke SERVER LOKAL. Tidak ada loader & tidak ada jaringan —
+  /// pengiriman ke Apps Script/gsheet dilakukan dari menu Pengaturan.
   Future<void> _prosesApproval(
     String kodeP0,
     String keputusan, {
     String alasan = '',
   }) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Dialog(
-        backgroundColor: Colors.transparent,
-        child: CustomLoadingWidget(message: 'Memproses keputusan...'),
-      ),
+    final res = await _repo.catatKeputusan(
+      kodeP0: kodeP0,
+      keputusan: keputusan,
+      username: _currentUsername,
+      alasan: alasan,
+      tanggal: _tanggalApi,
     );
+    if (!mounted) return;
 
-    Map<String, dynamic> res;
-    try {
-      res = await ApiService.setApprovalP0(
-        kodeP0: kodeP0,
-        keputusan: keputusan,
-        username: _currentUsername,
-        alasan: alasan,
-      );
-    } catch (e) {
-      // WAJIB tutup loader saat error/timeout — jangan biarkan loading selamanya
-      if (!mounted) return;
-      Navigator.pop(context);
+    if (res['ok'] != true) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Gagal memproses (timeout/jaringan). Coba lagi.'),
+        SnackBar(
+          content: Text((res['message'] ?? 'Gagal menyimpan').toString()),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
 
-    if (mounted) {
-      Navigator.pop(context); // Tutup loader
-      if (res['ok'] == true) {
-        // OPTIMISTIC: keputusan sudah tercatat di antrean backend — hapus card dari
-        // daftar & geser badge SEGERA, tanpa menunggu proses backend (±1 menit).
-        setState(() {
-          _listP0.removeWhere((e) => (e['kodeP0'] ?? '').toString() == kodeP0);
-          final asal = _counts[_selectedStatus];
-          if (asal is int && asal > 0) _counts[_selectedStatus] = asal - 1;
-          final tujuan = _counts[keputusan];
-          if (tujuan is int) _counts[keputusan] = tujuan + 1;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              keputusan == 'Approved'
-                  ? 'Data $kodeP0 disetujui!.'
-                  : 'Data $kodeP0 ditolak.',
-            ),
-            backgroundColor: keputusan == 'Approved'
-                ? const Color(0xFF10B981)
-                : const Color(0xFFEF4444),
-          ),
-        );
-        // Tidak perlu _fetchData(): card sudah hilang secara lokal. Refresh manual bila perlu.
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal: ${res['error']}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
+    // Kartu langsung pindah dari tab aktif & badge bergeser — keputusan sudah
+    // tersimpan permanen di HP, jadi ini bukan lagi "optimistic", tapi fakta.
+    setState(() {
+      _listP0.removeWhere((e) => (e['kodeP0'] ?? '').toString() == kodeP0);
+      final asal = _counts[_selectedStatus];
+      if (asal is int && asal > 0) _counts[_selectedStatus] = asal - 1;
+      final tujuan = _counts[keputusan];
+      if (tujuan is int) _counts[keputusan] = tujuan + 1;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          keputusan == 'Approved'
+              ? '$kodeP0 disetujui — tersimpan di HP. Kirim lewat Pengaturan → Sinkron.'
+              : '$kodeP0 ditolak — tersimpan di HP. Kirim lewat Pengaturan → Sinkron.',
+        ),
+        backgroundColor: keputusan == 'Approved'
+            ? const Color(0xFF10B981)
+            : const Color(0xFFEF4444),
+      ),
+    );
+  }
+
+  /// Batalkan keputusan yang BELUM terkirim (salah tekan). Aman karena baris
+  /// antrean belum pernah sampai ke server.
+  Future<void> _batalkanKeputusan(String kodeP0) async {
+    await _repo.batalkanKeputusan(kodeP0);
+    if (!mounted) return;
+    setState(() {
+      _listP0.removeWhere((e) => (e['kodeP0'] ?? '').toString() == kodeP0);
+      final asal = _counts[_selectedStatus];
+      if (asal is int && asal > 0) _counts[_selectedStatus] = asal - 1;
+      final tujuan = _counts['Menunggu'];
+      if (tujuan is int) _counts['Menunggu'] = tujuan + 1;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Keputusan $kodeP0 dibatalkan — kembali ke Menunggu.'),
+        backgroundColor: const Color(0xFF64748B),
+      ),
+    );
   }
 
   void _konfirmasiApprove(String kodeP0) {
@@ -196,7 +260,9 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         content: Text(
-          'Data $kodeP0 akan ditandai Approved dan poinnya dihitung otomatis.',
+          'Data $kodeP0 ditandai Approved dan disimpan di server lokal HP. '
+          'Poin dihitung otomatis oleh server setelah keputusan dikirim lewat '
+          'Pengaturan → Sinkron.',
         ),
         actions: [
           TextButton(
@@ -328,9 +394,13 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
   // (selalu tampil, tanpa menunggu API). Lampiran Switching/Gardu dimuat terpisah DI DALAM
   // modal (lazy) dengan status loading/error + tombol Coba Lagi — kegagalan lampiran
   // TIDAK PERNAH lagi menghalangi detail dasar.
+  //
+  // Rev 22 Agu 2026: detail dasar kini juga tersedia OFFLINE (dibaca dari cermin
+  // lokal). Lampiran Switching/Gardu tetap butuh jaringan — isinya foto.
   void _showDetailModal(Map<String, dynamic> item) {
     final kodeP0 = (item['kodeP0'] ?? '').toString();
     final status = (item['status'] ?? 'Menunggu').toString();
+    final lokalPending = item['lokalPending'] == true;
 
     // State lampiran — closure di luar builder agar bertahan saat StatefulBuilder rebuild
     Map<String, dynamic>? lampiranRes;
@@ -438,6 +508,10 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
                   child: ListView(
                     padding: const EdgeInsets.all(20),
                     children: [
+                      if (lokalPending) ...[
+                        _buildBadgeBelumTerkirim(item),
+                        const SizedBox(height: 12),
+                      ],
                       _buildSectionHeader(
                         Icons.info_outline,
                         '1. Informasi Pekerjaan',
@@ -720,6 +794,98 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
   }
 
   // ══════════ KOMPONEN UI ══════════
+
+  /// Spanduk status di atas daftar: mode offline dan/atau jumlah keputusan yang
+  /// masih menunggu dikirim. Sengaja SELALU terlihat saat ada antrean supaya
+  /// admin tidak menyangka keputusannya sudah masuk gsheet.
+  Widget _buildSpandukStatus() {
+    if (!_offline && _antrean == 0) return const SizedBox.shrink();
+
+    final adaAntrean = _antrean > 0;
+    final bg = adaAntrean ? const Color(0xFFFEF3C7) : const Color(0xFFE0F2FE);
+    final fg = adaAntrean ? const Color(0xFFB45309) : const Color(0xFF0284C7);
+    final icon = adaAntrean
+        ? Icons.cloud_upload_rounded
+        : Icons.cloud_off_rounded;
+
+    final pesan = adaAntrean
+        ? '$_antrean keputusan tersimpan di HP dan belum terkirim. '
+            'Buka Pengaturan → Kirim Keputusan Verifikasi P0.'
+        : 'Mode offline — daftar dibaca dari data yang tersimpan di HP.';
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: fg),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              pesan,
+              style: TextStyle(
+                  fontSize: 11.5, color: fg, fontWeight: FontWeight.w600),
+            ),
+          ),
+          if (_offline && adaAntrean)
+            Padding(
+              padding: const EdgeInsets.only(left: 6),
+              child: Icon(Icons.cloud_off_rounded, size: 14, color: fg),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Lencana pada kartu/detail: keputusan sudah tercatat lokal, belum terkirim.
+  Widget _buildBadgeBelumTerkirim(Map<String, dynamic> item) {
+    final gagal = (item['lokalGagal'] ?? '').toString();
+    final bg = gagal.isNotEmpty
+        ? const Color(0xFFFEE2E2)
+        : const Color(0xFFFEF3C7);
+    final fg = gagal.isNotEmpty
+        ? const Color(0xFFB91C1C)
+        : const Color(0xFFB45309);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            gagal.isNotEmpty
+                ? Icons.error_outline_rounded
+                : Icons.schedule_send_rounded,
+            size: 14,
+            color: fg,
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              gagal.isNotEmpty
+                  ? 'BELUM TERKIRIM — gagal: $gagal'
+                  : 'BELUM TERKIRIM — tersimpan di server lokal HP',
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.3,
+                color: fg,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildStatusChip(String status) {
     Color bg, fg;
@@ -1238,6 +1404,7 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
   Widget _buildP0Card(Map<String, dynamic> item) {
     final status = (item['status'] ?? 'Menunggu').toString();
     final kodeP0 = (item['kodeP0'] ?? '').toString();
+    final lokalPending = item['lokalPending'] == true;
     final durasi = (item['durasi'] ?? '').toString();
     final jarakP0 = (item['jarakAntarP0'] ?? '').toString();
     final durasiJarak = [
@@ -1257,6 +1424,10 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (lokalPending) ...[
+                _buildBadgeBelumTerkirim(item),
+                const SizedBox(height: 10),
+              ],
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -1329,7 +1500,30 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
                   _buildPhotoBox('Sesudah', item['fotoSesudah']?['thumb']),
                 ],
               ),
-              if (status == 'Menunggu') ...[
+              // Keputusan lokal yang belum terkirim masih boleh DIBATALKAN — aman,
+              // karena server belum pernah menerimanya.
+              if (lokalPending) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF64748B),
+                      side: const BorderSide(color: Color(0xFFCBD5E1)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    icon: const Icon(Icons.undo_rounded, size: 16),
+                    label: const Text(
+                      'Batalkan keputusan',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    onPressed: () => _batalkanKeputusan(kodeP0),
+                  ),
+                ),
+              ] else if (status == 'Menunggu') ...[
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -1423,10 +1617,8 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
                 final jumlah = _counts[status];
                 return Expanded(
                   child: GestureDetector(
-                    onTap: () {
-                      setState(() => _selectedStatus = status);
-                      if (_sudahCari) _fetchData();
-                    },
+                    // Pindah tab dibaca dari cermin lokal — tidak menembak server.
+                    onTap: () => _gantiTab(status),
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -1537,6 +1729,8 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
               ],
             ),
           ),
+          // SPANDUK: mode offline / keputusan menunggu kirim
+          _buildSpandukStatus(),
           // DAFTAR CARD
           Expanded(
             child: !_sudahCari
@@ -1544,7 +1738,10 @@ class _VerifikasiP0ScreenState extends State<VerifikasiP0Screen> {
                     child: Padding(
                       padding: EdgeInsets.all(24),
                       child: Text(
-                        'Pilih tanggal lalu tekan tombol Cari untuk memuat data. Halaman sengaja dibuka kosong agar tidak membebani server.',
+                        'Pilih tanggal lalu tekan tombol Cari untuk memuat data. '
+                        'Halaman sengaja dibuka kosong agar tidak membebani server.\n\n'
+                        'Keputusan Approve/Reject disimpan dulu di server lokal HP, '
+                        'lalu dikirim ke gsheet lewat Pengaturan → Sinkron.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Color(0xFF94A3B8),
