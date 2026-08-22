@@ -2,7 +2,12 @@
 /* Rev 21 Agu 2026: mini-map kini dibuat di Apps Script pakai layanan bawaan Maps.newStaticMap()
    (GRATIS — tanpa API key, tanpa tagihan Maps Static API), lalu dikirim ke engine sebagai base64.
    Apps Script: ambil foto dari Drive + buat mini-map → kirim ke engine → simpan JPEG hasil ke Drive.
-   Penempelan watermark (mini-map, logo, teks) tetap dilakukan engine Cloud Run (cepat, gratis di free tier). */
+   Penempelan watermark (mini-map, logo, teks) tetap dilakukan engine Cloud Run (cepat, gratis di free tier).
+
+   Rev 22 Agu 2026: file hasil WAJIB ANYONE_WITH_LINK dan URL yang dikembalikan
+   distandardkan ke:
+     https://drive.google.com/thumbnail?id=<FILE_ID>
+   tanpa ukuran. Mobile/web menambahkan &sz=w400 atau &sz=w1600 saat membaca. */
 
 // URL engine Cloud Run, mis. "https://wm-engine-xxxx.asia-southeast2.run.app/watermark". WAJIB diisi.
 var WM_ENGINE_URL =
@@ -19,7 +24,7 @@ var WM_ENGINE_SECRET = "sisi-wm-2026";
  * @param {string} outputFolderId Folder tujuan hasil
  * @param {Object} info           { ulp, tim, petugas, jam, hari, tanggal, penyulang, daerah, koordinat, switching, arus, durasi, jarak, jarakP0, lat, long }
  * @param {string} [outName]      Nama file hasil; default "WM_<fileId>.jpg"
- * @return {string} URL file hasil
+ * @return {string} URL thumbnail baku TANPA ukuran
  */
 function watermarkFoto_(fileId, outputFolderId, info, outName) {
   info = info || {};
@@ -66,7 +71,17 @@ function watermarkFoto_(fileId, outputFolderId, info, outName) {
   var folder = DriveApp.getFolderById(outputFolderId);
   var dup = folder.getFilesByName(outNm); // buang hasil lama bernama sama (regen) agar tak menumpuk
   while (dup.hasNext()) dup.next().setTrashed(true);
-  return folder.createFile(png).getUrl();
+
+  var hasil = folder.createFile(png);
+  // Tanpa sharing ini gambar hanya terlihat oleh pemilik Drive, dan blank di
+  // HP petugas / web app yang tidak sedang login dengan akun pemilik.
+  hasil.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+  // Gunakan helper pusat bila sudah ada; fallback tetap menghasilkan format
+  // yang sama agar file ini aman di-push lebih dulu.
+  return typeof urlFotoBaku_ === "function"
+    ? urlFotoBaku_(hasil.getId())
+    : "https://drive.google.com/thumbnail?id=" + hasil.getId();
 }
 
 /**
