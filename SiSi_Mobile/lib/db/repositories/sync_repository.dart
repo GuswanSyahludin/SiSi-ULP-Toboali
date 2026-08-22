@@ -1,5 +1,6 @@
 import '../../services/api_service.dart';
 import '../db_provider.dart';
+import 'gardu_sync_repository.dart';
 import 'laporan_repository.dart';
 import 'master_gardu_repository.dart';
 import 'master_repository.dart';
@@ -18,16 +19,13 @@ class SyncRepository {
     if(_kunci.contains(modul))return {'ok':false,'message':'Sinkron sedang berjalan.'};
     _kunci.add(modul);
     try{
-      // Upload dulu. Ini mencegah download server menimpa edit lokal.
-      final up=await MasterGarduRepository().sinkronAntrean(token);
+      final up=await GarduSyncRepository().kirim(token);
       if(up['ok']!=true)return {'ok':false,'message':'Edit Gardu belum terkirim: ${up['message']}'};
-
       final rp=await ApiService.getDropdownRow(token:token);
       if(rp['success']!=true)return {'ok':false,'message':(rp['message']??'Gagal menarik penyulang').toString()};
       final listP=List<String>.from(rp['penyulang']??[]);
       final mapS=Map<String,dynamic>.from(rp['sectionByPenyulang']??{});
       await MasterRepository().simpanDariApi(listP,mapS);
-
       final rg=await MasterGarduRepository().download(token);
       if(rg['success']!=true)return {'ok':false,'message':(rg['message']??'Gagal menarik Master Gardu').toString()};
       final j=(rg['jumlah']??0) as int;
