@@ -1,0 +1,32 @@
+name: Apply Master Gardu POST router once
+on:
+  push:
+    branches: [fix/predeploy-appscript-audit-v2]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/predeploy-appscript-audit-v2
+      - name: Route POST update payload directly
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('SiSi_BackEnd/Core/Auth-Perangkat.js'); s=p.read_text()
+          old='''      case "getMasterGarduMobile":\n        hasil = typeof getMasterGarduMobile === "function"\n          ? getMasterGarduMobile((body && body.token) || p.token,\n              (body && body.ulp) || p.ulp)\n          : { success: false, message: "Master-Gardu-Mobile.js belum terpasang." };\n        break;'''
+          new='''      case "getMasterGarduMobile":\n        if (body && body.mode === "update") {\n          hasil = typeof updateMasterGarduMobile === "function"\n            ? updateMasterGarduMobile(body.token, body.payload || {})\n            : { success: false, message: "Master-Gardu-Sync-Mobile.js belum terpasang." };\n        } else {\n          hasil = typeof getMasterGarduMobile === "function"\n            ? getMasterGarduMobile((body && body.token) || p.token,\n                (body && body.ulp) || p.ulp)\n            : { success: false, message: "Master-Gardu-Mobile.js belum terpasang." };\n        }\n        break;'''
+          if old not in s: raise SystemExit('getMasterGarduMobile case not found')
+          p.write_text(s.replace(old,new,1))
+          PY
+      - name: Remove workflow and commit
+        run: |
+          rm .github/workflows/apply-master-gardu-post-router-once.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "fix(router): accept Master Gardu updates via POST JSON" || exit 0
+          git push
