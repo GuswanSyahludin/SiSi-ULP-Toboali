@@ -220,19 +220,18 @@ class _LoginSheetState extends State<_LoginSheet> {
     });
 
     try {
-      final result = await ApiService.login(username, password);
+      // Rev 22 Agu 2026 (tahap 2): loginPerangkat menerbitkan deviceToken tanpa
+      // masa berlaku. Ini SATU-SATUNYA tempat password disentuh — ia tidak
+      // pernah ikut disimpan ke perangkat.
+      final result = await ApiService.loginPerangkat(username, password);
       if (!mounted) return;
 
       if (result['success'] == true) {
-        // Rev 22 Agu 2026: simpan SELURUH field sesi (termasuk ulp/tim/subTim
-        // yang dipakai dashboard) + kredensial, lewat SesiStore. Sesi ini yang
-        // dipakai SplashGate agar aplikasi tidak meminta login lagi sampai user
-        // benar-benar menekan "Keluar dari Akun".
-        await SesiStore.simpan(
-          Map<String, dynamic>.from(result),
-          username: username,
-          password: password,
-        );
+        // Simpan SELURUH field sesi (termasuk ulp/tim/subTim yang dipakai
+        // dashboard) + deviceToken. Sesi inilah yang dipakai SplashGate agar
+        // aplikasi tidak meminta login lagi sampai user benar-benar menekan
+        // "Keluar dari Akun".
+        await SesiStore.simpan(Map<String, dynamic>.from(result));
 
         if (!mounted) return;
         Navigator.pop(context); // tutup popup login DULU
