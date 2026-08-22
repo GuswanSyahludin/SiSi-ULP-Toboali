@@ -245,9 +245,9 @@ function authPerangkatRouter_(e, body) {
   try {
     switch (action) {
       case "loginPerangkat":
-        hasil = loginPerangkat((body && body.username) || p.username,
-          (body && body.password) || p.password,
-          (body && body.perangkat) || p.perangkat);
+        hasil = body
+          ? loginPerangkat(body.username, body.password, body.perangkat)
+          : { success: false, message: "Login wajib menggunakan POST JSON." };
         break;
       case "cekPerangkat":
         hasil = cekPerangkat((body && body.deviceToken) || p.deviceToken);

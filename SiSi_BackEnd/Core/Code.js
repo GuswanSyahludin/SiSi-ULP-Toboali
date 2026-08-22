@@ -2364,10 +2364,9 @@ function apiRouter_(e, body) {
     switch (action) {
       // 1. Autentikasi & Akun
       case "login":
-        result = doLogin(
-          body ? body.username : p.username,
-          body ? body.password : p.password,
-        );
+        result = body
+          ? doLogin(body.username, body.password)
+          : { success: false, message: "Login wajib menggunakan POST JSON." };
         break;
 
       case "logout":
