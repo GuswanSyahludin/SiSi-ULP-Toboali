@@ -1,0 +1,31 @@
+name: Apps Script final audit once
+on:
+  push:
+    branches: [fix/predeploy-appscript-audit-v2]
+permissions:
+  contents: write
+jobs:
+  audit:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/predeploy-appscript-audit-v2
+      - name: Parse all backend JS and verify invariants
+        run: |
+          find SiSi_BackEnd -name '*.js' -print0 | xargs -0 -n1 node --check
+          grep -q 'authPerangkatRouter_(e, body)' SiSi_BackEnd/Core/Code.js
+          grep -q 'Login wajib menggunakan POST JSON' SiSi_BackEnd/Core/Auth-Perangkat.js
+          grep -q 'Maksimal 1 Gardu per request' SiSi_BackEnd/Core/Inspeksi-Gardu-Mobile.js
+          grep -q 'ULP payload tidak sesuai sesi' SiSi_BackEnd/Core/Master-Gardu-Sync-Mobile.js
+          ! grep -R 'password=.*Uri.encodeComponent' SiSi_Mobile/lib/services/api_service.dart
+      - name: Remove workflow and update marker
+        run: |
+          rm .github/workflows/apps-script-final-audit-once.yml
+          printf 'Apps Script final static audit passed at %s\n' "$(date -u +%FT%TZ)" > SiSi_BackEnd/PREDEPLOY_AUDIT_PASSED.txt
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "test(audit): final Apps Script checks passed" || exit 0
+          git push
