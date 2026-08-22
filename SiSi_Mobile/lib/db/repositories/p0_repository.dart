@@ -26,7 +26,7 @@ class P0Repository {
 
   // ═════ BACA DAFTAR ═════
 
-  /// Daftar kartu P0 untuk 1 tanggal + 1 status.
+  /// Daftar kartu P0 untuk 1 tanggal + 1 status — SERVER dulu.
   ///
   /// Bentuk balasan menyerupai ApiService.getApprovalP0List agar UI lama nyaris
   /// tidak berubah, dengan tambahan:
@@ -51,7 +51,8 @@ class P0Repository {
         tanggal: tanggal,
       );
       if (res['ok'] == true) {
-        await _segarkanCermin(ulp, tanggal, List<dynamic>.from(res['list'] ?? []));
+        await _segarkanCermin(
+            ulp, tanggal, List<dynamic>.from(res['list'] ?? []));
       } else {
         offline = true;
       }
@@ -61,6 +62,42 @@ class P0Repository {
 
     // 2) Selalu sajikan dari cermin lokal supaya hasilnya identik online maupun
     //    offline, dan keputusan yang belum terkirim ikut terlihat.
+    return _susunDariCermin(
+      ulp: ulp,
+      status: status,
+      tanggal: tanggal,
+      offline: offline,
+    );
+  }
+
+  /// Daftar dari CERMIN LOKAL saja — tanpa satu pun permintaan jaringan.
+  ///
+  /// Dipakai saat berpindah tab (Menunggu / Approved / Rejected): cermin sudah
+  /// memuat ketiga status hasil satu kali tarik, jadi tidak ada alasan menembak
+  /// backend lagi hanya untuk menyaring.
+  Future<Map<String, dynamic>> bacaListLokal({
+    required String ulp,
+    required String status,
+    required String tanggal,
+  }) {
+    return _susunDariCermin(
+      ulp: ulp,
+      status: status,
+      tanggal: tanggal,
+      offline: false,
+      diamSaatKosong: true,
+    );
+  }
+
+  /// Menyusun daftar + badge dari cermin lokal, dengan keputusan lokal ditumpuk
+  /// di atas status server.
+  Future<Map<String, dynamic>> _susunDariCermin({
+    required String ulp,
+    required String status,
+    required String tanggal,
+    required bool offline,
+    bool diamSaatKosong = false,
+  }) async {
     final baris = await _dao.bacaCermin(ulp, tanggal);
     final antrean = await _dao.antrean();
     final petaKeputusan = {for (final a in antrean) a.kodeP0: a};
@@ -94,7 +131,7 @@ class P0Repository {
       if (status.isEmpty || statusTampil == status) hasil.add(item);
     }
 
-    if (baris.isEmpty && offline) {
+    if (baris.isEmpty && offline && !diamSaatKosong) {
       return {
         'ok': false,
         'offline': true,
@@ -212,12 +249,12 @@ class P0Repository {
           terkirim++;
         } else {
           gagal++;
-          final p = (res['error'] ?? res['message'] ?? 'ditolak server')
-              .toString();
+          final p =
+              (res['error'] ?? res['message'] ?? 'ditolak server').toString();
           await _dao.tandaiGagal(a.kodeP0, a.percobaan + 1, p);
           pesan.add('${a.kodeP0}: $p');
         }
-      } catch (e) {
+      } catch (_) {
         gagal++;
         await _dao.tandaiGagal(a.kodeP0, a.percobaan + 1, 'timeout/jaringan');
         pesan.add('${a.kodeP0}: timeout/jaringan');
