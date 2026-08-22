@@ -1,0 +1,38 @@
+name: Enforce POST-only login once
+on:
+  push:
+    branches: [fix/predeploy-appscript-audit-v2]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/predeploy-appscript-audit-v2
+      - name: Reject query-string credentials
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('SiSi_BackEnd/Core/Auth-Perangkat.js'); s=p.read_text()
+          old='''      case "loginPerangkat":\n        hasil = loginPerangkat((body && body.username) || p.username,\n          (body && body.password) || p.password,\n          (body && body.perangkat) || p.perangkat);\n        break;'''
+          new='''      case "loginPerangkat":\n        hasil = body\n          ? loginPerangkat(body.username, body.password, body.perangkat)\n          : { success: false, message: "Login wajib menggunakan POST JSON." };\n        break;'''
+          if old not in s: raise SystemExit('device login case not found')
+          p.write_text(s.replace(old,new,1))
+
+          p=Path('SiSi_BackEnd/Core/Code.js'); s=p.read_text()
+          old='''      case "login":\n        result = doLogin(\n          body ? body.username : p.username,\n          body ? body.password : p.password,\n        );\n        break;'''
+          new='''      case "login":\n        result = body\n          ? doLogin(body.username, body.password)\n          : { success: false, message: "Login wajib menggunakan POST JSON." };\n        break;'''
+          if old not in s: raise SystemExit('legacy login case not found')
+          p.write_text(s.replace(old,new,1))
+          PY
+      - name: Remove workflow and commit
+        run: |
+          rm .github/workflows/enforce-post-login-once.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "fix(auth): reject login credentials in query strings" || exit 0
+          git push
