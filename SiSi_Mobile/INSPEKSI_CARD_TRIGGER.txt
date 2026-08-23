@@ -1,0 +1,1 @@
+Trigger inspection card migration.
