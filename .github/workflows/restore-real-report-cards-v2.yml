@@ -1,0 +1,156 @@
+name: One-time real report card restoration v2
+on:
+  push:
+    branches: [fix/real-data-report-cards-apply]
+permissions:
+  contents: write
+jobs:
+  update:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/real-data-report-cards-apply
+          fetch-depth: 0
+      - name: Patch sources
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          def sub1(pattern, replacement, text, label):
+              new, count = re.subn(pattern, replacement, text, count=1, flags=re.S)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected 1 match, got {count}')
+              return new
+
+          p = Path('SiSi_Mobile/lib/screens/laporan_harian_screen.dart')
+          s = p.read_text().replace(
+              'if (!gardu) return InspeksiJaringanScreen(sesi: widget.sesi);',
+              'if (!gardu) return InspeksiJaringanScreen(sesi: widget.sesi, targetSubTim: sub);')
+          p.write_text(s)
+
+          p = Path('SiSi_Mobile/lib/screens/laporan_row_screen.dart')
+          s = p.read_text()
+          s = s.replace("import '../db/repositories/master_repository.dart';", "import '../db/repositories/header_repository.dart';\nimport '../db/repositories/master_repository.dart';\nimport '../widgets/laporan_header_card.dart';")
+          s = sub1(r"  Future<void> _loadLaporan\(\) async \{.*?\n  \}\n\n  void _buatLaporanBaru", """  Future<void> _loadLaporan() async {
+    setState(() => _loading = true);
+    final now = DateTime.now();
+    final tanggal = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final response = await HeaderRepository().bacaLaporanHarian(token: (widget.sesi['token'] ?? '').toString(), subTim: _activeSubTim, tanggal: tanggal);
+    if (!mounted) return;
+    final data = response['success'] == true ? List<dynamic>.from(response['data'] ?? []) : <dynamic>[];
+    setState(() {
+      _laporanList..clear()..addAll(data.map((raw) {
+        final item = Map<String, dynamic>.from(raw as Map);
+        item.putIfAbsent('realisasi', () => <Map<String, dynamic>>[]);
+        return item;
+      }));
+      _loading = false;
+    });
+  }
+
+  void _buatLaporanBaru""", s, 'ROW load')
+          s = sub1(r"  Widget _buildLaporanCard\(Map<String, dynamic> item\) \{.*?\n  \}\n\}\n\nclass _LaporanRowDetailScreen", """  Widget _buildLaporanCard(Map<String, dynamic> item) {
+    final real = item['realisasi'] as List? ?? const [];
+    final totalPohon = real.fold<int>(0, (sum, r) => sum + ((r['rabas'] as int? ?? 0) + (r['sedang'] as int? ?? 0) + (r['besar'] as int? ?? 0)));
+    return LaporanHeaderCard(item: item, icon: Icons.park_rounded, accent: AppColors.success700,
+      summary: '${real.length} Penyulang  •  $totalPohon Titik Pohon',
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => _LaporanRowDetailScreen(sesi: widget.sesi, item: item))).then((_) => setState(() {})),
+      onWa: () => _kirimWa((item['waText'] ?? '').toString()));
+  }
+  Future<void> _kirimWa(String text) async {
+    if (text.trim().isEmpty) return;
+    await launchUrl(Uri.parse('https://api.whatsapp.com/send?text=${Uri.encodeComponent(text)}'), mode: LaunchMode.externalApplication);
+  }
+}
+
+class _LaporanRowDetailScreen""", s, 'ROW card')
+          p.write_text(s)
+
+          p = Path('SiSi_Mobile/lib/screens/laporan_hartek_screen.dart')
+          s = p.read_text()
+          s = s.replace("import '../db/repositories/master_repository.dart';", "import '../db/repositories/header_repository.dart';\nimport '../db/repositories/master_repository.dart';\nimport '../widgets/laporan_header_card.dart';")
+          s = sub1(r"  Future<void> _loadLaporan\(\) async \{.*?\n  \}\n\n  void _buatLaporanBaru", """  Future<void> _loadLaporan() async {
+    setState(() => _loading = true);
+    final now = DateTime.now();
+    final tanggal = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final response = await HeaderRepository().bacaLaporanHarian(token: (widget.sesi['token'] ?? '').toString(), subTim: 'Hartek', tanggal: tanggal);
+    if (!mounted) return;
+    final data = response['success'] == true ? List<dynamic>.from(response['data'] ?? []) : <dynamic>[];
+    setState(() {
+      _laporanList..clear()..addAll(data.map((raw) {
+        final item = Map<String, dynamic>.from(raw as Map);
+        item.putIfAbsent('objekList', () => <Map<String, dynamic>>[]);
+        return item;
+      }));
+      _loading = false;
+    });
+  }
+
+  void _buatLaporanBaru""", s, 'Hartek load')
+          s = sub1(r"  Widget _buildLaporanCard\(Map<String, dynamic> item\) \{.*?\n  \}\n\}\n\nclass _LaporanHartekDetailScreen", """  Widget _buildLaporanCard(Map<String, dynamic> item) {
+    final objek = item['objekList'] as List? ?? const [];
+    final total = objek.fold<int>(0, (sum, o) => sum + ((o['pekerjaanList'] as List?)?.length ?? 0));
+    return LaporanHeaderCard(item: item, icon: Icons.engineering_rounded, accent: AppColors.amber700,
+      summary: '${objek.length} Objek  •  $total Pekerjaan',
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => _LaporanHartekDetailScreen(sesi: widget.sesi, item: item))).then((_) => setState(() {})),
+      onWa: () => _kirimWa((item['waText'] ?? '').toString()));
+  }
+  Future<void> _kirimWa(String text) async {
+    if (text.trim().isEmpty) return;
+    await launchUrl(Uri.parse('https://api.whatsapp.com/send?text=${Uri.encodeComponent(text)}'), mode: LaunchMode.externalApplication);
+  }
+}
+
+class _LaporanHartekDetailScreen""", s, 'Hartek card')
+          p.write_text(s)
+
+          p = Path('SiSi_Mobile/lib/screens/inspeksi_jaringan_screen.dart')
+          s = p.read_text()
+          s = s.replace("import '../theme/app_colors.dart';", "import '../db/repositories/header_repository.dart';\nimport '../theme/app_colors.dart';\nimport '../widgets/laporan_header_card.dart';")
+          s = s.replace("  final Map<String, dynamic> sesi;\n  const InspeksiJaringanScreen({super.key, required this.sesi});", "  final Map<String, dynamic> sesi;\n  final String? targetSubTim;\n  const InspeksiJaringanScreen({super.key, required this.sesi, this.targetSubTim});")
+          s = s.replace("  final List<Map<String, dynamic>> laporan = [];\n  bool loading = true;", "  final List<Map<String, dynamic>> laporan = [];\n  String get _subTim => widget.targetSubTim ?? widget.sesi['subTim'] ?? 'Inspeksi Jaringan';\n  bool loading = true;")
+          s = sub1(r"  Future<void> _load\(\) async \{.*?\n  \}\n\n  String _namaHari", """  Future<void> _load() async {
+    setState(() => loading = true);
+    final now = DateTime.now();
+    final tanggal = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final response = await HeaderRepository().bacaLaporanHarian(token: (widget.sesi['token'] ?? '').toString(), subTim: _subTim, tanggal: tanggal);
+    if (!mounted) return;
+    final data = response['success'] == true ? List<dynamic>.from(response['data'] ?? []) : <dynamic>[];
+    setState(() {
+      laporan..clear()..addAll(data.map((raw) {
+        final item = Map<String, dynamic>.from(raw as Map);
+        item.putIfAbsent('realisasi', () => <Map<String, dynamic>>[]);
+        return item;
+      }));
+      loading = false;
+    });
+  }
+
+  String _namaHari""", s, 'Inspection load')
+          s = sub1(r"  Widget _laporanCard\(Map<String, dynamic> item\) \{.*?\n  \}\n\n  void _buatLaporan", """  Widget _laporanCard(Map<String, dynamic> item) {
+    final real = item['realisasi'] as List? ?? const [];
+    final totalTiang = real.fold<int>(0, (sum, r) => sum + (int.tryParse('${r['totalTiang']}') ?? 0));
+    return LaporanHeaderCard(item: item, icon: Icons.alt_route_rounded, accent: AppColors.cyan600,
+      summary: '${real.length} Penyulang  •  $totalTiang Total Tiang',
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => _LaporanDetail(item: item))).then((_) => setState(() {})),
+      onWa: () => _kirimWa((item['waText'] ?? '').toString()));
+  }
+  Future<void> _kirimWa(String text) async {
+    if (text.trim().isEmpty) return;
+    await launchUrl(Uri.parse('https://api.whatsapp.com/send?text=${Uri.encodeComponent(text)}'), mode: LaunchMode.externalApplication);
+  }
+
+  void _buatLaporan""", s, 'Inspection card')
+          p.write_text(s)
+          PY
+      - name: Commit restoration
+        run: |
+          rm -f .github/workflows/restore-real-report-cards-v2.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix(mobile): restore real report cards and WA actions"
+          git push origin fix/real-data-report-cards-apply

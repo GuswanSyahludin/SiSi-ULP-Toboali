@@ -46,8 +46,12 @@ class _GarduScreenState extends State<GarduScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     final role = (widget.sesi['role'] ?? '').toString().trim().toLowerCase();
-    final ulp = role == 'super user' ? '' : (widget.sesi['ulp'] ?? '').toString();
-    final rows = await _repo.cari(_search.text, ulp: ulp);
+    final privileged = role == 'super user' || role == 'admin';
+    final ulp = privileged ? '' : (widget.sesi['ulp'] ?? '').toString().trim();
+    var rows = await _repo.cari(_search.text, ulp: ulp);
+    if (rows.isEmpty && ulp.isNotEmpty && await _repo.jumlah() > 0) {
+      rows = await _repo.cari(_search.text);
+    }
     if (mounted) setState(() { _rows = rows; _loading = false; });
   }
 
