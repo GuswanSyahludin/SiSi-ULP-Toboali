@@ -114,13 +114,10 @@ class _InspeksiJaringanState extends State<InspeksiJaringanScreen> {
         ],
       ),
       body: _body(),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.navy700,
-        foregroundColor: Colors.white,
         onPressed: _bukaFormTambahLaporan,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Tambah Laporan',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        child: const Icon(Icons.add_rounded, color: Colors.white),
       ),
     );
   }
@@ -174,17 +171,9 @@ class _InspeksiJaringanState extends State<InspeksiJaringanScreen> {
     }
     if (_laporan.isEmpty) {
       return const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.alt_route_rounded,
-                size: 54, color: AppColors.neutral400),
-            SizedBox(height: 12),
-            Text('Belum ada laporan inspeksi hari ini.',
-                style: TextStyle(
-                    color: AppColors.neutral500, fontWeight: FontWeight.w600)),
-          ],
-        ),
+        child: Text('Belum ada laporan inspeksi hari ini.',
+            style: TextStyle(
+                color: AppColors.neutral500, fontWeight: FontWeight.w600)),
       );
     }
     return RefreshIndicator(
@@ -224,7 +213,7 @@ class _InspeksiJaringanState extends State<InspeksiJaringanScreen> {
       MaterialPageRoute(
         builder: (_) => _FormInputInspeksiHeaderScreen(
           sesi: widget.sesi,
-          judulMenu: 'Tambah Laporan Inspeksi Jaringan',
+          judulMenu: 'Tambah Laporan Harian',
           subTim: _subTim,
           onSimpan: (dataBaru) {
             setState(() {
@@ -257,54 +246,24 @@ class _FormInputInspeksiHeaderScreen extends StatefulWidget {
 
 class _FormInputInspeksiHeaderScreenState
     extends State<_FormInputInspeksiHeaderScreen> {
-  final _koorAwalCtrl = TextEditingController();
-  final _koorAkhirCtrl = TextEditingController();
-  final _kmAwalCtrl = TextEditingController();
-  final _kmAkhirCtrl = TextEditingController();
-  final _kendalaCtrl = TextEditingController();
+  final a = TextEditingController();
+  final b = TextEditingController();
+  final ka = TextEditingController();
+  final kb = TextEditingController();
+  final kendala = TextEditingController();
+  bool busy = false;
 
-  bool _isGettingGpsAwal = false;
-  bool _isGettingGpsAkhir = false;
-
-  Future<void> _ambilGps(bool awal) async {
-    setState(() {
-      if (awal) _isGettingGpsAwal = true;
-      else _isGettingGpsAkhir = true;
-    });
-
-    try {
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-
-      final pos = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 15),
-      );
-
-      final val = '${pos.latitude.toStringAsFixed(6)}, ${pos.longitude.toStringAsFixed(6)}';
-      setState(() {
-        if (awal) _koorAwalCtrl.text = val;
-        else _koorAkhirCtrl.text = val;
-      });
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal mendapatkan GPS: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          if (awal) _isGettingGpsAwal = false;
-          else _isGettingGpsAkhir = false;
-        });
-      }
-    }
+  Future<void> _gps(TextEditingController c) async {
+    var p = await Geolocator.checkPermission();
+    if (p == LocationPermission.denied) p = await Geolocator.requestPermission();
+    final x = await Geolocator.getCurrentPosition();
+    c.text = '${x.latitude.toStringAsFixed(6)}, ${x.longitude.toStringAsFixed(6)}';
+    setState(() {});
   }
 
-  void _simpan() {
+  void _save() {
+    if (a.text.trim().isEmpty || b.text.trim().isEmpty) return;
+    setState(() => busy = true);
     final d = DateTime.now();
     final today = '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
     final hari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'][d.weekday % 7];
@@ -316,237 +275,96 @@ class _FormInputInspeksiHeaderScreenState
       'ulp': widget.sesi['ulp'] ?? 'Toboali',
       'subTim': widget.subTim,
       'inputBy': widget.sesi['username'] ?? 'Petugas',
-      'koordinatAwal': _koorAwalCtrl.text.trim(),
-      'koordinatAkhir': _koorAkhirCtrl.text.trim(),
-      'kmAwal': _kmAwalCtrl.text.trim(),
-      'kmAkhir': _kmAkhirCtrl.text.trim(),
-      'kendala': _kendalaCtrl.text.trim(),
+      'koordinatAwal': a.text.trim(),
+      'koordinatAkhir': b.text.trim(),
+      'kmAwal': ka.text.trim(),
+      'kmAkhir': kb.text.trim(),
+      'kendala': kendala.text.trim(),
       'realisasi': <Map<String, dynamic>>[],
     };
 
     widget.onSimpan(data);
-    Navigator.pop(context);
+    if (mounted) Navigator.pop(context);
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        backgroundColor: AppColors.navy700,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+  Widget build(BuildContext context) => Scaffold(
+        backgroundColor: const Color(0xFFFAF9F6),
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          foregroundColor: Colors.black87,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: Text(
+            widget.judulMenu,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+          ),
         ),
-        title: Text(
-          widget.judulMenu,
-          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            _field('Koordinat Jaringan Awal', a),
+            _field('Koordinat Jaringan Akhir', b),
+            _field('KM Awal', ka),
+            _field('KM Akhir', kb),
+            _field('Kendala', kendala, lines: 4),
+          ],
         ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.neutral200),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.cyan600.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.badge_outlined, color: AppColors.cyan600, size: 22),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${widget.sesi['username'] ?? 'Petugas'} (${widget.subTim})',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.navy900),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'ULP ${widget.sesi['ulp'] ?? 'Toboali'} • Hari Ini',
-                        style: const TextStyle(fontSize: 12, color: AppColors.neutral500),
-                      ),
-                    ],
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: SizedBox(
+              height: 48,
+              child: ElevatedButton(
+                onPressed: busy ? null : _save,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFF3F0F9),
+                  foregroundColor: const Color(0xFF6B46C1),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
                   ),
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          _buildFormSection(
-            title: 'Koordinat Lapangan',
-            children: [
-              _buildGpsField(
-                label: 'Koordinat Awal',
-                controller: _koorAwalCtrl,
-                isLoading: _isGettingGpsAwal,
-                onGpsPressed: () => _ambilGps(true),
-              ),
-              const SizedBox(height: 12),
-              _buildGpsField(
-                label: 'Koordinat Akhir',
-                controller: _koorAkhirCtrl,
-                isLoading: _isGettingGpsAkhir,
-                onGpsPressed: () => _ambilGps(false),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          _buildFormSection(
-            title: 'Speedometer (KM)',
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildTextField(
-                      label: 'KM Awal',
-                      controller: _kmAwalCtrl,
-                      keyboardType: TextInputType.number,
-                      prefixIcon: Icons.speed_rounded,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildTextField(
-                      label: 'KM Akhir',
-                      controller: _kmAkhirCtrl,
-                      keyboardType: TextInputType.number,
-                      prefixIcon: Icons.speed_rounded,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          _buildFormSection(
-            title: 'Kendala & Catatan Khusus',
-            children: [
-              _buildTextField(
-                label: 'Kendala Lapangan (Opsional)',
-                controller: _kendalaCtrl,
-                maxLines: 3,
-                prefixIcon: Icons.notes_rounded,
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.navy700,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                elevation: 2,
-              ),
-              onPressed: _simpan,
-              icon: const Icon(Icons.save_rounded),
-              label: const Text(
-                'Simpan Laporan Harian',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                child: Text(
+                  busy ? 'Menyimpan...' : 'Simpan Lokal',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
             ),
           ),
-          const SizedBox(height: 20),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFormSection({required String title, required List<Widget> children}) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.neutral200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title.toUpperCase(),
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AppColors.cyan600, letterSpacing: 0.5),
-          ),
-          const SizedBox(height: 14),
-          ...children,
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTextField({
-    required String label,
-    required TextEditingController controller,
-    int maxLines = 1,
-    TextInputType keyboardType = TextInputType.text,
-    IconData? prefixIcon,
-  }) {
-    return TextField(
-      controller: controller,
-      maxLines: maxLines,
-      keyboardType: keyboardType,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(fontSize: 13, color: AppColors.neutral500),
-        prefixIcon: prefixIcon != null ? Icon(prefixIcon, size: 20, color: AppColors.navy700) : null,
-        filled: true,
-        fillColor: const Color(0xFFF8FAFC),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.neutral300)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.neutral300)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.cyan600, width: 1.5)),
-      ),
-    );
-  }
-
-  Widget _buildGpsField({
-    required String label,
-    required TextEditingController controller,
-    required bool isLoading,
-    required VoidCallback onGpsPressed,
-  }) {
-    return TextField(
-      controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(fontSize: 13, color: AppColors.neutral500),
-        prefixIcon: const Icon(Icons.location_on_outlined, size: 20, color: AppColors.navy700),
-        suffixIcon: IconButton(
-          icon: isLoading
-              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-              : const Icon(Icons.my_location_rounded, color: AppColors.cyan600),
-          tooltip: 'Ambil GPS Sekarang',
-          onPressed: isLoading ? null : onGpsPressed,
         ),
-        filled: true,
-        fillColor: const Color(0xFFF8FAFC),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.neutral300)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.neutral300)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.cyan600, width: 1.5)),
-      ),
-    );
-  }
+      );
+
+  Widget _field(String l, TextEditingController c, {int lines = 1}) => Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: TextField(
+          controller: c,
+          maxLines: lines,
+          decoration: InputDecoration(
+            labelText: l,
+            labelStyle: const TextStyle(color: Colors.black54, fontSize: 13),
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
+            ),
+            suffixIcon: l.contains('Koordinat')
+                ? IconButton(
+                    onPressed: () => _gps(c),
+                    icon: const Icon(Icons.my_location_rounded, color: Colors.black54),
+                  )
+                : null,
+          ),
+        ),
+      );
 }
 
 class _InspeksiDetail extends StatefulWidget {
