@@ -82,8 +82,8 @@ class _InputTemuanTeknikScreenState extends State<InputTemuanTeknikScreen> {
       final list = await repo.pilihan(_selectedTier);
       final filtered = list
           .where((x) =>
-              x.objek.toLowerCase().contains(_objekInspeksi.toLowerCase()) ||
-              x.objek.isEmpty)
+              x.objekInspeksi.toLowerCase().contains(_objekInspeksi.toLowerCase()) ||
+              x.objekInspeksi.isEmpty)
           .map((x) => x.temuan)
           .toList();
 
