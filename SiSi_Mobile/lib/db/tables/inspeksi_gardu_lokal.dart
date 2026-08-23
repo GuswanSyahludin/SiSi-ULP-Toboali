@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 
+@DataClassName('InsGarduHeader')
 class InsGarduHeaders extends Table {
   @override String get tableName => 'ins_gardu_header';
   @override Set<Column> get primaryKey => {localId};
@@ -19,6 +20,7 @@ class InsGarduHeaders extends Table {
   TextColumn get pesanGagal => text().withDefault(const Constant(''))();
 }
 
+@DataClassName('InsGarduRealisasi')
 class InsGarduRealisasis extends Table {
   @override String get tableName => 'ins_gardu_realisasi';
   @override Set<Column> get primaryKey => {localId};
@@ -31,6 +33,7 @@ class InsGarduRealisasis extends Table {
   TextColumn get status => text().withDefault(const Constant('draft'))();
 }
 
+@DataClassName('InsGarduTemuan')
 class InsGarduTemuans extends Table {
   @override String get tableName => 'ins_gardu_temuan';
   @override Set<Column> get primaryKey => {localId};
@@ -45,6 +48,7 @@ class InsGarduTemuans extends Table {
   TextColumn get status => text().withDefault(const Constant('draft'))();
 }
 
+@DataClassName('ListTemuan')
 class ListTemuans extends Table {
   @override String get tableName => 'list_temuan';
   IntColumn get no => integer().nullable()();
