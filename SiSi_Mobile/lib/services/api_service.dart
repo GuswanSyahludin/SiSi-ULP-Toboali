@@ -6,6 +6,35 @@ import 'package:http/http.dart' as http;
 import 'sesi_store.dart';
 
 class ApiService {
+  static Map<String, dynamic> _decodeResponse(
+    http.Response response, {
+    required String operation,
+  }) {
+    final body = response.body.trim();
+    if (body.isEmpty) {
+      return {
+        'success': false,
+        'message':
+            '$operation gagal: backend mengirim respons kosong (HTTP ${response.statusCode}). Periksa deployment Web App dan akses eksekusi.',
+      };
+    }
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map) return Map<String, dynamic>.from(decoded);
+      return {
+        'success': false,
+        'message': '$operation gagal: format respons backend bukan objek JSON.',
+      };
+    } on FormatException {
+      final ringkas = body.length > 160 ? '${body.substring(0, 160)}…' : body;
+      return {
+        'success': false,
+        'message':
+            '$operation gagal: backend tidak mengirim JSON valid (HTTP ${response.statusCode}). Respons: $ringkas',
+      };
+    }
+  }
+
   static const String baseUrl =
       'https://script.google.com/macros/s/AKfycby4kkqmlpmzlvh-WRMbkqgVg4fNdQhECHm6QKyhaBqMcNebsJbaHLmZYYvb6nAcJ2CpyA/exec';
 
@@ -60,7 +89,7 @@ class ApiService {
           }),
         )
         .timeout(const Duration(seconds: 30));
-    final hasil = Map<String, dynamic>.from(jsonDecode(res.body));
+    final hasil = _decodeResponse(res, operation: 'Login');
 
     // Backend belum di-deploy ulang → pakai login lama (tanpa deviceToken).
     if (hasil['success'] != true && _belumAdaEndpoint(hasil)) {
@@ -161,7 +190,7 @@ class ApiService {
           }),
         )
         .timeout(const Duration(seconds: 30));
-    return jsonDecode(res.body);
+    return _decodeResponse(res, operation: 'Login');
   }
 
   static Future<Map<String, dynamic>> cekSesi(String token) async {
