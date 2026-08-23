@@ -118,7 +118,8 @@ class _InspeksiJaringanState extends State<InspeksiJaringanScreen> {
         foregroundColor: Colors.white,
         onPressed: _tambahLaporanHeader,
         icon: const Icon(Icons.add_rounded),
-        label: const Text('Tambah Laporan', style: TextStyle(fontWeight: FontWeight.bold)),
+        label: const Text('Tambah Laporan',
+            style: TextStyle(fontWeight: FontWeight.bold)),
       ),
     );
   }
@@ -133,12 +134,16 @@ class _InspeksiJaringanState extends State<InspeksiJaringanScreen> {
               'assets/images/loading.gif',
               width: 70,
               height: 70,
-              errorBuilder: (_, __, ___) => const CircularProgressIndicator(color: AppColors.cyan600),
+              errorBuilder: (_, __, ___) =>
+                  const CircularProgressIndicator(color: AppColors.cyan600),
             ),
             const SizedBox(height: 12),
             const Text(
               'Memuat data inspeksi...',
-              style: TextStyle(fontSize: 13, color: AppColors.neutral500, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.neutral500,
+                  fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -171,16 +176,19 @@ class _InspeksiJaringanState extends State<InspeksiJaringanScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.alt_route_rounded, size: 54, color: AppColors.neutral400),
+            const Icon(Icons.alt_route_rounded,
+                size: 54, color: AppColors.neutral400),
             const SizedBox(height: 12),
             const Text('Belum ada laporan inspeksi hari ini.',
-                style: TextStyle(color: AppColors.neutral500, fontWeight: FontWeight.w600)),
+                style: TextStyle(
+                    color: AppColors.neutral500, fontWeight: FontWeight.w600)),
             const SizedBox(height: 16),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.navy700,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
               ),
               onPressed: _tambahLaporanHeader,
               icon: const Icon(Icons.add_rounded),
@@ -231,29 +239,58 @@ class _InspeksiJaringanState extends State<InspeksiJaringanScreen> {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+        padding: EdgeInsets.fromLTRB(
+            20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Tambah Laporan Inspeksi Jaringan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.navy900)),
+              const Text('Tambah Laporan Inspeksi Jaringan',
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.navy900)),
               const SizedBox(height: 16),
-              TextField(controller: koA, decoration: const InputDecoration(labelText: 'Koordinat Awal', border: OutlineInputBorder())),
+              TextField(
+                  controller: koA,
+                  decoration: const InputDecoration(
+                      labelText: 'Koordinat Awal',
+                      border: OutlineInputBorder())),
               const SizedBox(height: 10),
-              TextField(controller: koB, decoration: const InputDecoration(labelText: 'Koordinat Akhir', border: OutlineInputBorder())),
+              TextField(
+                  controller: koB,
+                  decoration: const InputDecoration(
+                      labelText: 'Koordinat Akhir',
+                      border: OutlineInputBorder())),
               const SizedBox(height: 10),
               Row(
                 children: [
-                  Expanded(child: TextField(controller: ka, decoration: const InputDecoration(labelText: 'KM Awal', border: OutlineInputBorder()))),
+                  Expanded(
+                      child: TextField(
+                          controller: ka,
+                          decoration: const InputDecoration(
+                              labelText: 'KM Awal',
+                              border: OutlineInputBorder()))),
                   const SizedBox(width: 10),
-                  Expanded(child: TextField(controller: kb, decoration: const InputDecoration(labelText: 'KM Akhir', border: OutlineInputBorder()))),
+                  Expanded(
+                      child: TextField(
+                          controller: kb,
+                          decoration: const InputDecoration(
+                              labelText: 'KM Akhir',
+                              border: OutlineInputBorder()))),
                 ],
               ),
               const SizedBox(height: 10),
-              TextField(controller: kendala, maxLines: 2, decoration: const InputDecoration(labelText: 'Kendala (Opsional)', border: OutlineInputBorder())),
+              TextField(
+                  controller: kendala,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                      labelText: 'Kendala (Opsional)',
+                      border: OutlineInputBorder())),
               const SizedBox(height: 18),
               SizedBox(
                 width: double.infinity,
@@ -262,14 +299,24 @@ class _InspeksiJaringanState extends State<InspeksiJaringanScreen> {
                     backgroundColor: AppColors.navy700,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                   onPressed: () {
                     Navigator.pop(ctx);
                     setState(() {
                       _laporan.insert(0, {
-                        'kodeHeader': 'INS-DRAFT-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}',
-                        'hari': ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'][DateTime.now().weekday % 7],
+                        'kodeHeader':
+                            'INS-DRAFT-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}',
+                        'hari': [
+                          'Minggu',
+                          'Senin',
+                          'Selasa',
+                          'Rabu',
+                          'Kamis',
+                          'Jumat',
+                          'Sabtu'
+                        ][DateTime.now().weekday % 7],
                         'tanggal': _today,
                         'ulp': widget.sesi['ulp'] ?? 'Toboali',
                         'subTim': _subTim,
@@ -283,7 +330,8 @@ class _InspeksiJaringanState extends State<InspeksiJaringanScreen> {
                       });
                     });
                   },
-                  child: const Text('Simpan Laporan', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: const Text('Simpan Laporan',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
             ],

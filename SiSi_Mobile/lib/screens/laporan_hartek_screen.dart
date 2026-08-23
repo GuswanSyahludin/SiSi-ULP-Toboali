@@ -52,7 +52,9 @@ class _LaporanHartekScreenState extends State<LaporanHartekScreen> {
           item.putIfAbsent('objekList', () => <Map<String, dynamic>>[]);
           return item;
         }));
-      _error = res['success'] == true ? null : (res['message'] ?? 'Gagal memuat laporan').toString();
+      _error = res['success'] == true
+          ? null
+          : (res['message'] ?? 'Gagal memuat laporan').toString();
       _loading = false;
     });
   }
@@ -106,7 +108,8 @@ class _LaporanHartekScreenState extends State<LaporanHartekScreen> {
         foregroundColor: Colors.white,
         onPressed: _tambahLaporanHeader,
         icon: const Icon(Icons.add_rounded),
-        label: const Text('Tambah Laporan', style: TextStyle(fontWeight: FontWeight.bold)),
+        label: const Text('Tambah Laporan',
+            style: TextStyle(fontWeight: FontWeight.bold)),
       ),
     );
   }
@@ -121,12 +124,16 @@ class _LaporanHartekScreenState extends State<LaporanHartekScreen> {
               'assets/images/loading.gif',
               width: 70,
               height: 70,
-              errorBuilder: (_, __, ___) => const CircularProgressIndicator(color: AppColors.cyan600),
+              errorBuilder: (_, __, ___) =>
+                  const CircularProgressIndicator(color: AppColors.cyan600),
             ),
             const SizedBox(height: 12),
             const Text(
               'Memuat data hartek...',
-              style: TextStyle(fontSize: 13, color: AppColors.neutral500, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.neutral500,
+                  fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -139,7 +146,8 @@ class _LaporanHartekScreenState extends State<LaporanHartekScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.cloud_off_rounded, size: 46, color: AppColors.neutral500),
+              const Icon(Icons.cloud_off_rounded,
+                  size: 46, color: AppColors.neutral500),
               const SizedBox(height: 12),
               Text(_error!, textAlign: TextAlign.center),
               const SizedBox(height: 14),
@@ -158,16 +166,19 @@ class _LaporanHartekScreenState extends State<LaporanHartekScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.engineering_outlined, size: 54, color: AppColors.neutral400),
+            const Icon(Icons.engineering_outlined,
+                size: 54, color: AppColors.neutral400),
             const SizedBox(height: 12),
             const Text('Belum ada laporan Hartek hari ini.',
-                style: TextStyle(color: AppColors.neutral500, fontWeight: FontWeight.w600)),
+                style: TextStyle(
+                    color: AppColors.neutral500, fontWeight: FontWeight.w600)),
             const SizedBox(height: 16),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.navy700,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
               ),
               onPressed: _tambahLaporanHeader,
               icon: const Icon(Icons.add_rounded),
@@ -218,29 +229,58 @@ class _LaporanHartekScreenState extends State<LaporanHartekScreen> {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+        padding: EdgeInsets.fromLTRB(
+            20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Tambah Laporan Harian Hartek', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.navy900)),
+              const Text('Tambah Laporan Harian Hartek',
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.navy900)),
               const SizedBox(height: 16),
-              TextField(controller: koA, decoration: const InputDecoration(labelText: 'Koordinat Awal', border: OutlineInputBorder())),
+              TextField(
+                  controller: koA,
+                  decoration: const InputDecoration(
+                      labelText: 'Koordinat Awal',
+                      border: OutlineInputBorder())),
               const SizedBox(height: 10),
-              TextField(controller: koB, decoration: const InputDecoration(labelText: 'Koordinat Akhir', border: OutlineInputBorder())),
+              TextField(
+                  controller: koB,
+                  decoration: const InputDecoration(
+                      labelText: 'Koordinat Akhir',
+                      border: OutlineInputBorder())),
               const SizedBox(height: 10),
               Row(
                 children: [
-                  Expanded(child: TextField(controller: ka, decoration: const InputDecoration(labelText: 'KM Awal', border: OutlineInputBorder()))),
+                  Expanded(
+                      child: TextField(
+                          controller: ka,
+                          decoration: const InputDecoration(
+                              labelText: 'KM Awal',
+                              border: OutlineInputBorder()))),
                   const SizedBox(width: 10),
-                  Expanded(child: TextField(controller: kb, decoration: const InputDecoration(labelText: 'KM Akhir', border: OutlineInputBorder()))),
+                  Expanded(
+                      child: TextField(
+                          controller: kb,
+                          decoration: const InputDecoration(
+                              labelText: 'KM Akhir',
+                              border: OutlineInputBorder()))),
                 ],
               ),
               const SizedBox(height: 10),
-              TextField(controller: kendala, maxLines: 2, decoration: const InputDecoration(labelText: 'Kendala (Opsional)', border: OutlineInputBorder())),
+              TextField(
+                  controller: kendala,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                      labelText: 'Kendala (Opsional)',
+                      border: OutlineInputBorder())),
               const SizedBox(height: 18),
               SizedBox(
                 width: double.infinity,
@@ -249,14 +289,24 @@ class _LaporanHartekScreenState extends State<LaporanHartekScreen> {
                     backgroundColor: AppColors.navy700,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                   onPressed: () {
                     Navigator.pop(ctx);
                     setState(() {
                       _laporan.insert(0, {
-                        'kodeHeader': 'HAR-DRAFT-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}',
-                        'hari': ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'][DateTime.now().weekday % 7],
+                        'kodeHeader':
+                            'HAR-DRAFT-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}',
+                        'hari': [
+                          'Minggu',
+                          'Senin',
+                          'Selasa',
+                          'Rabu',
+                          'Kamis',
+                          'Jumat',
+                          'Sabtu'
+                        ][DateTime.now().weekday % 7],
                         'tanggal': _today,
                         'ulp': widget.sesi['ulp'] ?? 'Toboali',
                         'subTim': 'Hartek',
@@ -270,7 +320,8 @@ class _LaporanHartekScreenState extends State<LaporanHartekScreen> {
                       });
                     });
                   },
-                  child: const Text('Simpan Laporan', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: const Text('Simpan Laporan',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -315,7 +366,8 @@ class _HartekDetailState extends State<_HartekDetail> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Detail Laporan Hartek', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+            const Text('Detail Laporan Hartek',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
             Text(
               '${widget.item['hari'] ?? ''}, ${widget.item['tanggal'] ?? ''}',
               style: const TextStyle(fontSize: 12, color: Colors.white70),
@@ -382,14 +434,16 @@ class _HartekDetailState extends State<_HartekDetail> {
         _section('Informasi Laporan', [
           _row('Kode Header', widget.item['kodeHeader']),
           _row('ULP', widget.item['ulp']),
-          _row('Tim / Sub-Tim', '${widget.item['tim'] ?? 'Hartek'} / ${widget.item['subTim'] ?? 'Hartek'}'),
+          _row('Tim / Sub-Tim',
+              '${widget.item['tim'] ?? 'Hartek'} / ${widget.item['subTim'] ?? 'Hartek'}'),
           _row('Petugas', widget.item['inputBy'] ?? widget.item['petugas']),
         ]),
         const SizedBox(height: 12),
         _section('Perjalanan Lapangan', [
           _row('Koordinat Awal', widget.item['koordinatAwal']),
           _row('Koordinat Akhir', widget.item['koordinatAkhir']),
-          _row('KM Awal / Akhir', '${widget.item['kmAwal'] ?? '-'} / ${widget.item['kmAkhir'] ?? '-'}'),
+          _row('KM Awal / Akhir',
+              '${widget.item['kmAwal'] ?? '-'} / ${widget.item['kmAkhir'] ?? '-'}'),
           _row('Kendala', widget.item['kendala']),
         ]),
       ],
@@ -406,7 +460,12 @@ class _HartekDetailState extends State<_HartekDetail> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title.toUpperCase(), style: const TextStyle(fontSize: 10, letterSpacing: 1, fontWeight: FontWeight.w900, color: AppColors.cyan600)),
+            Text(title.toUpperCase(),
+                style: const TextStyle(
+                    fontSize: 10,
+                    letterSpacing: 1,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.cyan600)),
             const SizedBox(height: 8),
             ...children,
           ],
@@ -418,15 +477,27 @@ class _HartekDetailState extends State<_HartekDetail> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(width: 125, child: Text(label, style: const TextStyle(fontSize: 12, color: AppColors.neutral500))),
-            Expanded(child: Text((value ?? '-').toString().trim().isEmpty ? '-' : value.toString(), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800))),
+            SizedBox(
+                width: 125,
+                child: Text(label,
+                    style: const TextStyle(
+                        fontSize: 12, color: AppColors.neutral500))),
+            Expanded(
+                child: Text(
+                    (value ?? '-').toString().trim().isEmpty
+                        ? '-'
+                        : value.toString(),
+                    style: const TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.w800))),
           ],
         ),
       );
 
   Widget _objekList() {
     if (_objek.isEmpty) {
-      return const Center(child: Text('Belum ada objek Hartek.', style: TextStyle(color: AppColors.neutral500)));
+      return const Center(
+          child: Text('Belum ada objek Hartek.',
+              style: TextStyle(color: AppColors.neutral500)));
     }
     return ListView.separated(
       padding: const EdgeInsets.all(16),
@@ -443,13 +514,21 @@ class _HartekDetailState extends State<_HartekDetail> {
             leading: Container(
               width: 40,
               height: 40,
-              decoration: BoxDecoration(color: AppColors.amber600.withValues(alpha: .12), borderRadius: BorderRadius.circular(11)),
-              child: const Icon(Icons.home_repair_service_rounded, color: AppColors.amber700),
+              decoration: BoxDecoration(
+                  color: AppColors.amber600.withValues(alpha: .12),
+                  borderRadius: BorderRadius.circular(11)),
+              child: const Icon(Icons.home_repair_service_rounded,
+                  color: AppColors.amber700),
             ),
-            title: Text((o['gardu'] ?? o['penyulang'] ?? 'Objek Hartek').toString(), style: const TextStyle(fontWeight: FontWeight.w900)),
-            subtitle: Text('${o['jenisPekerjaan'] ?? '-'} • ${pekerjaan.length} pekerjaan'),
+            title: Text(
+                (o['gardu'] ?? o['penyulang'] ?? 'Objek Hartek').toString(),
+                style: const TextStyle(fontWeight: FontWeight.w900)),
+            subtitle: Text(
+                '${o['jenisPekerjaan'] ?? '-'} • ${pekerjaan.length} pekerjaan'),
             trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => _PekerjaanList(objek: o))).then((_) => setState(() {})),
+            onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => _PekerjaanList(objek: o)))
+                .then((_) => setState(() {})),
           ),
         );
       },
@@ -462,19 +541,31 @@ class _HartekDetailState extends State<_HartekDetail> {
       context: context,
       isScrollControlled: true,
       builder: (context) => Padding(
-        padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+        padding: EdgeInsets.fromLTRB(
+            20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: name, decoration: const InputDecoration(labelText: 'Nomor Gardu / Penyulang')),
+            TextField(
+                controller: name,
+                decoration: const InputDecoration(
+                    labelText: 'Nomor Gardu / Penyulang')),
             const SizedBox(height: 14),
-            SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () => Navigator.pop(context, name.text.trim()), child: const Text('Simpan Objek'))),
+            SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context, name.text.trim()),
+                    child: const Text('Simpan Objek'))),
           ],
         ),
       ),
     );
     if (result != null && result.isNotEmpty) {
-      setState(() => _objek.add({'gardu': result, 'jenisPekerjaan': 'Pemeliharaan Gardu', 'pekerjaanList': <Map<String, dynamic>>[]}));
+      setState(() => _objek.add({
+            'gardu': result,
+            'jenisPekerjaan': 'Pemeliharaan Gardu',
+            'pekerjaanList': <Map<String, dynamic>>[]
+          }));
     }
   }
 }
@@ -513,12 +604,16 @@ class _PekerjaanListState extends State<_PekerjaanList> {
                 itemBuilder: (_, i) => Card(
                   child: ListTile(
                     title: Text((list[i]['pekerjaan'] ?? '-').toString()),
-                    subtitle: Text('${(list[i]['materialList'] as List?)?.length ?? 0} material'),
+                    subtitle: Text(
+                        '${(list[i]['materialList'] as List?)?.length ?? 0} material'),
                   ),
                 ),
               ),
         floatingActionButton: FloatingActionButton(
-          onPressed: () => setState(() => list.add({'pekerjaan': 'Pekerjaan Baru', 'materialList': <Map<String, dynamic>>[]})),
+          onPressed: () => setState(() => list.add({
+                'pekerjaan': 'Pekerjaan Baru',
+                'materialList': <Map<String, dynamic>>[]
+              })),
           child: const Icon(Icons.add),
         ),
       );
