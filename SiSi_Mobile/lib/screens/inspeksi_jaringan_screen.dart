@@ -69,7 +69,8 @@ class _InspeksiJaringanState extends State<InspeksiJaringanScreen> {
   Future<void> _wa(String text) async {
     if (text.trim().isEmpty) return;
     await launchUrl(
-      Uri.parse('https://api.whatsapp.com/send?text=${Uri.encodeComponent(text)}'),
+      Uri.parse(
+          'https://api.whatsapp.com/send?text=${Uri.encodeComponent(text)}'),
       mode: LaunchMode.externalApplication,
     );
   }
@@ -145,15 +146,13 @@ class _InspeksiJaringanState extends State<InspeksiJaringanScreen> {
           final realisasi = item['realisasi'] as List? ?? const [];
           final totalTiang = realisasi.fold<int>(
             0,
-            (sum, row) =>
-                sum + (int.tryParse('${row['totalTiang']}') ?? 0),
+            (sum, row) => sum + (int.tryParse('${row['totalTiang']}') ?? 0),
           );
           return LaporanHeaderCard(
             item: item,
             icon: Icons.alt_route_rounded,
             accent: AppColors.cyan600,
-            summary:
-                '${realisasi.length} Penyulang • $totalTiang Total Tiang',
+            summary: '${realisasi.length} Penyulang • $totalTiang Total Tiang',
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
@@ -346,18 +345,16 @@ class _InspeksiDetailState extends State<_InspeksiDetail> {
               decoration: BoxDecoration(
                   color: AppColors.cyan600.withValues(alpha: .12),
                   borderRadius: BorderRadius.circular(11)),
-              child: const Icon(Icons.alt_route_rounded,
-                  color: AppColors.cyan600),
+              child:
+                  const Icon(Icons.alt_route_rounded, color: AppColors.cyan600),
             ),
             title: Text('Penyulang ${r['penyulang'] ?? '-'}',
                 style: const TextStyle(fontWeight: FontWeight.w900)),
-            subtitle: Text(
-                '${r['section'] ?? '-'} • ${temuan.length} temuan'),
+            subtitle: Text('${r['section'] ?? '-'} • ${temuan.length} temuan'),
             trailing: const Icon(Icons.chevron_right_rounded),
             onTap: () => Navigator.push(
               context,
-              MaterialPageRoute(
-                  builder: (_) => _TemuanList(realisasi: r)),
+              MaterialPageRoute(builder: (_) => _TemuanList(realisasi: r)),
             ).then((_) => setState(() {})),
           ),
         );
@@ -420,8 +417,8 @@ class _TemuanListState extends State<_TemuanList> {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
-            title: Text(
-                'Temuan ${widget.realisasi['penyulang'] ?? 'Penyulang'}')),
+            title:
+                Text('Temuan ${widget.realisasi['penyulang'] ?? 'Penyulang'}')),
         body: list.isEmpty
             ? const Center(child: Text('Belum ada temuan.'))
             : ListView.builder(
@@ -433,8 +430,7 @@ class _TemuanListState extends State<_TemuanList> {
                         color: AppColors.amber700),
                     title: Text((list[i]['jenis'] ?? list[i]['temuan'] ?? '-')
                         .toString()),
-                    subtitle:
-                        Text('Tiang: ${list[i]['tiang'] ?? '-'}'),
+                    subtitle: Text('Tiang: ${list[i]['tiang'] ?? '-'}'),
                   ),
                 ),
               ),
