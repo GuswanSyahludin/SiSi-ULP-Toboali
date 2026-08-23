@@ -6,6 +6,35 @@ import 'package:http/http.dart' as http;
 import 'sesi_store.dart';
 
 class ApiService {
+  static Future<http.Response> _postAppsScriptJson(
+    Uri uri,
+    Map<String, dynamic> payload, {
+    Duration timeout = const Duration(seconds: 30),
+  }) async {
+    final client = http.Client();
+    try {
+      final request = http.Request('POST', uri)
+        ..followRedirects = false
+        ..headers['Content-Type'] = 'application/json'
+        ..body = jsonEncode(payload);
+      var streamed = await client.send(request).timeout(timeout);
+      var response = await http.Response.fromStream(streamed);
+
+      var hops = 0;
+      while ({301, 302, 303, 307, 308}.contains(response.statusCode) &&
+          hops < 5) {
+        final location = response.headers['location'];
+        if (location == null || location.trim().isEmpty) break;
+        final next = uri.resolve(location);
+        response = await client.get(next).timeout(timeout);
+        hops++;
+      }
+      return response;
+    } finally {
+      client.close();
+    }
+  }
+
   static Map<String, dynamic> _decodeResponse(
     http.Response response, {
     required String operation,
@@ -77,18 +106,12 @@ class ApiService {
   ) async {
     final uri = Uri.parse('$baseUrl?mobile=1');
     // Kredensial wajib di body POST: tidak masuk URL, history, atau access log.
-    final res = await http
-        .post(
-          uri,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'action': 'loginPerangkat',
-            'username': username,
-            'password': password,
-            'perangkat': _namaPerangkat(),
-          }),
-        )
-        .timeout(const Duration(seconds: 30));
+    final res = await _postAppsScriptJson(uri, {
+      'action': 'loginPerangkat',
+      'username': username,
+      'password': password,
+      'perangkat': _namaPerangkat(),
+    });
     final hasil = _decodeResponse(res, operation: 'Login');
 
     // Backend belum di-deploy ulang → pakai login lama (tanpa deviceToken).
@@ -179,17 +202,11 @@ class ApiService {
     String password,
   ) async {
     final uri = Uri.parse('$baseUrl?mobile=1');
-    final res = await http
-        .post(
-          uri,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'action': 'login',
-            'username': username,
-            'password': password,
-          }),
-        )
-        .timeout(const Duration(seconds: 30));
+    final res = await _postAppsScriptJson(uri, {
+      'action': 'login',
+      'username': username,
+      'password': password,
+    });
     return _decodeResponse(res, operation: 'Login');
   }
 
