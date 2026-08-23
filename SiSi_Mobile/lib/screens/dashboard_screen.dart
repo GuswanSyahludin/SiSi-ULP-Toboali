@@ -49,23 +49,75 @@ class _DashboardScreenState extends State<DashboardScreen>
     {
       'name': 'Inspeksi Gardu',
       'category': 'Inspeksi',
-      'icon': Icons.electrical_services_rounded
+      'icon': Icons.electrical_services_rounded,
+      'badgeColor': AppColors.navy700,
     },
     {
       'name': 'Inspeksi Jaringan',
       'category': 'Inspeksi',
-      'icon': Icons.alt_route_rounded
+      'icon': Icons.alt_route_rounded,
+      'badgeColor': AppColors.cyan600,
     },
-    {'name': 'Hartek', 'category': 'Hartek', 'icon': Icons.engineering_rounded},
-    {'name': 'ROW 01', 'category': 'ROW', 'icon': Icons.park_rounded},
-    {'name': 'ROW 02', 'category': 'ROW', 'icon': Icons.park_rounded},
-    {'name': 'ROW 03', 'category': 'ROW', 'icon': Icons.park_rounded},
-    {'name': 'ROW 04', 'category': 'ROW', 'icon': Icons.park_rounded},
-    {'name': 'Yandal 13', 'category': 'Yandal', 'icon': Icons.bolt_rounded},
-    {'name': 'Yandal 14', 'category': 'Yandal', 'icon': Icons.bolt_rounded},
-    {'name': 'Yandal 15', 'category': 'Yandal', 'icon': Icons.bolt_rounded},
-    {'name': 'Yandal 16', 'category': 'Yandal', 'icon': Icons.bolt_rounded},
-    {'name': 'Yandal 17', 'category': 'Yandal', 'icon': Icons.bolt_rounded},
+    {
+      'name': 'Hartek',
+      'category': 'Hartek',
+      'icon': Icons.engineering_rounded,
+      'badgeColor': AppColors.amber700,
+    },
+    {
+      'name': 'ROW 01',
+      'category': 'ROW',
+      'icon': Icons.park_rounded,
+      'badgeColor': AppColors.success700,
+    },
+    {
+      'name': 'ROW 02',
+      'category': 'ROW',
+      'icon': Icons.park_rounded,
+      'badgeColor': AppColors.success700,
+    },
+    {
+      'name': 'ROW 03',
+      'category': 'ROW',
+      'icon': Icons.park_rounded,
+      'badgeColor': AppColors.success700,
+    },
+    {
+      'name': 'ROW 04',
+      'category': 'ROW',
+      'icon': Icons.park_rounded,
+      'badgeColor': AppColors.success700,
+    },
+    {
+      'name': 'Yandal 13',
+      'category': 'Yandal',
+      'icon': Icons.bolt_rounded,
+      'badgeColor': AppColors.plnRed,
+    },
+    {
+      'name': 'Yandal 14',
+      'category': 'Yandal',
+      'icon': Icons.bolt_rounded,
+      'badgeColor': AppColors.plnRed,
+    },
+    {
+      'name': 'Yandal 15',
+      'category': 'Yandal',
+      'icon': Icons.bolt_rounded,
+      'badgeColor': AppColors.plnRed,
+    },
+    {
+      'name': 'Yandal 16',
+      'category': 'Yandal',
+      'icon': Icons.bolt_rounded,
+      'badgeColor': AppColors.plnRed,
+    },
+    {
+      'name': 'Yandal 17',
+      'category': 'Yandal',
+      'icon': Icons.bolt_rounded,
+      'badgeColor': AppColors.plnRed,
+    },
   ];
 
   @override
@@ -182,11 +234,11 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildIndikatorOnline() {
-    final warna = _isOnline ? const Color(0xFF059669) : const Color(0xFFDC2626);
+    final warna = _isOnline ? AppColors.success600 : AppColors.red600;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: _isOnline ? const Color(0xFFECFDF5) : const Color(0xFFFEF2F2),
+        color: _isOnline ? const Color(0xFFECFDF5) : AppColors.red100,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: warna, width: 1),
       ),
@@ -401,10 +453,10 @@ class _DashboardScreenState extends State<DashboardScreen>
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Colors.grey.shade200),
+              border: Border.all(color: AppColors.neutral200),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: AppColors.navy950.withOpacity(0.05),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -533,7 +585,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         const SizedBox(height: 4),
         Text(
           'Pilih tim untuk melihat dan mengelola aktivitas harian',
-          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          style: TextStyle(fontSize: 12, color: AppColors.neutral500),
         ),
         const SizedBox(height: 16),
         GridView.builder(
@@ -548,18 +600,19 @@ class _DashboardScreenState extends State<DashboardScreen>
           itemCount: allTeams.length,
           itemBuilder: (context, idx) {
             final team = allTeams[idx];
+            final colorBadge = (team['badgeColor'] as Color?) ?? AppColors.navy700;
             return InkWell(
               onTap: () => setState(() => _selectedTeamDetail = team),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade200),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.neutral200),
                   boxShadow: [
                     BoxShadow(
-                        color: Colors.black.withOpacity(0.03),
+                        color: AppColors.navy950.withOpacity(0.03),
                         blurRadius: 6,
                         offset: const Offset(0, 2)),
                   ],
@@ -571,11 +624,11 @@ class _DashboardScreenState extends State<DashboardScreen>
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppColors.navy700.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(8),
+                        color: colorBadge.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(team['icon'],
-                          color: AppColors.navy700, size: 20),
+                          color: colorBadge, size: 20),
                     ),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -585,12 +638,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                           style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.navy700),
+                              color: AppColors.navy900),
                         ),
                         Text(
                           team['category'],
                           style: TextStyle(
-                              fontSize: 11, color: Colors.grey.shade600),
+                              fontSize: 11, color: AppColors.neutral500),
                         ),
                       ],
                     ),
@@ -734,7 +787,14 @@ class _DashboardScreenState extends State<DashboardScreen>
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: AppColors.navy700,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.navy700.withOpacity(0.2),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Row(
               children: [
@@ -742,10 +802,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(team['icon'] ?? Icons.people,
-                      color: Colors.white, size: 28),
+                      color: AppColors.plnYellow, size: 28),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -784,8 +844,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                 margin: const EdgeInsets.only(bottom: 10),
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: Colors.grey.shade200),
+                  borderRadius: BorderRadius.circular(14),
+                  side: const BorderSide(color: AppColors.neutral200),
                 ),
                 child: ListTile(
                   contentPadding:
@@ -794,7 +854,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: AppColors.navy700.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(action['icon'],
                         color: AppColors.navy700, size: 22),
@@ -804,14 +864,14 @@ class _DashboardScreenState extends State<DashboardScreen>
                     style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
-                        color: AppColors.navy700),
+                        color: AppColors.navy900),
                   ),
                   subtitle: Text(
                     action['desc'],
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    style: TextStyle(fontSize: 12, color: AppColors.neutral500),
                   ),
                   trailing: const Icon(Icons.arrow_forward_ios_rounded,
-                      size: 14, color: Colors.grey),
+                      size: 14, color: AppColors.neutral300),
                   onTap: () {
                     final title = action['title'];
                     Widget? tujuan;
@@ -852,26 +912,31 @@ class _DashboardScreenState extends State<DashboardScreen>
         'title': 'Input Temuan',
         'icon': Icons.add_alert_rounded,
         'desc': 'Input temuan anomali jaringan & gardu (db_INS_Temuan)',
+        'iconColor': AppColors.cyan600,
       },
       {
         'title': 'Verifikasi P0',
         'icon': Icons.verified_outlined,
         'desc': 'Verifikasi & persetujuan penugasan P0 Yandal',
+        'iconColor': AppColors.navy700,
       },
       {
         'title': 'Checkpoint Jaringan',
         'icon': Icons.location_on_outlined,
         'desc': 'Monitoring dan data checkpoint jalur penyulang',
+        'iconColor': AppColors.navy700,
       },
       {
         'title': 'Rekap Gangguan',
         'icon': Icons.electric_bolt_outlined,
         'desc': 'Rekapitulasi padam & gangguan distribusi',
+        'iconColor': AppColors.amber700,
       },
       {
         'title': 'Laporan UP3 / UIW',
         'icon': Icons.assessment_outlined,
         'desc': 'Format pelaporan hierarki harian unit induk',
+        'iconColor': AppColors.navy700,
       },
     ];
 
@@ -908,61 +973,63 @@ class _DashboardScreenState extends State<DashboardScreen>
                 color: AppColors.navy700),
           ),
           const SizedBox(height: 12),
-          ...subTeknik.map((item) => Card(
-                margin: const EdgeInsets.only(bottom: 10),
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: Colors.grey.shade200),
+          ...subTeknik.map((item) {
+            final color = (item['iconColor'] as Color?) ?? AppColors.navy700;
+            return Card(
+              margin: const EdgeInsets.only(bottom: 10),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+                side: const BorderSide(color: AppColors.neutral200),
+              ),
+              child: ListTile(
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(item['icon'], color: color, size: 22),
                 ),
-                child: ListTile(
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.navy700.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child:
-                        Icon(item['icon'], color: AppColors.navy700, size: 22),
-                  ),
-                  title: Text(
-                    item['title'],
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: AppColors.navy700),
-                  ),
-                  subtitle: Text(
-                    item['desc'],
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                  ),
-                  trailing: const Icon(Icons.arrow_forward_ios_rounded,
-                      size: 14, color: Colors.grey),
-                  onTap: () {
-                    final title = item['title'];
-                    Widget? tujuan;
-                    if (title == 'Input Temuan') {
-                      tujuan = InputTemuanTeknikScreen(sesi: widget.sesi);
-                    } else if (title == 'Verifikasi P0') {
-                      tujuan = VerifikasiP0Screen(sesi: widget.sesi);
-                    } else if (title == 'Laporan UP3 / UIW') {
-                      tujuan = LaporanUp3UiwScreen(
-                        sesi: widget.sesi,
-                        onBack: () => setState(() => _activeSubScreen = null),
-                      );
-                    }
-                    if (tujuan == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Menu $title segera hadir')),
-                      );
-                    } else {
-                      _bukaMenuTerproteksi(title, tujuan);
-                    }
-                  },
+                title: Text(
+                  item['title'],
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: AppColors.navy900),
                 ),
-              )),
+                subtitle: Text(
+                  item['desc'],
+                  style: TextStyle(fontSize: 12, color: AppColors.neutral500),
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded,
+                    size: 14, color: AppColors.neutral300),
+                onTap: () {
+                  final title = item['title'];
+                  Widget? tujuan;
+                  if (title == 'Input Temuan') {
+                    tujuan = InputTemuanTeknikScreen(sesi: widget.sesi);
+                  } else if (title == 'Verifikasi P0') {
+                    tujuan = VerifikasiP0Screen(sesi: widget.sesi);
+                  } else if (title == 'Laporan UP3 / UIW') {
+                    tujuan = LaporanUp3UiwScreen(
+                      sesi: widget.sesi,
+                      onBack: () => setState(() => _activeSubScreen = null),
+                    );
+                  }
+                  if (tujuan == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Menu $title segera hadir')),
+                    );
+                  } else {
+                    _bukaMenuTerproteksi(title, tujuan);
+                  }
+                },
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -996,7 +1063,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         children: [
           Card(
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             child: ListTile(
               leading: const Icon(Icons.account_circle_outlined,
                   color: AppColors.navy700),
@@ -1010,13 +1077,13 @@ class _DashboardScreenState extends State<DashboardScreen>
           const SizedBox(height: 16),
           Card(
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             child: ListTile(
               leading:
-                  const Icon(Icons.logout_rounded, color: Colors.redAccent),
+                  const Icon(Icons.logout_rounded, color: AppColors.red600),
               title: const Text('Keluar dari Akun',
                   style: TextStyle(
-                      color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                      color: AppColors.red600, fontWeight: FontWeight.bold)),
               onTap: _handleLogout,
             ),
           ),
@@ -1040,7 +1107,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
+              backgroundColor: AppColors.red600,
               foregroundColor: Colors.white,
             ),
             onPressed: () => Navigator.pop(ctx, true),
