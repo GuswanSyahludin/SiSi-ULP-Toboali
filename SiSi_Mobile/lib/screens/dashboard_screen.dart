@@ -695,11 +695,6 @@ class _DashboardScreenState extends State<DashboardScreen>
           'icon': Icons.description_outlined,
           'desc': 'Input & pantau laporan kerja harian dan realisasi ROW'
         },
-        {
-          'title': 'Tindak Lanjut Temuan',
-          'icon': Icons.assignment_turned_in_outlined,
-          'desc': 'Eksekusi temuan pohon / raba-raba'
-        },
       ];
     } else if (category.contains('Hartek')) {
       subActions = [
@@ -911,7 +906,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       {
         'title': 'Input Temuan',
         'icon': Icons.add_alert_rounded,
-        'desc': 'Input temuan anomali jaringan & gardu (db_INS_Temuan)',
+        'desc': 'Temuan C4A',
         'iconColor': AppColors.cyan600,
       },
       {

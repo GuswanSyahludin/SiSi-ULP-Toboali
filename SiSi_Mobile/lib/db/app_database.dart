@@ -54,31 +54,87 @@ class AppDatabase extends _$AppDatabase {
   @override
   int get schemaVersion => 6;
 
+  Future<Set<String>> _columns(String table) async {
+    final rows = await customSelect('PRAGMA table_info($table)').get();
+    return rows
+        .map((row) => row.data['name']?.toString() ?? '')
+        .where((name) => name.isNotEmpty)
+        .toSet();
+  }
+
+  Future<Set<String>> _tables() async {
+    final rows = await customSelect(
+      "SELECT name FROM sqlite_master WHERE type = 'table'",
+    ).get();
+    return rows
+        .map((row) => row.data['name']?.toString() ?? '')
+        .where((name) => name.isNotEmpty)
+        .toSet();
+  }
+
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onUpgrade: (m, from, to) async {
+          var tables = await _tables();
+
           if (from < 2) {
-            await m.createTable(p0Lokals);
-            await m.createTable(p0Outboxes);
+            if (!tables.contains('p0_lokal')) await m.createTable(p0Lokals);
+            if (!tables.contains('p0_outbox')) await m.createTable(p0Outboxes);
           }
-          if (from < 3) await m.createTable(masterGardus);
-          if (from < 4) await m.createTable(garduOutboxes);
-          if (from < 5) {
-            await m.addColumn(masterGardus, masterGardus.arusMaxPerFasa);
-            await m.addColumn(masterGardus, masterGardus.pembebananKva);
-            await m.addColumn(masterGardus, masterGardus.pembebananKw);
-            await m.addColumn(masterGardus, masterGardus.persentaseBeban);
-            await m.addColumn(masterGardus, masterGardus.kategoriBeban);
+          if (from < 3 && !tables.contains('master_gardu')) {
+            await m.createTable(masterGardus);
           }
+
+          tables = await _tables();
+          if (from < 4 && !tables.contains('gardu_outbox')) {
+            await m.createTable(garduOutboxes);
+          }
+
+          if (from < 5 || from < 6) {
+            final columns = await _columns('master_gardu');
+            if (!columns.contains('arus_max_per_fasa')) {
+              await m.addColumn(masterGardus, masterGardus.arusMaxPerFasa);
+            }
+            if (!columns.contains('pembebanan_kva')) {
+              await m.addColumn(masterGardus, masterGardus.pembebananKva);
+            }
+            if (!columns.contains('pembebanan_kw')) {
+              await m.addColumn(masterGardus, masterGardus.pembebananKw);
+            }
+            if (!columns.contains('persentase_beban')) {
+              await m.addColumn(masterGardus, masterGardus.persentaseBeban);
+            }
+            if (!columns.contains('kategori_beban')) {
+              await m.addColumn(masterGardus, masterGardus.kategoriBeban);
+            }
+            if (!columns.contains('penyulang')) {
+              await m.addColumn(masterGardus, masterGardus.penyulang);
+            }
+            if (!columns.contains('section')) {
+              await m.addColumn(masterGardus, masterGardus.section);
+            }
+            if (!columns.contains('berat_trafo')) {
+              await m.addColumn(masterGardus, masterGardus.beratTrafo);
+            }
+            if (!columns.contains('volume_minyak')) {
+              await m.addColumn(masterGardus, masterGardus.volumeMinyak);
+            }
+          }
+
           if (from < 6) {
-            await m.addColumn(masterGardus, masterGardus.penyulang);
-            await m.addColumn(masterGardus, masterGardus.section);
-            await m.addColumn(masterGardus, masterGardus.beratTrafo);
-            await m.addColumn(masterGardus, masterGardus.volumeMinyak);
-            await m.createTable(insGarduHeaders);
-            await m.createTable(insGarduRealisasis);
-            await m.createTable(insGarduTemuans);
-            await m.createTable(listTemuans);
+            tables = await _tables();
+            if (!tables.contains('ins_gardu_header')) {
+              await m.createTable(insGarduHeaders);
+            }
+            if (!tables.contains('ins_gardu_realisasi')) {
+              await m.createTable(insGarduRealisasis);
+            }
+            if (!tables.contains('ins_gardu_temuan')) {
+              await m.createTable(insGarduTemuans);
+            }
+            if (!tables.contains('list_temuan')) {
+              await m.createTable(listTemuans);
+            }
           }
         },
       );
