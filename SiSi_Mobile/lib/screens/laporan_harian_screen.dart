@@ -2,9 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../db/app_database.dart';
-import '../db/repositories/header_repository.dart';
 import '../db/repositories/inspeksi_gardu_repository.dart';
 import '../theme/app_colors.dart';
 import 'inspeksi_jaringan_screen.dart';
@@ -15,17 +13,13 @@ class LaporanHarianScreen extends StatefulWidget{
  @override State<LaporanHarianScreen>createState()=>_LaporanState();
 }
 class _LaporanState extends State<LaporanHarianScreen>{
- final repo=InspeksiGarduRepository();List<dynamic>server=[];bool loading=true,offline=false;String?error;
+ final repo=InspeksiGarduRepository();
  String get sub=>(widget.targetSubTim??widget.sesi['subTim']??widget.sesi['tim']??'ROW 01').toString();bool get gardu=>sub.toLowerCase().contains('inspeksi gardu');
- String get today{final d=DateTime.now();return'${d.year}-${d.month.toString().padLeft(2,'0')}-${d.day.toString().padLeft(2,'0')}';}
- @override void initState(){super.initState();if(gardu){loading=false;repo.downloadListTemuan('${widget.sesi['token']??''}').catchError((_){ });}else{_server();}}
- Future<void>_server()async{setState(()=>loading=true);final r=await HeaderRepository().bacaLaporanHarian(token:'${widget.sesi['token']??''}',subTim:sub,tanggal:today);if(!mounted)return;setState((){loading=false;if(r['success']==true){server=r['data']??[];offline=r['offline']==true;}else error='${r['message']}';});}
+ @override void initState(){super.initState();if(gardu){repo.downloadListTemuan('${widget.sesi['token']??''}').catchError((_){ });}}
  @override Widget build(BuildContext context){if(!gardu)return InspeksiJaringanScreen(sesi:widget.sesi);return Scaffold(backgroundColor:const Color(0xFFF6F8FC),appBar:AppBar(backgroundColor:AppColors.navy700,foregroundColor:Colors.white,title:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Laporan Harian',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),Text(sub,style:const TextStyle(fontSize:12,color:Colors.white70))]),actions:[if(!gardu)IconButton(onPressed:_server,icon:const Icon(Icons.refresh_rounded))]),body:_local(),floatingActionButton:FloatingActionButton(backgroundColor:AppColors.navy700,onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>InsGarduForm(sesi:widget.sesi))),child:const Icon(Icons.add_rounded,color:Colors.white)));}
  Widget _local()=>StreamBuilder<List<InsGarduHeader>>(stream:repo.pantauLaporan(),builder:(context,s){final list=s.data??[];if(list.isEmpty)return const Center(child:Padding(padding:EdgeInsets.all(30),child:Text('Belum ada laporan. Tekan + untuk membuat Laporan Harian Inspeksi Gardu.',textAlign:TextAlign.center)));return ListView.separated(padding:const EdgeInsets.all(16),itemCount:list.length,separatorBuilder:(_,__)=>const SizedBox(height:10),itemBuilder:(_,i)=>_draft(list[i]));});
  Widget _draft(InsGarduHeader h)=>FutureBuilder<List<InsGarduRealisasi>>(future:repo.garduLaporan(h.localId),builder:(context,s){final gs=s.data??[],done=gs.where((x)=>x.tier.isNotEmpty).length;return Card(elevation:0,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16),side:const BorderSide(color:Color(0xFFE2E8F0))),child:ListTile(contentPadding:const EdgeInsets.all(16),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>InsGarduDetail(header:h))),title:Text(h.kodeHeader.isEmpty?'Draft Lokal':h.kodeHeader,style:const TextStyle(fontWeight:FontWeight.w900,color:AppColors.navy700)),subtitle:Text('${h.hari}, ${h.tanggal}\n$done dari ${gs.length} gardu sudah diisi'),isThreeLine:true,trailing:Column(mainAxisAlignment:MainAxisAlignment.center,children:[_badge(h.status),const Icon(Icons.chevron_right_rounded)])));});
  Widget _badge(String x){final c=x=='tersinkron'?Colors.green:x=='gagal'?Colors.red:Colors.orange;return Text(x.toUpperCase(),style:TextStyle(fontSize:9,fontWeight:FontWeight.w900,color:c));}
- Widget _remote(){if(loading)return const Center(child:CircularProgressIndicator());if(error!=null)return Center(child:Text(error!));if(server.isEmpty)return Center(child:Text('Belum ada laporan hari ini untuk $sub'));return ListView(padding:const EdgeInsets.all(16),children:[if(offline)const Text('Mode offline',style:TextStyle(color:Colors.orange)),...server.map((e){final m=Map<String,dynamic>.from(e);return Card(elevation:0,child:ListTile(title:Text('${m['kodeHeader']??'-'}',style:const TextStyle(fontWeight:FontWeight.w900)),subtitle:Text('${m['hari']??''}, ${m['tanggal']??''}\nKM ${m['kmAwal']??'-'} / ${m['kmAkhir']??'-'}'),isThreeLine:true,trailing:IconButton(icon:const Icon(Icons.send_rounded,color:Color(0xFF25D366)),onPressed:()=>_wa('${m['waText']??''}'))));})]);}
- Future<void>_wa(String t)async{if(t.trim().isNotEmpty)await launchUrl(Uri.parse('https://api.whatsapp.com/send?text=${Uri.encodeComponent(t)}'),mode:LaunchMode.externalApplication);}
 }
 
 class InsGarduForm extends StatefulWidget{final Map<String,dynamic>sesi;const InsGarduForm({super.key,required this.sesi});@override State<InsGarduForm>createState()=>_FormState();}
