@@ -6,7 +6,6 @@ import '../db/db_provider.dart';
 import '../db/repositories/master_gardu_repository.dart';
 import '../db/repositories/p0_repository.dart';
 import '../db/repositories/sync_repository.dart';
-import '../screens/gardu_screen.dart';
 import '../theme/app_colors.dart';
 
 class SyncSectionPengaturan extends StatefulWidget {
@@ -43,10 +42,6 @@ class _State extends State<SyncSectionPengaturan>{
     return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
       const Text('Data & Server Lokal',style:TextStyle(fontSize:14,fontWeight:FontWeight.bold,color:AppColors.navy700)),
       const SizedBox(height:4),Text('ID server lokal HP ini: $device',style:const TextStyle(fontSize:11,color:Color(0xFF64748B))),
-      if(GarduScreen.boleh(widget.sesi))...[
-        const SizedBox(height:12),
-        _garduMenu(),
-      ],
       const SizedBox(height:10),
       _tile(
         icon:siap?Icons.sync_rounded:Icons.cloud_download_rounded,
@@ -66,20 +61,6 @@ class _State extends State<SyncSectionPengaturan>{
     ]);
   }
 
-  Widget _garduMenu()=>Material(
-    color:const Color(0xFFEFF4FF),borderRadius:BorderRadius.circular(16),
-    child:InkWell(borderRadius:BorderRadius.circular(16),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>GarduScreen(sesi:widget.sesi))),
-      child:Padding(padding:const EdgeInsets.all(16),child:Row(children:[
-        Container(width:44,height:44,decoration:BoxDecoration(color:AppColors.navy700,borderRadius:BorderRadius.circular(12)),
-          child:const Icon(Icons.electrical_services_rounded,color:Colors.white)),
-        const SizedBox(width:13),
-        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-          const Text('Gardu',style:TextStyle(fontSize:17,fontWeight:FontWeight.w900,color:Color(0xFF172554))),
-          Text(gardu.isEmpty?'Lihat dan edit Master Gardu lokal':'${gardu.length} perubahan belum disinkronkan',
-            style:TextStyle(fontSize:12,color:gardu.isEmpty?const Color(0xFF64748B):const Color(0xFFB45309),fontWeight:FontWeight.w600)),
-        ])),const Icon(Icons.arrow_forward_rounded,color:AppColors.navy700),
-      ])),
-    ));
 
   Widget _tile({required IconData icon,required String title,required String subtitle,required Color color,required bool busy,required VoidCallback onTap})=>
     Card(elevation:0,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12),side:BorderSide(color:color.withOpacity(.25))),

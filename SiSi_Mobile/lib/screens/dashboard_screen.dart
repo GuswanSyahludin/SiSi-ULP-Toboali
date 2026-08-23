@@ -10,6 +10,7 @@ import '../services/api_service.dart';
 import '../db/repositories/master_repository.dart';
 import '../widgets/sync_section_pengaturan.dart';
 import 'laporan_harian_screen.dart';
+import 'gardu_screen.dart';
 import 'login_screen.dart';
 import 'laporan_row_screen.dart';
 import 'laporan_hartek_screen.dart';
@@ -143,9 +144,14 @@ class _DashboardScreenState extends State<DashboardScreen>
     return role == 'super user' || role == 'admin';
   }
 
+  bool get _bolehGardu => GarduScreen.boleh(widget.sesi);
+
   List<String> get currentMenuItems {
     if (_isSuperUser) {
-      return ['Tim', 'Teknik', 'Pengaturan'];
+      return ['Tim', 'Gardu', 'Teknik', 'Pengaturan'];
+    }
+    if (_bolehGardu) {
+      return ['Tim', 'Gardu', 'Pengaturan'];
     }
     return ['Tim', 'Pengaturan'];
   }
@@ -154,7 +160,15 @@ class _DashboardScreenState extends State<DashboardScreen>
     if (_isSuperUser) {
       return [
         Icons.people_outline_rounded,
+        Icons.electrical_services_outlined,
         Icons.handyman_outlined,
+        Icons.settings_outlined,
+      ];
+    }
+    if (_bolehGardu) {
+      return [
+        Icons.people_outline_rounded,
+        Icons.electrical_services_outlined,
         Icons.settings_outlined,
       ];
     }
@@ -492,26 +506,18 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildTabContent(int index) {
-    if (_isSuperUser) {
-      switch (index) {
-        case 0:
-          return _buildMenuTim();
-        case 1:
-          return _buildMenuTeknik();
-        case 2:
-          return _buildMenuPengaturan();
-        default:
-          return const SizedBox();
-      }
-    } else {
-      switch (index) {
-        case 0:
-          return _buildMenuTim();
-        case 1:
-          return _buildMenuPengaturan();
-        default:
-          return const SizedBox();
-      }
+    final menu = currentMenuItems[index];
+    switch (menu) {
+      case 'Tim':
+        return _buildMenuTim();
+      case 'Gardu':
+        return GarduScreen(sesi: widget.sesi);
+      case 'Teknik':
+        return _buildMenuTeknik();
+      case 'Pengaturan':
+        return _buildMenuPengaturan();
+      default:
+        return const SizedBox();
     }
   }
 
