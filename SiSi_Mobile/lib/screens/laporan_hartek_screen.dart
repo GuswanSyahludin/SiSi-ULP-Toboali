@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../db/repositories/master_repository.dart';
+import '../db/repositories/header_repository.dart';
 import '../theme/app_colors.dart';
+import '../widgets/laporan_header_card.dart';
 
 class LaporanHartekScreen extends StatefulWidget {
   final Map<String, dynamic> sesi;
@@ -13,122 +14,54 @@ class LaporanHartekScreen extends StatefulWidget {
 }
 
 class _LaporanHartekScreenState extends State<LaporanHartekScreen> {
-  final List<Map<String, dynamic>> _laporanList = [];
+  final List<Map<String, dynamic>> _laporan = [];
   bool _loading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _loadLaporan();
+    _load();
   }
 
-  String _namaHari(int weekday) {
-    const list = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
-    return list[(weekday - 1) % 7];
-  }
-
-  String _tanggalHariIni(DateTime d) {
-    const bulan = [
-      '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-    ];
-    return '${d.day.toString().padLeft(2, '0')} ${bulan[d.month]} ${d.year}';
-  }
-
-  Future<void> _loadLaporan() async {
-    setState(() => _loading = true);
-    await Future<void>.delayed(const Duration(milliseconds: 250));
-    if (!mounted) return;
-
+  String get _today {
     final d = DateTime.now();
-    final tglStr = _tanggalHariIni(d);
-    final hariStr = _namaHari(d.weekday);
+    return '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+  }
 
+  Future<void> _load() async {
     setState(() {
-      _laporanList.clear();
-      _laporanList.add({
-        'kodeHeader': 'Draft Lokal',
-        'hari': hariStr,
-        'tanggal': tglStr,
-        'ulp': widget.sesi['ulp'] ?? 'Toboali',
-        'tim': 'Hartek',
-        'subTim': 'Hartek',
-        'petugas': widget.sesi['username'] ?? widget.sesi['nama'] ?? '-',
-        'koordinatAwal': '-2.998123, 106.456123',
-        'koordinatAkhir': '-2.999456, 106.458789',
-        'lokasi': 'Jl. Jend. Sudirman, Toboali',
-        'status': 'DRAFT LOKAL',
-        'objekList': <Map<String, dynamic>>[
-          {
-            'kodePG': 'HAR-GRD.001',
-            'jenisPekerjaan': 'Pemeliharaan Gardu',
-            'penyulang': 'TBL-01',
-            'section': 'Section A',
-            'gardu': 'GT.TBL-012',
-            'daerah': 'Jl. Sudirman',
-            'pekerjaanList': <Map<String, dynamic>>[
-              {
-                'kodePekerjaan': 'PKJ.001',
-                'pekerjaan': 'Penggantian Fuse Cut Out (FCO)',
-                'jumlah': '1',
-                'satuan': 'Set',
-                'materialList': <Map<String, dynamic>>[
-                  {
-                    'material': 'Fuse Cut Out 24kV 100A',
-                    'jumlah': '1',
-                    'satuan': 'Set',
-                    'kepemilikan': 'PLN',
-                  },
-                  {
-                    'material': 'Fuse Link 10A',
-                    'jumlah': '1',
-                    'satuan': 'Pcs',
-                    'kepemilikan': 'PLN',
-                  },
-                ],
-              },
-              {
-                'kodePekerjaan': 'PKJ.002',
-                'pekerjaan': 'Pengukuran Grounding Gardu',
-                'jumlah': '1',
-                'satuan': 'Titik',
-                'materialList': <Map<String, dynamic>>[],
-              },
-            ],
-          },
-          {
-            'kodePG': 'HAR-PNY.001',
-            'jenisPekerjaan': 'Jaringan',
-            'penyulang': 'TBL-02',
-            'section': 'Section B',
-            'gardu': '-',
-            'daerah': 'Sadai',
-            'pekerjaanList': <Map<String, dynamic>>[],
-          },
-        ],
-      });
+      _loading = true;
+      _error = null;
+    });
+    final res = await HeaderRepository().bacaLaporanHarian(
+      token: (widget.sesi['token'] ?? '').toString(),
+      subTim: 'Hartek',
+      tanggal: _today,
+    );
+    if (!mounted) return;
+    final raw = res['success'] == true
+        ? List<dynamic>.from(res['data'] ?? const [])
+        : <dynamic>[];
+    setState(() {
+      _laporan
+        ..clear()
+        ..addAll(raw.map((e) {
+          final item = Map<String, dynamic>.from(e as Map);
+          item.putIfAbsent('objekList', () => <Map<String, dynamic>>[]);
+          return item;
+        }));
+      _error = res['success'] == true ? null : (res['message'] ?? 'Gagal memuat laporan').toString();
       _loading = false;
     });
   }
 
-  void _buatLaporanBaru() {
-    final d = DateTime.now();
-    setState(() {
-      _laporanList.insert(0, {
-        'kodeHeader': 'Draft Lokal',
-        'hari': _namaHari(d.weekday),
-        'tanggal': _tanggalHariIni(d),
-        'ulp': widget.sesi['ulp'] ?? 'Toboali',
-        'tim': 'Hartek',
-        'subTim': 'Hartek',
-        'petugas': widget.sesi['username'] ?? widget.sesi['nama'] ?? '-',
-        'koordinatAwal': '',
-        'koordinatAkhir': '',
-        'lokasi': '',
-        'status': 'DRAFT LOKAL',
-        'objekList': <Map<String, dynamic>>[],
-      });
-    });
+  Future<void> _wa(String text) async {
+    if (text.trim().isEmpty) return;
+    final uri = Uri.parse(
+      'https://api.whatsapp.com/send?text=${Uri.encodeComponent(text)}',
+    );
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   @override
@@ -141,118 +74,108 @@ class _LaporanHartekScreenState extends State<LaporanHartekScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Laporan Harian Hartek', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
-            Text('Tim Hartek • ${widget.sesi['ulp'] ?? 'Toboali'}', style: const TextStyle(fontSize: 12, color: Colors.white70)),
+            const Text(
+              'Laporan Harian Hartek',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+            ),
+            Text(
+              'Hartek • ${widget.sesi['ulp'] ?? 'Toboali'}',
+              style: const TextStyle(fontSize: 12, color: Colors.white70),
+            ),
           ],
         ),
-        actions: [IconButton(onPressed: _loadLaporan, icon: const Icon(Icons.refresh_rounded))],
+        actions: [
+          IconButton(onPressed: _load, icon: const Icon(Icons.refresh_rounded)),
+        ],
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _laporanList.isEmpty
-              ? const Center(child: Text('Belum ada laporan harian Hartek.'))
-              : ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _laporanList.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (_, index) => _buildLaporanCard(_laporanList[index]),
-                ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppColors.navy700,
-        foregroundColor: Colors.white,
-        onPressed: _buatLaporanBaru,
-        child: const Icon(Icons.add_rounded),
-      ),
+      body: _body(),
     );
   }
 
-  Widget _buildLaporanCard(Map<String, dynamic> item) {
-    final objek = (item['objekList'] as List? ?? []);
-    final totalPekerjaan = objek.fold<int>(
-      0,
-      (sum, o) => sum + ((o['pekerjaanList'] as List?)?.length ?? 0),
-    );
-    final isDraft = '${item['status']}'.toUpperCase().contains('DRAFT');
-
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: Color(0xFFE2E8F0)),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(16),
-        title: Text(
-          item['kodeHeader'] ?? 'Draft Lokal',
-          style: const TextStyle(fontWeight: FontWeight.w900, color: AppColors.navy700),
+  Widget _body() {
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_error != null && _laporan.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.cloud_off_rounded, size: 46, color: AppColors.neutral500),
+              const SizedBox(height: 12),
+              Text(_error!, textAlign: TextAlign.center),
+              const SizedBox(height: 14),
+              ElevatedButton.icon(
+                onPressed: _load,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Coba Lagi'),
+              ),
+            ],
+          ),
         ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 4),
+      );
+    }
+    if (_laporan.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(28),
           child: Text(
-            '${item['hari']}, ${item['tanggal']} • ${item['ulp']}\n${objek.length} Objek (Gardu/PNY) • $totalPekerjaan Pekerjaan',
+            'Belum ada laporan Hartek hari ini.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppColors.neutral500),
           ),
         ),
-        isThreeLine: true,
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: isDraft ? Colors.amber.shade50 : Colors.green.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: isDraft ? Colors.amber.shade300 : Colors.green.shade300),
+      );
+    }
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: _laporan.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (_, index) {
+          final item = _laporan[index];
+          final objek = item['objekList'] as List? ?? const [];
+          final totalPekerjaan = objek.fold<int>(
+            0,
+            (sum, o) => sum + ((o['pekerjaanList'] as List?)?.length ?? 0),
+          );
+          return LaporanHeaderCard(
+            item: item,
+            icon: Icons.engineering_rounded,
+            accent: AppColors.amber700,
+            summary: '${objek.length} Objek • $totalPekerjaan Pekerjaan',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => _HartekDetail(sesi: widget.sesi, item: item),
               ),
-              child: Text(
-                item['status'] ?? 'DRAFT LOKAL',
-                style: TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w900,
-                  color: isDraft ? Colors.amber.shade900 : Colors.green.shade900,
-                ),
-              ),
-            ),
-            const SizedBox(height: 4),
-            const Icon(Icons.chevron_right_rounded, color: Color(0xFF64748B)),
-          ],
-        ),
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => _LaporanHartekDetailScreen(
-              sesi: widget.sesi,
-              item: item,
-            ),
-          ),
-        ).then((_) => setState(() {})),
+            ).then((_) => setState(() {})),
+            onWa: () => _wa((item['waText'] ?? '').toString()),
+          );
+        },
       ),
     );
   }
 }
 
-class _LaporanHartekDetailScreen extends StatefulWidget {
+class _HartekDetail extends StatefulWidget {
   final Map<String, dynamic> sesi;
   final Map<String, dynamic> item;
-  const _LaporanHartekDetailScreen({required this.sesi, required this.item});
+  const _HartekDetail({required this.sesi, required this.item});
 
   @override
-  State<_LaporanHartekDetailScreen> createState() => _LaporanHartekDetailScreenState();
+  State<_HartekDetail> createState() => _HartekDetailState();
 }
 
-class _LaporanHartekDetailScreenState extends State<_LaporanHartekDetailScreen> {
-  int tab = 0;
-  List<Map<String, dynamic>> get objekList =>
-      widget.item['objekList'] as List<Map<String, dynamic>>;
-
-  void _openMaps(String koordinat) async {
-    if (koordinat.trim().isEmpty || koordinat == '-') return;
-    final cleanKoor = koordinat.replaceAll(' ', '');
-    final uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$cleanKoor');
-    try {
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      }
-    } catch (_) {}
+class _HartekDetailState extends State<_HartekDetail> {
+  int _tab = 0;
+  List<Map<String, dynamic>> get _objek {
+    final raw = widget.item['objekList'];
+    if (raw is List<Map<String, dynamic>>) return raw;
+    final list = <Map<String, dynamic>>[];
+    widget.item['objekList'] = list;
+    return list;
   }
 
   @override
@@ -265,8 +188,11 @@ class _LaporanHartekDetailScreenState extends State<_LaporanHartekDetailScreen> 
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Detail Laporan Hartek', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-            Text('${widget.item['hari'] ?? ''}, ${widget.item['tanggal'] ?? ''}', style: const TextStyle(fontSize: 12, color: Colors.white70)),
+            const Text('Detail Laporan Hartek', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+            Text(
+              '${widget.item['hari'] ?? ''}, ${widget.item['tanggal'] ?? ''}',
+              style: const TextStyle(fontSize: 12, color: Colors.white70),
+            ),
           ],
         ),
       ),
@@ -274,989 +200,192 @@ class _LaporanHartekDetailScreenState extends State<_LaporanHartekDetailScreen> 
         children: [
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            padding: const EdgeInsets.all(12),
             child: Row(
               children: [
-                Expanded(child: _tabButton('1. Detail Laporan', 0)),
+                Expanded(child: _tabButton('Detail Laporan', 0)),
                 const SizedBox(width: 8),
-                Expanded(child: _tabButton('2. Objek Hartek (${objekList.length})', 1)),
+                Expanded(child: _tabButton('Objek (${_objek.length})', 1)),
               ],
             ),
           ),
-          Expanded(child: tab == 0 ? _detailHeader() : _objekListView()),
+          Expanded(child: _tab == 0 ? _detail() : _objekList()),
         ],
       ),
-      floatingActionButton: tab == 1
+      floatingActionButton: _tab == 1
           ? FloatingActionButton.extended(
+              onPressed: _addObjek,
               backgroundColor: AppColors.navy700,
               foregroundColor: Colors.white,
-              onPressed: _tambahObjek,
               icon: const Icon(Icons.add_rounded),
-              label: const Text('Tambah Objek', style: TextStyle(fontWeight: FontWeight.bold)),
+              label: const Text('Tambah Objek'),
             )
           : null,
     );
   }
 
-  Widget _tabButton(String label, int index) {
-    final active = tab == index;
+  Widget _tabButton(String text, int index) {
+    final active = _tab == index;
     return InkWell(
-      onTap: () => setState(() => tab = index),
+      onTap: () => setState(() => _tab = index),
       borderRadius: BorderRadius.circular(10),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(vertical: 11),
         decoration: BoxDecoration(
-          color: active ? AppColors.navy700 : const Color(0xFFF1F5F9),
+          color: active ? AppColors.navy700 : AppColors.neutral100,
           borderRadius: BorderRadius.circular(10),
         ),
-        alignment: Alignment.center,
         child: Text(
-          label,
+          text,
           style: TextStyle(
             fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: active ? Colors.white : const Color(0xFF64748B),
+            fontWeight: FontWeight.w800,
+            color: active ? Colors.white : AppColors.neutral500,
           ),
         ),
       ),
     );
   }
 
-  Widget _detailHeader() {
-    final koorAwal = '${widget.item['koordinatAwal'] ?? '-'}';
-    final koorAkhir = '${widget.item['koordinatAkhir'] ?? '-'}';
-    final lokasi = '${widget.item['lokasi'] ?? '-'}';
-
-    final totalPekerjaan = objekList.fold<int>(
-      0,
-      (sum, o) => sum + ((o['pekerjaanList'] as List?)?.length ?? 0),
-    );
-
+  Widget _detail() {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _buildSectionCard('1. Informasi Laporan (db_Global_Header)', [
-          _buildDetailRow('Kode Header', widget.item['kodeHeader']),
-          _buildDetailRow('Hari / Tanggal', '${widget.item['hari'] ?? '-'}, ${widget.item['tanggal'] ?? '-'}'),
-          _buildDetailRow('ULP / Tim', '${widget.item['ulp']} / Hartek'),
-          _buildDetailRow('Petugas Input', widget.item['petugas']),
-          _buildDetailRow('Status Data', widget.item['status']),
+        _section('Informasi Laporan', [
+          _row('Kode Header', widget.item['kodeHeader']),
+          _row('ULP', widget.item['ulp']),
+          _row('Tim / Sub-Tim', '${widget.item['tim'] ?? 'Hartek'} / ${widget.item['subTim'] ?? 'Hartek'}'),
+          _row('Petugas', widget.item['inputBy'] ?? widget.item['petugas']),
         ]),
         const SizedBox(height: 12),
-        _buildSectionCard('2. Perjalanan & Lokasi Lapangan', [
-          _buildKoorRow('Koordinat Awal', koorAwal),
-          _buildKoorRow('Koordinat Akhir', koorAkhir),
-          _buildDetailRow('Lokasi Pekerjaan', lokasi.isEmpty ? '-' : lokasi),
-        ]),
-        const SizedBox(height: 12),
-        _buildSectionCard('3. Ringkasan Realisasi Hartek', [
-          _buildDetailRow('Jumlah Objek', '${objekList.length} Objek'),
-          _buildDetailRow('Total Pekerjaan', '$totalPekerjaan Pekerjaan'),
+        _section('Perjalanan Lapangan', [
+          _row('Koordinat Awal', widget.item['koordinatAwal']),
+          _row('Koordinat Akhir', widget.item['koordinatAkhir']),
+          _row('KM Awal / Akhir', '${widget.item['kmAwal'] ?? '-'} / ${widget.item['kmAkhir'] ?? '-'}'),
+          _row('Kendala', widget.item['kendala']),
         ]),
       ],
     );
   }
 
-  Widget _buildSectionCard(String title, List<Widget> children) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0284C7))),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFF1F5F9)),
-            ),
-            child: Column(children: children),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, dynamic value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              value?.toString() ?? '-',
-              textAlign: TextAlign.right,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildKoorRow(String label, String koor) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-          const SizedBox(width: 8),
-          InkWell(
-            onTap: () => _openMaps(koor),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.location_on_rounded, size: 14, color: Color(0xFFEF4444)),
-                const SizedBox(width: 2),
-                Text(
-                  koor,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF0284C7),
-                    decoration: TextDecoration.underline,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _objekListView() {
-    if (objekList.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            'Belum ada objek gardu/penyulang. Tekan tombol + Tambah Objek.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
-          ),
+  Widget _section(String title, List<Widget> children) => Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.neutral200),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title.toUpperCase(), style: const TextStyle(fontSize: 10, letterSpacing: 1, fontWeight: FontWeight.w900, color: AppColors.cyan600)),
+            const SizedBox(height: 8),
+            ...children,
+          ],
         ),
       );
-    }
 
+  Widget _row(String label, dynamic value) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 5),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(width: 125, child: Text(label, style: const TextStyle(fontSize: 12, color: AppColors.neutral500))),
+            Expanded(child: Text((value ?? '-').toString().trim().isEmpty ? '-' : value.toString(), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800))),
+          ],
+        ),
+      );
+
+  Widget _objekList() {
+    if (_objek.isEmpty) {
+      return const Center(child: Text('Belum ada objek Hartek.', style: TextStyle(color: AppColors.neutral500)));
+    }
     return ListView.separated(
       padding: const EdgeInsets.all(16),
-      itemCount: objekList.length,
+      itemCount: _objek.length,
       separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (_, index) {
-        final o = objekList[index];
-        final peks = (o['pekerjaanList'] as List? ?? []);
-        final isGardu = (o['gardu'] ?? '-').toString() != '-';
-
-        return InkWell(
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => _HartekPekerjaanScreen(
-                sesi: widget.sesi,
-                objek: o,
-                onUpdated: () => setState(() {}),
-              ),
+      itemBuilder: (_, i) {
+        final o = _objek[i];
+        final pekerjaan = o['pekerjaanList'] as List? ?? const [];
+        return Material(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          child: ListTile(
+            contentPadding: const EdgeInsets.all(14),
+            leading: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(color: AppColors.amber600.withValues(alpha: .12), borderRadius: BorderRadius.circular(11)),
+              child: const Icon(Icons.home_repair_service_rounded, color: AppColors.amber700),
             ),
-          ).then((_) => setState(() {})),
-          borderRadius: BorderRadius.circular(14),
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE0F2FE),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Center(
-                    child: Text(
-                      '${index + 1}',
-                      style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0284C7)),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        isGardu ? 'Gardu ${o['gardu']}' : 'Penyulang ${o['penyulang']}',
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${o['penyulang']} • ${o['section']} • ${o['jenisPekerjaan']}',
-                        style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${peks.length} Pekerjaan Tercatat',
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF059669)),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.chevron_right_rounded, color: Color(0xFF94A3B8)),
-              ],
-            ),
+            title: Text((o['gardu'] ?? o['penyulang'] ?? 'Objek Hartek').toString(), style: const TextStyle(fontWeight: FontWeight.w900)),
+            subtitle: Text('${o['jenisPekerjaan'] ?? '-'} • ${pekerjaan.length} pekerjaan'),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => _PekerjaanList(objek: o))).then((_) => setState(() {})),
           ),
         );
       },
     );
   }
 
-  Future<void> _tambahObjek() async {
-    final r = await showModalBottomSheet<Map<String, dynamic>>(
+  Future<void> _addObjek() async {
+    final name = TextEditingController();
+    final result = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const _ObjekPGSheet(),
+      builder: (context) => Padding(
+        padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: name, decoration: const InputDecoration(labelText: 'Nomor Gardu / Penyulang')),
+            const SizedBox(height: 14),
+            SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () => Navigator.pop(context, name.text.trim()), child: const Text('Simpan Objek'))),
+          ],
+        ),
+      ),
     );
-    if (r != null) {
-      setState(() => objekList.add(r));
+    if (result != null && result.isNotEmpty) {
+      setState(() => _objek.add({'gardu': result, 'jenisPekerjaan': 'Pemeliharaan Gardu', 'pekerjaanList': <Map<String, dynamic>>[]}));
     }
   }
 }
 
-class _ObjekPGSheet extends StatefulWidget {
-  const _ObjekPGSheet();
-
-  @override
-  State<_ObjekPGSheet> createState() => _ObjekPGSheetState();
-}
-
-class _ObjekPGSheetState extends State<_ObjekPGSheet> {
-  String _jenisPekerjaan = 'Pemeliharaan Gardu';
-  String? _selectedPenyulang;
-  String? _selectedSection;
-  final _garduCtrl = TextEditingController();
-  final _daerahCtrl = TextEditingController();
-
-  List<String> _listPenyulang = [];
-  Map<String, List<String>> _sectionMap = {};
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadData();
-  }
-
-  Future<void> _loadData() async {
-    try {
-      final repo = MasterRepository();
-      final pList = await repo.daftarPenyulang();
-      final sMap = await repo.sectionByPenyulang();
-      if (pList.isNotEmpty) {
-        if (!mounted) return;
-        setState(() {
-          _listPenyulang = pList;
-          _selectedPenyulang = pList.first;
-          _sectionMap = sMap;
-          _selectedSection = (sMap[_selectedPenyulang] ?? ['Section A']).first;
-          _loading = false;
-        });
-        return;
-      }
-    } catch (_) {}
-
-    if (!mounted) return;
-    setState(() {
-      _listPenyulang = ['TBL-01', 'TBL-02', 'TBL-03', 'TBL-04'];
-      _selectedPenyulang = _listPenyulang.first;
-      _selectedSection = 'Section A';
-      _loading = false;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isGardu = _jenisPekerjaan.toLowerCase() != 'jaringan';
-
-    return Container(
-      padding: EdgeInsets.only(
-        top: 16,
-        left: 20,
-        right: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
-              ),
-            ),
-            const Text('Tambah Objek (db_Hartek_PenyulangGardu)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.navy700)),
-            const Divider(height: 20),
-            DropdownButtonFormField<String>(
-              value: _jenisPekerjaan,
-              decoration: InputDecoration(
-                labelText: 'Jenis Objek Pekerjaan',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              ),
-              items: ['Pemeliharaan Gardu', 'Jaringan', 'Non - Teknik']
-                  .map((j) => DropdownMenuItem(value: j, child: Text(j)))
-                  .toList(),
-              onChanged: (val) => setState(() => _jenisPekerjaan = val!),
-            ),
-            const SizedBox(height: 10),
-            if (isGardu) ...[
-              TextField(
-                controller: _garduCtrl,
-                decoration: const InputDecoration(labelText: 'Nomor Gardu', hintText: 'Contoh: GT.TBL-012'),
-              ),
-              const SizedBox(height: 10),
-            ],
-            if (_loading)
-              const Padding(padding: EdgeInsets.all(12), child: Center(child: CircularProgressIndicator()))
-            else ...[
-              DropdownButtonFormField<String>(
-                value: _selectedPenyulang,
-                decoration: InputDecoration(
-                  labelText: 'Penyulang',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                ),
-                items: _listPenyulang.map((p) => DropdownMenuItem(value: p, child: Text(p))).toList(),
-                onChanged: (val) {
-                  setState(() {
-                    _selectedPenyulang = val;
-                    final secs = _sectionMap[val] ?? ['Section A'];
-                    _selectedSection = secs.first;
-                  });
-                },
-              ),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                value: _selectedSection,
-                decoration: InputDecoration(
-                  labelText: 'Section',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                ),
-                items: (_sectionMap[_selectedPenyulang] ?? ['Section A', 'Section B'])
-                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                    .toList(),
-                onChanged: (val) => setState(() => _selectedSection = val),
-              ),
-            ],
-            const SizedBox(height: 10),
-            TextField(
-              controller: _daerahCtrl,
-              decoration: const InputDecoration(labelText: 'Daerah / Lokasi', hintText: 'Contoh: Jl. Sudirman'),
-            ),
-            const SizedBox(height: 18),
-            SizedBox(
-              width: double.infinity,
-              height: 46,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.navy700,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                onPressed: () {
-                  Navigator.pop(context, {
-                    'jenisPekerjaan': _jenisPekerjaan,
-                    'gardu': isGardu && _garduCtrl.text.trim().isNotEmpty ? _garduCtrl.text.trim() : '-',
-                    'penyulang': _selectedPenyulang ?? 'TBL-01',
-                    'section': _selectedSection ?? 'Section A',
-                    'daerah': _daerahCtrl.text.trim(),
-                    'pekerjaanList': <Map<String, dynamic>>[],
-                  });
-                },
-                child: const Text('Simpan Objek', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HartekPekerjaanScreen extends StatefulWidget {
-  final Map<String, dynamic> sesi;
+class _PekerjaanList extends StatefulWidget {
   final Map<String, dynamic> objek;
-  final VoidCallback onUpdated;
-
-  const _HartekPekerjaanScreen({
-    required this.sesi,
-    required this.objek,
-    required this.onUpdated,
-  });
-
+  const _PekerjaanList({required this.objek});
   @override
-  State<_HartekPekerjaanScreen> createState() => _HartekPekerjaanScreenState();
+  State<_PekerjaanList> createState() => _PekerjaanListState();
 }
 
-class _HartekPekerjaanScreenState extends State<_HartekPekerjaanScreen> {
-  List<Map<String, dynamic>> get pekerjaanList =>
-      widget.objek['pekerjaanList'] as List<Map<String, dynamic>>;
-
-  @override
-  Widget build(BuildContext context) {
-    final isGardu = (widget.objek['gardu'] ?? '-').toString() != '-';
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF6F8FC),
-      appBar: AppBar(
-        backgroundColor: AppColors.navy700,
-        foregroundColor: Colors.white,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(isGardu ? 'Gardu ${widget.objek['gardu']}' : 'Penyulang ${widget.objek['penyulang']}', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-            Text('${widget.objek['penyulang']} • ${widget.objek['section']}', style: const TextStyle(fontSize: 12, color: Colors.white70)),
-          ],
-        ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Informasi Objek Hartek', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0284C7))),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFF1F5F9)),
-                  ),
-                  child: Column(
-                    children: [
-                      _row('Jenis Objek', widget.objek['jenisPekerjaan']),
-                      if (isGardu) _row('Nomor Gardu', widget.objek['gardu']),
-                      _row('Penyulang', widget.objek['penyulang']),
-                      _row('Section', widget.objek['section']),
-                      _row('Daerah', widget.objek['daerah']),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Daftar Pekerjaan (${pekerjaanList.length})', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-              Text('${pekerjaanList.length} Item', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if (pekerjaanList.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: const Center(
-                child: Text(
-                  'Belum ada pekerjaan pada objek ini.\nTekan + Tambah Pekerjaan di bawah.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
-                ),
-              ),
-            ),
-          ...pekerjaanList.asMap().entries.map((e) {
-            final pk = e.value;
-            final mats = (pk['materialList'] as List? ?? []);
-
-            return InkWell(
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => _HartekMaterialScreen(
-                    pekerjaan: pk,
-                    onUpdated: () => setState(() {}),
-                  ),
-                ),
-              ).then((_) => setState(() {})),
-              borderRadius: BorderRadius.circular(14),
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFEF3C7),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        '${e.key + 1}',
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFD97706), fontSize: 12),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            pk['pekerjaan'] ?? '-',
-                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Volume: ${pk['jumlah']} ${pk['satuan']}',
-                            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                          ),
-                          const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              '${mats.length} Material Digunakan',
-                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF0284C7)),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Icon(Icons.chevron_right_rounded, color: Color(0xFF94A3B8)),
-                  ],
-                ),
-              ),
-            );
-          }),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.navy700,
-        foregroundColor: Colors.white,
-        onPressed: _tambahPekerjaan,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Tambah Pekerjaan', style: TextStyle(fontWeight: FontWeight.bold)),
-      ),
-    );
+class _PekerjaanListState extends State<_PekerjaanList> {
+  List<Map<String, dynamic>> get list {
+    final raw = widget.objek['pekerjaanList'];
+    if (raw is List<Map<String, dynamic>>) return raw;
+    final value = <Map<String, dynamic>>[];
+    widget.objek['pekerjaanList'] = value;
+    return value;
   }
 
-  Widget _row(String label, dynamic value) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-            Text('${value ?? '-'}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-          ],
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('Pekerjaan Hartek')),
+        body: list.isEmpty
+            ? const Center(child: Text('Belum ada pekerjaan.'))
+            : ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: list.length,
+                itemBuilder: (_, i) => Card(
+                  child: ListTile(
+                    title: Text((list[i]['pekerjaan'] ?? '-').toString()),
+                    subtitle: Text('${(list[i]['materialList'] as List?)?.length ?? 0} material'),
+                  ),
+                ),
+              ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () => setState(() => list.add({'pekerjaan': 'Pekerjaan Baru', 'materialList': <Map<String, dynamic>>[]})),
+          child: const Icon(Icons.add),
         ),
       );
-
-  Future<void> _tambahPekerjaan() async {
-    final res = await showModalBottomSheet<Map<String, dynamic>>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const _PekerjaanSheet(),
-    );
-    if (res != null) {
-      setState(() {
-        pekerjaanList.add(res);
-        widget.onUpdated();
-      });
-    }
-  }
-}
-
-class _PekerjaanSheet extends StatefulWidget {
-  const _PekerjaanSheet();
-
-  @override
-  State<_PekerjaanSheet> createState() => _PekerjaanSheetState();
-}
-
-class _PekerjaanSheetState extends State<_PekerjaanSheet> {
-  final _pekerjaanCtrl = TextEditingController();
-  final _jumlahCtrl = TextEditingController(text: '1');
-  String _satuan = 'Set';
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.only(
-        top: 16,
-        left: 20,
-        right: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
-              ),
-            ),
-            const Text('Tambah Pekerjaan (db_Hartek_Pekerjaan)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.navy700)),
-            const Divider(height: 20),
-            TextField(
-              controller: _pekerjaanCtrl,
-              decoration: const InputDecoration(labelText: 'Nama Pekerjaan', hintText: 'Contoh: Penggantian FCO'),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  flex: 6,
-                  child: TextField(
-                    controller: _jumlahCtrl,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Jumlah'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  flex: 4,
-                  child: DropdownButtonFormField<String>(
-                    value: _satuan,
-                    decoration: InputDecoration(
-                      labelText: 'Satuan',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    ),
-                    items: ['Set', 'Pcs', 'Batang', 'Titik', 'Gawang', 'Unit']
-                        .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                        .toList(),
-                    onChanged: (val) => setState(() => _satuan = val!),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            SizedBox(
-              width: double.infinity,
-              height: 46,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.navy700,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                onPressed: () {
-                  if (_pekerjaanCtrl.text.trim().isEmpty) return;
-                  Navigator.pop(context, {
-                    'pekerjaan': _pekerjaanCtrl.text.trim(),
-                    'jumlah': _jumlahCtrl.text.trim(),
-                    'satuan': _satuan,
-                    'materialList': <Map<String, dynamic>>[],
-                  });
-                },
-                child: const Text('Simpan Pekerjaan', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HartekMaterialScreen extends StatefulWidget {
-  final Map<String, dynamic> pekerjaan;
-  final VoidCallback onUpdated;
-
-  const _HartekMaterialScreen({
-    required this.pekerjaan,
-    required this.onUpdated,
-  });
-
-  @override
-  State<_HartekMaterialScreen> createState() => _HartekMaterialScreenState();
-}
-
-class _HartekMaterialScreenState extends State<_HartekMaterialScreen> {
-  List<Map<String, dynamic>> get materialList =>
-      widget.pekerjaan['materialList'] as List<Map<String, dynamic>>;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF6F8FC),
-      appBar: AppBar(
-        backgroundColor: AppColors.navy700,
-        foregroundColor: Colors.white,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(widget.pekerjaan['pekerjaan'] ?? 'Material', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const Text('db_Hartek_Material', style: TextStyle(fontSize: 12, color: Colors.white70)),
-          ],
-        ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Material Digunakan (${materialList.length})', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-              Text('${materialList.length} Item', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if (materialList.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: const Center(
-                child: Text(
-                  'Belum ada material untuk pekerjaan ini.\nTekan + Tambah Material di bawah.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
-                ),
-              ),
-            ),
-          ...materialList.map((m) {
-            return Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          m['material'] ?? '-',
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Kepemilikan: ${m['kepemilikan']}',
-                          style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE0F2FE),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '${m['jumlah']} ${m['satuan']}',
-                      style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0284C7), fontSize: 12),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.navy700,
-        foregroundColor: Colors.white,
-        onPressed: _tambahMaterial,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Tambah Material', style: TextStyle(fontWeight: FontWeight.bold)),
-      ),
-    );
-  }
-
-  Future<void> _tambahMaterial() async {
-    final res = await showModalBottomSheet<Map<String, dynamic>>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const _MaterialSheet(),
-    );
-    if (res != null) {
-      setState(() {
-        materialList.add(res);
-        widget.onUpdated();
-      });
-    }
-  }
-}
-
-class _MaterialSheet extends StatefulWidget {
-  const _MaterialSheet();
-
-  @override
-  State<_MaterialSheet> createState() => _MaterialSheetState();
-}
-
-class _MaterialSheetState extends State<_MaterialSheet> {
-  final _materialCtrl = TextEditingController();
-  final _jumlahCtrl = TextEditingController(text: '1');
-  String _satuan = 'Pcs';
-  String _kepemilikan = 'PLN';
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.only(
-        top: 16,
-        left: 20,
-        right: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
-              ),
-            ),
-            const Text('Tambah Material (db_Hartek_Material)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.navy700)),
-            const Divider(height: 20),
-            TextField(
-              controller: _materialCtrl,
-              decoration: const InputDecoration(labelText: 'Nama Material', hintText: 'Contoh: Fuse Cut Out 24kV'),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  flex: 6,
-                  child: TextField(
-                    controller: _jumlahCtrl,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Jumlah'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  flex: 4,
-                  child: DropdownButtonFormField<String>(
-                    value: _satuan,
-                    decoration: InputDecoration(
-                      labelText: 'Satuan',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    ),
-                    items: ['Pcs', 'Set', 'Meter', 'Batang', 'Unit']
-                        .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                        .toList(),
-                    onChanged: (val) => setState(() => _satuan = val!),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            DropdownButtonFormField<String>(
-              value: _kepemilikan,
-              decoration: InputDecoration(
-                labelText: 'Kepemilikan Material',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              ),
-              items: ['PLN', 'Pelanggan']
-                  .map((k) => DropdownMenuItem(value: k, child: Text(k)))
-                  .toList(),
-              onChanged: (val) => setState(() => _kepemilikan = val!),
-            ),
-            const SizedBox(height: 18),
-            SizedBox(
-              width: double.infinity,
-              height: 46,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.navy700,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                onPressed: () {
-                  if (_materialCtrl.text.trim().isEmpty) return;
-                  Navigator.pop(context, {
-                    'material': _materialCtrl.text.trim(),
-                    'jumlah': _jumlahCtrl.text.trim(),
-                    'satuan': _satuan,
-                    'kepemilikan': _kepemilikan,
-                  });
-                },
-                child: const Text('Simpan Material', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
