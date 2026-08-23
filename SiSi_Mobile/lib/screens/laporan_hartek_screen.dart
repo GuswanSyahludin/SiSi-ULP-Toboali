@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../db/repositories/header_repository.dart';
 import '../theme/app_colors.dart';
 import '../widgets/laporan_header_card.dart';
+import 'form_header_laporan_screen.dart';
 
 class LaporanHartekScreen extends StatefulWidget {
   final Map<String, dynamic> sesi;
@@ -201,9 +201,9 @@ class _LaporanHartekScreenState extends State<LaporanHartekScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => _FormInputHartekHeaderScreen(
+        builder: (_) => FormHeaderLaporanScreen(
           sesi: widget.sesi,
-          judulMenu: 'Tambah Laporan Harian',
+          judulMenu: 'Tambah Laporan Harian Hartek',
           subTim: 'Hartek',
           onSimpan: (dataBaru) {
             setState(() {
@@ -214,163 +214,6 @@ class _LaporanHartekScreenState extends State<LaporanHartekScreen> {
       ),
     );
   }
-}
-
-class _FormInputHartekHeaderScreen extends StatefulWidget {
-  final Map<String, dynamic> sesi;
-  final String judulMenu;
-  final String subTim;
-  final Function(Map<String, dynamic>) onSimpan;
-
-  const _FormInputHartekHeaderScreen({
-    required this.sesi,
-    required this.judulMenu,
-    required this.subTim,
-    required this.onSimpan,
-  });
-
-  @override
-  State<_FormInputHartekHeaderScreen> createState() =>
-      _FormInputHartekHeaderScreenState();
-}
-
-class _FormInputHartekHeaderScreenState
-    extends State<_FormInputHartekHeaderScreen> {
-  final a = TextEditingController();
-  final b = TextEditingController();
-  final ka = TextEditingController();
-  final kb = TextEditingController();
-  final kendala = TextEditingController();
-  bool busy = false;
-
-  Future<void> _gps(TextEditingController c) async {
-    var p = await Geolocator.checkPermission();
-    if (p == LocationPermission.denied)
-      p = await Geolocator.requestPermission();
-    final x = await Geolocator.getCurrentPosition();
-    c.text =
-        '${x.latitude.toStringAsFixed(6)}, ${x.longitude.toStringAsFixed(6)}';
-    setState(() {});
-  }
-
-  void _save() {
-    if (a.text.trim().isEmpty || b.text.trim().isEmpty) return;
-    setState(() => busy = true);
-    final d = DateTime.now();
-    final today =
-        '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-    final hari = [
-      'Minggu',
-      'Senin',
-      'Selasa',
-      'Rabu',
-      'Kamis',
-      'Jumat',
-      'Sabtu'
-    ][d.weekday % 7];
-
-    final data = {
-      'kodeHeader':
-          'HAR-DRAFT-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}',
-      'hari': hari,
-      'tanggal': today,
-      'ulp': widget.sesi['ulp'] ?? 'Toboali',
-      'subTim': widget.subTim,
-      'inputBy': widget.sesi['username'] ?? 'Petugas',
-      'koordinatAwal': a.text.trim(),
-      'koordinatAkhir': b.text.trim(),
-      'kmAwal': ka.text.trim(),
-      'kmAkhir': kb.text.trim(),
-      'kendala': kendala.text.trim(),
-      'objekList': <Map<String, dynamic>>[],
-    };
-
-    widget.onSimpan(data);
-    if (mounted) Navigator.pop(context);
-  }
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-        backgroundColor: const Color(0xFFFAF9F6),
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          foregroundColor: Colors.black87,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: Text(
-            widget.judulMenu,
-            style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87),
-          ),
-        ),
-        body: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            _field('Koordinat Awal', a),
-            _field('Koordinat Akhir', b),
-            _field('KM Awal', ka),
-            _field('KM Akhir', kb),
-            _field('Kendala', kendala, lines: 4),
-          ],
-        ),
-        bottomNavigationBar: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: SizedBox(
-              height: 48,
-              child: ElevatedButton(
-                onPressed: busy ? null : _save,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF3F0F9),
-                  foregroundColor: const Color(0xFF6B46C1),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                ),
-                child: Text(
-                  busy ? 'Menyimpan...' : 'Simpan Lokal',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-
-  Widget _field(String l, TextEditingController c, {int lines = 1}) => Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: TextField(
-          controller: c,
-          maxLines: lines,
-          decoration: InputDecoration(
-            labelText: l,
-            labelStyle: const TextStyle(color: Colors.black54, fontSize: 13),
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
-            ),
-            suffixIcon: l.contains('Koordinat')
-                ? IconButton(
-                    onPressed: () => _gps(c),
-                    icon: const Icon(Icons.my_location_rounded,
-                        color: Colors.black54),
-                  )
-                : null,
-          ),
-        ),
-      );
 }
 
 class _HartekDetail extends StatefulWidget {
