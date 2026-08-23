@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:image_picker/image_picker.dart';
 import '../db/app_database.dart';
 import '../db/repositories/inspeksi_gardu_repository.dart';
 import '../theme/app_colors.dart';
@@ -103,4 +102,76 @@ class _FormState extends State<InsGarduForm> {
 
 class InsGarduDetail extends StatefulWidget { final InsGarduHeader header; const InsGarduDetail({super.key,required this.header}); @override State<InsGarduDetail> createState()=>_DetailState(); }
 class _DetailState extends State<InsGarduDetail> { final repo=InspeksiGarduRepository(); @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Detail Laporan Harian')),body:FutureBuilder<List<InsGarduRealisasi>>(future:repo.garduLaporan(widget.header.localId),builder:(context,s){final gs=s.data??[];return ListView(padding:const EdgeInsets.all(16),children:[...gs.map((g)=>Card(child:ListTile(title:Text(g.nomorGardu),subtitle:Text(g.tier.isEmpty?'Belum diisi':g.tier),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>InsGarduTemuanEditor(g:g))).then((_){if(mounted)setState((){});}))) ]);})); }
-class InsGarduTemuanEditor extends StatefulWidget { final InsGarduRealisasi g; const InsGarduTemuanEditor({super.key,required this.g}); @override State<InsGarduTemuanEditor> createState()=>_TemuanState(); }
+
+class InsGarduTemuanEditor extends StatefulWidget {
+  final InsGarduRealisasi g;
+  const InsGarduTemuanEditor({super.key, required this.g});
+  @override
+  State<InsGarduTemuanEditor> createState() => _TemuanState();
+}
+
+class _TemuanState extends State<InsGarduTemuanEditor> {
+  final repo = InspeksiGarduRepository();
+  String tier = 'Tier 1';
+  List<ListTemuan> options = [];
+  final Map<String, Map<String, String>> selected = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    options = await repo.pilihan(tier);
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _save() async {
+    final rows = selected.entries
+        .map((e) => {'tier': tier, 'temuan': e.key, ...e.value})
+        .toList();
+    await repo.setGardu(gardu: widget.g, tier: tier, temuan: rows);
+    if (mounted) Navigator.pop(context, true);
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(
+          title: Text(widget.g.nomorGardu),
+          actions: [
+            TextButton(
+              onPressed: _save,
+              child: const Text('SIMPAN'),
+            )
+          ],
+        ),
+        body: ListView(
+          children: [
+            DropdownButtonFormField<String>(
+              value: tier,
+              items: ['Tier 1', 'Tier 2', 'Tier 1 & Tier 2']
+                  .map((x) => DropdownMenuItem(value: x, child: Text(x)))
+                  .toList(),
+              onChanged: (v) {
+                if (v != null) {
+                  tier = v;
+                  _load();
+                }
+              },
+            ),
+            ...options.map((o) => CheckboxListTile(
+                  value: selected.containsKey(o.temuan),
+                  title: Text(o.temuan),
+                  onChanged: (v) => setState(() {
+                    if (v == true) {
+                      selected[o.temuan] = {};
+                    } else {
+                      selected.remove(o.temuan);
+                    }
+                  }),
+                )),
+          ],
+        ),
+      );
+}
