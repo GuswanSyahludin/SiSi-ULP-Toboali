@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/physics.dart'; // SpringSimulation & SpringDescription (animasi pegas navbar)
+import 'package:flutter/physics.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_colors.dart';
 import '../services/api_service.dart';
@@ -11,13 +11,14 @@ import '../db/repositories/master_repository.dart';
 import '../widgets/sync_section_pengaturan.dart';
 import 'laporan_harian_screen.dart';
 import 'login_screen.dart';
-import 'eksekusi_row_screen.dart';
+import 'laporan_row_screen.dart';
+import 'laporan_hartek_screen.dart';
+import 'input_temuan_teknik_screen.dart';
 import 'verifikasi_p0_screen.dart';
 import 'laporan_up3_uiw_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final Map<String, dynamic> sesi;
-  // Kontrol background foto global: true = sembunyikan bg (dipakai saat loading.gif aktif)
   static final ValueNotifier<bool> loadingBg = ValueNotifier(false);
   const DashboardScreen({super.key, required this.sesi});
 
@@ -30,9 +31,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   int selectedIndex = -1;
   int previousIndex = -1;
   late AnimationController _bubbleController;
-  // Transisi memakai simulasi pegas (spring) — controller langsung dipakai sbg nilai animasi
 
-  // Status koneksi untuk indikator Online/Offline di navbar
   bool _isOnline = true;
   Timer? _onlineTimer;
 
@@ -72,10 +71,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void initState() {
     super.initState();
-    _bubbleController = AnimationController(
-      vsync: this,
-      // duration tidak dipakai — gerakan diatur simulasi pegas (spring)
-    );
+    _bubbleController = AnimationController(vsync: this);
     _cekKoneksi();
     _onlineTimer = Timer.periodic(
       const Duration(seconds: 10),
@@ -126,8 +122,6 @@ class _DashboardScreenState extends State<DashboardScreen>
       _selectedTeamDetail = null;
     });
 
-    // Transisi garis & icon: simulasi pegas (spring) — gerakan mengalir halus
-    // tanpa hentakan; damping 26 ≈ critical (nyaris tanpa pantulan berlebih)
     _bubbleController.animateWith(
       SpringSimulation(
         const SpringDescription(mass: 1.0, stiffness: 200.0, damping: 26.0),
@@ -149,8 +143,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     });
   }
 
-  // ═══ INTERLOCK (Project Dart): menu modul TERKUNCI sebelum master data
-  // di-download (Pengaturan → Download Master Data). Setelah data ada, terbuka.
   Future<void> _bukaMenuTerproteksi(String title, Widget screen) async {
     final siap = await MasterRepository().sudahAdaData();
     if (!mounted) return;
@@ -166,7 +158,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     _openSubScreen(screen);
   }
 
-  // Kembali ke tampilan awal (greeting) — dipakai tombol back di header menu
   void _kembaliKeAwal() {
     setState(() {
       previousIndex = -1;
@@ -176,9 +167,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     });
   }
 
-  // ═══ INDIKATOR ONLINE/OFFLINE (Rev 20 Agu 2026) — cek koneksi tiap 10 dtk via
-  // DNS lookup (tanpa package tambahan); indikator tampil di kanan atas header
-  // (actions tiap AppBar dashboard) sehingga standby di semua menu.
   Future<void> _cekKoneksi() async {
     bool online;
     try {
@@ -241,11 +229,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         return true;
       },
       child: Scaffold(
-        backgroundColor:
-            Colors.transparent, // transparan: foto background terlihat
-        // Foto background 1080x1920 untuk SEMUA screen (opacity 0,5 agar konten
-        // tetap terbaca; inner Scaffold dibuat transparan agar foto terlihat).
-        // Saat loading.gif aktif (loadingBg = true) bg disembunyikan, tampil lagi setelah selesai.
+        backgroundColor: Colors.transparent,
         body: ValueListenableBuilder<bool>(
           valueListenable: DashboardScreen.loadingBg,
           builder: (context, sedangLoading, _) {
@@ -306,8 +290,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
                       final currentX =
                           startX + (targetX - startX) * _bubbleController.value;
-                      const bubbleSize =
-                          56.0; // bubble diperbesar menampung icon aktif 1,7x
+                      const bubbleSize = 56.0;
 
                       return Positioned(
                         left: currentX - (bubbleSize / 2),
@@ -318,7 +301,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                           decoration: BoxDecoration(
                             color: AppColors.navy700,
                             shape: BoxShape.circle,
-                            // Garis 2px mengikuti batas bubble saat bubble berpindah menu
                             border: Border.all(
                               color: AppColors.cyan600,
                               width: 2.0,
@@ -333,7 +315,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                           ),
                           child: Icon(
                             currentMenuIcons[selectedIndex],
-                            // Icon menu aktif = 1,7x icon non-aktif (22)
                             size: 37.4,
                             color: Colors.white,
                           ),
@@ -365,7 +346,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                               Text(
                                 currentMenuItems[index],
                                 style: TextStyle(
-                                  // Label aktif: lebih besar, lebih tebal, lebih terang
                                   fontSize: selectedIndex == index ? 14.5 : 11,
                                   fontWeight: selectedIndex == index
                                       ? FontWeight.w800
@@ -396,8 +376,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   Widget _buildGreetingView() {
     final subTim = widget.sesi['subTim'] ?? 'Tim';
     return Scaffold(
-      backgroundColor:
-          Colors.transparent, // transparan: foto background terlihat
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: AppColors.navy700,
         elevation: 0,
@@ -406,7 +385,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Colors.white)),
-        // Indikator Online/Offline — selalu di kanan atas header
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
@@ -414,7 +392,6 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
         ],
       ),
-      // Greeting dibungkus card putih agar tidak tertimpa foto background
       body: Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -492,8 +469,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         return _buildTeamSubMenuActions(_selectedTeamDetail!);
       }
       return Scaffold(
-        backgroundColor:
-            Colors.transparent, // transparan: foto background terlihat
+        backgroundColor: Colors.transparent,
         appBar: AppBar(
           backgroundColor: AppColors.navy700,
           elevation: 0,
@@ -507,7 +483,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Colors.white)),
-          // Indikator Online/Offline — selalu di kanan atas header
           actions: [
             Padding(
               padding: const EdgeInsets.only(right: 12),
@@ -665,17 +640,12 @@ class _DashboardScreenState extends State<DashboardScreen>
         {
           'title': 'Laporan Harian',
           'icon': Icons.description_outlined,
-          'desc': 'Input & pantau laporan kerja harian'
+          'desc': 'Input & pantau laporan kerja harian dan realisasi ROW'
         },
         {
           'title': 'Tindak Lanjut Temuan',
           'icon': Icons.assignment_turned_in_outlined,
           'desc': 'Eksekusi temuan pohon / raba-raba'
-        },
-        {
-          'title': 'Eksekusi Pekerjaan',
-          'icon': Icons.cut_rounded,
-          'desc': 'Pekerjaan penebangan & pemangkasan'
         },
       ];
     } else if (category.contains('Hartek')) {
@@ -730,8 +700,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
 
     return Scaffold(
-      backgroundColor:
-          Colors.transparent, // transparan: foto background terlihat
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: AppColors.navy700,
         elevation: 0,
@@ -751,7 +720,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Colors.white)),
-        // Indikator Online/Offline — selalu di kanan atas header
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
@@ -848,24 +816,26 @@ class _DashboardScreenState extends State<DashboardScreen>
                     final title = action['title'];
                     Widget? tujuan;
                     if (title == 'Laporan Harian') {
-                      tujuan = LaporanHarianScreen(
-                        sesi: widget.sesi,
-                        targetSubTim: team['name'],
-                        targetTim: team['category'],
-                      );
-                    } else if (title == 'Eksekusi Pekerjaan') {
-                      tujuan = EksekusiRowScreen(
-                        sesi: widget.sesi,
-                        targetSubTim: team['name'],
-                        targetTim: team['category'],
-                      );
+                      if (category.contains('ROW')) {
+                        tujuan = LaporanRowScreen(
+                          sesi: widget.sesi,
+                          targetSubTim: team['name'],
+                        );
+                      } else if (category.contains('Hartek')) {
+                        tujuan = LaporanHartekScreen(sesi: widget.sesi);
+                      } else {
+                        tujuan = LaporanHarianScreen(
+                          sesi: widget.sesi,
+                          targetSubTim: team['name'],
+                          targetTim: team['category'],
+                        );
+                      }
                     }
                     if (tujuan == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('Menu $title segera hadir')),
                       );
                     } else {
-                      // INTERLOCK: cek master data dulu sebelum menu dibuka
                       _bukaMenuTerproteksi(title, tujuan);
                     }
                   },
@@ -876,11 +846,13 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  // ══════════════════════════════════════════
-  // TAB 2: MENU TEKNIK (VERIFIKASI P0 ROUTING)
-  // ══════════════════════════════════════════
   Widget _buildMenuTeknik() {
     final List<Map<String, dynamic>> subTeknik = [
+      {
+        'title': 'Input Temuan',
+        'icon': Icons.add_alert_rounded,
+        'desc': 'Input temuan anomali jaringan & gardu (db_INS_Temuan)',
+      },
       {
         'title': 'Verifikasi P0',
         'icon': Icons.verified_outlined,
@@ -904,8 +876,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     ];
 
     return Scaffold(
-      backgroundColor:
-          Colors.transparent, // transparan: foto background terlihat
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: AppColors.navy700,
         elevation: 0,
@@ -919,7 +890,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Colors.white)),
-        // Indikator Online/Offline — selalu di kanan atas header
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
@@ -973,7 +943,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                   onTap: () {
                     final title = item['title'];
                     Widget? tujuan;
-                    if (title == 'Verifikasi P0') {
+                    if (title == 'Input Temuan') {
+                      tujuan = InputTemuanTeknikScreen(sesi: widget.sesi);
+                    } else if (title == 'Verifikasi P0') {
                       tujuan = VerifikasiP0Screen(sesi: widget.sesi);
                     } else if (title == 'Laporan UP3 / UIW') {
                       tujuan = LaporanUp3UiwScreen(
@@ -986,7 +958,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                         SnackBar(content: Text('Menu $title segera hadir')),
                       );
                     } else {
-                      // INTERLOCK: cek master data dulu sebelum menu dibuka
                       _bukaMenuTerproteksi(title, tujuan);
                     }
                   },
@@ -999,8 +970,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Widget _buildMenuPengaturan() {
     return Scaffold(
-      backgroundColor:
-          Colors.transparent, // transparan: foto background terlihat
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: AppColors.navy700,
         elevation: 0,
@@ -1014,7 +984,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Colors.white)),
-        // Indikator Online/Offline — selalu di kanan atas header
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
@@ -1037,8 +1006,6 @@ class _DashboardScreenState extends State<DashboardScreen>
             ),
           ),
           const SizedBox(height: 16),
-          // ═══ DATA & SERVER LOKAL (Project Dart): card Download Master Data
-          // (penanda ✅/❌ + interlock) + kartu status sync per modul
           SyncSectionPengaturan(sesi: widget.sesi),
           const SizedBox(height: 16),
           Card(
@@ -1058,9 +1025,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  // ═══ LOGOUT (Rev 19 Agu siang) — sebelumnya pushNamedAndRemoveUntil('/login') tapi named route
-  // '/login' tidak pernah didaftarkan di main.dart → error saat diklik. Kini: konfirmasi → hapus sesi
-  // di server → hapus SharedPreferences → kembali ke LoginScreen.
   Future<void> _handleLogout() async {
     final yakin = await showDialog<bool>(
       context: context,
@@ -1087,7 +1051,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
     if (yakin != true || !mounted) return;
 
-    // Hapus sesi di server (abaikan jika gagal — logout lokal tetap jalan)
     try {
       final token = widget.sesi['token'] ?? '';
       if (token.toString().isNotEmpty) {
@@ -1095,7 +1058,6 @@ class _DashboardScreenState extends State<DashboardScreen>
       }
     } catch (_) {}
 
-    // Hapus sesi lokal
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token');
     await prefs.remove('username');
@@ -1118,24 +1080,16 @@ class NavbarWithNotchPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final bgPaint = Paint()..color = Colors.white;
 
-    // Garis 3px DOUBLE kiri→kanan dgn jarak terpisah & RAPI: kedua garis adalah
-    // busur lingkaran yang KONSENTRIS dgn bubble (pusat garis = pusat bubble),
-    // jadi jarak garis ke icon seragam mengelilingi bubble. Garis ATAS lurus di
-    // tepi atas navbar (y=0); garis BAWAH sejajar bottomBaseY px di bawahnya.
-    // Background navbar ikut MENONJOL ke atas memeluk bubble (setengah lingkaran
-    // putih di belakang icon) agar garis atas tidak tampak mengambang/tertinggal.
     final linePaint = Paint()
       ..color = AppColors.navy700
       ..strokeWidth = 3.0
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
-    const bottomBaseY = 14.0; // jarak garis bawah: 14px di bawah garis atas
-    const bubbleCenterY = 11.0; // pusat bubble: top -17 + tinggi 56/2
-    const topGapRadius =
-        40.0; // garis atas + tonjolan background: radius 40 (jarak 12px dari bubble)
-    const bottomGapRadius =
-        38.0; // garis bawah: lingkaran radius 38 (jarak 10px dari bubble)
+    const bottomBaseY = 14.0;
+    const bubbleCenterY = 11.0;
+    const topGapRadius = 40.0;
+    const bottomGapRadius = 38.0;
 
     final path = Path();
     path.moveTo(0, 0);
@@ -1148,19 +1102,16 @@ class NavbarWithNotchPainter extends CustomPainter {
     if (notchCenterX != null) {
       final cx = notchCenterX!;
 
-      // Background: tepi atas navbar NAIK memeluk bubble — setengah lingkaran putih
-      // di belakang icon, sekaligus jadi alas garis atas
-      const dyTop = 0 - bubbleCenterY; // garis lurus di y=0
+      const dyTop = 0 - bubbleCenterY;
       final reachTop =
-          math.sqrt(topGapRadius * topGapRadius - dyTop * dyTop); // ≈38,5
+          math.sqrt(topGapRadius * topGapRadius - dyTop * dyTop);
       path.lineTo(cx - reachTop, 0);
       path.arcToPoint(
         Offset(cx + reachTop, 0),
         radius: const Radius.circular(topGapRadius),
-        clockwise: true, // menonjol ke atas mengikuti busur garis atas
+        clockwise: true,
       );
 
-      // Garis ATAS — busur konsentris tepat di tepi tonjolan background
       final topStart = math.pi - math.atan2(dyTop, reachTop);
       final topEnd = math.atan2(dyTop, reachTop);
       topLinePath.lineTo(cx - reachTop, 0);
@@ -1168,15 +1119,13 @@ class NavbarWithNotchPainter extends CustomPainter {
         Rect.fromCircle(
             center: Offset(cx, bubbleCenterY), radius: topGapRadius),
         topStart,
-        (topEnd - topStart) +
-            2 * math.pi, // sweep searah jarum jam → lewat atas
+        (topEnd - topStart) + 2 * math.pi,
         false,
       );
 
-      // Garis BAWAH — busur konsentris melewati bawah bubble
-      const dyBot = bottomBaseY - bubbleCenterY; // 3
+      const dyBot = bottomBaseY - bubbleCenterY;
       final reachBot =
-          math.sqrt(bottomGapRadius * bottomGapRadius - dyBot * dyBot); // ≈37,9
+          math.sqrt(bottomGapRadius * bottomGapRadius - dyBot * dyBot);
       final botStart = math.pi - math.atan2(dyBot, reachBot);
       final botEnd = math.atan2(dyBot, reachBot);
       bottomLinePath.lineTo(cx - reachBot, bottomBaseY);
@@ -1184,7 +1133,7 @@ class NavbarWithNotchPainter extends CustomPainter {
         Rect.fromCircle(
             center: Offset(cx, bubbleCenterY), radius: bottomGapRadius),
         botStart,
-        botEnd - botStart, // sweep negatif → lewat bawah
+        botEnd - botStart,
         false,
       );
     }
