@@ -881,9 +881,13 @@ class _DashboardScreenState extends State<DashboardScreen>
                         tujuan = LaporanRowScreen(
                           sesi: widget.sesi,
                           targetSubTim: team['name'],
+                          onBack: () => setState(() => _activeSubScreen = null),
                         );
                       } else if (category.contains('Hartek')) {
-                        tujuan = LaporanHartekScreen(sesi: widget.sesi);
+                        tujuan = LaporanHartekScreen(
+                          sesi: widget.sesi,
+                          onBack: () => setState(() => _activeSubScreen = null),
+                        );
                       } else {
                         tujuan = LaporanHarianScreen(
                           sesi: widget.sesi,

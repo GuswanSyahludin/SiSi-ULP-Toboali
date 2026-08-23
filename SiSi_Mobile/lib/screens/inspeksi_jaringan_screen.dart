@@ -8,10 +8,12 @@ import '../widgets/laporan_header_card.dart';
 class InspeksiJaringanScreen extends StatefulWidget {
   final Map<String, dynamic> sesi;
   final String? targetSubTim;
+  final VoidCallback? onBack;
   const InspeksiJaringanScreen({
     super.key,
     required this.sesi,
     this.targetSubTim,
+    this.onBack,
   });
 
   @override
@@ -82,6 +84,17 @@ class _InspeksiJaringanState extends State<InspeksiJaringanScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.navy700,
         foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          tooltip: 'Kembali',
+          onPressed: () {
+            if (widget.onBack != null) {
+              widget.onBack!();
+            } else {
+              Navigator.maybePop(context);
+            }
+          },
+        ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -100,11 +113,37 @@ class _InspeksiJaringanState extends State<InspeksiJaringanScreen> {
         ],
       ),
       body: _body(),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppColors.navy700,
+        foregroundColor: Colors.white,
+        onPressed: _tambahLaporanHeader,
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Tambah Laporan', style: TextStyle(fontWeight: FontWeight.bold)),
+      ),
     );
   }
 
   Widget _body() {
-    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_loading) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              'assets/images/loading.gif',
+              width: 70,
+              height: 70,
+              errorBuilder: (_, __, ___) => const CircularProgressIndicator(color: AppColors.cyan600),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Memuat data inspeksi...',
+              style: TextStyle(fontSize: 13, color: AppColors.neutral500, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+      );
+    }
     if (_error != null && _laporan.isEmpty) {
       return Center(
         child: Padding(
@@ -128,17 +167,33 @@ class _InspeksiJaringanState extends State<InspeksiJaringanScreen> {
       );
     }
     if (_laporan.isEmpty) {
-      return const Center(
-        child: Text(
-          'Belum ada laporan inspeksi hari ini.',
-          style: TextStyle(color: AppColors.neutral500),
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.alt_route_rounded, size: 54, color: AppColors.neutral400),
+            const SizedBox(height: 12),
+            const Text('Belum ada laporan inspeksi hari ini.',
+                style: TextStyle(color: AppColors.neutral500, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.navy700,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: _tambahLaporanHeader,
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Buat Laporan Baru'),
+            ),
+          ],
         ),
       );
     }
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView.separated(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
         itemCount: _laporan.length,
         separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (_, index) {
@@ -162,6 +217,78 @@ class _InspeksiJaringanState extends State<InspeksiJaringanScreen> {
             onWa: () => _wa((item['waText'] ?? '').toString()),
           );
         },
+      ),
+    );
+  }
+
+  Future<void> _tambahLaporanHeader() async {
+    final ka = TextEditingController();
+    final kb = TextEditingController();
+    final koA = TextEditingController();
+    final koB = TextEditingController();
+    final kendala = TextEditingController();
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Tambah Laporan Inspeksi Jaringan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.navy900)),
+              const SizedBox(height: 16),
+              TextField(controller: koA, decoration: const InputDecoration(labelText: 'Koordinat Awal', border: OutlineInputBorder())),
+              const SizedBox(height: 10),
+              TextField(controller: koB, decoration: const InputDecoration(labelText: 'Koordinat Akhir', border: OutlineInputBorder())),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(child: TextField(controller: ka, decoration: const InputDecoration(labelText: 'KM Awal', border: OutlineInputBorder()))),
+                  const SizedBox(width: 10),
+                  Expanded(child: TextField(controller: kb, decoration: const InputDecoration(labelText: 'KM Akhir', border: OutlineInputBorder()))),
+                ],
+              ),
+              const SizedBox(height: 10),
+              TextField(controller: kendala, maxLines: 2, decoration: const InputDecoration(labelText: 'Kendala (Opsional)', border: OutlineInputBorder())),
+              const SizedBox(height: 18),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.navy700,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    setState(() {
+                      _laporan.insert(0, {
+                        'kodeHeader': 'INS-DRAFT-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}',
+                        'hari': ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'][DateTime.now().weekday % 7],
+                        'tanggal': _today,
+                        'ulp': widget.sesi['ulp'] ?? 'Toboali',
+                        'subTim': _subTim,
+                        'inputBy': widget.sesi['username'] ?? 'Petugas',
+                        'koordinatAwal': koA.text.trim(),
+                        'koordinatAkhir': koB.text.trim(),
+                        'kmAwal': ka.text.trim(),
+                        'kmAkhir': kb.text.trim(),
+                        'kendala': kendala.text.trim(),
+                        'realisasi': <Map<String, dynamic>>[],
+                      });
+                    });
+                  },
+                  child: const Text('Simpan Laporan', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -192,6 +319,11 @@ class _InspeksiDetailState extends State<_InspeksiDetail> {
       appBar: AppBar(
         backgroundColor: AppColors.navy700,
         foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          tooltip: 'Kembali',
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -417,8 +549,13 @@ class _TemuanListState extends State<_TemuanList> {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
-            title:
-                Text('Temuan ${widget.realisasi['penyulang'] ?? 'Penyulang'}')),
+          title: Text('Temuan ${widget.realisasi['penyulang'] ?? 'Penyulang'}'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            tooltip: 'Kembali',
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
         body: list.isEmpty
             ? const Center(child: Text('Belum ada temuan.'))
             : ListView.builder(
