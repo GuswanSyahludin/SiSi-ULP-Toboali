@@ -28,6 +28,9 @@ class _FormHeaderLaporanScreenState extends State<FormHeaderLaporanScreen> {
   final _kmAkhirCtrl = TextEditingController();
   final _kendalaCtrl = TextEditingController();
 
+  double? _akurasiAwal;
+  double? _akurasiAkhir;
+
   bool _isGettingGpsAwal = false;
   bool _isGettingGpsAkhir = false;
   bool _busy = false;
@@ -52,8 +55,13 @@ class _FormHeaderLaporanScreenState extends State<FormHeaderLaporanScreen> {
       final val =
           '${pos.latitude.toStringAsFixed(6)}, ${pos.longitude.toStringAsFixed(6)}';
       setState(() {
-        if (awal) _koorAwalCtrl.text = val;
-        else _koorAkhirCtrl.text = val;
+        if (awal) {
+          _koorAwalCtrl.text = val;
+          _akurasiAwal = pos.accuracy;
+        } else {
+          _koorAkhirCtrl.text = val;
+          _akurasiAkhir = pos.accuracy;
+        }
       });
     } catch (e) {
       if (mounted) {
@@ -205,6 +213,7 @@ class _FormHeaderLaporanScreenState extends State<FormHeaderLaporanScreen> {
                 hint: '-2.998412, 106.452819',
                 controller: _koorAwalCtrl,
                 isLoading: _isGettingGpsAwal,
+                accuracy: _akurasiAwal,
                 onGps: () => _ambilGps(true),
               ),
               const SizedBox(height: 12),
@@ -213,16 +222,17 @@ class _FormHeaderLaporanScreenState extends State<FormHeaderLaporanScreen> {
                 hint: 'Tekan tombol GPS untuk rekam titik akhir',
                 controller: _koorAkhirCtrl,
                 isLoading: _isGettingGpsAkhir,
+                accuracy: _akurasiAkhir,
                 onGps: () => _ambilGps(false),
               ),
             ],
           ),
           const SizedBox(height: 14),
 
-          // 3. Section Speedometer KM
+          // 3. Section Stand Mobil (KM)
           _buildCardSection(
-            icon: Icons.speed_rounded,
-            title: 'Speedometer Kendaraan (KM)',
+            icon: Icons.directions_car_rounded,
+            title: 'Stand Mobil (KM)',
             children: [
               Row(
                 children: [
@@ -372,22 +382,27 @@ class _FormHeaderLaporanScreenState extends State<FormHeaderLaporanScreen> {
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: const TextStyle(
-                fontSize: 12, color: AppColors.neutral400, fontWeight: FontWeight.normal),
+                fontSize: 12,
+                color: AppColors.neutral400,
+                fontWeight: FontWeight.normal),
             filled: true,
             fillColor: const Color(0xFFF8FAFC),
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.neutral200, width: 1.5),
+              borderSide:
+                  const BorderSide(color: AppColors.neutral200, width: 1.5),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.neutral200, width: 1.5),
+              borderSide:
+                  const BorderSide(color: AppColors.neutral200, width: 1.5),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.cyan600, width: 1.5),
+              borderSide:
+                  const BorderSide(color: AppColors.cyan600, width: 1.5),
             ),
           ),
         ),
@@ -400,8 +415,39 @@ class _FormHeaderLaporanScreenState extends State<FormHeaderLaporanScreen> {
     required String hint,
     required TextEditingController controller,
     required bool isLoading,
+    double? accuracy,
     required VoidCallback onGps,
   }) {
+    Color chipBgColor = const Color(0xFFF1F5F9);
+    Color chipTextColor = AppColors.neutral500;
+    IconData chipIcon = Icons.gps_not_fixed_rounded;
+    String chipText = 'GPS belum direkam';
+
+    if (accuracy != null) {
+      final accVal = accuracy.toStringAsFixed(1);
+      if (accuracy <= 10) {
+        chipBgColor = const Color(0xFFECFDF5);
+        chipTextColor = AppColors.success700;
+        chipIcon = Icons.gps_fixed_rounded;
+        chipText = 'Akurasi Tinggi (±$accVal m)';
+      } else if (accuracy <= 30) {
+        chipBgColor = const Color(0xFFFFFBEB);
+        chipTextColor = const Color(0xFFB45309);
+        chipIcon = Icons.gps_fixed_rounded;
+        chipText = 'Akurasi Sedang (±$accVal m)';
+      } else {
+        chipBgColor = const Color(0xFFFEF2F2);
+        chipTextColor = AppColors.red600;
+        chipIcon = Icons.gps_not_fixed_rounded;
+        chipText = 'Akurasi Lemah (±$accVal m)';
+      }
+    } else if (controller.text.trim().isNotEmpty) {
+      chipBgColor = const Color(0xFFF1F5F9);
+      chipTextColor = AppColors.neutral500;
+      chipIcon = Icons.location_on_outlined;
+      chipText = 'Koordinat Terisi';
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -420,7 +466,9 @@ class _FormHeaderLaporanScreenState extends State<FormHeaderLaporanScreen> {
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: const TextStyle(
-                fontSize: 12, color: AppColors.neutral400, fontWeight: FontWeight.normal),
+                fontSize: 12,
+                color: AppColors.neutral400,
+                fontWeight: FontWeight.normal),
             filled: true,
             fillColor: const Color(0xFFF8FAFC),
             contentPadding:
@@ -446,16 +494,43 @@ class _FormHeaderLaporanScreenState extends State<FormHeaderLaporanScreen> {
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.neutral200, width: 1.5),
+              borderSide:
+                  const BorderSide(color: AppColors.neutral200, width: 1.5),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.neutral200, width: 1.5),
+              borderSide:
+                  const BorderSide(color: AppColors.neutral200, width: 1.5),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.cyan600, width: 1.5),
+              borderSide:
+                  const BorderSide(color: AppColors.cyan600, width: 1.5),
             ),
+          ),
+        ),
+        const SizedBox(height: 5),
+        // Chip Akurasi Kecil
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: chipBgColor,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(chipIcon, size: 11, color: chipTextColor),
+              const SizedBox(width: 4),
+              Text(
+                chipText,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: chipTextColor,
+                ),
+              ),
+            ],
           ),
         ),
       ],
