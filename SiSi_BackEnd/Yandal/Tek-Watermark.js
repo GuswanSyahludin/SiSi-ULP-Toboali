@@ -1,13 +1,9 @@
 /***** Tek-Watermark.gs — Watermark foto gaya GPS Map Camera (engine Cloud Run + Pillow) *****/
-/* Rev 21 Agu 2026: mini-map kini dibuat di Apps Script pakai layanan bawaan Maps.newStaticMap()
-   (GRATIS — tanpa API key, tanpa tagihan Maps Static API), lalu dikirim ke engine sebagai base64.
-   Apps Script: ambil foto dari Drive + buat mini-map → kirim ke engine → simpan JPEG hasil ke Drive.
-   Penempelan watermark (mini-map, logo, teks) tetap dilakukan engine Cloud Run (cepat, gratis di free tier).
-
-   Rev 22 Agu 2026: file hasil WAJIB ANYONE_WITH_LINK dan URL yang dikembalikan
-   distandardkan ke:
-     https://drive.google.com/thumbnail?id=<FILE_ID>
-   tanpa ukuran. Mobile/web menambahkan &sz=w400 atau &sz=w1600 saat membaca. */
+/* Rev 23 Agu 2026: mini-map dihapus dari payload watermark & pembuatan.
+   Apps Script: ambil foto dari Drive → kirim ke engine → simpan JPEG hasil ke Drive.
+   Penempelan watermark (kartu info & logo) dilakukan engine Cloud Run.
+   
+   Sharing file memakai try-catch agar aman jika domain/organisasi membatasi ANYONE_WITH_LINK. */
 
 // URL engine Cloud Run, mis. "https://wm-engine-xxxx.asia-southeast2.run.app/watermark". WAJIB diisi.
 var WM_ENGINE_URL =
@@ -17,8 +13,8 @@ var WM_ENGINE_URL =
 var WM_ENGINE_SECRET = "sisi-wm-2026";
 
 /**
- * Tempel watermark gaya GPS Map Camera via engine Cloud Run, lalu simpan PNG ke folder tujuan.
- * Elemen ditangani engine (gaya GPS Map Camera, 3 kartu): mini-map kiri atas · kartu info kiri bawah · logo SiSi kanan bawah.
+ * Tempel watermark gaya GPS Map Camera via engine Cloud Run, lalu simpan JPEG ke folder tujuan.
+ * Elemen ditangani engine: kartu info kiri bawah · logo SiSi kanan bawah.
  *
  * @param {string} fileId         File ID foto sumber di Drive
  * @param {string} outputFolderId Folder tujuan hasil
@@ -29,11 +25,10 @@ var WM_ENGINE_SECRET = "sisi-wm-2026";
 function watermarkFoto_(fileId, outputFolderId, info, outName) {
   info = info || {};
   var blob = DriveApp.getFileById(fileId).getBlob();
-  var mapBlob = _miniMapBlob_(info.lat, info.long); // null bila koordinat kosong/gagal → foto tetap diproses
   var payload = {
     image: Utilities.base64Encode(blob.getBytes()),
     mimeType: blob.getContentType() || "image/jpeg",
-    minimap: mapBlob ? Utilities.base64Encode(mapBlob.getBytes()) : "",
+    minimap: "",
     ulp: info.ulp || "",
     tim: info.tim || "",
     petugas: info.petugas || "",
@@ -67,48 +62,21 @@ function watermarkFoto_(fileId, outputFolderId, info, outName) {
     );
   }
   var outNm = outName || "WM_" + fileId + ".jpg";
-  var png = resp.getBlob().setName(outNm);
+  var jpegBlob = resp.getBlob().setName(outNm);
   var folder = DriveApp.getFolderById(outputFolderId);
   var dup = folder.getFilesByName(outNm); // buang hasil lama bernama sama (regen) agar tak menumpuk
   while (dup.hasNext()) dup.next().setTrashed(true);
 
-  var hasil = folder.createFile(png);
-  // Tanpa sharing ini gambar hanya terlihat oleh pemilik Drive, dan blank di
-  // HP petugas / web app yang tidak sedang login dengan akun pemilik.
-  hasil.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  var hasil = folder.createFile(jpegBlob);
+  try {
+    hasil.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  } catch (eShare) {
+    Logger.log("Set sharing ANYONE_WITH_LINK dilewati/gagal: " + eShare.message);
+  }
 
-  // Gunakan helper pusat bila sudah ada; fallback tetap menghasilkan format
-  // yang sama agar file ini aman di-push lebih dulu.
   return typeof urlFotoBaku_ === "function"
     ? urlFotoBaku_(hasil.getId())
     : "https://drive.google.com/thumbnail?id=" + hasil.getId();
-}
-
-/**
- * Buat mini-map via layanan bawaan Apps Script (Maps Service) — GRATIS, tanpa API key.
- * Kuota memakai kuota bawaan Apps Script (BUKAN billing project GCP db-sisi-toboali).
- * @param {string|number} lat Latitude, mis. "-2.984077"
- * @param {string|number} lng Longitude, mis. "106.483088"
- * @return {Blob|null} gambar PNG mini-map, atau null bila koordinat tak valid/gagal
- */
-function _miniMapBlob_(lat, lng) {
-  var la = Number(lat),
-    lo = Number(lng);
-  if (!lat || !lng || !isFinite(la) || !isFinite(lo)) return null;
-  try {
-    var map = Maps.newStaticMap()
-      .setSize(640, 420) // setara 320x210 @ scale=2 (maks layanan bawaan 640px)
-      .setZoom(15)
-      .setMapType(Maps.Type.ROADMAP)
-      .setFormat(Maps.Format.PNG);
-    map.setMarkerStyle(Maps.MarkerSize.MID, Maps.Color.BLUE, null); // label opsional
-    map.addMarker(la, lo);
-    map.setCenter(la, lo);
-    return map.getBlob(); // ambil bytes langsung (JANGAN getMapUrl — itu butuh API key berbayar)
-  } catch (e) {
-    Logger.log("Mini-map gagal (dilewati): " + e.message);
-    return null;
-  }
 }
 
 /** Format hari + tanggal Indonesia, mis. { hari:"Kamis", tanggal:"04 Juni 2026" } */
@@ -156,8 +124,8 @@ function _testWatermark() {
     tim: "Yandal 13",
     petugas: "Abu K, Agung Waskito",
     jam: "15:16",
-    hari: ht.hari, // mis. "Kamis"
-    tanggal: ht.tanggal, // mis. "04 Juni 2026"
+    hari: ht.hari,
+    tanggal: ht.tanggal,
     penyulang: "Penyulang Toboali",
     daerah: "Gadung, Kec. Toboali, Kab. Bangka Selatan",
     koordinat: "2.984077°S, 106.483088°E",
