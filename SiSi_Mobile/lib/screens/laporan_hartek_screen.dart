@@ -245,9 +245,11 @@ class _FormInputHartekHeaderScreenState
 
   Future<void> _gps(TextEditingController c) async {
     var p = await Geolocator.checkPermission();
-    if (p == LocationPermission.denied) p = await Geolocator.requestPermission();
+    if (p == LocationPermission.denied)
+      p = await Geolocator.requestPermission();
     final x = await Geolocator.getCurrentPosition();
-    c.text = '${x.latitude.toStringAsFixed(6)}, ${x.longitude.toStringAsFixed(6)}';
+    c.text =
+        '${x.latitude.toStringAsFixed(6)}, ${x.longitude.toStringAsFixed(6)}';
     setState(() {});
   }
 
@@ -255,11 +257,21 @@ class _FormInputHartekHeaderScreenState
     if (a.text.trim().isEmpty || b.text.trim().isEmpty) return;
     setState(() => busy = true);
     final d = DateTime.now();
-    final today = '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-    final hari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'][d.weekday % 7];
+    final today =
+        '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+    final hari = [
+      'Minggu',
+      'Senin',
+      'Selasa',
+      'Rabu',
+      'Kamis',
+      'Jumat',
+      'Sabtu'
+    ][d.weekday % 7];
 
     final data = {
-      'kodeHeader': 'HAR-DRAFT-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}',
+      'kodeHeader':
+          'HAR-DRAFT-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}',
       'hari': hari,
       'tanggal': today,
       'ulp': widget.sesi['ulp'] ?? 'Toboali',
@@ -290,7 +302,10 @@ class _FormInputHartekHeaderScreenState
           ),
           title: Text(
             widget.judulMenu,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+            style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87),
           ),
         ),
         body: ListView(
@@ -349,7 +364,8 @@ class _FormInputHartekHeaderScreenState
             suffixIcon: l.contains('Koordinat')
                 ? IconButton(
                     onPressed: () => _gps(c),
-                    icon: const Icon(Icons.my_location_rounded, color: Colors.black54),
+                    icon: const Icon(Icons.my_location_rounded,
+                        color: Colors.black54),
                   )
                 : null,
           ),
