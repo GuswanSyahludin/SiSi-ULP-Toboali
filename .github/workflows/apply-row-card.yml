@@ -1,0 +1,92 @@
+name: Apply ROW report card
+on:
+  push:
+    branches: [fix/row-report-card]
+permissions:
+  contents: write
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/row-report-card
+          fetch-depth: 0
+      - name: Replace seeded ROW report list
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('SiSi_Mobile/lib/screens/laporan_row_screen.dart')
+          s=p.read_text()
+          s=s.replace("import '../db/repositories/master_repository.dart';", "import '../db/repositories/header_repository.dart';\nimport '../db/repositories/master_repository.dart';\nimport '../widgets/laporan_header_card.dart';")
+          load="""  Future<void> _loadLaporan() async {
+    setState(() => _loading = true);
+    final now = DateTime.now();
+    final tanggal = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final response = await HeaderRepository().bacaLaporanHarian(
+      token: (widget.sesi['token'] ?? '').toString(),
+      subTim: _activeSubTim,
+      tanggal: tanggal,
+    );
+    if (!mounted) return;
+    final data = response['success'] == true
+        ? List<dynamic>.from(response['data'] ?? const [])
+        : <dynamic>[];
+    setState(() {
+      _laporanList
+        ..clear()
+        ..addAll(data.map((raw) {
+          final item = Map<String, dynamic>.from(raw as Map);
+          item.putIfAbsent('realisasi', () => <Map<String, dynamic>>[]);
+          return item;
+        }));
+      _loading = false;
+    });
+  }
+
+"""
+          s,n=re.subn(r"  Future<void> _loadLaporan\(\) async \{.*?\n  \}\n\n  void _buatLaporanBaru",load+'  void _buatLaporanBaru',s,count=1,flags=re.S)
+          if n!=1: raise SystemExit(f'load match={n}')
+          card="""  Widget _buildLaporanCard(Map<String, dynamic> item) {
+    final real = item['realisasi'] as List? ?? const [];
+    final totalPohon = real.fold<int>(0, (sum, r) => sum +
+        ((r['rabas'] as int? ?? 0) +
+         (r['sedang'] as int? ?? 0) +
+         (r['besar'] as int? ?? 0)));
+    return LaporanHeaderCard(
+      item: item,
+      icon: Icons.park_rounded,
+      accent: AppColors.success700,
+      summary: '${real.length} Penyulang • $totalPohon Titik Pohon',
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) =>
+          _LaporanRowDetailScreen(sesi: widget.sesi, item: item)),
+      ).then((_) => setState(() {})),
+      onWa: () => _kirimWa((item['waText'] ?? '').toString()),
+    );
+  }
+
+  Future<void> _kirimWa(String text) async {
+    if (text.trim().isEmpty) return;
+    await launchUrl(
+      Uri.parse('https://api.whatsapp.com/send?text=${Uri.encodeComponent(text)}'),
+      mode: LaunchMode.externalApplication,
+    );
+  }
+
+"""
+          s,n=re.subn(r"  Widget _buildLaporanCard\(Map<String, dynamic> item\) \{.*?\n  \}\n\}\n\nclass _LaporanRowDetailScreen",card+'}\n\nclass _LaporanRowDetailScreen',s,count=1,flags=re.S)
+          if n!=1: raise SystemExit(f'card match={n}')
+          p.write_text(s)
+          PY
+      - name: Commit source change
+        run: |
+          rm -f SiSi_Mobile/ROW_CARD_TRIGGER.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix(row): restore real report card and WhatsApp action"
+          git push origin fix/row-report-card
