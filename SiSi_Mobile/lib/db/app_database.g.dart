@@ -2747,7 +2747,7 @@ class P0OutboxesCompanion extends UpdateCompanion<P0Outbox> {
 }
 
 class $MasterGardusTable extends MasterGardus
-    with TableInfo<$MasterGardusTable, MasterGardusData> {
+    with TableInfo<$MasterGardusTable, MasterGardu> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
@@ -3130,7 +3130,7 @@ class $MasterGardusTable extends MasterGardus
   String get actualTableName => $name;
   static const String $name = 'master_gardu';
   @override
-  VerificationContext validateIntegrity(Insertable<MasterGardusData> instance,
+  VerificationContext validateIntegrity(Insertable<MasterGardu> instance,
       {bool isInserting = false}) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
@@ -3350,9 +3350,9 @@ class $MasterGardusTable extends MasterGardus
   @override
   Set<GeneratedColumn> get $primaryKey => {gardu};
   @override
-  MasterGardusData map(Map<String, dynamic> data, {String? tablePrefix}) {
+  MasterGardu map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return MasterGardusData(
+    return MasterGardu(
       ulp: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}ulp'])!,
       gardu: attachedDatabase.typeMapping
@@ -3450,8 +3450,7 @@ class $MasterGardusTable extends MasterGardus
   }
 }
 
-class MasterGardusData extends DataClass
-    implements Insertable<MasterGardusData> {
+class MasterGardu extends DataClass implements Insertable<MasterGardu> {
   final String ulp;
   final String gardu;
   final String alamat;
@@ -3496,7 +3495,7 @@ class MasterGardusData extends DataClass
   final String pembebananKw;
   final String persentaseBeban;
   final String kategoriBeban;
-  const MasterGardusData(
+  const MasterGardu(
       {required this.ulp,
       required this.gardu,
       required this.alamat,
@@ -3640,10 +3639,10 @@ class MasterGardusData extends DataClass
     );
   }
 
-  factory MasterGardusData.fromJson(Map<String, dynamic> json,
+  factory MasterGardu.fromJson(Map<String, dynamic> json,
       {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return MasterGardusData(
+    return MasterGardu(
       ulp: serializer.fromJson<String>(json['ulp']),
       gardu: serializer.fromJson<String>(json['gardu']),
       alamat: serializer.fromJson<String>(json['alamat']),
@@ -3741,7 +3740,7 @@ class MasterGardusData extends DataClass
     };
   }
 
-  MasterGardusData copyWith(
+  MasterGardu copyWith(
           {String? ulp,
           String? gardu,
           String? alamat,
@@ -3786,7 +3785,7 @@ class MasterGardusData extends DataClass
           String? pembebananKw,
           String? persentaseBeban,
           String? kategoriBeban}) =>
-      MasterGardusData(
+      MasterGardu(
         ulp: ulp ?? this.ulp,
         gardu: gardu ?? this.gardu,
         alamat: alamat ?? this.alamat,
@@ -3832,8 +3831,8 @@ class MasterGardusData extends DataClass
         persentaseBeban: persentaseBeban ?? this.persentaseBeban,
         kategoriBeban: kategoriBeban ?? this.kategoriBeban,
       );
-  MasterGardusData copyWithCompanion(MasterGardusCompanion data) {
-    return MasterGardusData(
+  MasterGardu copyWithCompanion(MasterGardusCompanion data) {
+    return MasterGardu(
       ulp: data.ulp.present ? data.ulp.value : this.ulp,
       gardu: data.gardu.present ? data.gardu.value : this.gardu,
       alamat: data.alamat.present ? data.alamat.value : this.alamat,
@@ -3907,7 +3906,7 @@ class MasterGardusData extends DataClass
 
   @override
   String toString() {
-    return (StringBuffer('MasterGardusData(')
+    return (StringBuffer('MasterGardu(')
           ..write('ulp: $ulp, ')
           ..write('gardu: $gardu, ')
           ..write('alamat: $alamat, ')
@@ -4006,7 +4005,7 @@ class MasterGardusData extends DataClass
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is MasterGardusData &&
+      (other is MasterGardu &&
           other.ulp == this.ulp &&
           other.gardu == this.gardu &&
           other.alamat == this.alamat &&
@@ -4053,7 +4052,7 @@ class MasterGardusData extends DataClass
           other.kategoriBeban == this.kategoriBeban);
 }
 
-class MasterGardusCompanion extends UpdateCompanion<MasterGardusData> {
+class MasterGardusCompanion extends UpdateCompanion<MasterGardu> {
   final Value<String> ulp;
   final Value<String> gardu;
   final Value<String> alamat;
@@ -4193,7 +4192,7 @@ class MasterGardusCompanion extends UpdateCompanion<MasterGardusData> {
     this.kategoriBeban = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : gardu = Value(gardu);
-  static Insertable<MasterGardusData> custom({
+  static Insertable<MasterGardu> custom({
     Expression<String>? ulp,
     Expression<String>? gardu,
     Expression<String>? alamat,
@@ -8766,17 +8765,17 @@ class $$MasterGardusTableAnnotationComposer
 class $$MasterGardusTableTableManager extends RootTableManager<
     _$AppDatabase,
     $MasterGardusTable,
-    MasterGardusData,
+    MasterGardu,
     $$MasterGardusTableFilterComposer,
     $$MasterGardusTableOrderingComposer,
     $$MasterGardusTableAnnotationComposer,
     $$MasterGardusTableCreateCompanionBuilder,
     $$MasterGardusTableUpdateCompanionBuilder,
     (
-      MasterGardusData,
-      BaseReferences<_$AppDatabase, $MasterGardusTable, MasterGardusData>
+      MasterGardu,
+      BaseReferences<_$AppDatabase, $MasterGardusTable, MasterGardu>
     ),
-    MasterGardusData,
+    MasterGardu,
     PrefetchHooks Function()> {
   $$MasterGardusTableTableManager(_$AppDatabase db, $MasterGardusTable table)
       : super(TableManagerState(
@@ -8986,17 +8985,17 @@ class $$MasterGardusTableTableManager extends RootTableManager<
 typedef $$MasterGardusTableProcessedTableManager = ProcessedTableManager<
     _$AppDatabase,
     $MasterGardusTable,
-    MasterGardusData,
+    MasterGardu,
     $$MasterGardusTableFilterComposer,
     $$MasterGardusTableOrderingComposer,
     $$MasterGardusTableAnnotationComposer,
     $$MasterGardusTableCreateCompanionBuilder,
     $$MasterGardusTableUpdateCompanionBuilder,
     (
-      MasterGardusData,
-      BaseReferences<_$AppDatabase, $MasterGardusTable, MasterGardusData>
+      MasterGardu,
+      BaseReferences<_$AppDatabase, $MasterGardusTable, MasterGardu>
     ),
-    MasterGardusData,
+    MasterGardu,
     PrefetchHooks Function()>;
 typedef $$GarduOutboxesTableCreateCompanionBuilder = GarduOutboxesCompanion
     Function({

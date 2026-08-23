@@ -35,14 +35,33 @@ class _LaporanRowScreenState extends State<LaporanRowScreen> {
   }
 
   String _namaHari(int weekday) {
-    const list = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+    const list = [
+      'Senin',
+      'Selasa',
+      'Rabu',
+      'Kamis',
+      'Jumat',
+      'Sabtu',
+      'Minggu'
+    ];
     return list[(weekday - 1) % 7];
   }
 
   String _tanggalHariIni(DateTime d) {
     const bulan = [
-      '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      '',
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember'
     ];
     return '${d.day.toString().padLeft(2, '0')} ${bulan[d.month]} ${d.year}';
   }
@@ -89,9 +108,12 @@ class _LaporanRowScreenState extends State<LaporanRowScreen> {
                 'koordinat': '-2.998123, 106.456123',
                 'diameter': 0,
                 'jenisPekerjaan': 'Rabas / Pangkas',
-                'fotoSebelum': 'https://placehold.co/400x300/png?text=Foto+Sebelum',
-                'fotoPekerjaan': 'https://placehold.co/400x300/png?text=Foto+Pekerjaan',
-                'fotoSesudah': 'https://placehold.co/400x300/png?text=Foto+Sesudah',
+                'fotoSebelum':
+                    'https://placehold.co/400x300/png?text=Foto+Sebelum',
+                'fotoPekerjaan':
+                    'https://placehold.co/400x300/png?text=Foto+Pekerjaan',
+                'fotoSesudah':
+                    'https://placehold.co/400x300/png?text=Foto+Sesudah',
                 'tahap': 3,
               },
               {
@@ -103,7 +125,8 @@ class _LaporanRowScreenState extends State<LaporanRowScreen> {
                 'koordinat': '-2.998543, 106.456890',
                 'diameter': 45,
                 'jenisPekerjaan': 'Tebang Sedang',
-                'fotoSebelum': 'https://placehold.co/400x300/png?text=Foto+Sebelum',
+                'fotoSebelum':
+                    'https://placehold.co/400x300/png?text=Foto+Sebelum',
                 'fotoPekerjaan': '',
                 'fotoSesudah': '',
                 'tahap': 1,
@@ -156,11 +179,16 @@ class _LaporanRowScreenState extends State<LaporanRowScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Laporan Harian ROW', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
-            Text('$_activeSubTim • ${widget.sesi['ulp'] ?? 'Toboali'}', style: const TextStyle(fontSize: 12, color: Colors.white70)),
+            const Text('Laporan Harian ROW',
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
+            Text('$_activeSubTim • ${widget.sesi['ulp'] ?? 'Toboali'}',
+                style: const TextStyle(fontSize: 12, color: Colors.white70)),
           ],
         ),
-        actions: [IconButton(onPressed: _loadLaporan, icon: const Icon(Icons.refresh_rounded))],
+        actions: [
+          IconButton(
+              onPressed: _loadLaporan, icon: const Icon(Icons.refresh_rounded))
+        ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -170,7 +198,8 @@ class _LaporanRowScreenState extends State<LaporanRowScreen> {
                   padding: const EdgeInsets.all(16),
                   itemCount: _laporanList.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (_, index) => _buildLaporanCard(_laporanList[index]),
+                  itemBuilder: (_, index) =>
+                      _buildLaporanCard(_laporanList[index]),
                 ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.navy700,
@@ -185,7 +214,11 @@ class _LaporanRowScreenState extends State<LaporanRowScreen> {
     final real = (item['realisasi'] as List? ?? []);
     final totalPohon = real.fold<int>(
       0,
-      (sum, r) => sum + ((r['rabas'] as int? ?? 0) + (r['sedang'] as int? ?? 0) + (r['besar'] as int? ?? 0)),
+      (sum, r) =>
+          sum +
+          ((r['rabas'] as int? ?? 0) +
+              (r['sedang'] as int? ?? 0) +
+              (r['besar'] as int? ?? 0)),
     );
     final isDraft = '${item['status']}'.toUpperCase().contains('DRAFT');
 
@@ -199,7 +232,8 @@ class _LaporanRowScreenState extends State<LaporanRowScreen> {
         contentPadding: const EdgeInsets.all(16),
         title: Text(
           item['kodeHeader'] ?? 'Draft Lokal',
-          style: const TextStyle(fontWeight: FontWeight.w900, color: AppColors.navy700),
+          style: const TextStyle(
+              fontWeight: FontWeight.w900, color: AppColors.navy700),
         ),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 4),
@@ -216,14 +250,18 @@ class _LaporanRowScreenState extends State<LaporanRowScreen> {
               decoration: BoxDecoration(
                 color: isDraft ? Colors.amber.shade50 : Colors.green.shade50,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: isDraft ? Colors.amber.shade300 : Colors.green.shade300),
+                border: Border.all(
+                    color: isDraft
+                        ? Colors.amber.shade300
+                        : Colors.green.shade300),
               ),
               child: Text(
                 item['status'] ?? 'DRAFT LOKAL',
                 style: TextStyle(
                   fontSize: 9,
                   fontWeight: FontWeight.w900,
-                  color: isDraft ? Colors.amber.shade900 : Colors.green.shade900,
+                  color:
+                      isDraft ? Colors.amber.shade900 : Colors.green.shade900,
                 ),
               ),
             ),
@@ -251,7 +289,8 @@ class _LaporanRowDetailScreen extends StatefulWidget {
   const _LaporanRowDetailScreen({required this.sesi, required this.item});
 
   @override
-  State<_LaporanRowDetailScreen> createState() => _LaporanRowDetailScreenState();
+  State<_LaporanRowDetailScreen> createState() =>
+      _LaporanRowDetailScreenState();
 }
 
 class _LaporanRowDetailScreenState extends State<_LaporanRowDetailScreen> {
@@ -262,7 +301,8 @@ class _LaporanRowDetailScreenState extends State<_LaporanRowDetailScreen> {
   void _openMaps(String koordinat) async {
     if (koordinat.trim().isEmpty || koordinat == '-') return;
     final cleanKoor = koordinat.replaceAll(' ', '');
-    final uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$cleanKoor');
+    final uri =
+        Uri.parse('https://www.google.com/maps/search/?api=1&query=$cleanKoor');
     try {
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -280,8 +320,11 @@ class _LaporanRowDetailScreenState extends State<_LaporanRowDetailScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Detail Laporan ROW', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-            Text('${widget.item['hari'] ?? ''}, ${widget.item['tanggal'] ?? ''}', style: const TextStyle(fontSize: 12, color: Colors.white70)),
+            const Text('Detail Laporan ROW',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            Text(
+                '${widget.item['hari'] ?? ''}, ${widget.item['tanggal'] ?? ''}',
+                style: const TextStyle(fontSize: 12, color: Colors.white70)),
           ],
         ),
       ),
@@ -294,7 +337,8 @@ class _LaporanRowDetailScreenState extends State<_LaporanRowDetailScreen> {
               children: [
                 Expanded(child: _tabButton('1. Detail Laporan', 0)),
                 const SizedBox(width: 8),
-                Expanded(child: _tabButton('2. Realisasi (${realisasi.length})', 1)),
+                Expanded(
+                    child: _tabButton('2. Realisasi (${realisasi.length})', 1)),
               ],
             ),
           ),
@@ -307,7 +351,8 @@ class _LaporanRowDetailScreenState extends State<_LaporanRowDetailScreen> {
               foregroundColor: Colors.white,
               onPressed: _tambahRealisasi,
               icon: const Icon(Icons.add_rounded),
-              label: const Text('Tambah Penyulang', style: TextStyle(fontWeight: FontWeight.bold)),
+              label: const Text('Tambah Penyulang',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
             )
           : null,
     );
@@ -344,17 +389,22 @@ class _LaporanRowDetailScreenState extends State<_LaporanRowDetailScreen> {
     final kmAkhir = '${widget.item['kmAkhir'] ?? '-'}';
     final kendala = '${widget.item['kendala'] ?? '-'}';
 
-    final totalRabas = realisasi.fold<int>(0, (s, r) => s + (r['rabas'] as int? ?? 0));
-    final totalSedang = realisasi.fold<int>(0, (s, r) => s + (r['sedang'] as int? ?? 0));
-    final totalBesar = realisasi.fold<int>(0, (s, r) => s + (r['besar'] as int? ?? 0));
+    final totalRabas =
+        realisasi.fold<int>(0, (s, r) => s + (r['rabas'] as int? ?? 0));
+    final totalSedang =
+        realisasi.fold<int>(0, (s, r) => s + (r['sedang'] as int? ?? 0));
+    final totalBesar =
+        realisasi.fold<int>(0, (s, r) => s + (r['besar'] as int? ?? 0));
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         _buildSectionCard('1. Informasi Laporan (db_Global_Header)', [
           _buildDetailRow('Kode Header', widget.item['kodeHeader']),
-          _buildDetailRow('Hari / Tanggal', '${widget.item['hari'] ?? '-'}, ${widget.item['tanggal'] ?? '-'}'),
-          _buildDetailRow('ULP / Tim', '${widget.item['ulp']} / ${widget.item['subTim']}'),
+          _buildDetailRow('Hari / Tanggal',
+              '${widget.item['hari'] ?? '-'}, ${widget.item['tanggal'] ?? '-'}'),
+          _buildDetailRow(
+              'ULP / Tim', '${widget.item['ulp']} / ${widget.item['subTim']}'),
           _buildDetailRow('Petugas Input', widget.item['petugas']),
           _buildDetailRow('Status Data', widget.item['status']),
         ]),
@@ -371,7 +421,8 @@ class _LaporanRowDetailScreenState extends State<_LaporanRowDetailScreen> {
           _buildDetailRow('Rabas / Pangkas', '$totalRabas Gawang'),
           _buildDetailRow('Tebang Sedang (Ø ≤ 50cm)', '$totalSedang Batang'),
           _buildDetailRow('Tebang Besar (Ø > 50cm)', '$totalBesar Batang'),
-          _buildDetailRow('Total Titik Pohon', '${totalRabas + totalSedang + totalBesar} Titik'),
+          _buildDetailRow('Total Titik Pohon',
+              '${totalRabas + totalSedang + totalBesar} Titik'),
         ]),
       ],
     );
@@ -388,7 +439,11 @@ class _LaporanRowDetailScreenState extends State<_LaporanRowDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0284C7))),
+          Text(title,
+              style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0284C7))),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.all(12),
@@ -410,13 +465,17 @@ class _LaporanRowDetailScreenState extends State<_LaporanRowDetailScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+          Text(label,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
           const SizedBox(width: 8),
           Flexible(
             child: Text(
               value?.toString() ?? '-',
               textAlign: TextAlign.right,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
+              style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF0F172A)),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -431,14 +490,16 @@ class _LaporanRowDetailScreenState extends State<_LaporanRowDetailScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+          Text(label,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
           const SizedBox(width: 8),
           InkWell(
             onTap: () => _openMaps(koor),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.location_on_rounded, size: 14, color: Color(0xFFEF4444)),
+                const Icon(Icons.location_on_rounded,
+                    size: 14, color: Color(0xFFEF4444)),
                 const SizedBox(width: 2),
                 Text(
                   koor,
@@ -515,7 +576,9 @@ class _LaporanRowDetailScreenState extends State<_LaporanRowDetailScreen> {
                   child: Center(
                     child: Text(
                       '${index + 1}',
-                      style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0284C7)),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0284C7)),
                     ),
                   ),
                 ),
@@ -526,17 +589,24 @@ class _LaporanRowDetailScreenState extends State<_LaporanRowDetailScreen> {
                     children: [
                       Text(
                         'Penyulang ${r['penyulang']}',
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                        style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0F172A)),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         '${r['section']} • $rabas Rabas, $sedang Sedang, $besar Besar',
-                        style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                        style: const TextStyle(
+                            fontSize: 12, color: Color(0xFF64748B)),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         '${eksList.length} Titik Pekerjaan',
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF059669)),
+                        style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF059669)),
                       ),
                     ],
                   ),
@@ -546,13 +616,21 @@ class _LaporanRowDetailScreenState extends State<_LaporanRowDetailScreen> {
                   children: [
                     Text(
                       '$totalPohon',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.navy700),
+                      style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.navy700),
                     ),
-                    const Text('POHON', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8))),
+                    const Text('POHON',
+                        style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF94A3B8))),
                   ],
                 ),
                 const SizedBox(width: 6),
-                const Icon(Icons.chevron_right_rounded, color: Color(0xFF94A3B8)),
+                const Icon(Icons.chevron_right_rounded,
+                    color: Color(0xFF94A3B8)),
               ],
             ),
           ),
@@ -638,10 +716,16 @@ class _RealisasiRowSheetState extends State<_RealisasiRowSheet> {
                 width: 40,
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+                decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2)),
               ),
             ),
-            const Text('Pilih Penyulang', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.navy700)),
+            const Text('Pilih Penyulang',
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.navy700)),
             const Divider(height: 20),
             if (_loading)
               const Padding(
@@ -653,8 +737,10 @@ class _RealisasiRowSheetState extends State<_RealisasiRowSheet> {
                 value: _selectedPenyulang,
                 decoration: InputDecoration(
                   labelText: 'Penyulang',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 ),
                 items: _listPenyulang
                     .map((p) => DropdownMenuItem(value: p, child: Text(p)))
@@ -668,7 +754,8 @@ class _RealisasiRowSheetState extends State<_RealisasiRowSheet> {
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.navy700,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
                 onPressed: _selectedPenyulang == null
                     ? null
@@ -682,7 +769,9 @@ class _RealisasiRowSheetState extends State<_RealisasiRowSheet> {
                           'eksekusi': <Map<String, dynamic>>[],
                         });
                       },
-                child: const Text('Simpan Penyulang', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                child: const Text('Simpan Penyulang',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, color: Colors.white)),
               ),
             ),
           ],
@@ -706,10 +795,12 @@ class _PenyulangEksekusiRowScreen extends StatefulWidget {
   });
 
   @override
-  State<_PenyulangEksekusiRowScreen> createState() => _PenyulangEksekusiRowScreenState();
+  State<_PenyulangEksekusiRowScreen> createState() =>
+      _PenyulangEksekusiRowScreenState();
 }
 
-class _PenyulangEksekusiRowScreenState extends State<_PenyulangEksekusiRowScreen> {
+class _PenyulangEksekusiRowScreenState
+    extends State<_PenyulangEksekusiRowScreen> {
   List<Map<String, dynamic>> get eksekusiList =>
       widget.realisasi['eksekusi'] as List<Map<String, dynamic>>;
 
@@ -722,12 +813,16 @@ class _PenyulangEksekusiRowScreenState extends State<_PenyulangEksekusiRowScreen
       if (sec.isNotEmpty && sec != '-') setSection.add(sec);
 
       final dia = num.tryParse('${e['diameter']}') ?? 0;
-      if (dia > 50) besar++;
-      else if (dia > 0) sedang++;
-      else rabas++;
+      if (dia > 50)
+        besar++;
+      else if (dia > 0)
+        sedang++;
+      else
+        rabas++;
     }
 
-    widget.realisasi['section'] = setSection.isEmpty ? '-' : setSection.join(' - ');
+    widget.realisasi['section'] =
+        setSection.isEmpty ? '-' : setSection.join(' - ');
     widget.realisasi['rabas'] = rabas;
     widget.realisasi['sedang'] = sedang;
     widget.realisasi['besar'] = besar;
@@ -737,7 +832,8 @@ class _PenyulangEksekusiRowScreenState extends State<_PenyulangEksekusiRowScreen
   void _openMaps(String koordinat) async {
     if (koordinat.trim().isEmpty || koordinat == '-') return;
     final cleanKoor = koordinat.replaceAll(' ', '');
-    final uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$cleanKoor');
+    final uri =
+        Uri.parse('https://www.google.com/maps/search/?api=1&query=$cleanKoor');
     try {
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -759,8 +855,11 @@ class _PenyulangEksekusiRowScreenState extends State<_PenyulangEksekusiRowScreen
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Penyulang ${widget.realisasi['penyulang']}', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-            Text('${widget.realisasi['section']} • Realisasi', style: const TextStyle(fontSize: 12, color: Colors.white70)),
+            Text('Penyulang ${widget.realisasi['penyulang']}',
+                style:
+                    const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            Text('${widget.realisasi['section']} • Realisasi',
+                style: const TextStyle(fontSize: 12, color: Colors.white70)),
           ],
         ),
       ),
@@ -777,7 +876,11 @@ class _PenyulangEksekusiRowScreenState extends State<_PenyulangEksekusiRowScreen
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Data Realisasi Penyulang', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0284C7))),
+                const Text('Data Realisasi Penyulang',
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0284C7))),
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -803,8 +906,16 @@ class _PenyulangEksekusiRowScreenState extends State<_PenyulangEksekusiRowScreen
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Daftar Eksekusi Titik (${eksekusiList.length})', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-              Text('${eksekusiList.length} Titik', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
+              Text('Daftar Eksekusi Titik (${eksekusiList.length})',
+                  style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A))),
+              Text('${eksekusiList.length} Titik',
+                  style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF64748B),
+                      fontWeight: FontWeight.w600)),
             ],
           ),
           const SizedBox(height: 8),
@@ -827,7 +938,8 @@ class _PenyulangEksekusiRowScreenState extends State<_PenyulangEksekusiRowScreen
           ...eksekusiList.asMap().entries.map((e) {
             final item = e.value;
             final tahap = item['tahap'] ?? 1;
-            final warna = tahap >= 3 ? const Color(0xFF059669) : const Color(0xFFD97706);
+            final warna =
+                tahap >= 3 ? const Color(0xFF059669) : const Color(0xFFD97706);
 
             return InkWell(
               onTap: () => _lanjutFoto(item),
@@ -848,10 +960,14 @@ class _PenyulangEksekusiRowScreenState extends State<_PenyulangEksekusiRowScreen
                       children: [
                         Text(
                           item['jenisPekerjaan'] ?? 'Rabas / Pangkas',
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                          style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0F172A)),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color: warna.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(6),
@@ -859,23 +975,33 @@ class _PenyulangEksekusiRowScreenState extends State<_PenyulangEksekusiRowScreen
                           ),
                           child: Text(
                             '$tahap/3 ${tahap >= 3 ? 'Selesai' : 'Progres'}',
-                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: warna),
+                            style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: warna),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text('Section: ${item['section'] ?? '-'} • Tiang: ${item['nomorTiang']} • Diameter: ${item['diameter']} cm', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                    Text(
+                        'Section: ${item['section'] ?? '-'} • Tiang: ${item['nomorTiang']} • Diameter: ${item['diameter']} cm',
+                        style: const TextStyle(
+                            fontSize: 12, color: Color(0xFF64748B))),
                     const SizedBox(height: 4),
                     InkWell(
                       onTap: () => _openMaps(item['koordinat'] ?? ''),
                       child: Row(
                         children: [
-                          const Icon(Icons.location_on_rounded, size: 14, color: Color(0xFFEF4444)),
+                          const Icon(Icons.location_on_rounded,
+                              size: 14, color: Color(0xFFEF4444)),
                           const SizedBox(width: 2),
                           Text(
                             item['koordinat'] ?? '-',
-                            style: const TextStyle(fontSize: 12, color: Color(0xFF0284C7), decoration: TextDecoration.underline),
+                            style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF0284C7),
+                                decoration: TextDecoration.underline),
                           ),
                         ],
                       ),
@@ -883,11 +1009,15 @@ class _PenyulangEksekusiRowScreenState extends State<_PenyulangEksekusiRowScreen
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Expanded(child: _fotoBadge('Sebelum', item['fotoSebelum'])),
+                        Expanded(
+                            child: _fotoBadge('Sebelum', item['fotoSebelum'])),
                         const SizedBox(width: 6),
-                        Expanded(child: _fotoBadge('Pekerjaan', item['fotoPekerjaan'])),
+                        Expanded(
+                            child:
+                                _fotoBadge('Pekerjaan', item['fotoPekerjaan'])),
                         const SizedBox(width: 6),
-                        Expanded(child: _fotoBadge('Sesudah', item['fotoSesudah'])),
+                        Expanded(
+                            child: _fotoBadge('Sesudah', item['fotoSesudah'])),
                       ],
                     ),
                   ],
@@ -902,7 +1032,8 @@ class _PenyulangEksekusiRowScreenState extends State<_PenyulangEksekusiRowScreen
         foregroundColor: Colors.white,
         onPressed: _tambahEksekusi,
         icon: const Icon(Icons.add_rounded),
-        label: const Text('Tambah Eksekusi', style: TextStyle(fontWeight: FontWeight.bold)),
+        label: const Text('Tambah Eksekusi',
+            style: TextStyle(fontWeight: FontWeight.bold)),
       ),
     );
   }
@@ -914,12 +1045,16 @@ class _PenyulangEksekusiRowScreenState extends State<_PenyulangEksekusiRowScreen
       decoration: BoxDecoration(
         color: ada ? const Color(0xFFECFDF5) : const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: ada ? const Color(0xFF10B981) : const Color(0xFFCBD5E1)),
+        border: Border.all(
+            color: ada ? const Color(0xFF10B981) : const Color(0xFFCBD5E1)),
       ),
       alignment: Alignment.center,
       child: Text(
         '$label ${ada ? '✓' : '-'}',
-        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: ada ? const Color(0xFF059669) : const Color(0xFF64748B)),
+        style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            color: ada ? const Color(0xFF059669) : const Color(0xFF64748B)),
       ),
     );
   }
@@ -929,8 +1064,13 @@ class _PenyulangEksekusiRowScreenState extends State<_PenyulangEksekusiRowScreen
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-            Text('${value ?? '-'}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+            Text(label,
+                style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+            Text('${value ?? '-'}',
+                style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F172A))),
           ],
         ),
       );
@@ -959,7 +1099,8 @@ class _PenyulangEksekusiRowScreenState extends State<_PenyulangEksekusiRowScreen
     if (tahap >= 3) return;
 
     final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.camera, imageQuality: 70);
+    final picked =
+        await picker.pickImage(source: ImageSource.camera, imageQuality: 70);
     if (picked != null) {
       setState(() {
         if (tahap == 1) {
@@ -1065,11 +1206,13 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
         child: Wrap(
           children: [
             ListTile(
-              leading: const Icon(Icons.camera_alt_rounded, color: AppColors.navy700),
+              leading: const Icon(Icons.camera_alt_rounded,
+                  color: AppColors.navy700),
               title: const Text('Ambil dari Kamera Lapangan'),
               onTap: () async {
                 Navigator.pop(ctx);
-                final picked = await _picker.pickImage(source: ImageSource.camera, imageQuality: 70);
+                final picked = await _picker.pickImage(
+                    source: ImageSource.camera, imageQuality: 70);
                 if (picked != null) {
                   setState(() {
                     if (slot == 1) _fotoSebelum = File(picked.path);
@@ -1080,11 +1223,13 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library_rounded, color: AppColors.navy700),
+              leading: const Icon(Icons.photo_library_rounded,
+                  color: AppColors.navy700),
               title: const Text('Pilih dari Galeri'),
               onTap: () async {
                 Navigator.pop(ctx);
-                final picked = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
+                final picked = await _picker.pickImage(
+                    source: ImageSource.gallery, imageQuality: 70);
                 if (picked != null) {
                   setState(() {
                     if (slot == 1) _fotoSebelum = File(picked.path);
@@ -1123,7 +1268,9 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
           Container(
             width: 40,
             height: 4,
-            decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+            decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2)),
           ),
           const SizedBox(height: 12),
           Row(
@@ -1133,11 +1280,18 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('Input Eksekusi ROW',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.navy700)),
-                  Text(widget.subTim, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.navy700)),
+                  Text(widget.subTim,
+                      style:
+                          TextStyle(fontSize: 12, color: Colors.grey.shade600)),
                 ],
               ),
-              IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => Navigator.pop(context)),
+              IconButton(
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: () => Navigator.pop(context)),
             ],
           ),
           const Divider(height: 20),
@@ -1146,13 +1300,17 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
                 ? const Center(child: CircularProgressIndicator())
                 : ListView(
                     children: [
-                      const Text('Penyulang', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      const Text('Penyulang',
+                          style: TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 6),
                       DropdownButtonFormField<String>(
                         isExpanded: true,
                         decoration: InputDecoration(
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 12),
                           filled: true,
                           fillColor: const Color(0xFFF1F5F9),
                         ),
@@ -1160,26 +1318,32 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
                         items: [
                           DropdownMenuItem(
                             value: widget.penyulangOtomatis,
-                            child: Text(widget.penyulangOtomatis, overflow: TextOverflow.ellipsis),
+                            child: Text(widget.penyulangOtomatis,
+                                overflow: TextOverflow.ellipsis),
                           )
                         ],
                         onChanged: null,
                       ),
                       const SizedBox(height: 12),
-                      const Text('Section', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      const Text('Section',
+                          style: TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 6),
                       DropdownButtonFormField<String>(
                         isExpanded: true,
                         decoration: InputDecoration(
                           hintText: '--Pilih Section--',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 12),
                         ),
                         value: _selectedSection,
                         items: _listSection
                             .map((s) => DropdownMenuItem(
                                   value: s,
-                                  child: Text(s, overflow: TextOverflow.ellipsis),
+                                  child:
+                                      Text(s, overflow: TextOverflow.ellipsis),
                                 ))
                             .toList(),
                         onChanged: (val) {
@@ -1187,43 +1351,59 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
                         },
                       ),
                       const SizedBox(height: 12),
-                      const Text('Nomor Tiang', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      const Text('Nomor Tiang',
+                          style: TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 6),
                       TextField(
                         controller: _tiangCtrl,
                         decoration: InputDecoration(
                           hintText: 'Optional',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 12),
                         ),
                       ),
                       const SizedBox(height: 12),
-                      const Text('Koordinat Tiang', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      const Text('Koordinat Tiang',
+                          style: TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 6),
                       TextField(
                         controller: _koorTiangCtrl,
                         decoration: InputDecoration(
                           hintText: '-2.xxxx, 106.xxxx',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 12),
                           suffixIcon: IconButton(
-                            icon: const Icon(Icons.my_location, color: Color(0xFF0284C7)),
-                            onPressed: () => _getCurrentLocation(_koorTiangCtrl),
+                            icon: const Icon(Icons.my_location,
+                                color: Color(0xFF0284C7)),
+                            onPressed: () =>
+                                _getCurrentLocation(_koorTiangCtrl),
                           ),
                         ),
                       ),
                       const SizedBox(height: 12),
-                      const Text('Koordinat Pekerjaan', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      const Text('Koordinat Pekerjaan',
+                          style: TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 6),
                       TextField(
                         controller: _koorPekerjaanCtrl,
                         decoration: InputDecoration(
                           hintText: '-2.xxxx, 106.xxxx',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 12),
                           suffixIcon: IconButton(
-                            icon: const Icon(Icons.my_location, color: Color(0xFF0284C7)),
-                            onPressed: () => _getCurrentLocation(_koorPekerjaanCtrl),
+                            icon: const Icon(Icons.my_location,
+                                color: Color(0xFF0284C7)),
+                            onPressed: () =>
+                                _getCurrentLocation(_koorPekerjaanCtrl),
                           ),
                         ),
                       ),
@@ -1235,15 +1415,21 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Diameter (cm)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                const Text('Diameter (cm)',
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold)),
                                 const SizedBox(height: 6),
                                 TextField(
                                   controller: _diameterCtrl,
                                   keyboardType: TextInputType.number,
                                   decoration: InputDecoration(
                                     hintText: '0',
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                    border: OutlineInputBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(10)),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 12),
                                   ),
                                   onChanged: (_) => setState(() {}),
                                 ),
@@ -1255,7 +1441,10 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Jenis Pekerjaan', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                const Text('Jenis Pekerjaan',
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold)),
                                 const SizedBox(height: 6),
                                 Container(
                                   width: double.infinity,
@@ -1264,11 +1453,15 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
                                   decoration: BoxDecoration(
                                     color: const Color(0xFFE0F2FE),
                                     borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: const Color(0xFFBAE6FD)),
+                                    border: Border.all(
+                                        color: const Color(0xFFBAE6FD)),
                                   ),
                                   child: Text(
                                     curJenis,
-                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0369A1)),
+                                    style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF0369A1)),
                                   ),
                                 ),
                               ],
@@ -1277,15 +1470,23 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      const Text('Foto Pekerjaan (Sebelum, Pekerjaan, Sesudah)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      const Text('Foto Pekerjaan (Sebelum, Pekerjaan, Sesudah)',
+                          style: TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          Expanded(child: _buildImagePickerSlot('Sebelum', _fotoSebelum, () => _pickSlot(1))),
+                          Expanded(
+                              child: _buildImagePickerSlot(
+                                  'Sebelum', _fotoSebelum, () => _pickSlot(1))),
                           const SizedBox(width: 8),
-                          Expanded(child: _buildImagePickerSlot('Pekerjaan', _fotoPekerjaan, () => _pickSlot(2))),
+                          Expanded(
+                              child: _buildImagePickerSlot('Pekerjaan',
+                                  _fotoPekerjaan, () => _pickSlot(2))),
                           const SizedBox(width: 8),
-                          Expanded(child: _buildImagePickerSlot('Sesudah', _fotoSesudah, () => _pickSlot(3))),
+                          Expanded(
+                              child: _buildImagePickerSlot(
+                                  'Sesudah', _fotoSesudah, () => _pickSlot(3))),
                         ],
                       ),
                       const SizedBox(height: 24),
@@ -1295,22 +1496,28 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.navy700,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10)),
                           ),
                           onPressed: () {
-                            final diaNum = num.tryParse(_diameterCtrl.text.trim()) ?? 0;
+                            final diaNum =
+                                num.tryParse(_diameterCtrl.text.trim()) ?? 0;
                             int tahapFinal = 1;
-                            if (_fotoSesudah != null) tahapFinal = 3;
+                            if (_fotoSesudah != null)
+                              tahapFinal = 3;
                             else if (_fotoPekerjaan != null) tahapFinal = 2;
 
                             Navigator.pop(context, {
                               'penyulang': widget.penyulangOtomatis,
                               'section': _selectedSection ?? 'Section A',
-                              'nomorTiang': _tiangCtrl.text.trim().isEmpty ? '-' : _tiangCtrl.text.trim(),
+                              'nomorTiang': _tiangCtrl.text.trim().isEmpty
+                                  ? '-'
+                                  : _tiangCtrl.text.trim(),
                               'koordinatTiang': _koorTiangCtrl.text.trim(),
-                              'koordinat': _koorPekerjaanCtrl.text.trim().isNotEmpty
-                                  ? _koorPekerjaanCtrl.text.trim()
-                                  : _koorTiangCtrl.text.trim(),
+                              'koordinat':
+                                  _koorPekerjaanCtrl.text.trim().isNotEmpty
+                                      ? _koorPekerjaanCtrl.text.trim()
+                                      : _koorTiangCtrl.text.trim(),
                               'diameter': diaNum,
                               'jenisPekerjaan': curJenis,
                               'fotoSebelum': _fotoSebelum?.path ?? '',
@@ -1319,7 +1526,10 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
                               'tahap': tahapFinal,
                             });
                           },
-                          child: const Text('Simpan Eksekusi', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                          child: const Text('Simpan Eksekusi',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white)),
                         ),
                       ),
                     ],
@@ -1336,7 +1546,10 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: file != null ? const Color(0xFF10B981) : const Color(0xFFCBD5E1)),
+        border: Border.all(
+            color: file != null
+                ? const Color(0xFF10B981)
+                : const Color(0xFFCBD5E1)),
       ),
       child: InkWell(
         onTap: onTap,
@@ -1349,9 +1562,14 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
             : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.add_a_photo, size: 20, color: Color(0xFF64748B)),
+                  const Icon(Icons.add_a_photo,
+                      size: 20, color: Color(0xFF64748B)),
                   const SizedBox(height: 4),
-                  Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+                  Text(label,
+                      style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF64748B))),
                 ],
               ),
       ),
