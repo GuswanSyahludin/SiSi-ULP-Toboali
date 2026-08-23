@@ -606,7 +606,8 @@ class _DashboardScreenState extends State<DashboardScreen>
           itemCount: allTeams.length,
           itemBuilder: (context, idx) {
             final team = allTeams[idx];
-            final colorBadge = (team['badgeColor'] as Color?) ?? AppColors.navy700;
+            final colorBadge =
+                (team['badgeColor'] as Color?) ?? AppColors.navy700;
             return InkWell(
               onTap: () => setState(() => _selectedTeamDetail = team),
               borderRadius: BorderRadius.circular(14),
@@ -633,8 +634,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         color: colorBadge.withOpacity(0.12),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(team['icon'],
-                          color: colorBadge, size: 20),
+                      child: Icon(team['icon'], color: colorBadge, size: 20),
                     ),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1171,8 +1171,7 @@ class NavbarWithNotchPainter extends CustomPainter {
       final cx = notchCenterX!;
 
       const dyTop = 0 - bubbleCenterY;
-      final reachTop =
-          math.sqrt(topGapRadius * topGapRadius - dyTop * dyTop);
+      final reachTop = math.sqrt(topGapRadius * topGapRadius - dyTop * dyTop);
       path.lineTo(cx - reachTop, 0);
       path.arcToPoint(
         Offset(cx + reachTop, 0),

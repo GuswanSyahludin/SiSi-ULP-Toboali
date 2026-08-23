@@ -12,7 +12,8 @@ class InputTemuanTeknikScreen extends StatefulWidget {
   const InputTemuanTeknikScreen({super.key, required this.sesi});
 
   @override
-  State<InputTemuanTeknikScreen> createState() => _InputTemuanTeknikScreenState();
+  State<InputTemuanTeknikScreen> createState() =>
+      _InputTemuanTeknikScreenState();
 }
 
 class _InputTemuanTeknikScreenState extends State<InputTemuanTeknikScreen> {
@@ -82,7 +83,9 @@ class _InputTemuanTeknikScreenState extends State<InputTemuanTeknikScreen> {
       final list = await repo.pilihan(_selectedTier);
       final filtered = list
           .where((x) =>
-              x.objekInspeksi.toLowerCase().contains(_objekInspeksi.toLowerCase()) ||
+              x.objekInspeksi
+                  .toLowerCase()
+                  .contains(_objekInspeksi.toLowerCase()) ||
               x.objekInspeksi.isEmpty)
           .map((x) => x.temuan)
           .toList();
@@ -128,7 +131,8 @@ class _InputTemuanTeknikScreenState extends State<InputTemuanTeknikScreen> {
             'Koneksi terminal korosi',
           ];
 
-    final listPilihan = _objekInspeksi == 'Jaringan' ? fallbackJaringan : fallbackGardu;
+    final listPilihan =
+        _objekInspeksi == 'Jaringan' ? fallbackJaringan : fallbackGardu;
     setState(() {
       _listTemuan = listPilihan;
       _selectedTemuan = listPilihan.first;
@@ -165,11 +169,13 @@ class _InputTemuanTeknikScreenState extends State<InputTemuanTeknikScreen> {
         child: Wrap(
           children: [
             ListTile(
-              leading: const Icon(Icons.camera_alt_rounded, color: AppColors.navy700),
+              leading: const Icon(Icons.camera_alt_rounded,
+                  color: AppColors.navy700),
               title: const Text('Ambil dari Kamera Lapangan'),
               onTap: () async {
                 Navigator.pop(ctx);
-                final picked = await _picker.pickImage(source: ImageSource.camera, imageQuality: 70);
+                final picked = await _picker.pickImage(
+                    source: ImageSource.camera, imageQuality: 70);
                 if (picked != null) {
                   setState(() {
                     if (slot == 1) _fotoTemuan = File(picked.path);
@@ -179,11 +185,13 @@ class _InputTemuanTeknikScreenState extends State<InputTemuanTeknikScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library_rounded, color: AppColors.navy700),
+              leading: const Icon(Icons.photo_library_rounded,
+                  color: AppColors.navy700),
               title: const Text('Pilih dari Galeri'),
               onTap: () async {
                 Navigator.pop(ctx);
-                final picked = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
+                final picked = await _picker.pickImage(
+                    source: ImageSource.gallery, imageQuality: 70);
                 if (picked != null) {
                   setState(() {
                     if (slot == 1) _fotoTemuan = File(picked.path);
@@ -232,8 +240,10 @@ class _InputTemuanTeknikScreenState extends State<InputTemuanTeknikScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Input Temuan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
-            Text('${widget.sesi['ulp'] ?? 'Toboali'}', style: const TextStyle(fontSize: 12, color: Colors.white70)),
+            const Text('Input Temuan',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+            Text('${widget.sesi['ulp'] ?? 'Toboali'}',
+                style: const TextStyle(fontSize: 12, color: Colors.white70)),
           ],
         ),
       ),
@@ -242,13 +252,17 @@ class _InputTemuanTeknikScreenState extends State<InputTemuanTeknikScreen> {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                const Text('Objek Inspeksi', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                const Text('Objek Inspeksi',
+                    style:
+                        TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<String>(
                   value: _objekInspeksi,
                   decoration: InputDecoration(
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 12),
                     filled: true,
                     fillColor: Colors.white,
                   ),
@@ -262,13 +276,17 @@ class _InputTemuanTeknikScreenState extends State<InputTemuanTeknikScreen> {
                   },
                 ),
                 const SizedBox(height: 12),
-                const Text('Penyulang', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                const Text('Penyulang',
+                    style:
+                        TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<String>(
                   value: _selectedPenyulang,
                   decoration: InputDecoration(
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 12),
                     filled: true,
                     fillColor: Colors.white,
                   ),
@@ -285,24 +303,31 @@ class _InputTemuanTeknikScreenState extends State<InputTemuanTeknikScreen> {
                   },
                 ),
                 const SizedBox(height: 12),
-                const Text('Section', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                const Text('Section',
+                    style:
+                        TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<String>(
                   value: _selectedSection,
                   decoration: InputDecoration(
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 12),
                     filled: true,
                     fillColor: Colors.white,
                   ),
-                  items: (_sectionMap[_selectedPenyulang] ?? ['Section A', 'Section B'])
-                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                    .toList(),
+                  items: (_sectionMap[_selectedPenyulang] ??
+                          ['Section A', 'Section B'])
+                      .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                      .toList(),
                   onChanged: (val) => setState(() => _selectedSection = val),
                 ),
                 const SizedBox(height: 12),
                 if (isJaringan) ...[
-                  const Text('Nomor Tiang', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  const Text('Nomor Tiang',
+                      style:
+                          TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 6),
                   TextField(
                     controller: _tiangCtrl,
@@ -310,12 +335,16 @@ class _InputTemuanTeknikScreenState extends State<InputTemuanTeknikScreen> {
                       hintText: 'Contoh: 07',
                       filled: true,
                       fillColor: Colors.white,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 12),
                     ),
                   ),
                 ] else ...[
-                  const Text('Nomor Gardu', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  const Text('Nomor Gardu',
+                      style:
+                          TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 6),
                   TextField(
                     controller: _garduCtrl,
@@ -323,19 +352,25 @@ class _InputTemuanTeknikScreenState extends State<InputTemuanTeknikScreen> {
                       hintText: 'Contoh: GT.TBL-012',
                       filled: true,
                       fillColor: Colors.white,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 12),
                     ),
                   ),
                 ],
                 const SizedBox(height: 12),
-                const Text('Tier', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                const Text('Tier',
+                    style:
+                        TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<String>(
                   value: _selectedTier,
                   decoration: InputDecoration(
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 12),
                     filled: true,
                     fillColor: Colors.white,
                   ),
@@ -349,7 +384,9 @@ class _InputTemuanTeknikScreenState extends State<InputTemuanTeknikScreen> {
                   },
                 ),
                 const SizedBox(height: 12),
-                const Text('Temuan', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                const Text('Temuan',
+                    style:
+                        TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 6),
                 _loadingTemuan
                     ? const Center(child: CircularProgressIndicator())
@@ -357,18 +394,26 @@ class _InputTemuanTeknikScreenState extends State<InputTemuanTeknikScreen> {
                         value: _selectedTemuan,
                         isExpanded: true,
                         decoration: InputDecoration(
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 12),
                           filled: true,
                           fillColor: Colors.white,
                         ),
                         items: _listTemuan
-                            .map((t) => DropdownMenuItem(value: t, child: Text(t, overflow: TextOverflow.ellipsis)))
+                            .map((t) => DropdownMenuItem(
+                                value: t,
+                                child:
+                                    Text(t, overflow: TextOverflow.ellipsis)))
                             .toList(),
-                        onChanged: (val) => setState(() => _selectedTemuan = val),
+                        onChanged: (val) =>
+                            setState(() => _selectedTemuan = val),
                       ),
                 const SizedBox(height: 12),
-                const Text('Koordinat Temuan', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                const Text('Koordinat Temuan',
+                    style:
+                        TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 6),
                 TextField(
                   controller: _koorCtrl,
@@ -376,16 +421,21 @@ class _InputTemuanTeknikScreenState extends State<InputTemuanTeknikScreen> {
                     hintText: '-2.xxxx, 106.xxxx',
                     filled: true,
                     fillColor: Colors.white,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 12),
                     suffixIcon: IconButton(
-                      icon: const Icon(Icons.my_location, color: Color(0xFF0284C7)),
+                      icon: const Icon(Icons.my_location,
+                          color: Color(0xFF0284C7)),
                       onPressed: _getCurrentLocation,
                     ),
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text('Deskripsi / Catatan Lapangan', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                const Text('Deskripsi / Catatan Lapangan',
+                    style:
+                        TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 6),
                 TextField(
                   controller: _deskripsiCtrl,
@@ -394,19 +444,24 @@ class _InputTemuanTeknikScreenState extends State<InputTemuanTeknikScreen> {
                     hintText: 'Tuliskan catatan kondisi temuan...',
                     filled: true,
                     fillColor: Colors.white,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 12),
                   ),
                 ),
                 const SizedBox(height: 14),
                 Text(
                   'Foto Dokumentasi (Temuan & ${isJaringan ? 'Tiang' : 'Gardu'})',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Expanded(child: _buildFotoSlot('Foto Temuan', _fotoTemuan, () => _pickFoto(1))),
+                    Expanded(
+                        child: _buildFotoSlot(
+                            'Foto Temuan', _fotoTemuan, () => _pickFoto(1))),
                     const SizedBox(width: 10),
                     Expanded(
                       child: _buildFotoSlot(
@@ -424,16 +479,22 @@ class _InputTemuanTeknikScreenState extends State<InputTemuanTeknikScreen> {
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.navy700,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
                     ),
                     onPressed: _saving ? null : _handleSimpan,
                     child: _saving
                         ? const SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
                           )
-                        : const Text('Simpan Temuan', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 15)),
+                        : const Text('Simpan Temuan',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                fontSize: 15)),
                   ),
                 ),
               ],
@@ -447,7 +508,10 @@ class _InputTemuanTeknikScreenState extends State<InputTemuanTeknikScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: file != null ? const Color(0xFF10B981) : const Color(0xFFCBD5E1)),
+        border: Border.all(
+            color: file != null
+                ? const Color(0xFF10B981)
+                : const Color(0xFFCBD5E1)),
       ),
       child: InkWell(
         onTap: onTap,
@@ -460,9 +524,14 @@ class _InputTemuanTeknikScreenState extends State<InputTemuanTeknikScreen> {
             : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.add_a_photo, size: 20, color: Color(0xFF64748B)),
+                  const Icon(Icons.add_a_photo,
+                      size: 20, color: Color(0xFF64748B)),
                   const SizedBox(height: 4),
-                  Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+                  Text(label,
+                      style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF64748B))),
                 ],
               ),
       ),
