@@ -13,7 +13,7 @@ jobs:
         with:
           ref: main
       - name: Patch dashboard
-        shell: python
+        shell: python {0}
         run: |
           from pathlib import Path
           p=Path('SiSi_Mobile/lib/screens/dashboard_screen.dart')
@@ -22,20 +22,20 @@ jobs:
           if "import 'teknik_to_screen.dart';" not in s:
               s=s.replace(marker, marker+"\nimport 'teknik_to_screen.dart';")
           item="""      {
-        'title': 'Penugasan Tim',
-        'icon': Icons.group_add_outlined,
-        'desc': 'Pilih Tim Eksekusi untuk TO yang menunggu penugasan',
-        'iconColor': AppColors.amber700,
-      },
-      {
-        'title': 'Pindah Tim Eksekusi TO',
-        'icon': Icons.swap_horiz_rounded,
-        'desc': 'Pindahkan TO aktif ke Tim Eksekusi lain',
-        'iconColor': AppColors.cyan600,
-      },
-"""
+            'title': 'Penugasan Tim',
+            'icon': Icons.group_add_outlined,
+            'desc': 'Pilih Tim Eksekusi untuk TO yang menunggu penugasan',
+            'iconColor': AppColors.amber700,
+          },
+          {
+            'title': 'Pindah Tim Eksekusi TO',
+            'icon': Icons.swap_horiz_rounded,
+            'desc': 'Pindahkan TO aktif ke Tim Eksekusi lain',
+            'iconColor': AppColors.cyan600,
+          },
+          """
           anchor="""      {
-        'title': 'Verifikasi P0',"""
+            'title': 'Verifikasi P0',"""
           if "'title': 'Penugasan Tim'" not in s:
               if anchor not in s: raise SystemExit('menu anchor not found')
               s=s.replace(anchor,item+anchor)
