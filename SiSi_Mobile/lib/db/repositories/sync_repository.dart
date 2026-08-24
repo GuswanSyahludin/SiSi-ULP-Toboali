@@ -20,15 +20,17 @@ class SyncRepository {
   Future<String> perangkatId() =>
       DbProvider.instance.syncDao.ambilAtauBuatPerangkatId();
 
-  /// Satu pintu sinkronisasi dari menu Pengaturan.
-  ///
-  /// Urutan:
-  /// 1. Kirim seluruh keputusan Verifikasi P0 yang tersimpan lokal.
-  /// 2. Kirim perubahan Gardu dan paket Inspeksi Gardu.
-  /// 3. Tarik ulang master Penyulang, Master Gardu, dan List Temuan.
-  ///
-  /// Tahap master tetap dijalankan bila sebagian keputusan P0 gagal. Hasil akhir
-  /// melaporkan kedua modul secara terpisah agar kegagalan tidak tersamarkan.
+  Future<String> _tokenAktif(String token) async {
+    try {
+      final refreshed = await ApiService.cekPerangkat();
+      if (refreshed['success'] == true) {
+        final fresh = (refreshed['token'] ?? '').toString().trim();
+        if (fresh.isNotEmpty) return fresh;
+      }
+    } catch (_) {}
+    return token;
+  }
+
   Future<Map<String, dynamic>> sinkronSemua(String token) async {
     const modul = modulSinkronSemua;
     if (_kunci.contains(modul)) {
@@ -37,8 +39,9 @@ class SyncRepository {
 
     _kunci.add(modul);
     try {
+      final activeToken = await _tokenAktif(token);
       final p0 = await P0Repository().kirimAntrean();
-      final master = await downloadMasterData(token);
+      final master = await downloadMasterData(activeToken);
 
       final p0Ok = p0['ok'] == true;
       final masterOk = master['ok'] == true;
@@ -73,7 +76,8 @@ class SyncRepository {
 
     _kunci.add(modul);
     try {
-      final edit = await GarduSyncRepository().kirim(token);
+      final activeToken = await _tokenAktif(token);
+      final edit = await GarduSyncRepository().kirim(activeToken);
       if (edit['ok'] != true) {
         return {
           'ok': false,
@@ -81,7 +85,7 @@ class SyncRepository {
         };
       }
 
-      final inspeksi = await InspeksiGarduRepository().syncSemua(token);
+      final inspeksi = await InspeksiGarduRepository().syncSemua(activeToken);
       if (inspeksi['ok'] != true) {
         return {
           'ok': false,
@@ -89,17 +93,25 @@ class SyncRepository {
         };
       }
 
-      final rp = await ApiService.getDropdownRow(token: token);
+      final rp = await ApiService.getDropdownRow(token: activeToken);
       if (rp['success'] != true) {
-        return {'ok': false, 'message': 'Gagal menarik penyulang'};
+        final reason = (rp['message'] ?? 'respons server tidak valid').toString();
+        return {'ok': false, 'message': 'Gagal menarik penyulang: $reason'};
       }
 
       final listP = List<String>.from(rp['penyulang'] ?? []);
-      final mapS =
-          Map<String, dynamic>.from(rp['sectionByPenyulang'] ?? {});
+      final mapS = Map<String, dynamic>.from(
+        rp['sectionByPenyulang'] ?? {},
+      );
+      if (listP.isEmpty) {
+        return {
+          'ok': false,
+          'message': 'Master Penyulang dari server kosong. Periksa db_Penyulang.',
+        };
+      }
       await MasterRepository().simpanDariApi(listP, mapS);
 
-      final rg = await MasterGarduRepository().download(token);
+      final rg = await MasterGarduRepository().download(activeToken);
       if (rg['success'] != true) {
         return {
           'ok': false,
@@ -108,7 +120,7 @@ class SyncRepository {
         };
       }
 
-      await InspeksiGarduRepository().downloadListTemuan(token);
+      await InspeksiGarduRepository().downloadListTemuan(activeToken);
 
       final jumlahGardu = (rg['jumlah'] ?? 0) as int;
       await DbProvider.instance.syncDao.tandaiTersinkron(
@@ -144,7 +156,6 @@ class SyncRepository {
     }
   }
 
-  /// Dipertahankan untuk kompatibilitas pemanggil lama.
   Future<Map<String, dynamic>> sinkronVerifikasiP0() async {
     const modul = modulVerifikasiP0;
     if (_kunci.contains(modul)) {
