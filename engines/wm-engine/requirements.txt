@@ -1,3 +1,5 @@
 flask
-pillow
 gunicorn
+pillow
+google-api-python-client
+google-auth
