@@ -15,6 +15,7 @@ void callbackDispatcher() {
   Workmanager().executeTask((_, __) async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      await prefs.reload();
       if (prefs.getBool(_enabledKey) != true) return true;
       final sesi = await SesiStore.muat();
       final token = (sesi?['token'] ?? '').toString();
@@ -22,7 +23,7 @@ void callbackDispatcher() {
       final result = await SyncRepository().sinkronSemua(token);
       return result['ok'] == true;
     } catch (_) {
-      // Android akan mencoba kembali pada periode berikutnya.
+      // false meminta WorkManager menjadwalkan retry sesuai backoff.
       return false;
     }
   });
@@ -54,7 +55,7 @@ class AutoSyncService {
       _uniqueName,
       _taskName,
       frequency: const Duration(minutes: 15),
-      existingWorkPolicy: ExistingWorkPolicy.keep,
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
       constraints: Constraints(networkType: NetworkType.connected),
       backoffPolicy: BackoffPolicy.exponential,
       backoffPolicyDelay: const Duration(minutes: 10),
