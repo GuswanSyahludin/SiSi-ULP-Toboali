@@ -68,7 +68,8 @@ class _State extends State<SyncSectionPengaturan> {
     final ok = hasil['ok'] == true;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text((hasil['message'] ?? (ok ? 'Selesai' : 'Gagal')).toString()),
+        content:
+            Text((hasil['message'] ?? (ok ? 'Selesai' : 'Gagal')).toString()),
         backgroundColor: ok ? AppColors.success700 : AppColors.red600,
         duration: const Duration(seconds: 5),
       ),
@@ -83,12 +84,12 @@ class _State extends State<SyncSectionPengaturan> {
     final warna = totalAntrean > 0 ? AppColors.amber700 : AppColors.navy700;
 
     final subtitle = proses
-        ? 'Mengirim keputusan P0 dan perubahan lokal, lalu menarik master terbaru…'
+        ? 'Proses Sinkron....'
         : totalAntrean > 0
             ? '${p0.length} keputusan P0 · ${gardu.length} edit Gardu menunggu kirim'
             : sudahPernahSinkron
-                ? 'P0, laporan lokal, penyulang, Master Gardu, dan List Temuan'
-                : 'Kirim antrean lokal dan siapkan seluruh master data di HP';
+                ? 'Data Sudah Sinkron'
+                : 'Upload Data & Proses Sinkron';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
