@@ -8,6 +8,7 @@ class AppColors {
   static const navy500 = Color(0xFF2563EB);
   static const navy100 = Color(0xFFDBE6FF);
   static const cyan600 = Color(0xFF1CA0DB);
+  static const cyan100 = Color(0xFFE0F4FC);
   static const amber600 = Color(0xFFF5A623);
   static const amber700 = Color(0xFFD98A0E);
   static const neutral900 = Color(0xFF0F172A);
