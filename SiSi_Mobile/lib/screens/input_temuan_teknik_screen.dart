@@ -1,11 +1,13 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
-import '../widgets/accurate_gps_button.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../db/repositories/inspeksi_gardu_repository.dart';
 import '../db/repositories/master_repository.dart';
+import '../db/repositories/temuan_teknik_repository.dart';
 import '../theme/app_colors.dart';
+import '../widgets/accurate_gps_button.dart';
 
 class InputTemuanTeknikScreen extends StatefulWidget {
   final Map<String, dynamic> sesi;
@@ -17,28 +19,29 @@ class InputTemuanTeknikScreen extends StatefulWidget {
 }
 
 class _InputTemuanTeknikScreenState extends State<InputTemuanTeknikScreen> {
+  final _repository = TemuanTeknikRepository();
+  final _picker = ImagePicker();
+  final _tiangCtrl = TextEditingController();
+  final _garduCtrl = TextEditingController();
+  final _segmenCtrl = TextEditingController();
+  final _koorCtrl = TextEditingController();
+  final _deskripsiCtrl = TextEditingController();
+
   String _objekInspeksi = 'Jaringan';
   String? _selectedPenyulang;
   String? _selectedSection;
   String _selectedTier = 'Tier 1';
   String? _selectedTemuan;
-
-  final _tiangCtrl = TextEditingController();
-  final _garduCtrl = TextEditingController();
-  final _koorCtrl = TextEditingController();
-  final _deskripsiCtrl = TextEditingController();
-
   List<String> _listPenyulang = [];
   Map<String, List<String>> _sectionMap = {};
   List<String> _listTemuan = [];
-
+  File? _fotoTemuan;
+  File? _fotoTiangOrGardu;
   bool _loadingDropdown = true;
   bool _loadingTemuan = true;
   bool _saving = false;
 
-  File? _fotoTemuan;
-  File? _fotoTiangOrGardu;
-  final ImagePicker _picker = ImagePicker();
+  bool get _isJaringan => _objekInspeksi == 'Jaringan';
 
   @override
   void initState() {
@@ -46,78 +49,87 @@ class _InputTemuanTeknikScreenState extends State<InputTemuanTeknikScreen> {
     _loadDropdown();
   }
 
+  @override
+  void dispose() {
+    _tiangCtrl.dispose();
+    _garduCtrl.dispose();
+    _segmenCtrl.dispose();
+    _koorCtrl.dispose();
+    _deskripsiCtrl.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadDropdown() async {
     try {
       final repo = MasterRepository();
-      final pList = await repo.daftarPenyulang();
-      final sMap = await repo.sectionByPenyulang();
-
-      if (pList.isNotEmpty) {
-        if (!mounted) return;
-        setState(() {
-          _listPenyulang = pList;
-          _selectedPenyulang = pList.first;
-          _sectionMap = sMap;
-          _selectedSection = (sMap[_selectedPenyulang] ?? ['Section A']).first;
-          _loadingDropdown = false;
-        });
-        _loadTemuanByTierAndObjek();
-        return;
-      }
-    } catch (_) {}
-
-    if (!mounted) return;
-    setState(() {
-      _listPenyulang = ['TBL-01', 'TBL-02', 'TBL-03', 'TBL-04'];
-      _selectedPenyulang = _listPenyulang.first;
-      _selectedSection = 'Section A';
-      _loadingDropdown = false;
-    });
-    _loadTemuanByTierAndObjek();
+      final penyulang = await repo.daftarPenyulang();
+      final sections = await repo.sectionByPenyulang();
+      if (!mounted) return;
+      setState(() {
+        _listPenyulang = penyulang;
+        _sectionMap = sections;
+        _selectedPenyulang = penyulang.isEmpty ? null : penyulang.first;
+        final firstSections = sections[_selectedPenyulang] ?? const <String>[];
+        _selectedSection = firstSections.isEmpty ? null : firstSections.first;
+        _loadingDropdown = false;
+      });
+      await _loadTemuan();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loadingDropdown = false);
+      await _loadTemuan();
+    }
   }
 
-  Future<void> _loadTemuanByTierAndObjek() async {
-    setState(() => _loadingTemuan = true);
+  Future<void> _loadTemuan() async {
+    setState(() {
+      _loadingTemuan = true;
+      _selectedTemuan = null;
+    });
+    List<String> pilihan = [];
     try {
-      final repo = InspeksiGarduRepository();
-      final list = await repo.pilihan(_selectedTier);
-      final filtered = list
-          .where((x) =>
-              x.objekInspeksi
-                  .toLowerCase()
-                  .contains(_objekInspeksi.toLowerCase()) ||
-              x.objekInspeksi.isEmpty)
-          .map((x) => x.temuan)
-          .toList();
-
-      if (filtered.isNotEmpty) {
-        if (!mounted) return;
-        setState(() {
-          _listTemuan = filtered;
-          _selectedTemuan = filtered.first;
-          _loadingTemuan = false;
-        });
-        return;
-      }
+      final rows = await InspeksiGarduRepository().pilihan(_selectedTier);
+      pilihan = rows
+          .where((row) =>
+              row.objekInspeksi.trim().isEmpty ||
+              row.objekInspeksi.toLowerCase() ==
+                  _objekInspeksi.toLowerCase())
+          .map((row) => row.temuan.trim())
+          .where((value) => value.isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
     } catch (_) {}
 
+    if (pilihan.isEmpty) {
+      pilihan = _fallbackTemuan();
+    }
     if (!mounted) return;
-    final fallbackJaringan = _selectedTier == 'Tier 1'
-        ? [
-            'Isolator retak / flashover',
-            'Andongan penghantar kendor',
-            'Arrester bocor / rusak',
-            'Crossarm miring / korosi',
-            'Pohon mendekati JTM (<2.5m)',
-          ]
-        : [
-            'Tanda kilat / grounding putus',
-            'Guy wire kendor / putus',
-            'Pondasi tiang amblas',
-            'Jumperan kendor / korosi',
-          ];
+    setState(() {
+      _listTemuan = pilihan;
+      _selectedTemuan = pilihan.isEmpty ? null : pilihan.first;
+      _loadingTemuan = false;
+    });
+  }
 
-    final fallbackGardu = _selectedTier == 'Tier 1'
+  List<String> _fallbackTemuan() {
+    if (_isJaringan) {
+      return _selectedTier == 'Tier 1'
+          ? [
+              'Isolator retak / flashover',
+              'Andongan penghantar kendor',
+              'Arrester bocor / rusak',
+              'Crossarm miring / korosi',
+              'Pohon mendekati JTM (<2.5m)',
+            ]
+          : [
+              'Tanda kilat / grounding putus',
+              'Guy wire kendor / putus',
+              'Pondasi tiang amblas',
+              'Jumperan kendor / korosi',
+            ];
+    }
+    return _selectedTier == 'Tier 1'
         ? [
             'Fuse Cut Out (FCO) rusak/meleleh',
             'Arrester gardu bocor',
@@ -130,345 +142,323 @@ class _InputTemuanTeknikScreenState extends State<InputTemuanTeknikScreen> {
             'Indikator oli rendah',
             'Koneksi terminal korosi',
           ];
+  }
 
-    final listPilihan =
-        _objekInspeksi == 'Jaringan' ? fallbackJaringan : fallbackGardu;
+  InputDecoration _decoration({String? hint, Widget? suffixIcon}) {
+    return InputDecoration(
+      hintText: hint,
+      suffixIcon: suffixIcon,
+      filled: true,
+      fillColor: const Color(0xFFFCFDFF),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFFDCE3EC)),
+      ),
+    );
+  }
+
+  Widget _label(String text) => Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF334155),
+          ),
+        ),
+      );
+
+  Widget _gap() => const SizedBox(height: 14);
+
+  Future<void> _pickFoto(int slot) async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Wrap(children: [
+          ListTile(
+            leading: const Icon(Icons.camera_alt_rounded,
+                color: AppColors.navy700),
+            title: const Text('Ambil dari Kamera Lapangan'),
+            onTap: () => Navigator.pop(context, ImageSource.camera),
+          ),
+          ListTile(
+            leading: const Icon(Icons.photo_library_rounded,
+                color: AppColors.navy700),
+            title: const Text('Pilih dari Galeri'),
+            onTap: () => Navigator.pop(context, ImageSource.gallery),
+          ),
+        ]),
+      ),
+    );
+    if (source == null) return;
+    final picked = await _picker.pickImage(source: source, imageQuality: 70);
+    if (picked == null || !mounted) return;
     setState(() {
-      _listTemuan = listPilihan;
-      _selectedTemuan = listPilihan.first;
-      _loadingTemuan = false;
+      if (slot == 1) {
+        _fotoTemuan = File(picked.path);
+      } else {
+        _fotoTiangOrGardu = File(picked.path);
+      }
     });
   }
 
-  Future<void> _pickFoto(int slot) async {
-    showModalBottomSheet(
-      context: context,
-      builder: (ctx) => SafeArea(
-        child: Wrap(
-          children: [
-            ListTile(
-              leading: const Icon(Icons.camera_alt_rounded,
-                  color: AppColors.navy700),
-              title: const Text('Ambil dari Kamera Lapangan'),
-              onTap: () async {
-                Navigator.pop(ctx);
-                final picked = await _picker.pickImage(
-                    source: ImageSource.camera, imageQuality: 70);
-                if (picked != null) {
-                  setState(() {
-                    if (slot == 1) _fotoTemuan = File(picked.path);
-                    if (slot == 2) _fotoTiangOrGardu = File(picked.path);
-                  });
-                }
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_rounded,
-                  color: AppColors.navy700),
-              title: const Text('Pilih dari Galeri'),
-              onTap: () async {
-                Navigator.pop(ctx);
-                final picked = await _picker.pickImage(
-                    source: ImageSource.gallery, imageQuality: 70);
-                if (picked != null) {
-                  setState(() {
-                    if (slot == 1) _fotoTemuan = File(picked.path);
-                    if (slot == 2) _fotoTiangOrGardu = File(picked.path);
-                  });
-                }
-              },
-            ),
-          ],
-        ),
-      ),
-    );
+  String? _validate() {
+    if (_selectedPenyulang == null) return 'Pilih penyulang.';
+    if (_selectedSection == null) return 'Pilih section.';
+    if (_selectedTemuan == null) return 'Pilih jenis temuan.';
+    if (_isJaringan && _tiangCtrl.text.trim().isEmpty) {
+      return 'Nomor tiang wajib diisi.';
+    }
+    if (!_isJaringan && _garduCtrl.text.trim().isEmpty) {
+      return 'Nomor gardu wajib diisi.';
+    }
+    if (_koorCtrl.text.trim().isEmpty) return 'Koordinat wajib diambil.';
+    if (_fotoTemuan == null || _fotoTiangOrGardu == null) {
+      return 'Foto temuan dan foto ${_isJaringan ? 'tiang' : 'gardu'} wajib lengkap.';
+    }
+    return null;
   }
 
   Future<void> _handleSimpan() async {
-    if (_selectedTemuan == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pilih jenis temuan')),
-      );
+    final error = _validate();
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
       return;
     }
-
     setState(() => _saving = true);
-    await Future<void>.delayed(const Duration(milliseconds: 300));
-    if (!mounted) return;
-
-    setState(() => _saving = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Temuan berhasil disimpan'),
-        backgroundColor: Colors.green,
-      ),
-    );
-    Navigator.pop(context);
+    try {
+      final result = await _repository.simpan(
+        token: (widget.sesi['token'] ?? '').toString(),
+        objekInspeksi: _objekInspeksi,
+        penyulang: _selectedPenyulang!,
+        section: _selectedSection!,
+        segmen: _segmenCtrl.text.trim(),
+        nomorTiang: _isJaringan ? _tiangCtrl.text.trim() : '',
+        nomorGardu: _isJaringan ? '' : _garduCtrl.text.trim(),
+        tier: _selectedTier,
+        temuan: _selectedTemuan!,
+        koordinat: _koorCtrl.text.trim(),
+        deskripsi: _deskripsiCtrl.text.trim(),
+        fotoTemuan: _fotoTemuan!,
+        fotoTiangAtauGardu: _fotoTiangOrGardu!,
+      );
+      if (!mounted) return;
+      final kode = (result['kodePekerjaan'] ?? '').toString();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(kode.isEmpty
+              ? 'Temuan berhasil disimpan.'
+              : 'Temuan berhasil disimpan: $kode'),
+          backgroundColor: AppColors.success700,
+        ),
+      );
+      Navigator.pop(context, true);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: AppColors.red600,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isJaringan = _objekInspeksi == 'Jaringan';
-
+    final sections = _sectionMap[_selectedPenyulang] ?? const <String>[];
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8FC),
       appBar: AppBar(
         backgroundColor: AppColors.navy700,
         foregroundColor: Colors.white,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Input Temuan',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
-            Text('${widget.sesi['ulp'] ?? 'Toboali'}',
-                style: const TextStyle(fontSize: 12, color: Colors.white70)),
-          ],
-        ),
+        title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Input Temuan',
+              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
+          Text(
+            (widget.sesi['ulp'] ?? '').toString(),
+            style: const TextStyle(fontSize: 12, color: Colors.white70),
+          ),
+        ]),
       ),
       body: _loadingDropdown
           ? const Center(child: CircularProgressIndicator())
           : ListView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
               children: [
-                const Text('Objek Inspeksi',
-                    style:
-                        TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 6),
+                _label('Objek Inspeksi'),
                 DropdownButtonFormField<String>(
                   value: _objekInspeksi,
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 12),
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
-                  items: ['Jaringan', 'Gardu']
-                      .map((o) => DropdownMenuItem(value: o, child: Text(o)))
-                      .toList(),
-                  onChanged: (val) {
-                    if (val == null) return;
-                    setState(() => _objekInspeksi = val);
-                    _loadTemuanByTierAndObjek();
+                  decoration: _decoration(),
+                  items: const [
+                    DropdownMenuItem(value: 'Jaringan', child: Text('Jaringan')),
+                    DropdownMenuItem(value: 'Gardu', child: Text('Gardu')),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() {
+                      _objekInspeksi = value;
+                      _tiangCtrl.clear();
+                      _garduCtrl.clear();
+                      _fotoTiangOrGardu = null;
+                    });
+                    _loadTemuan();
                   },
                 ),
-                const SizedBox(height: 12),
-                const Text('Penyulang',
-                    style:
-                        TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 6),
+                _gap(),
+                _label('Penyulang'),
                 DropdownButtonFormField<String>(
                   value: _selectedPenyulang,
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 12),
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
+                  isExpanded: true,
+                  decoration: _decoration(hint: 'Pilih penyulang'),
                   items: _listPenyulang
-                      .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                      .map((value) => DropdownMenuItem(
+                            value: value,
+                            child: Text(value),
+                          ))
                       .toList(),
-                  onChanged: (val) {
-                    if (val == null) return;
+                  onChanged: (value) {
+                    final nextSections = _sectionMap[value] ?? const <String>[];
                     setState(() {
-                      _selectedPenyulang = val;
-                      final secs = _sectionMap[val] ?? ['Section A'];
-                      _selectedSection = secs.first;
+                      _selectedPenyulang = value;
+                      _selectedSection =
+                          nextSections.isEmpty ? null : nextSections.first;
                     });
                   },
                 ),
-                const SizedBox(height: 12),
-                const Text('Section',
-                    style:
-                        TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 6),
+                _gap(),
+                _label('Section'),
                 DropdownButtonFormField<String>(
-                  value: _selectedSection,
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 12),
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
-                  items: (_sectionMap[_selectedPenyulang] ??
-                          ['Section A', 'Section B'])
-                      .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                  value: sections.contains(_selectedSection)
+                      ? _selectedSection
+                      : null,
+                  isExpanded: true,
+                  decoration: _decoration(hint: 'Pilih section'),
+                  items: sections
+                      .map((value) => DropdownMenuItem(
+                            value: value,
+                            child: Text(value),
+                          ))
                       .toList(),
-                  onChanged: (val) => setState(() => _selectedSection = val),
+                  onChanged: (value) =>
+                      setState(() => _selectedSection = value),
                 ),
-                const SizedBox(height: 12),
-                if (isJaringan) ...[
-                  const Text('Nomor Tiang',
-                      style:
-                          TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: _tiangCtrl,
-                    decoration: InputDecoration(
-                      hintText: 'Contoh: 07',
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 12),
-                    ),
+                _gap(),
+                _label('Segmen'),
+                TextField(
+                  controller: _segmenCtrl,
+                  decoration: _decoration(hint: 'Segmen lokasi temuan'),
+                ),
+                _gap(),
+                _label(_isJaringan ? 'Nomor Tiang' : 'Nomor Gardu'),
+                TextField(
+                  controller: _isJaringan ? _tiangCtrl : _garduCtrl,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: _decoration(
+                    hint: _isJaringan ? 'Contoh: 07' : 'Contoh: GT.TBL-012',
                   ),
-                ] else ...[
-                  const Text('Nomor Gardu',
-                      style:
-                          TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: _garduCtrl,
-                    decoration: InputDecoration(
-                      hintText: 'Contoh: GT.TBL-012',
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 12),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 12),
-                const Text('Tier',
-                    style:
-                        TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 6),
+                ),
+                _gap(),
+                _label('Tier'),
                 DropdownButtonFormField<String>(
                   value: _selectedTier,
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 12),
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
-                  items: ['Tier 1', 'Tier 2']
-                      .map((t) => DropdownMenuItem(value: t, child: Text(t)))
-                      .toList(),
-                  onChanged: (val) {
-                    if (val == null) return;
-                    setState(() => _selectedTier = val);
-                    _loadTemuanByTierAndObjek();
+                  decoration: _decoration(),
+                  items: const [
+                    DropdownMenuItem(value: 'Tier 1', child: Text('Tier 1')),
+                    DropdownMenuItem(value: 'Tier 2', child: Text('Tier 2')),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() => _selectedTier = value);
+                    _loadTemuan();
                   },
                 ),
-                const SizedBox(height: 12),
-                const Text('Temuan',
-                    style:
-                        TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 6),
+                _gap(),
+                _label('Temuan'),
                 _loadingTemuan
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const LinearProgressIndicator(minHeight: 3)
                     : DropdownButtonFormField<String>(
                         value: _selectedTemuan,
                         isExpanded: true,
-                        decoration: InputDecoration(
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10)),
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 12),
-                          filled: true,
-                          fillColor: Colors.white,
-                        ),
+                        decoration: _decoration(hint: 'Pilih temuan'),
                         items: _listTemuan
-                            .map((t) => DropdownMenuItem(
-                                value: t,
-                                child:
-                                    Text(t, overflow: TextOverflow.ellipsis)))
+                            .map((value) => DropdownMenuItem(
+                                  value: value,
+                                  child: Text(value,
+                                      overflow: TextOverflow.ellipsis),
+                                ))
                             .toList(),
-                        onChanged: (val) =>
-                            setState(() => _selectedTemuan = val),
+                        onChanged: (value) =>
+                            setState(() => _selectedTemuan = value),
                       ),
-                const SizedBox(height: 12),
-                const Text('Koordinat Temuan',
-                    style:
-                        TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 6),
+                _gap(),
+                _label('Koordinat Temuan'),
                 TextField(
                   controller: _koorCtrl,
-                  decoration: InputDecoration(
-                    hintText: '-2.xxxx, 106.xxxx',
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 12),
+                  readOnly: true,
+                  decoration: _decoration(
+                    hint: '-2.xxxx, 106.xxxx',
                     suffixIcon: AccurateGpsButton(controller: _koorCtrl),
                   ),
                 ),
-                const SizedBox(height: 12),
-                const Text('Deskripsi / Catatan Lapangan',
-                    style:
-                        TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 6),
+                _gap(),
+                _label('Deskripsi / Catatan Lapangan'),
                 TextField(
                   controller: _deskripsiCtrl,
-                  maxLines: 2,
-                  decoration: InputDecoration(
-                    hintText: 'Tuliskan catatan kondisi temuan...',
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 12),
-                  ),
+                  maxLines: 3,
+                  decoration:
+                      _decoration(hint: 'Tuliskan kondisi temuan...'),
                 ),
-                const SizedBox(height: 14),
-                Text(
-                  'Foto Dokumentasi (Temuan & ${isJaringan ? 'Tiang' : 'Gardu'})',
-                  style: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                        child: _buildFotoSlot(
-                            'Foto Temuan', _fotoTemuan, () => _pickFoto(1))),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _buildFotoSlot(
-                        isJaringan ? 'Foto Tiang' : 'Foto Gardu',
-                        _fotoTiangOrGardu,
-                        () => _pickFoto(2),
-                      ),
+                const SizedBox(height: 18),
+                _label(
+                    'Foto Dokumentasi (Temuan & ${_isJaringan ? 'Tiang' : 'Gardu'})'),
+                Row(children: [
+                  Expanded(
+                    child: _fotoSlot(
+                      'Foto Temuan',
+                      _fotoTemuan,
+                      () => _pickFoto(1),
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _fotoSlot(
+                      _isJaringan ? 'Foto Tiang' : 'Foto Gardu',
+                      _fotoTiangOrGardu,
+                      () => _pickFoto(2),
+                    ),
+                  ),
+                ]),
                 const SizedBox(height: 24),
                 SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton(
+                  height: 50,
+                  child: ElevatedButton.icon(
+                    onPressed: _saving ? null : _handleSimpan,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.navy700,
+                      foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                    onPressed: _saving ? null : _handleSimpan,
-                    child: _saving
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
+                    icon: _saving
+                        ? const SizedBox.square(
+                            dimension: 19,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                           )
-                        : const Text('Simpan Temuan',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                fontSize: 15)),
+                        : const Icon(Icons.save_rounded),
+                    label: Text(
+                      _saving ? 'Menyimpan...' : 'Simpan Temuan',
+                      style: const TextStyle(fontWeight: FontWeight.w900),
+                    ),
                   ),
                 ),
               ],
@@ -476,38 +466,52 @@ class _InputTemuanTeknikScreenState extends State<InputTemuanTeknikScreen> {
     );
   }
 
-  Widget _buildFotoSlot(String label, File? file, VoidCallback onTap) {
-    return Container(
-      height: 84,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-            color: file != null
-                ? const Color(0xFF10B981)
-                : const Color(0xFFCBD5E1)),
-      ),
+  Widget _fotoSlot(String label, File? file, VoidCallback onTap) {
+    return Material(
+      color: const Color(0xFFFCFDFF),
+      borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: file != null
-            ? ClipRRect(
-                borderRadius: BorderRadius.circular(9),
-                child: Image.file(file, fit: BoxFit.cover),
-              )
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.add_a_photo,
-                      size: 20, color: Color(0xFF64748B)),
-                  const SizedBox(height: 4),
-                  Text(label,
-                      style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF64748B))),
-                ],
-              ),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          height: 104,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: file == null
+                  ? const Color(0xFFDCE3EC)
+                  : AppColors.success700,
+            ),
+          ),
+          child: file != null
+              ? Stack(fit: StackFit.expand, children: [
+                  Image.file(file, fit: BoxFit.cover),
+                  const Positioned(
+                    right: 6,
+                    top: 6,
+                    child: CircleAvatar(
+                      radius: 12,
+                      backgroundColor: AppColors.success700,
+                      child: Icon(Icons.check_rounded,
+                          size: 16, color: Colors.white),
+                    ),
+                  ),
+                ])
+              : Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  const Icon(Icons.add_a_photo_rounded,
+                      color: Color(0xFF64748B)),
+                  const SizedBox(height: 6),
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ]),
+        ),
       ),
     );
   }
