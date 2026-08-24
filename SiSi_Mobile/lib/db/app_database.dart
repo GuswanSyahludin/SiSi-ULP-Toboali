@@ -52,7 +52,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(driftDatabase(name: 'sisi_db'));
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   Future<Set<String>> _columns(String table) async {
     final rows = await customSelect('PRAGMA table_info($table)').get();
@@ -72,8 +72,16 @@ class AppDatabase extends _$AppDatabase {
         .toSet();
   }
 
+  Future<void> _ensureTeknikToTables() async {
+    await customStatement('CREATE TABLE IF NOT EXISTS teknik_to_cache (kode_pekerjaan TEXT NOT NULL, mode TEXT NOT NULL, tanggal TEXT NOT NULL DEFAULT "", payload TEXT NOT NULL, updated_at TEXT NOT NULL, PRIMARY KEY (kode_pekerjaan, mode))');
+    await customStatement('CREATE INDEX IF NOT EXISTS idx_teknik_to_mode_tanggal ON teknik_to_cache(mode, tanggal DESC)');
+    await customStatement('CREATE TABLE IF NOT EXISTS teknik_to_team (nama TEXT PRIMARY KEY NOT NULL, updated_at TEXT NOT NULL)');
+    await customStatement('CREATE TABLE IF NOT EXISTS teknik_to_outbox (id INTEGER PRIMARY KEY AUTOINCREMENT, kode_pekerjaan TEXT NOT NULL, mode TEXT NOT NULL, payload TEXT NOT NULL, created_at TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0)');
+  }
+
   @override
   MigrationStrategy get migration => MigrationStrategy(
+        beforeOpen: (_) async => _ensureTeknikToTables(),
         onUpgrade: (m, from, to) async {
           var tables = await _tables();
 

@@ -7,6 +7,7 @@ import 'package:flutter/physics.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_colors.dart';
 import '../services/api_service.dart';
+import '../services/auto_sync_service.dart';
 import '../db/repositories/master_repository.dart';
 import '../widgets/sync_section_pengaturan.dart';
 import 'laporan_harian_screen.dart';
@@ -29,7 +30,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   int selectedIndex = -1;
   int previousIndex = -1;
   late AnimationController _bubbleController;
@@ -125,7 +126,9 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _bubbleController = AnimationController(vsync: this);
+    unawaited(AutoSyncService.syncNow(widget.sesi));
     _cekKoneksi();
     _onlineTimer = Timer.periodic(
       const Duration(seconds: 10),
@@ -135,9 +138,17 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _onlineTimer?.cancel();
     _bubbleController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(AutoSyncService.syncNow(widget.sesi));
+    }
   }
 
   bool get _isSuperUser {
@@ -1155,6 +1166,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       }
     } catch (_) {}
 
+    await AutoSyncService.deactivate();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token');
     await prefs.remove('username');

@@ -6,6 +6,7 @@ import 'laporan_repository.dart';
 import 'master_gardu_repository.dart';
 import 'master_repository.dart';
 import 'p0_repository.dart';
+import 'teknik_to_repository.dart';
 
 class SyncRepository {
   static const modulMasterData = 'masterData';
@@ -42,19 +43,24 @@ class SyncRepository {
       final activeToken = await _tokenAktif(token);
       final p0 = await P0Repository().kirimAntrean();
       final master = await downloadMasterData(activeToken);
+      Map<String, dynamic> teknikTo = {'ok': true};
+      try { await TeknikToRepository().syncAll(activeToken); }
+      catch (e) { teknikTo = {'ok': false, 'message': e.toString()}; }
 
       final p0Ok = p0['ok'] == true;
       final masterOk = master['ok'] == true;
+      final teknikToOk = teknikTo['ok'] == true;
       final p0Terkirim = p0['terkirim'] ?? 0;
       final p0Gagal = p0['gagal'] ?? 0;
 
       final bagian = <String>[
         'P0: $p0Terkirim terkirim${p0Gagal == 0 ? '' : ', $p0Gagal gagal'}',
         'Data: ${masterOk ? master['message'] ?? 'sinkron selesai' : master['message'] ?? 'gagal'}',
+        'TO: ${teknikToOk ? 'offline siap' : teknikTo['message'] ?? 'gagal'}',
       ];
 
       return {
-        'ok': p0Ok && masterOk,
+        'ok': p0Ok && masterOk && teknikToOk,
         'p0Ok': p0Ok,
         'masterOk': masterOk,
         'p0Terkirim': p0Terkirim,

@@ -7,6 +7,7 @@ import '../db/repositories/master_gardu_repository.dart';
 import '../db/repositories/p0_repository.dart';
 import '../db/repositories/sync_repository.dart';
 import '../theme/app_colors.dart';
+import '../services/auto_sync_service.dart';
 
 class SyncSectionPengaturan extends StatefulWidget {
   final Map<String, dynamic> sesi;
@@ -66,6 +67,7 @@ class _State extends State<SyncSectionPengaturan> {
 
     setState(() => proses = false);
     final ok = hasil['ok'] == true;
+    if (ok) await AutoSyncService.activate();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content:
@@ -88,7 +90,7 @@ class _State extends State<SyncSectionPengaturan> {
         : totalAntrean > 0
             ? '${p0.length} keputusan P0 · ${gardu.length} edit Gardu menunggu kirim'
             : sudahPernahSinkron
-                ? 'Data Sudah Sinkron'
+                ? 'Sinkron otomatis aktif · data siap offline'
                 : 'Upload Data & Proses Sinkron';
 
     return Column(
