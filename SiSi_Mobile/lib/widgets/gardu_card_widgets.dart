@@ -10,22 +10,19 @@ double garduPercent(String raw) {
   return value < 0 ? 0 : value;
 }
 
-Color garduLoadColor(double p) {
-  if (p <= 25) return const Color(0xFF0284C7);
-  if (p <= 50) return const Color(0xFF16A34A);
-  if (p <= 80) return const Color(0xFFCA8A04);
-  if (p <= 100) return const Color(0xFFEA580C);
-  return const Color(0xFFDC2626);
+Color garduLoadColor(double percent) {
+  if (percent < 50) return const Color(0xFF76FF03); // Hijau stabilo
+  if (percent < 80) return const Color(0xFF03A9F4); // Biru terang
+  if (percent < 100) return const Color(0xFF8D6E63); // Coklat
+  return const Color(0xFFDC2626); // Merah
 }
 
-String garduCategory(MasterGardu g) {
-  if (g.kategoriBeban.trim().isNotEmpty) return g.kategoriBeban;
-  final p = garduPercent(g.persentaseBeban);
-  if (p <= 25) return 'Beban Rendah';
-  if (p <= 50) return 'Beban Normal';
-  if (p <= 80) return 'Waspada';
-  if (p <= 100) return 'Tinggi';
-  return 'Overload';
+String garduCategory(MasterGardu gardu) {
+  final percent = garduPercent(gardu.persentaseBeban);
+  if (percent < 50) return 'Underload';
+  if (percent < 80) return 'Cukup';
+  if (percent < 100) return 'Overload';
+  return 'Buruk';
 }
 
 String _show(String v) => v.trim().isEmpty ? '-' : v.trim();
@@ -256,7 +253,6 @@ Future<void> showGarduDetailSheet(
               _ElectricalSection(title: 'LWBP', voltages: [g.lwbpRs,g.lwbpSt,g.lwbpTr,g.lwbpRn,g.lwbpSn,g.lwbpTn], currents: [g.lwbpR,g.lwbpS,g.lwbpT,g.lwbpN]),
             ]),
           ),
-          // Footer struktural, tidak berada di Stack dan tidak menimpa ListView.
           SafeArea(top: false, child: Container(
             width: double.infinity, color: const Color(0xFFFCFDFF),
             padding: const EdgeInsets.fromLTRB(18, 12, 18, 14),
