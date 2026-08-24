@@ -15,6 +15,7 @@ import 'login_screen.dart';
 import 'laporan_row_screen.dart';
 import 'laporan_hartek_screen.dart';
 import 'input_temuan_teknik_screen.dart';
+import 'teknik_to_screen.dart';
 import 'verifikasi_p0_screen.dart';
 import 'laporan_up3_uiw_screen.dart';
 
@@ -920,6 +921,18 @@ class _DashboardScreenState extends State<DashboardScreen>
         'iconColor': AppColors.cyan600,
       },
       {
+        'title': 'Penugasan Tim',
+        'icon': Icons.group_add_outlined,
+        'desc': 'Pilih Tim Eksekusi untuk TO yang menunggu penugasan',
+        'iconColor': AppColors.amber700,
+      },
+      {
+        'title': 'Pindah Tim Eksekusi TO',
+        'icon': Icons.swap_horiz_rounded,
+        'desc': 'Pindahkan TO aktif ke Tim Eksekusi lain',
+        'iconColor': AppColors.cyan600,
+      },
+      {
         'title': 'Verifikasi P0',
         'icon': Icons.verified_outlined,
         'desc': 'Verifikasi & persetujuan penugasan P0 Yandal',
@@ -1016,6 +1029,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                   Widget? tujuan;
                   if (title == 'Input Temuan') {
                     tujuan = InputTemuanTeknikScreen(sesi: widget.sesi);
+                  } else if (title == 'Penugasan Tim') {
+                    tujuan = TeknikToScreen(sesi: widget.sesi, mode: 'assignment');
+                  } else if (title == 'Pindah Tim Eksekusi TO') {
+                    tujuan = TeknikToScreen(sesi: widget.sesi, mode: 'move');
                   } else if (title == 'Verifikasi P0') {
                     tujuan = VerifikasiP0Screen(sesi: widget.sesi);
                   } else if (title == 'Laporan UP3 / UIW') {
