@@ -13,6 +13,8 @@ class MasterGardus extends Table {
   TextColumn get ulp => text().withDefault(const Constant(''))();
   TextColumn get gardu => text()();
   TextColumn get alamat => text().withDefault(const Constant(''))();
+  TextColumn get latitude => text().withDefault(const Constant(''))();
+  TextColumn get longitude => text().withDefault(const Constant(''))();
   TextColumn get penyulang => text().withDefault(const Constant(''))();
   TextColumn get section => text().withDefault(const Constant(''))();
   TextColumn get jenisGardu => text().withDefault(const Constant(''))();

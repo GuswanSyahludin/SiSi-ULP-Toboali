@@ -52,7 +52,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(driftDatabase(name: 'sisi_db'));
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   Future<Set<String>> _columns(String table) async {
     final rows = await customSelect('PRAGMA table_info($table)').get();
@@ -118,6 +118,16 @@ class AppDatabase extends _$AppDatabase {
             }
             if (!columns.contains('volume_minyak')) {
               await m.addColumn(masterGardus, masterGardus.volumeMinyak);
+            }
+          }
+
+          if (from < 7) {
+            final columns = await _columns('master_gardu');
+            if (!columns.contains('latitude')) {
+              await m.addColumn(masterGardus, masterGardus.latitude);
+            }
+            if (!columns.contains('longitude')) {
+              await m.addColumn(masterGardus, masterGardus.longitude);
             }
           }
 

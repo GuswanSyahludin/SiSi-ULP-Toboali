@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../db/app_database.dart';
 import '../theme/app_colors.dart';
 
@@ -28,6 +29,23 @@ String garduCategory(MasterGardu g) {
 }
 
 String _show(String v) => v.trim().isEmpty ? '-' : v.trim();
+
+String _garduCoordinate(MasterGardu g) {
+  final lat = g.latitude.trim();
+  final lng = g.longitude.trim();
+  if (lat.isEmpty && lng.isEmpty) return '-';
+  return [lat, lng].where((value) => value.isNotEmpty).join(', ');
+}
+
+Future<void> _openGarduMaps(MasterGardu g) async {
+  final lat = g.latitude.trim();
+  final lng = g.longitude.trim();
+  if (lat.isEmpty || lng.isEmpty) return;
+  final uri = Uri.parse(
+    'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent('$lat,$lng')}',
+  );
+  await launchUrl(uri, mode: LaunchMode.externalApplication);
+}
 
 class GarduLoadRing extends StatelessWidget {
   final String percentage;
@@ -116,7 +134,29 @@ class GarduSummaryCard extends StatelessWidget {
                 const SizedBox(height: 5),
                 Text(_show(gardu.alamat), maxLines: 2, overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: 12, height: 1.35, color: Color(0xFF7C879B))),
-                const SizedBox(height: 10),
+                const SizedBox(height: 7),
+                InkWell(
+                  onTap: gardu.latitude.trim().isNotEmpty && gardu.longitude.trim().isNotEmpty
+                      ? () => _openGarduMaps(gardu)
+                      : null,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 3),
+                    child: Row(children: [
+                      const Icon(Icons.location_on_rounded, size: 14, color: AppColors.cyan600),
+                      const SizedBox(width: 4),
+                      Expanded(child: Text(
+                        _garduCoordinate(gardu),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.cyan600),
+                      )),
+                      if (gardu.latitude.trim().isNotEmpty && gardu.longitude.trim().isNotEmpty)
+                        const Icon(Icons.open_in_new_rounded, size: 12, color: AppColors.cyan600),
+                    ]),
+                  ),
+                ),
+                const SizedBox(height: 7),
                 _Category(text: garduCategory(gardu), color: color),
               ])),
               const SizedBox(width: 14),
@@ -191,9 +231,20 @@ Future<void> showGarduDetailSheet(
             child: ListView(controller: controller, padding: const EdgeInsets.fromLTRB(18, 4, 18, 24), children: [
               _LoadOverview(g: g),
               const SizedBox(height: 18),
-              _DetailSection(title: 'Identitas', rows: [
-                ('ULP', g.ulp), ('Gardu', g.gardu), ('Alamat', g.alamat),
-                ('Jenis Gardu', g.jenisGardu), ('Kepemilikan', g.kepemilikan)]),
+              _DetailSection(
+                title: 'Identitas',
+                rows: [
+                  ('ULP', g.ulp),
+                  ('Gardu', g.gardu),
+                  ('Alamat', g.alamat),
+                  ('Koordinat', _garduCoordinate(g)),
+                  ('Jenis Gardu', g.jenisGardu),
+                  ('Kepemilikan', g.kepemilikan),
+                ],
+                coordinateTap: g.latitude.trim().isNotEmpty && g.longitude.trim().isNotEmpty
+                    ? () => _openGarduMaps(g)
+                    : null,
+              ),
               _DetailSection(title: 'Data Trafo', rows: [
                 ('Merk', g.merk), ('Kapasitas', '${_show(g.kapasitasKva)} kVA'),
                 ('No. Seri', g.noSeri), ('Tahun Trafo', g.tahunTrafo), ('Type Seal', g.typeSeal)]),
@@ -254,8 +305,14 @@ class _OverviewRow extends StatelessWidget {
 }
 
 class _DetailSection extends StatelessWidget {
-  final String title; final List<(String,String)> rows;
-  const _DetailSection({required this.title, required this.rows});
+  final String title;
+  final List<(String,String)> rows;
+  final VoidCallback? coordinateTap;
+  const _DetailSection({
+    required this.title,
+    required this.rows,
+    this.coordinateTap,
+  });
   @override Widget build(BuildContext context) => Container(
     margin: const EdgeInsets.only(bottom: 14), padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(color: const Color(0xFFFCFDFF), border: Border.all(color: const Color(0xFFE8ECF3)), borderRadius: BorderRadius.circular(18)),
@@ -264,7 +321,18 @@ class _DetailSection extends StatelessWidget {
       const SizedBox(height: 9),
       ...rows.map((r) => Padding(padding: const EdgeInsets.symmetric(vertical: 6), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         SizedBox(width: 118, child: Text(r.$1, style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)))),
-        Expanded(child: Text(_show(r.$2), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF1E293B)))),
+        Expanded(
+          child: r.$1 == 'Koordinat' && coordinateTap != null
+              ? InkWell(
+                  onTap: coordinateTap,
+                  child: Row(children: [
+                    Flexible(child: Text(_show(r.$2), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.cyan600))),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.open_in_new_rounded, size: 13, color: AppColors.cyan600),
+                  ]),
+                )
+              : Text(_show(r.$2), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF1E293B))),
+        ),
       ]))),
     ]),
   );
