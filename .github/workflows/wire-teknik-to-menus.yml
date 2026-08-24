@@ -2,7 +2,8 @@ name: Wire Teknik TO menus
 on:
   push:
     branches: [main]
-    paths: [.github/workflows/wire-teknik-to-menus.yml]
+    paths:
+      - .github/workflows/wire-teknik-to-menus.yml
   workflow_dispatch:
 permissions:
   contents: write
@@ -13,48 +14,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
-      - name: Patch dashboard
-        shell: python {0}
-        run: |
-          from pathlib import Path
-          p=Path('SiSi_Mobile/lib/screens/dashboard_screen.dart')
-          s=p.read_text()
-          marker="import 'input_temuan_teknik_screen.dart';"
-          if "import 'teknik_to_screen.dart';" not in s:
-              s=s.replace(marker, marker+"\nimport 'teknik_to_screen.dart';")
-          item="""      {
-            'title': 'Penugasan Tim',
-            'icon': Icons.group_add_outlined,
-            'desc': 'Pilih Tim Eksekusi untuk TO yang menunggu penugasan',
-            'iconColor': AppColors.amber700,
-          },
-          {
-            'title': 'Pindah Tim Eksekusi TO',
-            'icon': Icons.swap_horiz_rounded,
-            'desc': 'Pindahkan TO aktif ke Tim Eksekusi lain',
-            'iconColor': AppColors.cyan600,
-          },
-          """
-          anchor="""      {
-            'title': 'Verifikasi P0',"""
-          if "'title': 'Penugasan Tim'" not in s:
-              if anchor not in s: raise SystemExit('menu anchor not found')
-              s=s.replace(anchor,item+anchor)
-          route="""                  if (title == 'Input Temuan') {
-                    tujuan = InputTemuanTeknikScreen(sesi: widget.sesi);
-                  } else if (title == 'Verifikasi P0') {"""
-          replacement="""                  if (title == 'Input Temuan') {
-                    tujuan = InputTemuanTeknikScreen(sesi: widget.sesi);
-                  } else if (title == 'Penugasan Tim') {
-                    tujuan = TeknikToScreen(sesi: widget.sesi, mode: 'assignment');
-                  } else if (title == 'Pindah Tim Eksekusi TO') {
-                    tujuan = TeknikToScreen(sesi: widget.sesi, mode: 'move');
-                  } else if (title == 'Verifikasi P0') {"""
-          if "mode: 'assignment'" not in s:
-              if route not in s: raise SystemExit('route anchor not found')
-              s=s.replace(route,replacement)
-          p.write_text(s)
-      - name: Commit patch
+      - name: Patch dashboard source
+        run: python .github/scripts/wire_teknik_to_menus.py
+      - name: Commit dashboard source
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
