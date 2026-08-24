@@ -13,6 +13,8 @@
    refreshLaporanHarian diguard _tglSudahDiarsip_ (tanggal <= H-2 tidak dibuat ulang di
    aktif); getLaporanHarianRow diberi fallback ARSIP (Pola A) agar laporan lama tetap bisa
    dilihat read-only.
+   Rev 24 Agu 2026 — FIX KOMULATIF: Hartek, Inspeksi Jaringan, dan Inspeksi Gardu
+   kini DUAL-READ AKTIF+ARSIP via _readSheetDual_(), konsisten dengan ROW.
    Rev 20 Agu 2026 — OPTIMASI BACA mobile Laporan UP3/UIW: getMobileLaporanUp3Uiw
    di-cache (CacheService) 2 menit per (ULP, tanggal) + _statusTimLaporan_ hanya
    memindai 1000 baris terakhir tiap sheet (_lapRecentRows_). Cache dibuang
@@ -252,14 +254,15 @@ function _lapDataROW_(ss, ulp, tglIso) {
 // C. Hartek: per penyulang (hari) {jaringan, gardu} + komulatif bulan.
 // Jaringan = Jumlah Gawang (kolom L PG, jenis 'Jaringan'); Gardu = jumlah baris objek gardu (bukan Jaringan/Non-Teknik).
 function _lapDataHartek_(ss, ulp, tglIso) {
-  var sh = ss.getSheetByName(LAP_UP3.HTK_PG),
-    C = COL_HTK.PG;
+  var C = COL_HTK.PG;
   var bulan = tglIso.substring(0, 7);
   var hari = {},
     kom = { jaringan: 0, gardu: 0 };
-  if (sh && sh.getLastRow() > 1) {
-    var d = sh.getDataRange().getValues();
-    for (var i = 1; i < d.length; i++) {
+  // DUAL-READ: data H-2 ke belakang sudah berpindah ke ARSIP. Tanpa gabungan
+  // AKTIF+ARSIP, komulatif bulan Hartek turun/hilang setelah migrasi harian.
+  var d = _readSheetDual_(LAP_UP3.HTK_PG, C.kodePG, C.timeStamp + 1);
+  if (d.length) {
+    for (var i = 0; i < d.length; i++) {
       if (String(d[i][C.ulp] || "").trim() !== ulp) continue;
       var t = _normTgl(d[i][C.tanggal]);
       if (t.substring(0, 7) !== bulan) continue;
@@ -301,11 +304,16 @@ function _lapDataInspeksi_(ss, ulp, tglIso) {
     return hari[p];
   }
 
-  var shJ = ss.getSheetByName(LAP_UP3.INSJAR);
-  if (shJ && shJ.getLastRow() > 1) {
-    var RJ = COL_INS.REALISASI,
-      dj = shJ.getDataRange().getValues();
-    for (var i = 1; i < dj.length; i++) {
+  var RJ = COL_INS.REALISASI;
+  // DUAL-READ Inspeksi Jaringan: gabungkan AKTIF+ARSIP dan dedup berdasarkan
+  // Kode Pekerjaan Penyulang agar baris in-flight migrasi tidak dihitung dua kali.
+  var dj = _readSheetDual_(
+    LAP_UP3.INSJAR,
+    RJ.kodePekerjaanPeny,
+    RJ.timestamp + 1,
+  );
+  if (dj.length) {
+    for (var i = 0; i < dj.length; i++) {
       var kh = String(dj[i][RJ.kodeHeader] || "").trim();
       if ((ulpMap[kh] || "") !== ulp) continue;
       var t = _normTgl(dj[i][RJ.tanggal]);
@@ -329,11 +337,16 @@ function _lapDataInspeksi_(ss, ulp, tglIso) {
     }
   }
 
-  var shG = ss.getSheetByName(LAP_UP3.INSDU);
-  if (shG && shG.getLastRow() > 1) {
-    var RG = COL_INSDU.REALISASI,
-      dg = shG.getDataRange().getValues();
-    for (var k = 1; k < dg.length; k++) {
+  var RG = COL_INSDU.REALISASI;
+  // DUAL-READ Inspeksi Gardu: data lama tetap ikut komulatif setelah sheet
+  // realisasi gardu dimigrasikan ke file ARSIP.
+  var dg = _readSheetDual_(
+    LAP_UP3.INSDU,
+    RG.kodePekerjaanGardu,
+    RG.timestamp + 1,
+  );
+  if (dg.length) {
+    for (var k = 0; k < dg.length; k++) {
       var kh2 = String(dg[k][RG.kodeHeader] || "").trim();
       if ((ulpMap[kh2] || "") !== ulp) continue;
       var t2 = _normTgl(dg[k][RG.tanggal]);

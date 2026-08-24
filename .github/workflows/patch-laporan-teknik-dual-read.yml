@@ -1,0 +1,36 @@
+name: Patch laporan teknik dual-read
+
+on:
+  push:
+    branches:
+      - fix/laporan-teknik-dual-read
+    paths:
+      - scripts/patch_laporan_teknik_dual_read.py
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/laporan-teknik-dual-read
+          fetch-depth: 0
+      - name: Apply deterministic patch
+        run: python scripts/patch_laporan_teknik_dual_read.py
+      - name: Verify syntax-sensitive changes
+        run: |
+          grep -n "DUAL-READ.*Hartek\|DUAL-READ Inspeksi Jaringan\|DUAL-READ Inspeksi Gardu" SiSi_BackEnd/Teknik/Tek-LapUP3UIWHarian.js
+          test "$(grep -c "var d = _readSheetDual_(LAP_UP3.HTK_PG" SiSi_BackEnd/Teknik/Tek-LapUP3UIWHarian.js)" -eq 1
+          test "$(grep -c "RJ.kodePekerjaanPeny" SiSi_BackEnd/Teknik/Tek-LapUP3UIWHarian.js)" -ge 1
+          test "$(grep -c "RG.kodePekerjaanGardu" SiSi_BackEnd/Teknik/Tek-LapUP3UIWHarian.js)" -ge 1
+      - name: Commit patched report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add SiSi_BackEnd/Teknik/Tek-LapUP3UIWHarian.js
+          git diff --cached --quiet && exit 0
+          git commit -m "fix(teknik): dual-read sumber kumulatif laporan UP3"
+          git push origin HEAD:fix/laporan-teknik-dual-read
