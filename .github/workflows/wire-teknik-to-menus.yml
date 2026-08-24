@@ -1,12 +1,12 @@
 name: Wire Teknik TO menus
 on:
-  pull_request:
-    types: [opened]
+  pull_request_target:
+    types: [opened, reopened]
 permissions:
   contents: write
 jobs:
   patch:
-    if: github.head_ref == 'trigger/wire-teknik-to-menus'
+    if: github.event.pull_request.head.ref == 'trigger/wire-teknik-to-menus'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
