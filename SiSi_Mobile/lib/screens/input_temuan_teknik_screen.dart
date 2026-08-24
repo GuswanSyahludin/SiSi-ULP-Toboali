@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import '../services/accurate_location_service.dart';
 import '../widgets/accurate_gps_button.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -139,23 +138,6 @@ class _InputTemuanTeknikScreenState extends State<InputTemuanTeknikScreen> {
       _selectedTemuan = listPilihan.first;
       _loadingTemuan = false;
     });
-  }
-
-  Future<void> _getCurrentLocation() async {
-    try {
-      final result = await AccurateLocationService.capture();
-      if (!mounted) return;
-      setState(() => _koorCtrl.text = result.coordinates);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Akurasi GPS ${result.accuracyLabel}')),
-      );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$e')),
-        );
-      }
-    }
   }
 
   Future<void> _pickFoto(int slot) async {
