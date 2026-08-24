@@ -4,4 +4,4 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 ENV PORT=8080
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 4 --timeout 120 main:app
+CMD exec gunicorn --bind :$PORT --workers 1 --threads 4 --timeout 120 hybrid_v1:app
