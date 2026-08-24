@@ -1399,7 +1399,8 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
                               borderRadius: BorderRadius.circular(10)),
                           contentPadding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 12),
-                          suffixIcon: AccurateGpsButton(controller: _koorTiangCtrl),
+                          suffixIcon:
+                              AccurateGpsButton(controller: _koorTiangCtrl),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -1417,7 +1418,8 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
                               borderRadius: BorderRadius.circular(10)),
                           contentPadding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 12),
-                          suffixIcon: AccurateGpsButton(controller: _koorPekerjaanCtrl),
+                          suffixIcon:
+                              AccurateGpsButton(controller: _koorPekerjaanCtrl),
                         ),
                       ),
                       const SizedBox(height: 12),

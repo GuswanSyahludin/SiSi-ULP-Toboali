@@ -2771,6 +2771,22 @@ class $MasterGardusTable extends MasterGardus
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant(''));
+  static const VerificationMeta _latitudeMeta =
+      const VerificationMeta('latitude');
+  @override
+  late final GeneratedColumn<String> latitude = GeneratedColumn<String>(
+      'latitude', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
+  static const VerificationMeta _longitudeMeta =
+      const VerificationMeta('longitude');
+  @override
+  late final GeneratedColumn<String> longitude = GeneratedColumn<String>(
+      'longitude', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
   static const VerificationMeta _penyulangMeta =
       const VerificationMeta('penyulang');
   @override
@@ -3082,6 +3098,8 @@ class $MasterGardusTable extends MasterGardus
         ulp,
         gardu,
         alamat,
+        latitude,
+        longitude,
         penyulang,
         section,
         jenisGardu,
@@ -3147,6 +3165,14 @@ class $MasterGardusTable extends MasterGardus
     if (data.containsKey('alamat')) {
       context.handle(_alamatMeta,
           alamat.isAcceptableOrUnknown(data['alamat']!, _alamatMeta));
+    }
+    if (data.containsKey('latitude')) {
+      context.handle(_latitudeMeta,
+          latitude.isAcceptableOrUnknown(data['latitude']!, _latitudeMeta));
+    }
+    if (data.containsKey('longitude')) {
+      context.handle(_longitudeMeta,
+          longitude.isAcceptableOrUnknown(data['longitude']!, _longitudeMeta));
     }
     if (data.containsKey('penyulang')) {
       context.handle(_penyulangMeta,
@@ -3359,6 +3385,10 @@ class $MasterGardusTable extends MasterGardus
           .read(DriftSqlType.string, data['${effectivePrefix}gardu'])!,
       alamat: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}alamat'])!,
+      latitude: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}latitude'])!,
+      longitude: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}longitude'])!,
       penyulang: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}penyulang'])!,
       section: attachedDatabase.typeMapping
@@ -3454,6 +3484,8 @@ class MasterGardu extends DataClass implements Insertable<MasterGardu> {
   final String ulp;
   final String gardu;
   final String alamat;
+  final String latitude;
+  final String longitude;
   final String penyulang;
   final String section;
   final String jenisGardu;
@@ -3499,6 +3531,8 @@ class MasterGardu extends DataClass implements Insertable<MasterGardu> {
       {required this.ulp,
       required this.gardu,
       required this.alamat,
+      required this.latitude,
+      required this.longitude,
       required this.penyulang,
       required this.section,
       required this.jenisGardu,
@@ -3546,6 +3580,8 @@ class MasterGardu extends DataClass implements Insertable<MasterGardu> {
     map['ulp'] = Variable<String>(ulp);
     map['gardu'] = Variable<String>(gardu);
     map['alamat'] = Variable<String>(alamat);
+    map['latitude'] = Variable<String>(latitude);
+    map['longitude'] = Variable<String>(longitude);
     map['penyulang'] = Variable<String>(penyulang);
     map['section'] = Variable<String>(section);
     map['jenis_gardu'] = Variable<String>(jenisGardu);
@@ -3595,6 +3631,8 @@ class MasterGardu extends DataClass implements Insertable<MasterGardu> {
       ulp: Value(ulp),
       gardu: Value(gardu),
       alamat: Value(alamat),
+      latitude: Value(latitude),
+      longitude: Value(longitude),
       penyulang: Value(penyulang),
       section: Value(section),
       jenisGardu: Value(jenisGardu),
@@ -3646,6 +3684,8 @@ class MasterGardu extends DataClass implements Insertable<MasterGardu> {
       ulp: serializer.fromJson<String>(json['ulp']),
       gardu: serializer.fromJson<String>(json['gardu']),
       alamat: serializer.fromJson<String>(json['alamat']),
+      latitude: serializer.fromJson<String>(json['latitude']),
+      longitude: serializer.fromJson<String>(json['longitude']),
       penyulang: serializer.fromJson<String>(json['penyulang']),
       section: serializer.fromJson<String>(json['section']),
       jenisGardu: serializer.fromJson<String>(json['jenisGardu']),
@@ -3696,6 +3736,8 @@ class MasterGardu extends DataClass implements Insertable<MasterGardu> {
       'ulp': serializer.toJson<String>(ulp),
       'gardu': serializer.toJson<String>(gardu),
       'alamat': serializer.toJson<String>(alamat),
+      'latitude': serializer.toJson<String>(latitude),
+      'longitude': serializer.toJson<String>(longitude),
       'penyulang': serializer.toJson<String>(penyulang),
       'section': serializer.toJson<String>(section),
       'jenisGardu': serializer.toJson<String>(jenisGardu),
@@ -3744,6 +3786,8 @@ class MasterGardu extends DataClass implements Insertable<MasterGardu> {
           {String? ulp,
           String? gardu,
           String? alamat,
+          String? latitude,
+          String? longitude,
           String? penyulang,
           String? section,
           String? jenisGardu,
@@ -3789,6 +3833,8 @@ class MasterGardu extends DataClass implements Insertable<MasterGardu> {
         ulp: ulp ?? this.ulp,
         gardu: gardu ?? this.gardu,
         alamat: alamat ?? this.alamat,
+        latitude: latitude ?? this.latitude,
+        longitude: longitude ?? this.longitude,
         penyulang: penyulang ?? this.penyulang,
         section: section ?? this.section,
         jenisGardu: jenisGardu ?? this.jenisGardu,
@@ -3836,6 +3882,8 @@ class MasterGardu extends DataClass implements Insertable<MasterGardu> {
       ulp: data.ulp.present ? data.ulp.value : this.ulp,
       gardu: data.gardu.present ? data.gardu.value : this.gardu,
       alamat: data.alamat.present ? data.alamat.value : this.alamat,
+      latitude: data.latitude.present ? data.latitude.value : this.latitude,
+      longitude: data.longitude.present ? data.longitude.value : this.longitude,
       penyulang: data.penyulang.present ? data.penyulang.value : this.penyulang,
       section: data.section.present ? data.section.value : this.section,
       jenisGardu:
@@ -3910,6 +3958,8 @@ class MasterGardu extends DataClass implements Insertable<MasterGardu> {
           ..write('ulp: $ulp, ')
           ..write('gardu: $gardu, ')
           ..write('alamat: $alamat, ')
+          ..write('latitude: $latitude, ')
+          ..write('longitude: $longitude, ')
           ..write('penyulang: $penyulang, ')
           ..write('section: $section, ')
           ..write('jenisGardu: $jenisGardu, ')
@@ -3960,6 +4010,8 @@ class MasterGardu extends DataClass implements Insertable<MasterGardu> {
         ulp,
         gardu,
         alamat,
+        latitude,
+        longitude,
         penyulang,
         section,
         jenisGardu,
@@ -4009,6 +4061,8 @@ class MasterGardu extends DataClass implements Insertable<MasterGardu> {
           other.ulp == this.ulp &&
           other.gardu == this.gardu &&
           other.alamat == this.alamat &&
+          other.latitude == this.latitude &&
+          other.longitude == this.longitude &&
           other.penyulang == this.penyulang &&
           other.section == this.section &&
           other.jenisGardu == this.jenisGardu &&
@@ -4056,6 +4110,8 @@ class MasterGardusCompanion extends UpdateCompanion<MasterGardu> {
   final Value<String> ulp;
   final Value<String> gardu;
   final Value<String> alamat;
+  final Value<String> latitude;
+  final Value<String> longitude;
   final Value<String> penyulang;
   final Value<String> section;
   final Value<String> jenisGardu;
@@ -4102,6 +4158,8 @@ class MasterGardusCompanion extends UpdateCompanion<MasterGardu> {
     this.ulp = const Value.absent(),
     this.gardu = const Value.absent(),
     this.alamat = const Value.absent(),
+    this.latitude = const Value.absent(),
+    this.longitude = const Value.absent(),
     this.penyulang = const Value.absent(),
     this.section = const Value.absent(),
     this.jenisGardu = const Value.absent(),
@@ -4149,6 +4207,8 @@ class MasterGardusCompanion extends UpdateCompanion<MasterGardu> {
     this.ulp = const Value.absent(),
     required String gardu,
     this.alamat = const Value.absent(),
+    this.latitude = const Value.absent(),
+    this.longitude = const Value.absent(),
     this.penyulang = const Value.absent(),
     this.section = const Value.absent(),
     this.jenisGardu = const Value.absent(),
@@ -4196,6 +4256,8 @@ class MasterGardusCompanion extends UpdateCompanion<MasterGardu> {
     Expression<String>? ulp,
     Expression<String>? gardu,
     Expression<String>? alamat,
+    Expression<String>? latitude,
+    Expression<String>? longitude,
     Expression<String>? penyulang,
     Expression<String>? section,
     Expression<String>? jenisGardu,
@@ -4243,6 +4305,8 @@ class MasterGardusCompanion extends UpdateCompanion<MasterGardu> {
       if (ulp != null) 'ulp': ulp,
       if (gardu != null) 'gardu': gardu,
       if (alamat != null) 'alamat': alamat,
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
       if (penyulang != null) 'penyulang': penyulang,
       if (section != null) 'section': section,
       if (jenisGardu != null) 'jenis_gardu': jenisGardu,
@@ -4292,6 +4356,8 @@ class MasterGardusCompanion extends UpdateCompanion<MasterGardu> {
       {Value<String>? ulp,
       Value<String>? gardu,
       Value<String>? alamat,
+      Value<String>? latitude,
+      Value<String>? longitude,
       Value<String>? penyulang,
       Value<String>? section,
       Value<String>? jenisGardu,
@@ -4338,6 +4404,8 @@ class MasterGardusCompanion extends UpdateCompanion<MasterGardu> {
       ulp: ulp ?? this.ulp,
       gardu: gardu ?? this.gardu,
       alamat: alamat ?? this.alamat,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
       penyulang: penyulang ?? this.penyulang,
       section: section ?? this.section,
       jenisGardu: jenisGardu ?? this.jenisGardu,
@@ -4394,6 +4462,12 @@ class MasterGardusCompanion extends UpdateCompanion<MasterGardu> {
     }
     if (alamat.present) {
       map['alamat'] = Variable<String>(alamat.value);
+    }
+    if (latitude.present) {
+      map['latitude'] = Variable<String>(latitude.value);
+    }
+    if (longitude.present) {
+      map['longitude'] = Variable<String>(longitude.value);
     }
     if (penyulang.present) {
       map['penyulang'] = Variable<String>(penyulang.value);
@@ -4530,6 +4604,8 @@ class MasterGardusCompanion extends UpdateCompanion<MasterGardu> {
           ..write('ulp: $ulp, ')
           ..write('gardu: $gardu, ')
           ..write('alamat: $alamat, ')
+          ..write('latitude: $latitude, ')
+          ..write('longitude: $longitude, ')
           ..write('penyulang: $penyulang, ')
           ..write('section: $section, ')
           ..write('jenisGardu: $jenisGardu, ')
@@ -8231,6 +8307,8 @@ typedef $$MasterGardusTableCreateCompanionBuilder = MasterGardusCompanion
   Value<String> ulp,
   required String gardu,
   Value<String> alamat,
+  Value<String> latitude,
+  Value<String> longitude,
   Value<String> penyulang,
   Value<String> section,
   Value<String> jenisGardu,
@@ -8279,6 +8357,8 @@ typedef $$MasterGardusTableUpdateCompanionBuilder = MasterGardusCompanion
   Value<String> ulp,
   Value<String> gardu,
   Value<String> alamat,
+  Value<String> latitude,
+  Value<String> longitude,
   Value<String> penyulang,
   Value<String> section,
   Value<String> jenisGardu,
@@ -8340,6 +8420,12 @@ class $$MasterGardusTableFilterComposer
 
   ColumnFilters<String> get alamat => $composableBuilder(
       column: $table.alamat, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get latitude => $composableBuilder(
+      column: $table.latitude, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get longitude => $composableBuilder(
+      column: $table.longitude, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get penyulang => $composableBuilder(
       column: $table.penyulang, builder: (column) => ColumnFilters(column));
@@ -8486,6 +8572,12 @@ class $$MasterGardusTableOrderingComposer
 
   ColumnOrderings<String> get alamat => $composableBuilder(
       column: $table.alamat, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get latitude => $composableBuilder(
+      column: $table.latitude, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get longitude => $composableBuilder(
+      column: $table.longitude, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get penyulang => $composableBuilder(
       column: $table.penyulang, builder: (column) => ColumnOrderings(column));
@@ -8637,6 +8729,12 @@ class $$MasterGardusTableAnnotationComposer
 
   GeneratedColumn<String> get alamat =>
       $composableBuilder(column: $table.alamat, builder: (column) => column);
+
+  GeneratedColumn<String> get latitude =>
+      $composableBuilder(column: $table.latitude, builder: (column) => column);
+
+  GeneratedColumn<String> get longitude =>
+      $composableBuilder(column: $table.longitude, builder: (column) => column);
 
   GeneratedColumn<String> get penyulang =>
       $composableBuilder(column: $table.penyulang, builder: (column) => column);
@@ -8791,6 +8889,8 @@ class $$MasterGardusTableTableManager extends RootTableManager<
             Value<String> ulp = const Value.absent(),
             Value<String> gardu = const Value.absent(),
             Value<String> alamat = const Value.absent(),
+            Value<String> latitude = const Value.absent(),
+            Value<String> longitude = const Value.absent(),
             Value<String> penyulang = const Value.absent(),
             Value<String> section = const Value.absent(),
             Value<String> jenisGardu = const Value.absent(),
@@ -8838,6 +8938,8 @@ class $$MasterGardusTableTableManager extends RootTableManager<
             ulp: ulp,
             gardu: gardu,
             alamat: alamat,
+            latitude: latitude,
+            longitude: longitude,
             penyulang: penyulang,
             section: section,
             jenisGardu: jenisGardu,
@@ -8885,6 +8987,8 @@ class $$MasterGardusTableTableManager extends RootTableManager<
             Value<String> ulp = const Value.absent(),
             required String gardu,
             Value<String> alamat = const Value.absent(),
+            Value<String> latitude = const Value.absent(),
+            Value<String> longitude = const Value.absent(),
             Value<String> penyulang = const Value.absent(),
             Value<String> section = const Value.absent(),
             Value<String> jenisGardu = const Value.absent(),
@@ -8932,6 +9036,8 @@ class $$MasterGardusTableTableManager extends RootTableManager<
             ulp: ulp,
             gardu: gardu,
             alamat: alamat,
+            latitude: latitude,
+            longitude: longitude,
             penyulang: penyulang,
             section: section,
             jenisGardu: jenisGardu,
