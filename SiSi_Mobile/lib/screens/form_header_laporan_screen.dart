@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
+import '../services/accurate_location_service.dart';
 import '../theme/app_colors.dart';
 
 class FormHeaderLaporanScreen extends StatefulWidget {
@@ -42,31 +42,21 @@ class _FormHeaderLaporanScreenState extends State<FormHeaderLaporanScreen> {
     });
 
     try {
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-
-      final pos = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 15),
-      );
-
-      final val =
-          '${pos.latitude.toStringAsFixed(6)}, ${pos.longitude.toStringAsFixed(6)}';
+      final result = await AccurateLocationService.capture();
+      if (!mounted) return;
       setState(() {
         if (awal) {
-          _koorAwalCtrl.text = val;
-          _akurasiAwal = pos.accuracy;
+          _koorAwalCtrl.text = result.coordinates;
+          _akurasiAwal = result.accuracy;
         } else {
-          _koorAkhirCtrl.text = val;
-          _akurasiAkhir = pos.accuracy;
+          _koorAkhirCtrl.text = result.coordinates;
+          _akurasiAkhir = result.accuracy;
         }
       });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal mendapatkan GPS: $e')),
+          SnackBar(content: Text('$e')),
         );
       }
     } finally {
@@ -111,6 +101,8 @@ class _FormHeaderLaporanScreenState extends State<FormHeaderLaporanScreen> {
       'inputBy': widget.sesi['username'] ?? 'Petugas',
       'koordinatAwal': _koorAwalCtrl.text.trim(),
       'koordinatAkhir': _koorAkhirCtrl.text.trim(),
+      'akurasiKoordinatAwal': _akurasiAwal,
+      'akurasiKoordinatAkhir': _akurasiAkhir,
       'kmAwal': _kmAwalCtrl.text.trim(),
       'kmAkhir': _kmAkhirCtrl.text.trim(),
       'kendala': _kendalaCtrl.text.trim(),

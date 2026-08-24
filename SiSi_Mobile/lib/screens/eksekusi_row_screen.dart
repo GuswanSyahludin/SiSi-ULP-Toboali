@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:geolocator/geolocator.dart';
+import '../services/accurate_location_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_colors.dart';
 import '../services/api_service.dart';
@@ -1112,26 +1112,23 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
     }
   }
 
-  Future<void> _getCurrentLocation(TextEditingController targetCtrl) async {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
+  Future<void> _getCurrentLocation(
+    TextEditingController targetCtrl,
+  ) async {
+    try {
+      final result = await AccurateLocationService.capture();
+      if (!mounted) return;
+      setState(() => targetCtrl.text = result.coordinates);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Layanan lokasi GPS belum aktif')),
+        SnackBar(content: Text('Akurasi GPS ${result.accuracyLabel}')),
       );
-      return;
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$e')),
+        );
+      }
     }
-
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) return;
-    }
-
-    Position position = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.bestForNavigation,
-    );
-
-    targetCtrl.text = '${position.latitude}, ${position.longitude}';
   }
 
   Future<void> _pickImage() async {

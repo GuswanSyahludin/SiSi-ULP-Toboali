@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
+import '../services/accurate_location_service.dart';
 import '../db/app_database.dart';
 import '../db/repositories/inspeksi_gardu_repository.dart';
 import '../theme/app_colors.dart';
@@ -142,13 +142,20 @@ class _FormState extends State<InsGarduForm> {
   bool busy = false;
 
   Future<void> _gps(TextEditingController c) async {
-    var p = await Geolocator.checkPermission();
-    if (p == LocationPermission.denied) {
-      p = await Geolocator.requestPermission();
+    try {
+      final result = await AccurateLocationService.capture();
+      if (!mounted) return;
+      setState(() => c.text = result.coordinates);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Akurasi GPS ${result.accuracyLabel}')),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$e')),
+        );
+      }
     }
-    final x = await Geolocator.getCurrentPosition();
-    c.text = '${x.latitude.toStringAsFixed(6)}, ${x.longitude.toStringAsFixed(6)}';
-    setState(() {});
   }
 
   Future<void> _save() async {
