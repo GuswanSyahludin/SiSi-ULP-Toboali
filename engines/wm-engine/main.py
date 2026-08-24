@@ -26,39 +26,32 @@ PUBLIC_LINKS_DEFAULT = os.environ.get("WM_PUBLIC_LINKS", "false").lower() in (
 )
 BASE_DIR = os.path.dirname(__file__)
 
+# Compact V4 palette.
+PANEL = (17, 24, 35, 218)
+NAVY = (30, 58, 138, 255)
+CYAN = (28, 160, 219, 255)
+LIME = (138, 209, 0, 255)
+WHITE = (250, 252, 255, 255)
+MUTED = (197, 205, 218, 255)
+
 
 def _asset(name):
     path = os.path.join(BASE_DIR, "assets", name)
     return path if os.path.exists(path) else None
 
 
-def _logo(name):
-    path = _asset(name)
-    return Image.open(path).convert("RGBA") if path else None
-
-
-LOGO_PLN = _logo("logo_pln.png")
-LOGO_SISI = _logo("logo_sisi.png")
-
-
 def _font(size):
     path = _asset("DejaVuSans-Bold.ttf")
     try:
-        return ImageFont.truetype(path, size) if path else ImageFont.load_default()
+        return ImageFont.truetype(path, max(8, int(size))) if path else ImageFont.load_default()
     except Exception:
         return ImageFont.load_default()
 
 
 def _enhance(image):
     image = ImageOps.autocontrast(image, cutoff=1)
-    image = ImageEnhance.Brightness(image).enhance(1.12)
-    return ImageEnhance.Sharpness(image).enhance(1.4)
-
-
-GREEN = (138, 209, 0, 255)
-PANEL = (38, 38, 38, 180)
-WHITE = (255, 255, 255, 255)
-SUBTLE = (225, 225, 225, 255)
+    image = ImageEnhance.Brightness(image).enhance(1.08)
+    return ImageEnhance.Sharpness(image).enhance(1.3)
 
 
 def _rounded(size, radius, fill):
@@ -69,29 +62,32 @@ def _rounded(size, radius, fill):
     return image
 
 
-def _wrap(draw, text, font, max_width):
-    words = (text or "").split()
-    lines, current = [], ""
-    for word in words:
-        candidate = (current + " " + word).strip()
-        if not current or draw.textlength(candidate, font=font) <= max_width:
-            current = candidate
-        else:
-            lines.append(current)
-            current = word
-    if current:
-        lines.append(current)
-    return lines or [""]
+def _safe_text(value):
+    return "" if value is None else str(value).strip()
 
 
-def _decode_minimap(encoded, width, height):
+def _fit_text(draw, text, font, max_width):
+    text = _safe_text(text)
+    if not text or draw.textlength(text, font=font) <= max_width:
+        return text
+    suffix = "…"
+    while text and draw.textlength(text + suffix, font=font) > max_width:
+        text = text[:-1]
+    return text + suffix if text else ""
+
+
+def _format_accuracy(value):
+    text = _safe_text(value)
+    if not text:
+        return ""
+    # Payload baru idealnya sudah berupa ±4.2 m. Fallback menerima angka mentah.
+    if "m" in text.lower() or "±" in text:
+        return text
     try:
-        if not encoded:
-            return None
-        image = Image.open(io.BytesIO(base64.b64decode(encoded))).convert("RGBA")
-        return image.resize((width, height))
+        number = float(text.replace(",", "."))
+        return "±%s m" % ("%.1f" % number).rstrip("0").rstrip(".")
     except Exception:
-        return None
+        return text
 
 
 def _require_secret(data):
@@ -110,195 +106,171 @@ def _decode_source(data):
 
 
 def _render_watermark(data, raw=None):
+    """Render SiSi Watermark Compact V4.
+
+    Panel hanya di kiri bawah dan hanya berisi:
+    Kode Pekerjaan, Tanggal, Koordinat Pekerjaan, Akurasi, Tim,
+    dan Jenis Pekerjaan. Akurasi tidak memakai label kualitas.
+    """
     raw = raw or _decode_source(data)
     base = Image.open(io.BytesIO(raw)).convert("RGB")
 
-    # Mobile disarankan mengirim maksimal 2000 px. Guard ini tetap dipertahankan
-    # agar foto kamera mentah tidak memboroskan RAM dan waktu Cloud Run.
     max_side = 2000
     if max(base.size) > max_side:
         base.thumbnail((max_side, max_side), Image.Resampling.LANCZOS)
 
-    base = _enhance(base).convert("RGBA")
-    width, height = base.size
-    canvas = base.copy()
-    scale = max(0.6, width / 1024.0)
-    margin = int(20 * scale)
-    lat = data.get("lat", "")
-    lng = data.get("long", "")
+    canvas = _enhance(base).convert("RGBA")
+    width, height = canvas.size
+    scale = max(0.55, width / 1024.0)
+    margin = max(10, int(18 * scale))
+    pad_x = max(10, int(13 * scale))
+    pad_y = max(9, int(11 * scale))
 
-    # Kartu minimap kanan atas.
-    if data.get("minimap"):
-        map_width = int(width * 0.24)
-        map_height = int(map_width * 0.66)
-        minimap = _decode_minimap(data.get("minimap"), map_width, map_height)
-        if minimap:
-            inner = int(8 * scale)
-            card = _rounded(
-                (map_width + inner * 2, map_height + inner * 2),
-                int(14 * scale),
-                PANEL,
-            )
-            mask = _rounded((map_width, map_height), int(9 * scale), WHITE)
-            card.paste(minimap, (inner, inner), mask)
-            canvas.alpha_composite(card, (width - card.width - margin, margin))
+    landscape = width >= height
+    panel_width = int(width * (0.34 if landscape else 0.56))
+    panel_width = min(panel_width, width - margin * 2)
 
-    # Kartu informasi kiri bawah.
-    pad = int(20 * scale)
-    content_width = int(width * 0.40)
-    font_title = _font(int(30 * scale))
-    font_sub = _font(int(19 * scale))
-    font_time = _font(int(46 * scale))
-    font_small = _font(int(18 * scale))
-    font_body = _font(int(21 * scale))
+    kode = _safe_text(
+        data.get("kodePekerjaan")
+        or data.get("kodeEksekusi")
+        or data.get("kodeP0")
+        or data.get("kode")
+    ) or "-"
+    tanggal = _safe_text(data.get("tanggal"))
+    hari = _safe_text(data.get("hari"))
+    jam = _safe_text(data.get("jam"))
+    tanggal_parts = []
+    if hari:
+        tanggal_parts.append(hari)
+    if tanggal:
+        tanggal_parts.append(tanggal)
+    tanggal_display = ", ".join(tanggal_parts)
+    if jam:
+        tanggal_display += (" · " if tanggal_display else "") + jam
 
-    measure = ImageDraw.Draw(canvas)
-    logo_height = int(48 * scale)
-    logo_width = (
-        int(LOGO_PLN.width * (logo_height / LOGO_PLN.height))
-        if LOGO_PLN
-        else 0
+    lat = _safe_text(data.get("lat"))
+    lng = _safe_text(data.get("long"))
+    koordinat = _safe_text(
+        data.get("koordinatPekerjaan") or data.get("koordinat")
     )
-    heading_offset = logo_width + int(12 * scale) if LOGO_PLN else 0
-    ulp_text = data.get("ulp", "")
-    if ulp_text and not ulp_text.upper().startswith("ULP"):
-        ulp_text = "ULP " + ulp_text
+    if not koordinat and lat and lng:
+        koordinat = lat + ", " + lng
 
-    tim = data.get("tim", "")
-    petugas = data.get("petugas", "")
-    header_height = max(logo_height, int(58 * scale))
-    separator_height = int(22 * scale)
-    time_height = int(50 * scale)
-    jam = data.get("jam", "")
-    hari = data.get("hari", "")
-    tanggal = data.get("tanggal", "")
-
-    koordinat = data.get("koordinat") or (
-        f"{lat}, {lng}" if lat and lng else ""
+    akurasi = _format_accuracy(data.get("akurasi") or data.get("accuracy"))
+    tim = _safe_text(data.get("tim"))
+    ulp = _safe_text(data.get("ulp"))
+    if ulp and not ulp.upper().startswith("ULP"):
+        ulp = "ULP " + ulp
+    tim_display = " · ".join(part for part in (tim, ulp) if part)
+    pekerjaan = _safe_text(
+        data.get("jenisPekerjaan") or data.get("pekerjaan")
     )
-    blocks = []
-    petugas_display = " & ".join(
-        part.strip() for part in petugas.split(",") if part.strip()
-    )
-    if petugas_display:
-        blocks.append(["Petugas : " + petugas_display])
-    if data.get("penyulang"):
-        blocks.append(["Penyulang : " + data.get("penyulang")])
-    if data.get("switching"):
-        blocks.append(["Switching : " + data.get("switching")])
-    if data.get("arus"):
-        blocks.append(["Arus (R/S/T) : " + data.get("arus")])
-    if data.get("daerah"):
-        blocks.append(["Daerah Pekerjaan : " + data.get("daerah")])
-    if koordinat:
-        blocks.append(["Koordinat :", koordinat])
-    if data.get("durasi"):
-        blocks.append(["Durasi : " + data.get("durasi")])
-    if data.get("jarak"):
-        blocks.append(["Jarak (Closing → Pekerjaan) : " + data.get("jarak")])
-    if data.get("jarakP0"):
-        blocks.append(["Jarak Antar P0 : " + data.get("jarakP0")])
+    tahap = _safe_text(data.get("tahap") or data.get("jenisFoto")).upper()
 
-    bullet_indent = int(22 * scale)
-    body_line_height = int(31 * scale)
-    line_gap = int(7 * scale)
-    wrapped = []
-    for block in blocks:
-        lines = []
-        for logical in block:
-            lines += _wrap(
-                measure, logical, font_body, content_width - bullet_indent
-            )
-        wrapped.append(lines)
+    font_label = _font(14 * scale)
+    font_value = _font(15 * scale)
+    font_code_label = _font(11 * scale)
+    font_code = _font(17 * scale)
+    font_stage = _font(11 * scale)
+    font_logo = _font(21 * scale)
 
-    body_height = sum(
-        body_line_height * len(lines) + line_gap for lines in wrapped
-    )
-    gap = int(12 * scale)
-    card_height = (
-        pad * 2
-        + header_height
-        + gap
-        + separator_height
-        + gap
-        + time_height
-        + gap
-        + body_height
-    )
-    card_width = pad * 2 + content_width
-    card = _rounded((card_width, card_height), int(16 * scale), PANEL)
-    draw = ImageDraw.Draw(card)
-    y = pad
+    probe = ImageDraw.Draw(canvas)
+    label_width = int(77 * scale)
+    logo_size = int(31 * scale)
+    header_height = int(42 * scale)
+    row_height = int(25 * scale)
+    rows = [
+        ("Tanggal", tanggal_display or "-"),
+        ("Koordinat", koordinat or "-"),
+        ("Akurasi", akurasi or "-"),
+        ("Tim", tim_display or "-"),
+        ("Pekerjaan", pekerjaan or "-"),
+    ]
+    panel_height = pad_y * 2 + header_height + int(8 * scale) + len(rows) * row_height
 
-    if LOGO_PLN:
-        logo = LOGO_PLN.resize((logo_width, logo_height))
-        card.paste(logo, (pad, y), logo)
-    draw.text((pad + heading_offset, y), ulp_text, font=font_title, fill=WHITE)
+    panel = _rounded(
+        (panel_width, panel_height), max(10, int(14 * scale)), PANEL
+    )
+    draw = ImageDraw.Draw(panel)
+
+    # Header: monogram SiSi, kode, dan tahap foto opsional.
+    logo_y = pad_y
+    draw.rounded_rectangle(
+        [pad_x, logo_y, pad_x + logo_size, logo_y + logo_size],
+        radius=max(5, int(8 * scale)),
+        fill=NAVY,
+        outline=CYAN,
+        width=max(1, int(1.5 * scale)),
+    )
+    logo_text = "S"
+    logo_bbox = draw.textbbox((0, 0), logo_text, font=font_logo)
     draw.text(
-        (pad + heading_offset, y + int(32 * scale)),
-        tim,
-        font=font_sub,
-        fill=SUBTLE,
+        (
+            pad_x + (logo_size - (logo_bbox[2] - logo_bbox[0])) / 2,
+            logo_y + (logo_size - (logo_bbox[3] - logo_bbox[1])) / 2 - logo_bbox[1],
+        ),
+        logo_text,
+        font=font_logo,
+        fill=WHITE,
     )
-    y += header_height + gap
 
-    line_width = max(2, int(3 * scale))
-    line_y_1 = y + int(4 * scale)
-    line_y_2 = line_y_1 + line_width + int(8 * scale)
-    draw.line([(0, line_y_1), (card_width - 1, line_y_1)], fill=GREEN, width=line_width)
-    draw.line([(0, line_y_2), (card_width - 1, line_y_2)], fill=GREEN, width=line_width)
-    y += separator_height + gap
-
-    draw.text((pad, y), jam, font=font_time, fill=GREEN)
-    date_x = pad + int(draw.textlength(jam, font=font_time)) + int(14 * scale)
-    draw.text((date_x, y + int(6 * scale)), hari, font=font_small, fill=WHITE)
+    code_x = pad_x + logo_size + int(9 * scale)
+    right_reserved = int(62 * scale) if tahap else 0
+    code_width = panel_width - code_x - pad_x - right_reserved
+    draw.text((code_x, logo_y), "KODE PEKERJAAN", font=font_code_label, fill=MUTED)
     draw.text(
-        (date_x, y + int(26 * scale)), tanggal, font=font_body, fill=WHITE
+        (code_x, logo_y + int(15 * scale)),
+        _fit_text(probe, kode, font_code, code_width),
+        font=font_code,
+        fill=WHITE,
     )
-    y += time_height + gap
 
-    for lines in wrapped:
-        bullet_size = int(11 * scale)
-        draw.rectangle(
-            [
-                pad,
-                y + int(6 * scale),
-                pad + bullet_size,
-                y + int(6 * scale) + bullet_size,
-            ],
-            fill=GREEN,
+    if tahap:
+        stage_text = _fit_text(probe, tahap, font_stage, int(53 * scale))
+        stage_w = int(draw.textlength(stage_text, font=font_stage)) + int(13 * scale)
+        stage_h = int(21 * scale)
+        stage_x = panel_width - pad_x - stage_w
+        stage_y = logo_y + int(5 * scale)
+        draw.rounded_rectangle(
+            [stage_x, stage_y, stage_x + stage_w, stage_y + stage_h],
+            radius=max(4, int(6 * scale)),
+            fill=LIME,
         )
-        for line in lines:
-            draw.text(
-                (pad + bullet_indent, y), line, font=font_body, fill=WHITE
-            )
-            y += body_line_height
-        y += line_gap
-
-    card_y = max(margin, height - card_height - margin)
-    canvas.alpha_composite(card, (margin, card_y))
-
-    # Logo SiSi kanan bawah.
-    if LOGO_SISI:
-        logo_height = int(76 * scale)
-        logo_width = int(LOGO_SISI.width * (logo_height / LOGO_SISI.height))
-        logo_card = _rounded(
-            (logo_width + pad, logo_height + pad), int(14 * scale), PANEL
-        )
-        logo = LOGO_SISI.resize((logo_width, logo_height))
-        logo_card.paste(logo, (pad // 2, pad // 2), logo)
-        canvas.alpha_composite(
-            logo_card,
+        stage_bbox = draw.textbbox((0, 0), stage_text, font=font_stage)
+        draw.text(
             (
-                width - (logo_width + pad) - margin,
-                height - (logo_height + pad) - margin,
+                stage_x + (stage_w - (stage_bbox[2] - stage_bbox[0])) / 2,
+                stage_y + (stage_h - (stage_bbox[3] - stage_bbox[1])) / 2 - stage_bbox[1],
             ),
+            stage_text,
+            font=font_stage,
+            fill=(31, 51, 20, 255),
         )
+
+    rule_y = pad_y + header_height
+    draw.rounded_rectangle(
+        [pad_x, rule_y, panel_width - pad_x, rule_y + max(2, int(2.5 * scale))],
+        radius=2,
+        fill=LIME,
+    )
+
+    # Lima baris data, tanpa bullet, minimap, logo terpisah, atau klasifikasi akurasi.
+    y = rule_y + int(10 * scale)
+    max_value_width = panel_width - pad_x * 2 - label_width
+    for label, value in rows:
+        draw.text((pad_x, y), label, font=font_label, fill=MUTED)
+        draw.text(
+            (pad_x + label_width, y),
+            _fit_text(probe, value, font_value, max_value_width),
+            font=font_value,
+            fill=WHITE,
+        )
+        y += row_height
+
+    canvas.alpha_composite(panel, (margin, height - panel_height - margin))
 
     output = io.BytesIO()
-    canvas.convert("RGB").save(
-        output, format="JPEG", quality=85, optimize=True
-    )
+    canvas.convert("RGB").save(output, format="JPEG", quality=85, optimize=True)
     output.seek(0)
     return output
 
@@ -323,7 +295,7 @@ def _drive_service():
 
 
 def _safe_name(value, fallback="watermark"):
-    cleaned = re.sub(r'[\\/:*?"<>|\r\n]+', "-", str(value or "").strip())
+    cleaned = re.sub(r'[\\/:*?"<>|\r\n]+', "-", _safe_text(value))
     cleaned = re.sub(r"\s+", " ", cleaned).strip(" .-")
     return cleaned[:120] or fallback
 
@@ -349,8 +321,7 @@ def _ensure_folder(service, parent_id, name):
     )
     if found:
         return found[0]["id"]
-
-    created = (
+    return (
         service.files()
         .create(
             body={
@@ -361,59 +332,50 @@ def _ensure_folder(service, parent_id, name):
             fields="id",
             supportsAllDrives=True,
         )
-        .execute()
+        .execute()["id"]
     )
-    return created["id"]
 
 
 def _resolve_folder(service, data):
-    parent = str(data.get("folderId") or DRIVE_ROOT_FOLDER_ID).strip()
+    parent = _safe_text(data.get("folderId") or DRIVE_ROOT_FOLDER_ID)
     if not parent:
-        raise ValueError(
-            "folderId atau environment WM_DRIVE_ROOT_FOLDER_ID wajib diisi."
-        )
-
+        raise ValueError("folderId atau WM_DRIVE_ROOT_FOLDER_ID wajib diisi.")
     folder_path = data.get("folderPath") or []
     if isinstance(folder_path, str):
         folder_path = [part for part in folder_path.split("/") if part.strip()]
     if not isinstance(folder_path, list):
         raise ValueError("folderPath harus berupa array atau path string.")
-
     for segment in folder_path[:8]:
-        if str(segment).strip():
-            parent = _ensure_folder(service, parent, str(segment))
+        if _safe_text(segment):
+            parent = _ensure_folder(service, parent, segment)
     return parent
 
 
 def _watermark_key(data, raw):
-    explicit = str(data.get("idempotencyKey") or "").strip()
+    explicit = _safe_text(data.get("idempotencyKey"))
     if explicit:
         return hashlib.sha256(explicit.encode("utf-8")).hexdigest()
-
     metadata_keys = [
-        "ulp",
-        "tim",
-        "petugas",
-        "jam",
-        "hari",
+        "kodePekerjaan",
+        "kodeEksekusi",
+        "kodeP0",
         "tanggal",
-        "lat",
-        "long",
+        "hari",
+        "jam",
         "koordinat",
-        "penyulang",
-        "switching",
-        "arus",
-        "daerah",
-        "durasi",
-        "jarak",
-        "jarakP0",
+        "koordinatPekerjaan",
+        "akurasi",
+        "accuracy",
+        "tim",
+        "ulp",
+        "jenisPekerjaan",
+        "pekerjaan",
+        "tahap",
     ]
     metadata = {key: data.get(key, "") for key in metadata_keys}
     digest = hashlib.sha256()
     digest.update(raw)
     digest.update(json.dumps(metadata, sort_keys=True).encode("utf-8"))
-    if data.get("minimap"):
-        digest.update(str(data.get("minimap")).encode("utf-8"))
     return digest.hexdigest()
 
 
@@ -463,12 +425,12 @@ def _file_response(file_data, wm_key, cached=False, public=False):
         "thumbnailUrl": f"https://drive.google.com/thumbnail?id={file_id}",
         "wmKey": wm_key,
         "public": public,
+        "design": "compact-v4",
     }
 
 
 @app.post("/watermark")
 def watermark():
-    """Endpoint lama: render JPEG dan kirim kembali ke pemanggil."""
     data = request.get_json(silent=True) or {}
     _require_secret(data)
     try:
@@ -482,25 +444,13 @@ def watermark():
 
 @app.post("/watermark/drive")
 def watermark_to_drive():
-    """Render sekali, upload langsung ke Drive, lalu kembalikan metadata kecil.
-
-    Payload tambahan:
-      folderId: parent folder Drive (opsional bila env root sudah diisi)
-      folderPath: array atau path string, contoh ["ROW", "2026", "08. Agustus"]
-      fileName: nama output tanpa/with ekstensi .jpg
-      idempotencyKey: ID stabil milik pekerjaan/foto agar retry tidak duplikat
-      makePublic: true bila URL thumbnail perlu dibaca langsung tanpa login
-      oldFileId: file lama yang baru dihapus SETELAH upload baru berhasil
-    """
     data = request.get_json(silent=True) or {}
     _require_secret(data)
-
     try:
         raw = _decode_source(data)
         service = _drive_service()
         folder_id = _resolve_folder(service, data)
         wm_key = _watermark_key(data, raw)
-
         existing = _find_existing(service, folder_id, wm_key)
         if existing:
             return jsonify(_file_response(existing, wm_key, cached=True))
@@ -509,28 +459,30 @@ def watermark_to_drive():
         name = _safe_name(data.get("fileName"), "WM-" + wm_key[:12])
         if not name.lower().endswith((".jpg", ".jpeg")):
             name += ".jpg"
-
-        media = MediaIoBaseUpload(output, mimetype="image/jpeg", resumable=False)
         created = (
             service.files()
             .create(
                 body={
                     "name": name,
                     "parents": [folder_id],
-                    "appProperties": {"wmKey": wm_key, "source": "sisi-wm"},
+                    "appProperties": {
+                        "wmKey": wm_key,
+                        "source": "sisi-wm",
+                        "design": "compact-v4",
+                    },
                 },
-                media_body=media,
+                media_body=MediaIoBaseUpload(
+                    output, mimetype="image/jpeg", resumable=False
+                ),
                 fields="id,name,webViewLink,webContentLink",
                 supportsAllDrives=True,
             )
             .execute()
         )
-
         public_requested = data.get("makePublic", PUBLIC_LINKS_DEFAULT) is True
         public_ok = _make_public(service, created["id"]) if public_requested else False
 
-        # Aman untuk regenerate: file lama hanya dihapus setelah file baru sukses.
-        old_file_id = str(data.get("oldFileId") or "").strip()
+        old_file_id = _safe_text(data.get("oldFileId"))
         if old_file_id and old_file_id != created["id"]:
             try:
                 service.files().delete(
@@ -539,14 +491,7 @@ def watermark_to_drive():
             except Exception:
                 app.logger.warning("File WM lama gagal dihapus: %s", old_file_id)
 
-        return jsonify(
-            _file_response(
-                created,
-                wm_key,
-                cached=False,
-                public=public_ok,
-            )
-        )
+        return jsonify(_file_response(created, wm_key, public=public_ok))
     except (ValueError, KeyError) as error:
         return jsonify({"ok": False, "message": str(error)}), 400
     except Exception as error:
@@ -560,6 +505,7 @@ def health():
         {
             "ok": True,
             "service": "sisi-wm-engine",
+            "design": "compact-v4",
             "directDrive": True,
             "driveRootConfigured": bool(DRIVE_ROOT_FOLDER_ID),
             "secretConfigured": bool(SECRET),
