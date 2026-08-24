@@ -1,7 +1,7 @@
 name: Wire Teknik TO menus
 on:
   push:
-    branches: [feat/teknik-team-assignment]
+    branches: [main]
     paths: [.github/workflows/wire-teknik-to-menus.yml]
 permissions:
   contents: write
@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: feat/teknik-team-assignment
+          ref: main
       - name: Patch dashboard
         shell: python
         run: |
@@ -37,6 +37,7 @@ jobs:
           anchor="""      {
         'title': 'Verifikasi P0',"""
           if "'title': 'Penugasan Tim'" not in s:
+              if anchor not in s: raise SystemExit('menu anchor not found')
               s=s.replace(anchor,item+anchor)
           route="""                  if (title == 'Input Temuan') {
                     tujuan = InputTemuanTeknikScreen(sesi: widget.sesi);
@@ -57,5 +58,5 @@ jobs:
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add SiSi_Mobile/lib/screens/dashboard_screen.dart
-          git commit -m "feat: add TO assignment menus to Teknik" || exit 0
-          git push
+          git commit -m "fix: show TO assignment menus in Teknik" || exit 0
+          git push origin main
