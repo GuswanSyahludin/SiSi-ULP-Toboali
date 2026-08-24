@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/accurate_location_service.dart';
+import '../widgets/accurate_gps_button.dart';
 import '../theme/app_colors.dart';
 
 class FormHeaderLaporanScreen extends StatefulWidget {
@@ -465,24 +466,18 @@ class _FormHeaderLaporanScreenState extends State<FormHeaderLaporanScreen> {
             fillColor: const Color(0xFFF8FAFC),
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            suffixIcon: Padding(
-              padding: const EdgeInsets.only(right: 6),
-              child: IconButton(
-                style: IconButton.styleFrom(
-                  backgroundColor: AppColors.navy700,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(9)),
-                ),
-                icon: isLoading
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white))
-                    : const Icon(Icons.my_location_rounded, size: 18),
-                onPressed: isLoading ? null : onGps,
-              ),
+            suffixIcon: AccurateGpsButton(
+              controller: controller,
+              showAccuracyFeedback: false,
+              onCaptured: (result) {
+                setState(() {
+                  if (controller == _koorAwalCtrl) {
+                    _akurasiAwal = result.accuracy;
+                  } else if (controller == _koorAkhirCtrl) {
+                    _akurasiAkhir = result.accuracy;
+                  }
+                });
+              },
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),

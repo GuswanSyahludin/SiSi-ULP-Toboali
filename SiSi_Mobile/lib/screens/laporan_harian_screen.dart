@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/accurate_location_service.dart';
+import '../widgets/accurate_gps_button.dart';
 import '../db/app_database.dart';
 import '../db/repositories/inspeksi_gardu_repository.dart';
 import '../theme/app_colors.dart';
@@ -221,10 +222,7 @@ class _FormState extends State<InsGarduForm> {
             labelText: l,
             border: const OutlineInputBorder(),
             suffixIcon: l.contains('Koordinat')
-                ? IconButton(
-                    onPressed: () => _gps(c),
-                    icon: const Icon(Icons.my_location),
-                  )
+                ? AccurateGpsButton(controller: c)
                 : null,
           ),
         ),

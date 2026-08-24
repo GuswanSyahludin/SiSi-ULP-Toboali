@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../services/accurate_location_service.dart';
+import '../widgets/accurate_gps_button.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../db/repositories/inspeksi_gardu_repository.dart';
@@ -420,11 +421,7 @@ class _InputTemuanTeknikScreenState extends State<InputTemuanTeknikScreen> {
                         borderRadius: BorderRadius.circular(10)),
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 12),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.my_location,
-                          color: Color(0xFF0284C7)),
-                      onPressed: _getCurrentLocation,
-                    ),
+                    suffixIcon: AccurateGpsButton(controller: _koorCtrl),
                   ),
                 ),
                 const SizedBox(height: 12),

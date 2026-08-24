@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/accurate_location_service.dart';
+import '../widgets/accurate_gps_button.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_colors.dart';
 import '../services/api_service.dart';
@@ -1398,12 +1399,7 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
                               borderRadius: BorderRadius.circular(10)),
                           contentPadding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 12),
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.my_location,
-                                color: Color(0xFF0284C7)),
-                            onPressed: () =>
-                                _getCurrentLocation(_koorTiangCtrl),
-                          ),
+                          suffixIcon: AccurateGpsButton(controller: _koorTiangCtrl),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -1421,12 +1417,7 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
                               borderRadius: BorderRadius.circular(10)),
                           contentPadding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 12),
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.my_location,
-                                color: Color(0xFF0284C7)),
-                            onPressed: () =>
-                                _getCurrentLocation(_koorPekerjaanCtrl),
-                          ),
+                          suffixIcon: AccurateGpsButton(controller: _koorPekerjaanCtrl),
                         ),
                       ),
                       const SizedBox(height: 12),
