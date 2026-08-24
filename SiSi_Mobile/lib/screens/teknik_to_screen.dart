@@ -93,10 +93,10 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
           backgroundColor: AppColors.navy700,
           foregroundColor: Colors.white,
           leading: IconButton(onPressed: _back, icon: const Icon(Icons.arrow_back_rounded)),
-          title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
-            Text('Data lokal, buka tanpa menunggu server', style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(.72))),
-          ]),
+          title: Text(
+            title,
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+          ),
           actions: [
             Padding(padding: const EdgeInsets.only(right: 8), child: Center(child: _SyncBadge(syncing: syncing))),
           ],

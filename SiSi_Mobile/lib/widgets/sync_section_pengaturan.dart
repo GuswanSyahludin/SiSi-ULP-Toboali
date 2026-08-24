@@ -58,6 +58,15 @@ class _State extends State<SyncSectionPengaturan> {
     super.dispose();
   }
 
+  String _jamSinkron(SyncInfo? info) {
+    if (info == null || info.lastSyncAt.trim().isEmpty) return '';
+    final waktu = DateTime.tryParse(info.lastSyncAt)?.toLocal();
+    if (waktu == null) return '';
+    final jam = waktu.hour.toString().padLeft(2, '0');
+    final menit = waktu.minute.toString().padLeft(2, '0');
+    return '$jam:$menit WIB';
+  }
+
   Future<void> _sinkronSemua() async {
     if (proses) return;
     setState(() => proses = true);
@@ -142,12 +151,28 @@ class _State extends State<SyncSectionPengaturan> {
             ),
             subtitle: Padding(
               padding: const EdgeInsets.only(top: 3),
-              child: Text(
-                subtitle,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.neutral500,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.neutral500,
+                    ),
+                  ),
+                  if (sudahPernahSinkron) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      'Terakhir sinkron ${_jamSinkron(info)}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.success700,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
             trailing: proses
