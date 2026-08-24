@@ -499,16 +499,7 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
 
   String _initial(String value) => value.split(RegExp(r'\s+')).where((x) => x.isNotEmpty).take(2).map((x) => x[0]).join().toUpperCase();
 
-  Future<void> _detail(Map<String, dynamic> row) async {
-    final changed = await showModalBottomSheet<bool>(
-      context: context, isScrollControlled: true, useSafeArea: true, backgroundColor: Colors.transparent,
-      builder: (_) => _ToDetailSheet(sesi: widget.sesi, mode: widget.mode, row: row),
-    );
-    if (changed == true && mounted) {
-      setState(() => rows.removeWhere((x) => x['kodePekerjaan'] == row['kodePekerjaan']));
-      unawaited(_refresh(silent: true));
-    }
-  }
+
 }
 
 class _SyncBadge extends StatelessWidget {
@@ -526,74 +517,4 @@ class _Empty extends StatelessWidget {
     Text(moving ? 'Tidak ada TO yang dapat dipindahkan' : 'Semua TO sudah memiliki tim', textAlign: TextAlign.center, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900)),
     const SizedBox(height: 5), const Text('Tarik ke bawah saat online untuk memperbarui data.', textAlign: TextAlign.center, style: TextStyle(fontSize: 11, color: AppColors.neutral500)),
   ])));
-}
-
-class _ToDetailSheet extends StatefulWidget {
-  final Map<String, dynamic> sesi, row; final String mode;
-  const _ToDetailSheet({required this.sesi, required this.mode, required this.row});
-  @override State<_ToDetailSheet> createState() => _ToDetailSheetState();
-}
-
-class _ToDetailSheetState extends State<_ToDetailSheet> {
-  final repo = TeknikToRepository();
-  final note = TextEditingController();
-  List<String> teams = []; String? selected, error; bool loading = true, saving = false;
-
-  @override void initState() { super.initState(); _loadTeams(); }
-  @override void dispose() { note.dispose(); super.dispose(); }
-
-  Future<void> _loadTeams() async {
-    var local = await repo.cachedTeams();
-    final current = '${widget.row['timEksekusi'] ?? ''}'.trim().toLowerCase();
-    local = local.where((x) => x.toLowerCase() != current).toList();
-    if (mounted) setState(() { teams = local; loading = false; });
-    try {
-      final fresh = await repo.refreshTeams('${widget.sesi['token'] ?? ''}');
-      if (mounted) setState(() => teams = fresh.where((x) => x.toLowerCase() != current).toList());
-    } catch (_) {}
-  }
-
-  Future<void> _save() async {
-    if (selected == null) return;
-    setState(() { saving = true; error = null; });
-    try {
-      await repo.assign(token: '${widget.sesi['token'] ?? ''}', mode: widget.mode, kode: '${widget.row['kodePekerjaan']}', tim: selected!, catatan: note.text.trim());
-      if (mounted) Navigator.pop(context, true);
-    } catch (e) {
-      if (mounted) setState(() { saving = false; error = e.toString().replaceFirst('Exception: ', ''); });
-    }
-  }
-
-  @override Widget build(BuildContext context) => Stack(children: [
-    DraggableScrollableSheet(expand: false, initialChildSize: .9, minChildSize: .62, maxChildSize: .98, builder: (_, controller) => Material(
-      color: const Color(0xFFF7F9FC), borderRadius: const BorderRadius.vertical(top: Radius.circular(26)), clipBehavior: Clip.antiAlias,
-      child: Column(children: [
-        Container(width: 42, height: 4, margin: const EdgeInsets.symmetric(vertical: 12), decoration: BoxDecoration(color: AppColors.neutral300, borderRadius: BorderRadius.circular(4))),
-        Padding(padding: const EdgeInsets.fromLTRB(18, 0, 8, 10), child: Row(children: [
-          Expanded(child: Text('${widget.row['temuan'] ?? 'Detail TO'}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.navy700))),
-          IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close_rounded)),
-        ])),
-        Expanded(child: ListView(controller: controller, padding: const EdgeInsets.fromLTRB(18, 4, 18, 24), children: [
-          _details(), const SizedBox(height: 18),
-          const Text('Tim Eksekusi', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900)), const SizedBox(height: 7),
-          DropdownButtonFormField<String>(value: selected, isExpanded: true, decoration: InputDecoration(hintText: teams.isEmpty ? 'Belum ada tim lokal' : 'Pilih tim', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(13))), items: teams.map((x) => DropdownMenuItem(value: x, child: Text(x))).toList(), onChanged: loading ? null : (v) => setState(() => selected = v)),
-          const SizedBox(height: 12),
-          TextField(controller: note, maxLines: 3, decoration: InputDecoration(labelText: 'Catatan SPV (opsional)', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(13)))),
-          if (error != null) Padding(padding: const EdgeInsets.only(top: 10), child: Text(error!, style: const TextStyle(fontSize: 11, color: AppColors.red600))),
-        ])),
-        SafeArea(top: false, child: Container(color: Colors.white, padding: const EdgeInsets.fromLTRB(18, 12, 18, 14), child: SizedBox(width: double.infinity, height: 48, child: ElevatedButton(onPressed: saving || selected == null ? null : _save, style: ElevatedButton.styleFrom(backgroundColor: AppColors.navy700, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13))), child: Text(widget.mode == 'move' ? 'Pindahkan Tim Eksekusi' : 'Simpan Penugasan', style: const TextStyle(fontWeight: FontWeight.w900))))),
-      ]),
-    )),
-    if (saving) const Positioned.fill(child: Material(color: Color(0xFFF7F9FC), child: SafeArea(child: CustomLoadingWidget(message: 'Menyimpan ke antrean lokal...', size: 88)))),
-  ]);
-
-  Widget _details() {
-    final values = <(String,String)>[
-      ('Kode', '${widget.row['kodePekerjaan'] ?? '-'}'), ('Objek', '${widget.row['objek'] ?? '-'}'),
-      ('Tanggal', '${widget.row['tanggal'] ?? '-'}'), ('Penyulang', '${widget.row['penyulang'] ?? '-'}'),
-      ('Section', '${widget.row['section'] ?? '-'}'), ('Tier', '${widget.row['tier'] ?? '-'}'),
-      ('Deskripsi', '${widget.row['deskripsi'] ?? '-'}'), ('Tim saat ini', '${widget.row['timEksekusi'] ?? '-'}'),
-    ];
-    return Container(padding: const EdgeInsets.all(15), decoration: BoxDecoration(color: Colors.white, border: Border.all(color: AppColors.neutral200), borderRadius: BorderRadius.circular(16)), child: Column(children: values.map((v) => Padding(padding: const EdgeInsets.symmetric(vertical: 5), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [SizedBox(width: 92, child: Text(v.$1, style: const TextStyle(fontSize: 10, color: AppColors.neutral500))), Expanded(child: Text(v.$2.trim().isEmpty ? '-' : v.$2, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800)))]))).toList()));
-  }
 }
