@@ -8,7 +8,12 @@ function getMasterGarduMobile(token,ulpDiminta){try{
   if(!sesiTek)return{success:false,message:'Sesi habis.'};
   var dataTek={};try{dataTek=JSON.parse(raw.substring('TEMUAN_TEKNIK:'.length));}catch(eTek){return{success:false,message:'Data temuan tidak valid.'};}
   dataTek.username=String(sesiTek.username||'');
+  dataTek.petugasInspeksi=String(sesiTek.subTim||sesiTek.tim||'').trim();
   var simpanTek=typeof simpanTemuanInsJar==='function'?simpanTemuanInsJar(dataTek):{ok:false,error:'Fungsi simpan temuan belum tersedia.'};
+  if(simpanTek&&simpanTek.ok&&dataTek.petugasInspeksi&&typeof _findRowTemuan==='function'){
+   var lokasiTek=_findRowTemuan(simpanTek.kodePekerjaan);
+   if(lokasiTek)lokasiTek.sheet.getRange(lokasiTek.row,COL_INS.TEMUAN.timInspeksi+1).setValue(dataTek.petugasInspeksi);
+  }
   return simpanTek&&simpanTek.ok?{success:true,kodePekerjaan:simpanTek.kodePekerjaan,fotoTemuanUrl:simpanTek.fotoTemuanUrl,fotoTiangUrl:simpanTek.fotoTiangUrl}:{success:false,message:String((simpanTek&&(simpanTek.error||simpanTek.message))||'Gagal menyimpan temuan.')};
  }
  if(raw.indexOf('INSPEKSI:')===0){var paket={};try{paket=JSON.parse(raw.substring(9));}catch(e){return{success:false,message:'Paket inspeksi tidak valid.'};}return syncPaketInsGarduMobile_(token,paket);}

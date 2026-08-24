@@ -19,6 +19,8 @@ class TemuanTeknikRepository {
     String segmen = '',
     String nomorTiang = '',
     String nomorGardu = '',
+    String koordinatTiang = '',
+    String petugasInspeksi = '',
     String deskripsi = '',
   }) async {
     final payload = <String, dynamic>{
@@ -31,6 +33,8 @@ class TemuanTeknikRepository {
       'tier': tier,
       'temuan': temuan,
       'koordinat': koordinat,
+      'koordinatTiang': koordinatTiang,
+      'petugasInspeksi': petugasInspeksi,
       'deskripsi': deskripsi,
       'fotoTemuanB64': base64Encode(await fotoTemuan.readAsBytes()),
       'fotoTemuanMime': 'image/jpeg',
