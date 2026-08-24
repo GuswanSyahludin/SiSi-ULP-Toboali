@@ -1,3 +1,49 @@
+"""SiSi WM Engine - Anti-Manipulasi V1 (hybrid entrypoint Cloud Run).
+
+=============================================================================
+CATATAN DEPLOY CLOUD RUN (acuan tetap, jangan cari ulang)
+=============================================================================
+Project Google Cloud   : db-sisi-toboali
+Nama service Cloud Run : wm-engine
+Region                 : asia-southeast2
+URL service            : https://wm-engine-1011716929576.asia-southeast2.run.app
+Entrypoint container   : hybrid_v1:app   (lihat Dockerfile)
+WM version aktif       : compact-v5-anti-manipulation-v1
+Ukuran kanvas kanonik  : landscape 1600x1200, portrait 1200x1600, JPEG q85
+
+Environment yang dipakai service ini:
+  WM_SECRET                    -> WAJIB. Sudah terpasang di Cloud Run.
+  WM_SIGNING_SECRET            -> WAJIB untuk endpoint verifikasi V1.
+  WM_DRIVE_ROOT_FOLDER_ID      -> opsional, kosong karena folder dikirim payload.
+  WM_PUBLIC_LINKS              -> opsional, default false.
+  WM_ALLOWED_TIME_SKEW_SECONDS -> opsional, default 86400.
+
+NILAI SECRET TIDAK DITULIS DI REPO. Ambil dari Cloud Run bila perlu:
+  gcloud run services describe wm-engine --region asia-southeast2 \
+    --format='yaml(spec.template.spec.containers[0].env)'
+
+Langkah redeploy dari Cloud Shell:
+  cd ~/SiSi--Sistem-Integrasi- && git pull origin main
+  cd engines/wm-engine
+  gcloud builds submit --tag gcr.io/$GOOGLE_CLOUD_PROJECT/wm-engine:v1
+  gcloud run deploy wm-engine \
+    --image gcr.io/$GOOGLE_CLOUD_PROJECT/wm-engine:v1 \
+    --region asia-southeast2 --platform managed \
+    --update-env-vars WM_SIGNING_SECRET="<hasil openssl rand -hex 32>"
+
+Pakai --update-env-vars, bukan --set-env-vars, supaya WM_SECRET lama tidak hilang.
+
+Verifikasi setelah deploy:
+  curl https://wm-engine-1011716929576.asia-southeast2.run.app/
+  curl https://wm-engine-1011716929576.asia-southeast2.run.app/watermark/v1
+Harus tampil version compact-v5-anti-manipulation-v1 dan signingConfigured true.
+
+Engine Cloud Run lain pada project yang sama:
+  ba-pdf-engine  region asia-southeast2
+  row-pdf-engine region asia-southeast2
+=============================================================================
+"""
+
 import base64
 import hashlib
 import hmac
