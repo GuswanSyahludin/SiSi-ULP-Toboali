@@ -21,7 +21,12 @@ class GarduScreen extends StatefulWidget {
 }
 
 class _GarduScreenState extends State<GarduScreen> {
-  static const _categories = ['Underload', 'Cukup', 'Overload', 'Buruk'];
+  static const _categoryLabels = <String, String>{
+    'Underload': 'Underload (<50%)',
+    'Cukup': 'Cukup (>=50%, <80%)',
+    'Overload': 'Overload (>=80%, <100%)',
+    'Buruk': 'Buruk (>=100%)',
+  };
   static const _filterLabels = <String, String>{
     'nomor': 'Nomor Gardu',
     'range': 'Range Beban',
@@ -214,8 +219,11 @@ class _GarduScreenState extends State<GarduScreen> {
             value: _category,
             isExpanded: true,
             hint: const Text('Pilih kriteria beban'),
-            items: _categories
-                .map((value) => DropdownMenuItem(value: value, child: Text(value)))
+            items: _categoryLabels.entries
+                .map((entry) => DropdownMenuItem(
+                      value: entry.key,
+                      child: Text(entry.value),
+                    ))
                 .toList(),
             onChanged: (value) {
               setState(() {
