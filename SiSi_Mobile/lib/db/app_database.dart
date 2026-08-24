@@ -52,7 +52,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(driftDatabase(name: 'sisi_db'));
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   Future<Set<String>> _columns(String table) async {
     final rows = await customSelect('PRAGMA table_info($table)').get();
@@ -72,6 +72,12 @@ class AppDatabase extends _$AppDatabase {
         .toSet();
   }
 
+  Future<void> _ensureLocalMirrorTables() async {
+    await customStatement('CREATE TABLE IF NOT EXISTS local_dataset_state (dataset TEXT PRIMARY KEY NOT NULL, version TEXT NOT NULL, updated_at TEXT NOT NULL, row_count INTEGER NOT NULL DEFAULT 0, kind TEXT NOT NULL DEFAULT "main")');
+    await customStatement('CREATE TABLE IF NOT EXISTS local_dataset_rows (dataset TEXT NOT NULL, row_key TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(dataset,row_key))');
+    await customStatement('CREATE INDEX IF NOT EXISTS idx_local_dataset ON local_dataset_rows(dataset)');
+  }
+
   Future<void> _ensureTeknikToTables() async {
     await customStatement('CREATE TABLE IF NOT EXISTS teknik_to_cache (kode_pekerjaan TEXT NOT NULL, mode TEXT NOT NULL, tanggal TEXT NOT NULL DEFAULT "", payload TEXT NOT NULL, updated_at TEXT NOT NULL, PRIMARY KEY (kode_pekerjaan, mode))');
     await customStatement('CREATE INDEX IF NOT EXISTS idx_teknik_to_mode_tanggal ON teknik_to_cache(mode, tanggal DESC)');
@@ -81,7 +87,10 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        beforeOpen: (_) async => _ensureTeknikToTables(),
+        beforeOpen: (_) async {
+          await _ensureTeknikToTables();
+          await _ensureLocalMirrorTables();
+        },
         onUpgrade: (m, from, to) async {
           var tables = await _tables();
 

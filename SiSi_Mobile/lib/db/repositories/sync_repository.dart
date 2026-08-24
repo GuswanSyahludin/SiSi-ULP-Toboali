@@ -7,6 +7,7 @@ import 'master_gardu_repository.dart';
 import 'master_repository.dart';
 import 'p0_repository.dart';
 import 'teknik_to_repository.dart';
+import 'delta_sync_repository.dart';
 
 class SyncRepository {
   static const modulMasterData = 'masterData';
@@ -34,44 +35,47 @@ class SyncRepository {
 
   Future<Map<String, dynamic>> sinkronSemua(String token) async {
     const modul = modulSinkronSemua;
-    if (_kunci.contains(modul)) {
-      return {'ok': false, 'message': 'Sinkron data sedang berjalan.'};
-    }
-
+    if (_kunci.contains(modul)) return {'ok':false,'message':'Sinkron data sedang berjalan.'};
     _kunci.add(modul);
     try {
       final activeToken = await _tokenAktif(token);
+      final deltaRepo = DeltaSyncRepository();
+      final initial = !await deltaRepo.sudahPernah();
+
       final p0 = await P0Repository().kirimAntrean();
-      final master = await downloadMasterData(activeToken);
-      Map<String, dynamic> teknikTo = {'ok': true};
-      try { await TeknikToRepository().syncAll(activeToken); }
-      catch (e) { teknikTo = {'ok': false, 'message': e.toString()}; }
+      final garduEdit = await GarduSyncRepository().kirim(activeToken);
+      final inspeksi = await InspeksiGarduRepository().syncSemua(activeToken);
+      try { await TeknikToRepository().flushOutbox(activeToken); } catch (_) {}
 
-      final p0Ok = p0['ok'] == true;
-      final masterOk = master['ok'] == true;
-      final teknikToOk = teknikTo['ok'] == true;
-      final p0Terkirim = p0['terkirim'] ?? 0;
-      final p0Gagal = p0['gagal'] ?? 0;
+      Map<String,dynamic> firstMaster={'ok':true};
+      if(initial) firstMaster=await downloadMasterData(activeToken);
 
-      final bagian = <String>[
-        'P0: $p0Terkirim terkirim${p0Gagal == 0 ? '' : ', $p0Gagal gagal'}',
-        'Data: ${masterOk ? master['message'] ?? 'sinkron selesai' : master['message'] ?? 'gagal'}',
-        'TO: ${teknikToOk ? 'offline siap' : teknikTo['message'] ?? 'gagal'}',
-      ];
+      final delta = await deltaRepo.sync(activeToken);
+      final changed=delta.changed.toSet();
 
-      return {
-        'ok': p0Ok && masterOk && teknikToOk,
-        'p0Ok': p0Ok,
-        'masterOk': masterOk,
-        'p0Terkirim': p0Terkirim,
-        'p0Gagal': p0Gagal,
-        'message': bagian.join(' • '),
-      };
-    } catch (e) {
-      return {'ok': false, 'message': 'Koneksi bermasalah: $e'};
-    } finally {
-      _kunci.remove(modul);
-    }
+      if(!initial && changed.contains('db_Penyulang')){
+        final rp=await ApiService.getDropdownRow(token:activeToken);
+        if(rp['success']==true) await MasterRepository().simpanDariApi(
+          List<String>.from(rp['penyulang']??[]),Map<String,dynamic>.from(rp['sectionByPenyulang']??{}));
+      }
+      if(!initial && changed.contains('Master_Gardu')) await MasterGarduRepository().download(activeToken);
+      if(!initial && changed.contains('db_List_Temuan')) await InspeksiGarduRepository().downloadListTemuan(activeToken);
+      if(changed.contains('db_INS_Temuan')){
+        try { await Future.wait([
+          TeknikToRepository().refreshList(activeToken,'assignment'),
+          TeknikToRepository().refreshList(activeToken,'move'),
+        ]); } catch (_) {}
+      }
+      if(changed.contains('db_Users')){ try { await TeknikToRepository().refreshTeams(activeToken); } catch (_) {} }
+
+      final ok=p0['ok']==true && garduEdit['ok']==true && inspeksi['ok']==true && firstMaster['ok']==true;
+      await DbProvider.instance.syncDao.tandaiTersinkron(modul,
+        jumlah:delta.changed.length,keterangan:delta.message);
+      return {'ok':ok,'initial':initial,'changed':delta.changed,
+        'message':'${delta.message} • Outbox: P0 ${p0['terkirim']??0}, Gardu ${garduEdit['terkirim']??0}, Inspeksi ${inspeksi['terkirim']??0}'};
+    } catch(e) {
+      return {'ok':false,'message':'Koneksi bermasalah: $e'};
+    } finally { _kunci.remove(modul); }
   }
 
   Future<Map<String, dynamic>> downloadMasterData(String token) async {

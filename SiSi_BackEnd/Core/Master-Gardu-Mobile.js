@@ -3,6 +3,7 @@ var MASTER_GARDU_MOBILE={spreadsheetId:'1TEC2iaxEcTCn0IXDZM1kHpAhKyBHuG90SMK48zE
 function getMasterGarduMobile(token,ulpDiminta){try{
  var raw=String(ulpDiminta||'');
  if(raw==='LIST_TEMUAN')return getListTemuanMobile_(token);
+ if(raw.indexOf('DELTA_SYNC:')===0){var dp={};try{dp=JSON.parse(raw.substring('DELTA_SYNC:'.length));}catch(eD){return{success:false,message:'Payload delta sync tidak valid.'};}return typeof deltaSyncMobile_==='function'?deltaSyncMobile_(token,dp):{success:false,message:'Delta-Sync-Mobile.js belum terpasang.'};}
  if(raw.indexOf('TEKNIK_TO:')===0){var toPayload={};try{toPayload=JSON.parse(raw.substring('TEKNIK_TO:'.length));}catch(eTo){return{success:false,message:'Payload TO tidak valid.'};}return typeof teknikToMobile_==='function'?teknikToMobile_(token,toPayload):{success:false,message:'Teknik-TO-Mobile.js belum terpasang.'};}
  if(raw.indexOf('TEMUAN_TEKNIK:')===0){
   var sesiTek=getSesiByToken(String(token||''));
