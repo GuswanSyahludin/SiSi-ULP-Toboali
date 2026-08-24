@@ -91,15 +91,13 @@ class AccurateLocationService {
     timer.cancel();
     await subscription.cancel();
 
-    // Beberapa perangkat lambat memberi event stream pertama. Ambil satu
-    // pembacaan final sebagai fallback, tetap dengan mode navigasi terbaik.
+    // Geolocator 12 memakai named parameter desiredAccuracy dan timeLimit
+    // pada getCurrentPosition, bukan objek locationSettings.
     if (best == null) {
       try {
         best = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.bestForNavigation,
-            timeLimit: Duration(seconds: 12),
-          ),
+          desiredAccuracy: LocationAccuracy.bestForNavigation,
+          timeLimit: const Duration(seconds: 12),
         );
         samples = 1;
       } catch (_) {
