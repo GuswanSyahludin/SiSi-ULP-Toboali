@@ -40,7 +40,6 @@ class _GarduScreenState extends State<GarduScreen> {
   StreamSubscription<List<GarduOutbox>>? _subscription;
   String _filterType = 'nomor';
   String? _category;
-  bool _showFilters = false;
   bool _loading = true;
 
   @override
@@ -124,27 +123,12 @@ class _GarduScreenState extends State<GarduScreen> {
   }
 
   void _selectFilter(String type) {
+    if (type == _filterType) return;
     _clearValues();
     setState(() {
       _filterType = type;
       _rows = List.of(_allRows);
     });
-  }
-
-  void _resetFilters() {
-    _clearValues();
-    setState(() => _rows = List.of(_allRows));
-  }
-
-  void _searchByNumber(String _) {
-    if (_filterType != 'nomor') {
-      _minLoad.clear();
-      _maxLoad.clear();
-      _capacity.clear();
-      _category = null;
-      _filterType = 'nomor';
-    }
-    _applyFilters();
   }
 
   Future<void> _load() async {
@@ -182,150 +166,140 @@ class _GarduScreenState extends State<GarduScreen> {
     );
   }
 
-  Widget _numberField({
-    required TextEditingController controller,
-    required String label,
-    required String suffix,
-  }) {
-    return TextField(
-      controller: controller,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      onChanged: (_) => _applyFilters(),
-      decoration: InputDecoration(
-        labelText: label,
-        suffixText: suffix,
-        filled: true,
-        fillColor: const Color(0xFFFCFDFF),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFDCE3EC)),
-        ),
-      ),
+  InputDecoration _plainDecoration(String hint, {String? suffix}) {
+    return InputDecoration(
+      hintText: hint,
+      suffixText: suffix,
+      border: InputBorder.none,
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(vertical: 15),
     );
   }
 
-  Widget _criterionInput() {
+  Widget _filterInput() {
     switch (_filterType) {
-      case 'nomor':
-        return const Text(
-          'Ketik nomor gardu pada kolom pencarian di atas.',
-          style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-        );
       case 'range':
         return Row(children: [
           Expanded(
-            child: _numberField(
+            child: TextField(
               controller: _minLoad,
-              label: 'Minimum',
-              suffix: '%',
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              onChanged: (_) => _applyFilters(),
+              decoration: _plainDecoration('Min', suffix: '%'),
             ),
           ),
           const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 8),
+            padding: EdgeInsets.symmetric(horizontal: 10),
             child: Text('s.d.', style: TextStyle(color: Color(0xFF64748B))),
           ),
           Expanded(
-            child: _numberField(
+            child: TextField(
               controller: _maxLoad,
-              label: 'Maksimum',
-              suffix: '%',
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              onChanged: (_) => _applyFilters(),
+              decoration: _plainDecoration('Maks', suffix: '%'),
             ),
           ),
         ]);
       case 'kapasitas':
-        return _numberField(
+        return TextField(
           controller: _capacity,
-          label: 'Kapasitas Trafo',
-          suffix: 'kVA',
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          onChanged: (_) => _applyFilters(),
+          decoration: _plainDecoration('Cari kapasitas trafo', suffix: 'kVA'),
         );
       case 'kategori':
-        return Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: _categories.map((category) {
-            final selected = _category == category;
-            return FilterChip(
-              label: Text(category),
-              selected: selected,
-              onSelected: (_) {
-                setState(() {
-                  _category = selected ? null : category;
-                  _rows = _filter(_allRows);
-                });
-              },
-              selectedColor: AppColors.cyan600.withOpacity(.15),
-              checkmarkColor: AppColors.cyan600,
-              labelStyle: TextStyle(
-                fontWeight: FontWeight.w800,
-                color: selected
-                    ? AppColors.navy700
-                    : const Color(0xFF475569),
-              ),
-              side: BorderSide(
-                color: selected
-                    ? AppColors.cyan600
-                    : const Color(0xFFDCE3EC),
-              ),
-            );
-          }).toList(),
+        return DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            value: _category,
+            isExpanded: true,
+            hint: const Text('Pilih kriteria beban'),
+            items: _categories
+                .map((value) => DropdownMenuItem(value: value, child: Text(value)))
+                .toList(),
+            onChanged: (value) {
+              setState(() {
+                _category = value;
+                _rows = _filter(_allRows);
+              });
+            },
+          ),
         );
+      case 'nomor':
       default:
-        return const SizedBox.shrink();
+        return TextField(
+          controller: _search,
+          textCapitalization: TextCapitalization.characters,
+          onChanged: (_) => _applyFilters(),
+          decoration: _plainDecoration('Cari nomor gardu'),
+        );
     }
   }
 
-  Widget _filterPanel() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFCFDFF),
-        border: Border.all(color: const Color(0xFFDCE3EC)),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          const Expanded(
-            child: Text(
-              'FILTER GARDU',
-              style: TextStyle(
-                fontSize: 11,
-                letterSpacing: 1,
-                fontWeight: FontWeight.w900,
-                color: AppColors.navy700,
-              ),
-            ),
+  Widget _filterButton() {
+    return PopupMenuButton<String>(
+      tooltip: 'Pilih kriteria filter',
+      initialValue: _filterType,
+      onSelected: _selectFilter,
+      itemBuilder: (_) => _filterLabels.entries
+          .map((entry) => PopupMenuItem<String>(
+                value: entry.key,
+                child: Row(children: [
+                  Icon(
+                    entry.key == _filterType
+                        ? Icons.radio_button_checked_rounded
+                        : Icons.radio_button_unchecked_rounded,
+                    size: 19,
+                    color: entry.key == _filterType
+                        ? AppColors.cyan600
+                        : const Color(0xFF94A3B8),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(entry.value),
+                ]),
+              ))
+          .toList(),
+      child: SizedBox(
+        width: 48,
+        height: 48,
+        child: Stack(alignment: Alignment.center, children: [
+          Icon(
+            Icons.filter_list_rounded,
+            color: _hasActiveFilter
+                ? AppColors.cyan600
+                : const Color(0xFF64748B),
           ),
           if (_hasActiveFilter)
-            TextButton(onPressed: _resetFilters, child: const Text('Reset')),
-        ]),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          value: _filterType,
-          isExpanded: true,
-          decoration: InputDecoration(
-            labelText: 'Pilih Kriteria',
-            filled: true,
-            fillColor: const Color(0xFFF6F8FC),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFDCE3EC)),
+            const Positioned(
+              right: 8,
+              top: 8,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppColors.amber700,
+                  shape: BoxShape.circle,
+                ),
+                child: SizedBox.square(dimension: 9),
+              ),
             ),
-          ),
-          items: _filterLabels.entries
-              .map((entry) => DropdownMenuItem(
-                    value: entry.key,
-                    child: Text(entry.value),
-                  ))
-              .toList(),
-          onChanged: (value) {
-            if (value != null && value != _filterType) _selectFilter(value);
-          },
-        ),
-        const SizedBox(height: 12),
-        _criterionInput(),
+        ]),
+      ),
+    );
+  }
+
+  Widget _filterBar() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      constraints: const BoxConstraints(minHeight: 56),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFCFDFF),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(children: [
+        const SizedBox(width: 14),
+        const Icon(Icons.search_rounded, color: Color(0xFF64748B)),
+        const SizedBox(width: 12),
+        Expanded(child: _filterInput()),
+        _filterButton(),
       ]),
     );
   }
@@ -348,53 +322,7 @@ class _GarduScreenState extends State<GarduScreen> {
         ],
       ),
       body: Column(children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: TextField(
-            controller: _search,
-            onChanged: _searchByNumber,
-            decoration: InputDecoration(
-              hintText: 'Cari nomor gardu',
-              prefixIcon: const Icon(Icons.search_rounded),
-              suffixIcon: Stack(
-                alignment: Alignment.center,
-                children: [
-                  IconButton(
-                    tooltip: 'Pilih kriteria filter',
-                    onPressed: () =>
-                        setState(() => _showFilters = !_showFilters),
-                    icon: Icon(
-                      Icons.filter_list_rounded,
-                      color: _showFilters || _hasActiveFilter
-                          ? AppColors.cyan600
-                          : const Color(0xFF64748B),
-                    ),
-                  ),
-                  if (_hasActiveFilter)
-                    Positioned(
-                      right: 7,
-                      top: 7,
-                      child: Container(
-                        width: 9,
-                        height: 9,
-                        decoration: const BoxDecoration(
-                          color: AppColors.amber700,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              filled: true,
-              fillColor: const Color(0xFFFCFDFF),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-        ),
-        if (_showFilters) _filterPanel(),
+        _filterBar(),
         Padding(
           padding: const EdgeInsets.fromLTRB(18, 4, 18, 12),
           child: Row(children: [
@@ -404,6 +332,11 @@ class _GarduScreenState extends State<GarduScreen> {
                 fontWeight: FontWeight.w800,
                 color: Color(0xFF475569),
               ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              _filterLabels[_filterType]!,
+              style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
             ),
             const Spacer(),
             if (_pending.isNotEmpty)
