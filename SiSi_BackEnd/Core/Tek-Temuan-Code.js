@@ -1249,14 +1249,6 @@ function validasiUlangFotoTemuan(){
 /* Pasang trigger waktu untuk validasiUlangFotoTemuan (default tiap 1 jam).
    Jalankan SEKALI dari editor Apps Script. Ganti everyHours(1) menjadi
    everyMinutes(30) bila ingin lebih cepat. */
-function setupTriggerValidasiFotoTemuan(){
-  ScriptApp.getProjectTriggers().forEach(function(t){
-    if(t.getHandlerFunction() === 'validasiUlangFotoTemuan') ScriptApp.deleteTrigger(t);
-  });
-  ScriptApp.newTrigger('validasiUlangFotoTemuan').timeBased().everyHours(1).create();
-  Logger.log('Trigger validasiUlangFotoTemuan dipasang (tiap 1 jam).');
-}
-
 /* DIAGNOSTIK — tidak mengubah data. Jalankan manual dari editor lalu lihat menu Eksekusi/Log.
    Menampilkan nama file foto yang dibaca dari kolom Q vs R (dan S vs T) per baris,
    serta apakah baris itu akan dianggap "foto diganti". */

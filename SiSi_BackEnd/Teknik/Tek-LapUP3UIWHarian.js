@@ -1420,19 +1420,6 @@ function drainLaporanDirty() {
 }
 
 // SETUP sekali: pasang trigger drainLaporanDirty tiap 1 menit (idempoten).
-function createLaporanDrainTrigger() {
-  var all = ScriptApp.getProjectTriggers();
-  for (var i = 0; i < all.length; i++) {
-    if (all[i].getHandlerFunction() === "drainLaporanDirty")
-      ScriptApp.deleteTrigger(all[i]);
-  }
-  ScriptApp.newTrigger("drainLaporanDirty")
-    .timeBased()
-    .everyMinutes(1)
-    .create();
-  return "Trigger drainLaporanDirty dipasang (tiap 1 menit).";
-}
-
 // Batalkan trigger drain laporan.
 function hapusLaporanDrainTrigger() {
   var all = ScriptApp.getProjectTriggers();
@@ -1457,35 +1444,6 @@ function _lhHandleWebhook(body) {
 }
 
 /* ===== Pemasang trigger (jalankan SEKALI dari editor Apps Script) ===== */
-function pasangTriggerLaporanHarian() {
-  ScriptApp.getProjectTriggers().forEach(function (t) {
-    var f = t.getHandlerFunction();
-    if (
-      f === "ensureLaporanHarianHariIni" ||
-      f === "refreshLaporanHarianHariIni" ||
-      f === "drainLaporanDirty"
-    )
-      ScriptApp.deleteTrigger(t);
-  });
-  // 00:00-01:00: buat baris hari baru
-  ScriptApp.newTrigger("ensureLaporanHarianHariIni")
-    .timeBased()
-    .atHour(0)
-    .everyDays(1)
-    .inTimezone(LH.TZ)
-    .create();
-  // tiap 1 menit: rebuild UP3 & UIW utk tanggal yang ditandai "dirty" oleh webhook (async, near real-time)
-  ScriptApp.newTrigger("drainLaporanDirty")
-    .timeBased()
-    .everyMinutes(1)
-    .create();
-  // tiap 15 menit: BACKSTOP sweep hari ini (menutup celah bila ada perubahan yg lolos dari webhook)
-  ScriptApp.newTrigger("refreshLaporanHarianHariIni")
-    .timeBased()
-    .everyMinutes(15)
-    .create();
-}
-
 /* =====================================================
    MOBILE "Laporan UP3 / UIW" — Rev 20 Agu 2026 (OPTIMASI BACA)
    Jembatan sub-menu mobile Laporan UP3 / UIW (SiSi Mobile):

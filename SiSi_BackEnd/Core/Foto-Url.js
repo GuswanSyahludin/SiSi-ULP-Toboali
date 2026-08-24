@@ -118,17 +118,6 @@ function normalisasiUrlFotoRowTick() {
 }
 
 /** Jalankan SEKALI dari editor setelah deploy. */
-function pasangNormalisasiUrlFotoROWTrigger() {
-  var fn = "normalisasiUrlFotoRowTick";
-  var all = ScriptApp.getProjectTriggers();
-  for (var i = 0; i < all.length; i++) {
-    if (all[i].getHandlerFunction() === fn) ScriptApp.deleteTrigger(all[i]);
-  }
-  ScriptApp.newTrigger(fn).timeBased().everyMinutes(1).create();
-  normalisasiUrlFotoRowTick(); // langsung rapikan batch pertama
-  Logger.log("Trigger normalisasi URL foto ROW terpasang (tiap 1 menit).");
-}
-
 function hapusNormalisasiUrlFotoROWTrigger() {
   var all = ScriptApp.getProjectTriggers(), n = 0;
   for (var i = 0; i < all.length; i++) {

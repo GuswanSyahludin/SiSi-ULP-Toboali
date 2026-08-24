@@ -928,14 +928,6 @@ function drainAntreanP0() {
 }
 
 // SETUP sekali: pasang trigger time-driven drainAntreanP0 setiap 1 menit (jalankan manual dari editor).
-function createWmDrainTriggerY() {
-  var trs = ScriptApp.getProjectTriggers();
-  for (var i = 0; i < trs.length; i++)
-    if (trs[i].getHandlerFunction() === "drainAntreanP0")
-      ScriptApp.deleteTrigger(trs[i]);
-  ScriptApp.newTrigger("drainAntreanP0").timeBased().everyMinutes(1).create();
-  Logger.log("Trigger drainAntreanP0 dibuat: setiap 1 menit");
-}
 // Lepas trigger antrean. CATATAN: mode sinkron sudah DIMATIKAN di doPost (fast sync), jadi tanpa trigger ini Foto WM TIDAK akan diproses sama sekali. Lepas hanya bila benar-benar perlu.
 function hapusWmDrainTriggerY() {
   var trs = ScriptApp.getProjectTriggers(),
@@ -953,16 +945,6 @@ function hapusWmDrainTriggerY() {
 // (db_Yandal_P0 + Switching) → salah satu pembeban slot eksekusi terbesar saat sheet sibuk. Foto tetap masuk
 // antrean seketika lewat webhook enqueueP0Yandal_; sweep ini HANYA backstop celah timing (15 mnt cukup).
 // Setelah deploy: jalankan fungsi ini SEKALI dari editor (pilih namanya → Run) agar trigger terpasang.
-function createSweepWmBacklogTriggerY(minutes) {
-  var m = Number(minutes || 15);
-  if ([1, 5, 10, 15, 30].indexOf(m) < 0) m = 15; // interval valid Apps Script
-  var trs = ScriptApp.getProjectTriggers();
-  for (var i = 0; i < trs.length; i++)
-    if (trs[i].getHandlerFunction() === "sweepWmBacklogY")
-      ScriptApp.deleteTrigger(trs[i]);
-  ScriptApp.newTrigger("sweepWmBacklogY").timeBased().everyMinutes(m).create();
-  Logger.log("Trigger sweepWmBacklogY dibuat: setiap " + m + " menit");
-}
 // Lepas trigger backstop sweep WM.
 function hapusSweepWmBacklogTriggerY() {
   var trs = ScriptApp.getProjectTriggers(),
@@ -1832,17 +1814,6 @@ function drainAntreanApprovalP0() {
 }
 
 // SETUP sekali: pasang trigger time-driven drainAntreanApprovalP0 setiap 1 menit (jalankan manual dari editor).
-function createApprovalDrainTriggerY() {
-  var trs = ScriptApp.getProjectTriggers();
-  for (var i = 0; i < trs.length; i++)
-    if (trs[i].getHandlerFunction() === "drainAntreanApprovalP0")
-      ScriptApp.deleteTrigger(trs[i]);
-  ScriptApp.newTrigger("drainAntreanApprovalP0")
-    .timeBased()
-    .everyMinutes(1)
-    .create();
-  Logger.log("Trigger drainAntreanApprovalP0 dibuat: setiap 1 menit");
-}
 // Lepas trigger antrean approval. CATATAN: tanpa trigger ini keputusan HANYA tercatat di antrean, TIDAK diproses.
 function hapusApprovalDrainTriggerY() {
   var trs = ScriptApp.getProjectTriggers(),
@@ -2482,21 +2453,6 @@ function hentikanRecalcPointBertahap() {
 // SETUP sekali: pasang trigger time-driven sweepPointP0Yandal.
 // Rev 19 Agu malam: default 1 menit → 15 menit (ia hanya BACKSTOP — point dihitung seketika oleh
 // antrean approval saat Approved). Scan penuh db_Yandal_P0 tiap menit membebani limit eksekusi simultan.
-function createPointP0DrainTriggerY(minutes) {
-  var m = Number(minutes || 15);
-  if ([1, 5, 10, 15, 30].indexOf(m) < 0) m = 15; // interval valid Apps Script
-  var trs = ScriptApp.getProjectTriggers();
-  for (var i = 0; i < trs.length; i++) {
-    if (trs[i].getHandlerFunction() === "sweepPointP0Yandal")
-      ScriptApp.deleteTrigger(trs[i]);
-  }
-  ScriptApp.newTrigger("sweepPointP0Yandal")
-    .timeBased()
-    .everyMinutes(m)
-    .create();
-  Logger.log("Trigger sweepPointP0Yandal dibuat: setiap " + m + " menit");
-}
-
 // Lepas trigger backstop point P0.
 function hapusPointP0DrainTriggerY() {
   var trs = ScriptApp.getProjectTriggers(),
@@ -4228,20 +4184,6 @@ function setVccYandal(args) {
 }
 
 // SETUP sekali: trigger harian 00:30 menyegarkan db_Yandal_Rank (bulan berjalan).
-function createRankTriggerY() {
-  var fn = "sinkronRankYandal",
-    tg = ScriptApp.getProjectTriggers();
-  for (var i = 0; i < tg.length; i++)
-    if (tg[i].getHandlerFunction() === fn) ScriptApp.deleteTrigger(tg[i]);
-  ScriptApp.newTrigger(fn)
-    .timeBased()
-    .everyDays(1)
-    .atHour(0)
-    .nearMinute(30)
-    .create();
-  Logger.log("Trigger harian sinkronRankYandal dibuat (00:30 WIB).");
-}
-
 // ====== BACKSTOP DURASI & JARAK P0 (recalc massal — baris yang terlewat) ======
 // Menutup celah bila prosesP0Yandal tak sempat menghitung Durasi/Jarak (mis. webhook
 // terlewat, koordinat/closing masuk belakangan, atau sync AppSheet telat). Menyapu
@@ -4395,19 +4337,6 @@ function recalcPaksaDurasiJarakYandalP0(opts) {
 
 // SETUP sekali (jalankan dari editor): pasang trigger time-driven sweepDurasiJarakYandalP0.
 // minutes: 1/5/10/15/30 (default 30 sejak 19 Agu malam 4). Recalc hanya baris kosong -> steady-state ringan.
-function createRecalcDurasiJarakTriggerY(minutes) {
-  var m = Number(minutes || 30);
-  if ([1, 5, 10, 15, 30].indexOf(m) < 0) m = 30; // interval valid Apps Script — 19 Agu malam 4: default 5 → 30 mnt (backstop; prosesP0Yandal sudah menghitung inline)
-  var trs = ScriptApp.getProjectTriggers();
-  for (var i = 0; i < trs.length; i++)
-    if (trs[i].getHandlerFunction() === "sweepDurasiJarakYandalP0")
-      ScriptApp.deleteTrigger(trs[i]);
-  ScriptApp.newTrigger("sweepDurasiJarakYandalP0")
-    .timeBased()
-    .everyMinutes(m)
-    .create();
-  Logger.log("Trigger sweepDurasiJarakYandalP0 dibuat: setiap " + m + " menit");
-}
 // Lepas trigger backstop durasi/jarak.
 function hapusRecalcDurasiJarakTriggerY() {
   var trs = ScriptApp.getProjectTriggers(),

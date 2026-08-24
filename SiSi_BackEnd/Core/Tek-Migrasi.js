@@ -215,22 +215,6 @@ function hentikanMigrasiGlobalHeader() {
    (Global Header + ROW Realisasi + ROW Eksekusi + INS Temuan + Yandal P0 + Teknik_Laporan Harian + InsJar Realisasi + InsDu Realisasi + Hartek PenyulangGardu + Hartek Pekerjaan + Hartek Material + Yandal Shift + Yandal Pengecekan Switching) lewat mulaiMigrasiSemua(). Masing-masing memakai
    cursor + tick 1 menit & berhenti otomatis saat selesai; hari berikutnya mulai lagi
    utk data H-2 terbaru. */
-function createMigrasiHarianTrigger() {
-  var trs = ScriptApp.getProjectTriggers();
-  for (var i = 0; i < trs.length; i++) {
-    var f = trs[i].getHandlerFunction();
-    if (f === "mulaiMigrasiSemua" || f === "mulaiMigrasiGlobalHeader")
-      ScriptApp.deleteTrigger(trs[i]);
-  }
-  ScriptApp.newTrigger("mulaiMigrasiSemua")
-    .timeBased()
-    .atHour(1)
-    .everyDays(1)
-    .inTimezone("Asia/Jakarta")
-    .create();
-  return "Trigger migrasi harian dipasang (01:00 WIB): Global Header + ROW Realisasi + ROW Eksekusi + INS Temuan + Yandal P0 + Teknik_Laporan Harian + InsJar Realisasi + InsDu Realisasi + Hartek PenyulangGardu + Hartek Pekerjaan + Hartek Material + Yandal Shift + Yandal Pengecekan Switching.";
-}
-
 /* ===== PREVIEW MIGRASI (read-only, aman) =====
    Jalankan dari editor Apps Script: previewMigrasiGlobalHeader() -> lihat View > Logs.
    Menampilkan tanggal batas (H-2), total baris, rincian akan-disalin / sudah-ada-di-arsip
@@ -5935,48 +5919,6 @@ function harianGabunganSiSi() {
    TIDAK disentuh: drainAntreanP0 (1 mnt, sengaja terpisah krn berat), migrasiSemuaTick
    (milik migrasi), jalankanPerbaikanMassalKodeROWMenit (job satu-kali — HAPUS manual di
    ⏰ Triggers bila pekerjaannya sudah selesai). */
-function pasangTriggerGabunganSiSi() {
-  var lepas = [
-    "recalcTick",
-    "drainLaporanDirty",
-    "drainFotoRow",
-    "sweepPointP0Yandal",
-    "validasiUlangFotoTemuan",
-    "pingEngineY",
-    "refreshLaporanHarianHariIni",
-    "sweepEksekusiRowBacklog",
-    "refreshLaporanHarianROW",
-    "ensureLaporanHarianHariIni",
-    "refreshWaHarian",
-    "sinkronRankYandal",
-    "mulaiMigrasiSemua",
-    "tickGabunganSiSi",
-    "harianGabunganSiSi",
-  ];
-  var trs = ScriptApp.getProjectTriggers(),
-    n = 0;
-  for (var i = 0; i < trs.length; i++) {
-    if (lepas.indexOf(trs[i].getHandlerFunction()) >= 0) {
-      ScriptApp.deleteTrigger(trs[i]);
-      n++;
-    }
-  }
-  ScriptApp.newTrigger("tickGabunganSiSi").timeBased().everyMinutes(1).create();
-  ScriptApp.newTrigger("harianGabunganSiSi")
-    .timeBased()
-    .atHour(0)
-    .nearMinute(30)
-    .everyDays(1)
-    .inTimezone("Asia/Jakarta")
-    .create();
-  var msg =
-    "Trigger gabungan terpasang: tickGabunganSiSi (1 mnt) + harianGabunganSiSi (00:30). " +
-    n +
-    " trigger lama dilepas. Sisa terpisah: drainAntreanP0 + migrasiSemuaTick.";
-  Logger.log(msg);
-  return msg;
-}
-
 /* Lepas 2 trigger gabungan & kosongkan state (utk rollback ke trigger per-modul). */
 function lepasTriggerGabunganSiSi() {
   var trs = ScriptApp.getProjectTriggers(),

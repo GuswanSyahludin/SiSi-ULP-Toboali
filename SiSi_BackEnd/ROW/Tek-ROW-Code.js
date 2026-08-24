@@ -854,15 +854,6 @@ function forceRefreshLaporan(tim, tanggal) {
   }
 }
 
-function setupTriggerLaporan() {
-  ScriptApp.getProjectTriggers().forEach(function(t) {
-    if (t.getHandlerFunction() === 'refreshLaporanHarianROW') ScriptApp.deleteTrigger(t);
-  });
-  ScriptApp.newTrigger('refreshLaporanHarianROW').timeBased().everyHours(1).create();
-  ScriptApp.newTrigger('refreshLaporanHarianROW').timeBased().atHour(18).everyDays(1).inTimezone('Asia/Jakarta').create();
-  Logger.log('Trigger berhasil dipasang');
-}
-
 function _aggregateForTim(ulp, tim, tglStr, exeRows, exeAll, hdrRow, penySecList) {
   var tz = Session.getScriptTimeZone();
   var bulan = tglStr.substring(0, 7);
@@ -1917,16 +1908,6 @@ function jalankanRecalcEksekusiROWHarian() {
    Memasang trigger waktu tiap 1 jam. Eksekusi nyata dibatasi 08:00-19:00 WIB
    oleh guard di jalankanRecalcEksekusiROWHarian().
    Aman dijalankan ulang: trigger lama utk handler ini dihapus dulu (anti-dobel). */
-function setupTriggerRecalcROW() {
-  ScriptApp.getProjectTriggers().forEach(function(t) {
-    if (t.getHandlerFunction() === 'jalankanRecalcEksekusiROWHarian') ScriptApp.deleteTrigger(t);
-  });
-  ScriptApp.newTrigger('jalankanRecalcEksekusiROWHarian').timeBased().everyHours(1).create();
-  Logger.log('Trigger recalc ROW dipasang (tiap 1 jam; aktif hanya 08:00-19:00 WIB via guard)');
-  return '✅ Trigger recalcEksekusiROW dipasang: tiap 1 jam, hanya aktif 08:00-19:00 WIB.';
-}
-
-
 /* ═══ BUILDER WA ROW (kontrak Tek-WaEngine: recalc(ss, kodeHeader)) ═══
    Membangun WA Text utk 1 header ROW di db_Global_Header lalu menulisnya ke kolom
    WA Text header tsb. Memakai _aggregateForTim + _formatWA (format ROW yg sudah ada).
@@ -3627,15 +3608,6 @@ function drainFotoRow(){
 }
 
 // Pasang trigger periodik drainFotoRow (tiap 1 menit) + buang trigger fotoRowTick lama.
-function createFotoRowDrainTrigger(){
-  ScriptApp.getProjectTriggers().forEach(function(t){
-    var fn = t.getHandlerFunction();
-    if(fn === 'drainFotoRow' || fn === 'fotoRowTick') ScriptApp.deleteTrigger(t);
-  });
-  ScriptApp.newTrigger('drainFotoRow').timeBased().everyMinutes(1).create();
-  Logger.log('[createFotoRowDrainTrigger] Trigger drainFotoRow tiap 1 menit terpasang (fotoRowTick lama dibuang).');
-}
-
 // Lepas trigger drainFotoRow (dan sisa fotoRowTick lama bila ada).
 function hapusFotoRowDrainTrigger(){
   var n = 0;
@@ -3744,14 +3716,6 @@ function sweepEksekusiRowBacklog(){
 }
 
 // Pasang 1 trigger periodik sweepEksekusiRowBacklog (default tiap 1 jam) + buang trigger lama senama.
-function createEksekusiRowSweepTrigger(){
-  ScriptApp.getProjectTriggers().forEach(function(t){
-    if(t.getHandlerFunction() === 'sweepEksekusiRowBacklog') ScriptApp.deleteTrigger(t);
-  });
-  ScriptApp.newTrigger('sweepEksekusiRowBacklog').timeBased().everyHours(1).create();
-  Logger.log('[createEksekusiRowSweepTrigger] Trigger sweepEksekusiRowBacklog tiap 1 jam terpasang.');
-}
-
 // Lepas trigger sweepEksekusiRowBacklog.
 function hapusEksekusiRowSweepTrigger(){
   var n = 0;

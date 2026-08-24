@@ -914,17 +914,6 @@ function recalcTick() {
   }
 }
 
-function createRecalcTrigger() {
-  var all = ScriptApp.getProjectTriggers();
-  for (var i = 0; i < all.length; i++) {
-    var fn = all[i].getHandlerFunction();
-    if (fn === "recalcTick" || fn === "recalcRowTick")
-      ScriptApp.deleteTrigger(all[i]);
-  }
-  ScriptApp.newTrigger("recalcTick").timeBased().everyMinutes(1).create();
-  return "Trigger recalcTick (gabungan row+wa) dipasang (tiap 1 menit).";
-}
-
 function hapusRecalcTrigger() {
   var all = ScriptApp.getProjectTriggers();
   var n = 0;
@@ -940,9 +929,6 @@ function hapusRecalcTrigger() {
 
 function recalcRowTick() {
   return recalcTick();
-}
-function createRecalcRowTrigger() {
-  return createRecalcTrigger();
 }
 function hapusRecalcRowTrigger() {
   return hapusRecalcTrigger();
@@ -971,24 +957,6 @@ function fastTick() {
 
 // SETUP sekali (jalankan dari editor): pasang fastTick tiap 1 menit, SEKALIGUS melepas trigger
 // lama yang digantikannya (recalcTick / recalcRowTick / drainAntreanApprovalP0).
-function createFastTickTrigger() {
-  var ganti = [
-    "fastTick",
-    "drainAntreanApprovalP0",
-    "recalcTick",
-    "recalcRowTick",
-  ];
-  var trs = ScriptApp.getProjectTriggers();
-  for (var i = 0; i < trs.length; i++) {
-    if (ganti.indexOf(trs[i].getHandlerFunction()) >= 0)
-      ScriptApp.deleteTrigger(trs[i]);
-  }
-  ScriptApp.newTrigger("fastTick").timeBased().everyMinutes(1).create();
-  Logger.log(
-    "Trigger fastTick dipasang (tiap 1 menit): antrean approval + recalc",
-  );
-}
-
 // Lepas fastTick (mis. ingin kembali ke trigger terpisah — pasang ulang lewat createRecalcTrigger
 // + createApprovalDrainTriggerY).
 function hapusFastTickTrigger() {
@@ -1004,44 +972,12 @@ function hapusFastTickTrigger() {
 }
 
 // Ubah interval trigger apa pun dari editor (helper umum).
-function aturIntervalTrigger(fnName, menit) {
-  var m = Number(menit || 5);
-  if ([1, 5, 10, 15, 30].indexOf(m) < 0) m = 5; // interval valid Apps Script
-  var trs = ScriptApp.getProjectTriggers();
-  for (var i = 0; i < trs.length; i++) {
-    if (trs[i].getHandlerFunction() === fnName) ScriptApp.deleteTrigger(trs[i]);
-  }
-  ScriptApp.newTrigger(fnName).timeBased().everyMinutes(m).create();
-  Logger.log("Trigger " + fnName + " dipasang: setiap " + m + " menit");
-}
-
 // Jalankan SEKALI dari editor: drain watermark tiap 1 menit → 5 menit.
 // Drain WM memindai 2 sheet penuh tiap run — beban sheet terberat yang tersisa; menurunkannya
 // mempercepat SEMUA request lain (login, list, approval) saat jam sibuk. Watermark tetap diproses,
 // hanya dengan jeda maks 5 menit (mobile/AppSheet memang tidak menunggu watermark — aman).
-function aturDrainWatermark5Menit() {
-  aturIntervalTrigger("drainAntreanP0", 5);
-}
-
 /* ═══ BACKSTOP WA ═══ */
 var REFRESH_WA_INTERVAL_MIN = 15;
-
-function createRefreshWaTrigger() {
-  var all = ScriptApp.getProjectTriggers();
-  for (var i = 0; i < all.length; i++) {
-    if (all[i].getHandlerFunction() === "refreshWaHarian")
-      ScriptApp.deleteTrigger(all[i]);
-  }
-  ScriptApp.newTrigger("refreshWaHarian")
-    .timeBased()
-    .everyMinutes(REFRESH_WA_INTERVAL_MIN)
-    .create();
-  return (
-    "Trigger backstop refreshWaHarian dipasang (tiap " +
-    REFRESH_WA_INTERVAL_MIN +
-    " menit)."
-  );
-}
 
 function hapusRefreshWaTrigger() {
   var all = ScriptApp.getProjectTriggers();
