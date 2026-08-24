@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../services/accurate_location_service.dart';
 import '../widgets/accurate_gps_button.dart';
 import '../theme/app_colors.dart';
 
@@ -32,43 +31,7 @@ class _FormHeaderLaporanScreenState extends State<FormHeaderLaporanScreen> {
   double? _akurasiAwal;
   double? _akurasiAkhir;
 
-  bool _isGettingGpsAwal = false;
-  bool _isGettingGpsAkhir = false;
   bool _busy = false;
-
-  Future<void> _ambilGps(bool awal) async {
-    setState(() {
-      if (awal) _isGettingGpsAwal = true;
-      else _isGettingGpsAkhir = true;
-    });
-
-    try {
-      final result = await AccurateLocationService.capture();
-      if (!mounted) return;
-      setState(() {
-        if (awal) {
-          _koorAwalCtrl.text = result.coordinates;
-          _akurasiAwal = result.accuracy;
-        } else {
-          _koorAkhirCtrl.text = result.coordinates;
-          _akurasiAkhir = result.accuracy;
-        }
-      });
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          if (awal) _isGettingGpsAwal = false;
-          else _isGettingGpsAkhir = false;
-        });
-      }
-    }
-  }
 
   void _simpan() {
     if (_koorAwalCtrl.text.trim().isEmpty) {
@@ -205,18 +168,14 @@ class _FormHeaderLaporanScreenState extends State<FormHeaderLaporanScreen> {
                 label: 'Koordinat Awal Pekerjaan',
                 hint: '-2.998412, 106.452819',
                 controller: _koorAwalCtrl,
-                isLoading: _isGettingGpsAwal,
                 accuracy: _akurasiAwal,
-                onGps: () => _ambilGps(true),
               ),
               const SizedBox(height: 12),
               _buildGpsField(
                 label: 'Koordinat Akhir Pekerjaan',
                 hint: 'Tekan tombol GPS untuk rekam titik akhir',
                 controller: _koorAkhirCtrl,
-                isLoading: _isGettingGpsAkhir,
                 accuracy: _akurasiAkhir,
-                onGps: () => _ambilGps(false),
               ),
             ],
           ),
@@ -407,9 +366,7 @@ class _FormHeaderLaporanScreenState extends State<FormHeaderLaporanScreen> {
     required String label,
     required String hint,
     required TextEditingController controller,
-    required bool isLoading,
     double? accuracy,
-    required VoidCallback onGps,
   }) {
     Color chipBgColor = const Color(0xFFF1F5F9);
     Color chipTextColor = AppColors.neutral500;

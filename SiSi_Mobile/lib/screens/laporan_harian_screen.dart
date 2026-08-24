@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../services/accurate_location_service.dart';
 import '../widgets/accurate_gps_button.dart';
 import '../db/app_database.dart';
 import '../db/repositories/inspeksi_gardu_repository.dart';
@@ -141,23 +140,6 @@ class _FormState extends State<InsGarduForm> {
   final kb = TextEditingController();
   final kendala = TextEditingController();
   bool busy = false;
-
-  Future<void> _gps(TextEditingController c) async {
-    try {
-      final result = await AccurateLocationService.capture();
-      if (!mounted) return;
-      setState(() => c.text = result.coordinates);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Akurasi GPS ${result.accuracyLabel}')),
-      );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$e')),
-        );
-      }
-    }
-  }
 
   Future<void> _save() async {
     if (a.text.trim().isEmpty || b.text.trim().isEmpty) return;

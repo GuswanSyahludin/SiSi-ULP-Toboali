@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../services/accurate_location_service.dart';
 import '../widgets/accurate_gps_button.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_colors.dart';
@@ -1110,25 +1109,6 @@ class _FormEksekusiSheetState extends State<_FormEksekusiSheet> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _loadingDropdown = false);
-    }
-  }
-
-  Future<void> _getCurrentLocation(
-    TextEditingController targetCtrl,
-  ) async {
-    try {
-      final result = await AccurateLocationService.capture();
-      if (!mounted) return;
-      setState(() => targetCtrl.text = result.coordinates);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Akurasi GPS ${result.accuracyLabel}')),
-      );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$e')),
-        );
-      }
     }
   }
 
