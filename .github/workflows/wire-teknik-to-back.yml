@@ -1,0 +1,21 @@
+name: Wire Teknik TO back callbacks
+on:
+  push:
+    branches: [fix/teknik-to-loading-data]
+    paths: [.github/workflows/wire-teknik-to-back.yml]
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/teknik-to-loading-data
+      - run: python .github/scripts/wire_teknik_to_back.py
+      - run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add SiSi_Mobile/lib/screens/dashboard_screen.dart
+          git commit -m "fix: wire TO screen back actions" || exit 0
+          git push origin fix/teknik-to-loading-data

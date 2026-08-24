@@ -1030,9 +1030,17 @@ class _DashboardScreenState extends State<DashboardScreen>
                   if (title == 'Input Temuan') {
                     tujuan = InputTemuanTeknikScreen(sesi: widget.sesi);
                   } else if (title == 'Penugasan Tim') {
-                    tujuan = TeknikToScreen(sesi: widget.sesi, mode: 'assignment');
+                    tujuan = TeknikToScreen(
+                      sesi: widget.sesi,
+                      mode: 'assignment',
+                      onBack: () => setState(() => _activeSubScreen = null),
+                    );
                   } else if (title == 'Pindah Tim Eksekusi TO') {
-                    tujuan = TeknikToScreen(sesi: widget.sesi, mode: 'move');
+                    tujuan = TeknikToScreen(
+                      sesi: widget.sesi,
+                      mode: 'move',
+                      onBack: () => setState(() => _activeSubScreen = null),
+                    );
                   } else if (title == 'Verifikasi P0') {
                     tujuan = VerifikasiP0Screen(sesi: widget.sesi);
                   } else if (title == 'Laporan UP3 / UIW') {

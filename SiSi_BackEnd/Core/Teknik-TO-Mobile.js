@@ -20,7 +20,7 @@ function _toList_(token,mode){
       var status=_toNorm_(r[T.status]),tim=_toNorm_(r[T.timEksekusi]);
       if(mode==='assignment'&&status!=='Penugasan Tim')continue;
       if(mode==='move'&&(status!=='Progress Pekerjaan'||!tim))continue;
-      out.push({kodePekerjaan:kode,ulp:_toNorm_(r[T.ulp]),tanggal:_normTgl(r[T.tanggal]),objek:_toNorm_(r[T.objekInspeksi]),penyulang:_toNorm_(r[T.penyulang]),section:_toNorm_(r[T.section]),segmen:_toNorm_(r[T.segmen]),nomorTiang:_toNorm_(r[T.nomorTiang]),nomorGardu:_toNorm_(r[T.nomorGardu]),tier:_toNorm_(r[T.tier]),temuan:_toNorm_(r[T.temuan]),deskripsi:_toNorm_(r[T.deskripsi]),koordinat:_toNorm_(r[T.koordinat]),fotoTemuanUrl:_toNorm_(r[T.fotoTemuanUrl]),fotoTiangUrl:_toNorm_(r[T.fotoTiangUrl]),status:status,timEksekusi:tim,catatan:_toNorm_(r[T.catatan])});
+      out.push({kodePekerjaan:kode,ulp:_toNorm_(r[T.ulp]),tanggal:_normTgl(r[T.tanggal]),objek:_toNorm_(r[T.objekInspeksi]),penyulang:_toNorm_(r[T.penyulang]),section:_toNorm_(r[T.section]),segmen:_toNorm_(r[T.segmen]),nomorTiang:_toNorm_(r[T.nomorTiang]),nomorGardu:_toNorm_(r[T.nomorGardu]),tier:_toNorm_(r[T.tier]),temuan:_toNorm_(r[T.temuan]),deskripsi:_toNorm_(r[T.deskripsi]),koordinat:_toNorm_(r[T.koordinat]),fotoTemuanUrl:_toNorm_(r[T.fotoTemuanUrl]),fotoTiangUrl:_toNorm_(r[T.fotoTiangUrl]),timEksekusi:tim,catatan:_toNorm_(r[T.catatan])});
     }
     out.sort(function(a,b){return String(b.tanggal).localeCompare(String(a.tanggal))||String(b.kodePekerjaan).localeCompare(String(a.kodePekerjaan));});
     return{success:true,count:out.length,list:out};
@@ -54,13 +54,16 @@ function _toAssign_(token,kodePekerjaan,timBaru,catatan,mode){
     loc.sheet.getRange(loc.row,T.tglForward+1).setValue(new Date());
     loc.sheet.getRange(loc.row,T.catatan+1).setValue(_toNorm_(catatan));
     SpreadsheetApp.flush();
-    return{success:true,kodePekerjaan:kodePekerjaan,timEksekusi:tim,status:STATUS_INS.PROGRESS,mode:mode};
+    return{success:true,kodePekerjaan:kodePekerjaan,timEksekusi:tim,mode:mode};
   }catch(e){return{success:false,message:e.message};}
 }
 function teknikToMobile_(token,payload){
-  payload=payload||{};var cmd=_toNorm_(payload.cmd);
-  if(cmd==='list')return _toList_(token,_toNorm_(payload.mode));
-  if(cmd==='teams')return _toTeams_(token,payload.current);
-  if(cmd==='assign')return _toAssign_(token,payload.kodePekerjaan,payload.timEksekusi,payload.catatan,payload.mode);
-  return{success:false,message:'Perintah TO tidak dikenal.'};
+  payload=payload||{};var cmd=_toNorm_(payload.cmd),result;
+  if(cmd==='list')result=_toList_(token,_toNorm_(payload.mode));
+  else if(cmd==='teams')result=_toTeams_(token,payload.current);
+  else if(cmd==='assign')result=_toAssign_(token,payload.kodePekerjaan,payload.timEksekusi,payload.catatan,payload.mode);
+  else result={success:false,message:'Perintah TO tidak dikenal.'};
+  result.module='teknik-to';
+  result.apiVersion=1;
+  return result;
 }
