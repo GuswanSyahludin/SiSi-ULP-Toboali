@@ -38,6 +38,10 @@
 #   Jalankan dari root repo di Cloud Shell:
 #     bash engines/ops/setup-hemat-biaya.sh --dry-run   # lihat dampak dulu
 #     bash engines/ops/setup-hemat-biaya.sh             # pasang permanen
+#
+# PENTING
+#   Artifact Registry mengingat status dry-run dari eksekusi sebelumnya.
+#   Karena itu mode APPLY wajib mengirim --no-dry-run secara eksplisit.
 # =============================================================================
 
 set -uo pipefail
@@ -89,8 +93,20 @@ for TARGET in $AR_TARGETS; do
     gcloud artifacts repositories set-cleanup-policies "$REPO" \
       --location="$LOC" --policy="$CLEANUP_FILE" --dry-run
   else
+    # --no-dry-run wajib: tanpa flag ini repository tetap mewarisi dry-run=true
+    # dari simulasi sebelumnya dan tidak akan pernah menghapus image.
     gcloud artifacts repositories set-cleanup-policies "$REPO" \
-      --location="$LOC" --policy="$CLEANUP_FILE"
+      --location="$LOC" --policy="$CLEANUP_FILE" --no-dry-run
+
+    STATUS="$(gcloud artifacts repositories describe "$REPO" --location="$LOC" \
+      --format='value(cleanupPolicyDryRun)')"
+    if [[ "$STATUS" == "False" || "$STATUS" == "false" ]]; then
+      echo "      AKTIF: cleanupPolicyDryRun=false"
+    else
+      echo "      GAGAL AKTIF: cleanupPolicyDryRun=$STATUS" >&2
+      exit 1
+    fi
+
     gcloud artifacts repositories describe "$REPO" --location="$LOC" \
       --format='yaml(cleanupPolicies,cleanupPolicyDryRun)'
   fi
