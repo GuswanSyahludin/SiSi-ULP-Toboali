@@ -1,0 +1,24 @@
+name: Remove obsolete TO detail
+on:
+  push:
+    branches: [main]
+    paths: [scripts/remove_obsolete_to_detail.py]
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: main}
+      - run: python scripts/remove_obsolete_to_detail.py
+      - run: |
+          ! grep -q "Future<void> _detail" SiSi_Mobile/lib/screens/teknik_to_screen.dart
+          ! grep -q "_ToDetailSheet" SiSi_Mobile/lib/screens/teknik_to_screen.dart
+          grep -q "class _SyncBadge" SiSi_Mobile/lib/screens/teknik_to_screen.dart
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add SiSi_Mobile/lib/screens/teknik_to_screen.dart
+          git commit -m "fix(mobile): remove obsolete TO detail sheet from main"
+          git push origin HEAD:main
