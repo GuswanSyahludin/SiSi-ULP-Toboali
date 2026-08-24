@@ -13,7 +13,9 @@ class GarduScreen extends StatefulWidget {
   static bool boleh(Map<String, dynamic> sesi) {
     final role = (sesi['role'] ?? '').toString().trim().toLowerCase();
     final subTim = (sesi['subTim'] ?? '').toString().trim().toLowerCase();
-    return role == 'super user' || role == 'admin' || subTim == 'inspeksi gardu';
+    return role == 'super user' ||
+        role == 'admin' ||
+        subTim == 'inspeksi gardu';
   }
 
   @override
@@ -21,7 +23,12 @@ class GarduScreen extends StatefulWidget {
 }
 
 class _GarduScreenState extends State<GarduScreen> {
-  static const _categories = ['Underload', 'Cukup', 'Overload', 'Buruk'];
+  static const _categories = [
+    'Underload (<50%)',
+    'Cukup (>=50%, <80%)',
+    'Overload (>=80%, <100%)',
+    'Buruk (>100%)'
+  ];
   static const _filterLabels = <String, String>{
     'nomor': 'Nomor Gardu',
     'range': 'Range Beban',
@@ -183,7 +190,8 @@ class _GarduScreenState extends State<GarduScreen> {
           Expanded(
             child: TextField(
               controller: _minLoad,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               onChanged: (_) => _applyFilters(),
               decoration: _plainDecoration('Min', suffix: '%'),
             ),
@@ -195,7 +203,8 @@ class _GarduScreenState extends State<GarduScreen> {
           Expanded(
             child: TextField(
               controller: _maxLoad,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               onChanged: (_) => _applyFilters(),
               decoration: _plainDecoration('Maks', suffix: '%'),
             ),
@@ -215,7 +224,8 @@ class _GarduScreenState extends State<GarduScreen> {
             isExpanded: true,
             hint: const Text('Pilih kriteria beban'),
             items: _categories
-                .map((value) => DropdownMenuItem(value: value, child: Text(value)))
+                .map((value) =>
+                    DropdownMenuItem(value: value, child: Text(value)))
                 .toList(),
             onChanged: (value) {
               setState(() {
@@ -265,9 +275,8 @@ class _GarduScreenState extends State<GarduScreen> {
         child: Stack(alignment: Alignment.center, children: [
           Icon(
             Icons.filter_list_rounded,
-            color: _hasActiveFilter
-                ? AppColors.cyan600
-                : const Color(0xFF64748B),
+            color:
+                _hasActiveFilter ? AppColors.cyan600 : const Color(0xFF64748B),
           ),
           if (_hasActiveFilter)
             const Positioned(
@@ -316,7 +325,8 @@ class _GarduScreenState extends State<GarduScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.navy700,
         foregroundColor: Colors.white,
-        title: const Text('Gardu', style: TextStyle(fontWeight: FontWeight.w900)),
+        title:
+            const Text('Gardu', style: TextStyle(fontWeight: FontWeight.w900)),
         actions: [
           IconButton(onPressed: _load, icon: const Icon(Icons.refresh_rounded)),
         ],
