@@ -22,6 +22,12 @@ class GarduScreen extends StatefulWidget {
 
 class _GarduScreenState extends State<GarduScreen> {
   static const _categories = ['Underload', 'Cukup', 'Overload', 'Buruk'];
+  static const _filterLabels = <String, String>{
+    'nomor': 'Nomor Gardu',
+    'range': 'Range Beban',
+    'kapasitas': 'Kapasitas Trafo',
+    'kategori': 'Kriteria Beban',
+  };
 
   final _repo = MasterGarduRepository();
   final _search = TextEditingController();
@@ -32,6 +38,7 @@ class _GarduScreenState extends State<GarduScreen> {
   List<MasterGardu> _rows = [];
   Set<String> _pending = {};
   StreamSubscription<List<GarduOutbox>>? _subscription;
+  String _filterType = 'nomor';
   String? _category;
   bool _showFilters = false;
   bool _loading = true;
@@ -62,53 +69,82 @@ class _GarduScreenState extends State<GarduScreen> {
   }
 
   List<MasterGardu> _filter(List<MasterGardu> source) {
-    final number = _search.text.trim().toLowerCase();
-    final minLoad = _number(_minLoad.text);
-    final maxLoad = _number(_maxLoad.text);
-    final capacity = _number(_capacity.text);
-
     return source.where((gardu) {
-      if (number.isNotEmpty && !gardu.gardu.toLowerCase().contains(number)) {
-        return false;
+      switch (_filterType) {
+        case 'nomor':
+          final number = _search.text.trim().toLowerCase();
+          return number.isEmpty || gardu.gardu.toLowerCase().contains(number);
+        case 'range':
+          final load = garduPercent(gardu.persentaseBeban);
+          final minLoad = _number(_minLoad.text);
+          final maxLoad = _number(_maxLoad.text);
+          if (minLoad != null && load < minLoad) return false;
+          if (maxLoad != null && load > maxLoad) return false;
+          return true;
+        case 'kapasitas':
+          final capacity = _number(_capacity.text);
+          if (capacity == null) return true;
+          final garduCapacity = _number(gardu.kapasitasKva);
+          return garduCapacity != null &&
+              (garduCapacity - capacity).abs() <= .001;
+        case 'kategori':
+          return _category == null || garduCategory(gardu) == _category;
+        default:
+          return true;
       }
-      final load = garduPercent(gardu.persentaseBeban);
-      if (minLoad != null && load < minLoad) return false;
-      if (maxLoad != null && load > maxLoad) return false;
-      if (capacity != null) {
-        final garduCapacity = _number(gardu.kapasitasKva);
-        if (garduCapacity == null || (garduCapacity - capacity).abs() > .001) {
-          return false;
-        }
-      }
-      if (_category != null && garduCategory(gardu) != _category) return false;
-      return true;
     }).toList();
+  }
+
+  bool get _hasActiveFilter {
+    switch (_filterType) {
+      case 'nomor':
+        return _search.text.trim().isNotEmpty;
+      case 'range':
+        return _minLoad.text.trim().isNotEmpty ||
+            _maxLoad.text.trim().isNotEmpty;
+      case 'kapasitas':
+        return _capacity.text.trim().isNotEmpty;
+      case 'kategori':
+        return _category != null;
+      default:
+        return false;
+    }
   }
 
   void _applyFilters() {
     setState(() => _rows = _filter(_allRows));
   }
 
-  int get _activeFilterCount {
-    var count = 0;
-    if (_search.text.trim().isNotEmpty) count++;
-    if (_minLoad.text.trim().isNotEmpty || _maxLoad.text.trim().isNotEmpty) {
-      count++;
-    }
-    if (_capacity.text.trim().isNotEmpty) count++;
-    if (_category != null) count++;
-    return count;
-  }
-
-  void _resetFilters() {
+  void _clearValues() {
     _search.clear();
     _minLoad.clear();
     _maxLoad.clear();
     _capacity.clear();
+    _category = null;
+  }
+
+  void _selectFilter(String type) {
+    _clearValues();
     setState(() {
-      _category = null;
+      _filterType = type;
       _rows = List.of(_allRows);
     });
+  }
+
+  void _resetFilters() {
+    _clearValues();
+    setState(() => _rows = List.of(_allRows));
+  }
+
+  void _searchByNumber(String _) {
+    if (_filterType != 'nomor') {
+      _minLoad.clear();
+      _maxLoad.clear();
+      _capacity.clear();
+      _category = null;
+      _filterType = 'nomor';
+    }
+    _applyFilters();
   }
 
   Future<void> _load() async {
@@ -169,6 +205,76 @@ class _GarduScreenState extends State<GarduScreen> {
     );
   }
 
+  Widget _criterionInput() {
+    switch (_filterType) {
+      case 'nomor':
+        return const Text(
+          'Ketik nomor gardu pada kolom pencarian di atas.',
+          style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+        );
+      case 'range':
+        return Row(children: [
+          Expanded(
+            child: _numberField(
+              controller: _minLoad,
+              label: 'Minimum',
+              suffix: '%',
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            child: Text('s.d.', style: TextStyle(color: Color(0xFF64748B))),
+          ),
+          Expanded(
+            child: _numberField(
+              controller: _maxLoad,
+              label: 'Maksimum',
+              suffix: '%',
+            ),
+          ),
+        ]);
+      case 'kapasitas':
+        return _numberField(
+          controller: _capacity,
+          label: 'Kapasitas Trafo',
+          suffix: 'kVA',
+        );
+      case 'kategori':
+        return Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: _categories.map((category) {
+            final selected = _category == category;
+            return FilterChip(
+              label: Text(category),
+              selected: selected,
+              onSelected: (_) {
+                setState(() {
+                  _category = selected ? null : category;
+                  _rows = _filter(_allRows);
+                });
+              },
+              selectedColor: AppColors.cyan600.withOpacity(.15),
+              checkmarkColor: AppColors.cyan600,
+              labelStyle: TextStyle(
+                fontWeight: FontWeight.w800,
+                color: selected
+                    ? AppColors.navy700
+                    : const Color(0xFF475569),
+              ),
+              side: BorderSide(
+                color: selected
+                    ? AppColors.cyan600
+                    : const Color(0xFFDCE3EC),
+              ),
+            );
+          }).toList(),
+        );
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
   Widget _filterPanel() {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
@@ -191,76 +297,35 @@ class _GarduScreenState extends State<GarduScreen> {
               ),
             ),
           ),
-          if (_activeFilterCount > 0)
+          if (_hasActiveFilter)
             TextButton(onPressed: _resetFilters, child: const Text('Reset')),
         ]),
         const SizedBox(height: 8),
-        const Text(
-          'Range Beban',
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+        DropdownButtonFormField<String>(
+          value: _filterType,
+          isExpanded: true,
+          decoration: InputDecoration(
+            labelText: 'Pilih Kriteria',
+            filled: true,
+            fillColor: const Color(0xFFF6F8FC),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFFDCE3EC)),
+            ),
+          ),
+          items: _filterLabels.entries
+              .map((entry) => DropdownMenuItem(
+                    value: entry.key,
+                    child: Text(entry.value),
+                  ))
+              .toList(),
+          onChanged: (value) {
+            if (value != null && value != _filterType) _selectFilter(value);
+          },
         ),
-        const SizedBox(height: 8),
-        Row(children: [
-          Expanded(
-            child: _numberField(
-              controller: _minLoad,
-              label: 'Minimum',
-              suffix: '%',
-            ),
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 8),
-            child: Text('s.d.', style: TextStyle(color: Color(0xFF64748B))),
-          ),
-          Expanded(
-            child: _numberField(
-              controller: _maxLoad,
-              label: 'Maksimum',
-              suffix: '%',
-            ),
-          ),
-        ]),
         const SizedBox(height: 12),
-        _numberField(
-          controller: _capacity,
-          label: 'Kapasitas Trafo',
-          suffix: 'kVA',
-        ),
-        const SizedBox(height: 14),
-        const Text(
-          'Kriteria',
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: _categories.map((category) {
-            return FilterChip(
-              label: Text(category),
-              selected: _category == category,
-              onSelected: (selected) {
-                setState(() {
-                  _category = selected ? category : null;
-                  _rows = _filter(_allRows);
-                });
-              },
-              selectedColor: AppColors.cyan600.withOpacity(.15),
-              checkmarkColor: AppColors.cyan600,
-              labelStyle: TextStyle(
-                fontWeight: FontWeight.w800,
-                color: _category == category
-                    ? AppColors.navy700
-                    : const Color(0xFF475569),
-              ),
-              side: BorderSide(
-                color: _category == category
-                    ? AppColors.cyan600
-                    : const Color(0xFFDCE3EC),
-              ),
-            );
-          }).toList(),
-        ),
+        _criterionInput(),
       ]),
     );
   }
@@ -287,7 +352,7 @@ class _GarduScreenState extends State<GarduScreen> {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: TextField(
             controller: _search,
-            onChanged: (_) => _applyFilters(),
+            onChanged: _searchByNumber,
             decoration: InputDecoration(
               hintText: 'Cari nomor gardu',
               prefixIcon: const Icon(Icons.search_rounded),
@@ -300,30 +365,21 @@ class _GarduScreenState extends State<GarduScreen> {
                         setState(() => _showFilters = !_showFilters),
                     icon: Icon(
                       Icons.filter_list_rounded,
-                      color: _showFilters || _activeFilterCount > 0
+                      color: _showFilters || _hasActiveFilter
                           ? AppColors.cyan600
                           : const Color(0xFF64748B),
                     ),
                   ),
-                  if (_activeFilterCount > 0)
+                  if (_hasActiveFilter)
                     Positioned(
                       right: 7,
                       top: 7,
                       child: Container(
-                        width: 17,
-                        height: 17,
-                        alignment: Alignment.center,
+                        width: 9,
+                        height: 9,
                         decoration: const BoxDecoration(
                           color: AppColors.amber700,
                           shape: BoxShape.circle,
-                        ),
-                        child: Text(
-                          '$_activeFilterCount',
-                          style: const TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
-                          ),
                         ),
                       ),
                     ),
