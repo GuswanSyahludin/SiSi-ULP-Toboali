@@ -1,0 +1,17 @@
+[
+  {
+    "name": "hapus-untagged",
+    "action": { "type": "Delete" },
+    "condition": {
+      "tagState": "untagged",
+      "olderThan": "3d"
+    }
+  },
+  {
+    "name": "simpan-3-terbaru",
+    "action": { "type": "Keep" },
+    "mostRecentVersions": {
+      "keepCount": 3
+    }
+  }
+]

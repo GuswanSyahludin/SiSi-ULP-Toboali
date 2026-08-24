@@ -1,0 +1,20 @@
+{
+  "_catatan": [
+    "Lifecycle bucket sumber Cloud Build untuk project db-sisi-toboali.",
+    "Tujuan: arsip source tiap build (tar.gz) tidak menumpuk dan menembus 5 GB gratis Cloud Storage.",
+    "Aturan ini GRATIS. Cloud Storage tidak menagih eksekusi lifecycle, dan Delete adalah operasi Class A yang tidak ditagih saat dipicu lifecycle.",
+    "age 7 dipilih karena arsip source hanya berguna untuk menelusuri build gagal beberapa hari terakhir. Image hasil build TIDAK terpengaruh aturan ini.",
+    "Pasang dengan: gcloud storage buckets update gs://db-sisi-toboali_cloudbuild --lifecycle-file=engines/ops/cloudbuild-bucket-lifecycle.json"
+  ],
+  "lifecycle": {
+    "rule": [
+      {
+        "action": { "type": "Delete" },
+        "condition": {
+          "age": 7,
+          "matchesPrefix": ["source/"]
+        }
+      }
+    ]
+  }
+}
