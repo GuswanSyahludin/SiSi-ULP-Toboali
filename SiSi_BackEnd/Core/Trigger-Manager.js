@@ -229,7 +229,7 @@ function auditTriggerSiSi() {
     lebih.push(fn);
   }
 
-  return {
+  var hasil = {
     ok: kurang.length === 0 && lebih.length === 0 && duplikat.length === 0,
     total: trs.length,
     permanen: TRIGGER_SISI_PERMANEN.length,
@@ -240,6 +240,8 @@ function auditTriggerSiSi() {
     sementara: sementara,
     catatan: "migrasiSemuaTick/job sekali-jalan boleh muncul sementara dan harus melepas diri saat selesai.",
   };
+  Logger.log("[auditTriggerSiSi] " + JSON.stringify(hasil));
+  return hasil;
 }
 
 // Read-only: jadwal efektif untuk ditampilkan di log/diagnostik.
