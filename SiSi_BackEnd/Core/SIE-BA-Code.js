@@ -1848,7 +1848,7 @@ var BA_PDF_ENGINE = {
   url: PropertiesService.getScriptProperties().getProperty('BA_PDF_ENGINE_URL')
        || 'https://ba-pdf-engine-1011716929576.asia-southeast2.run.app',
   secret: PropertiesService.getScriptProperties().getProperty('BA_PDF_SECRET')
-       || 'sisi-pdf-2026'
+       || _engineSecret_('PDF_ENGINE_SECRET')
 };
 
 // Alias kolom hasil PDF di Rekap Gardu. Dibuat otomatis bila belum ada.
@@ -2355,7 +2355,7 @@ var SW_PDF_ENGINE = {
   url: PropertiesService.getScriptProperties().getProperty('BA_PDF_ENGINE_URL')
        || 'https://ba-pdf-engine-1011716929576.asia-southeast2.run.app',
   secret: PropertiesService.getScriptProperties().getProperty('BA_PDF_SECRET')
-       || 'sisi-pdf-2026'
+       || _engineSecret_('PDF_ENGINE_SECRET')
 };
 function _swCariBaris_(sh,idBA){
   var values=sh.getDataRange().getValues();
