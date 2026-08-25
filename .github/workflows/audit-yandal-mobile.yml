@@ -1,0 +1,41 @@
+name: Audit Yandal Mobile
+on:
+  push:
+    branches: [feat/yandal-local-mirror]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: audit-yandal-mobile
+  cancel-in-progress: false
+jobs:
+  wire-analyze-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/yandal-local-mirror
+      - name: Wire Yandal menu
+        run: python .github/scripts/wire_yandal_mobile.py
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve dependencies
+        working-directory: SiSi_Mobile
+        run: flutter pub get
+      - name: Reject stale lockfile
+        run: git diff --exit-code -- SiSi_Mobile/pubspec.lock
+      - name: Analyze Flutter source
+        working-directory: SiSi_Mobile
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+      - name: Build Android debug APK
+        working-directory: SiSi_Mobile
+        run: flutter build apk --debug
+      - name: Commit menu route after successful audit
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add SiSi_Mobile/lib/screens/dashboard_screen.dart
+          git commit -m "feat(yandal): wire offline Yandal menu [skip ci]" || exit 0
+          git push origin feat/yandal-local-mirror

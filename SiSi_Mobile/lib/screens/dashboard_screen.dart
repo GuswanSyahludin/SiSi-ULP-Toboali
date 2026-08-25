@@ -21,6 +21,7 @@ import 'teknik_to_screen.dart';
 import 'verifikasi_p0_screen.dart';
 import 'laporan_up3_uiw_screen.dart';
 import 'engine_usage_screen.dart';
+import 'yandal_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final Map<String, dynamic> sesi;
@@ -896,7 +897,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                     final title = action['title'];
                     Widget? tujuan;
                     if (title == 'Laporan Harian') {
-                      if (category.contains('ROW')) {
+                      if (category.contains('Yandal')) {
+                        tujuan = YandalScreen(sesi: widget.sesi);
+                      } else if (category.contains('ROW')) {
                         tujuan = LaporanRowScreen(
                           sesi: widget.sesi,
                           targetSubTim: team['name'],
