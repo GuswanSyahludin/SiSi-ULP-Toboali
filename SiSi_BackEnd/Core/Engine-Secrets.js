@@ -12,8 +12,8 @@ function _engineSecret_(key) {
 }
 
 /* Called from Cloud Shell through `clasp run`. It intentionally returns only
-   booleans, never the supplied secrets. Super-user validation is optional here
-   because Apps Script Execution API already requires an authorized account. */
+   booleans, never the supplied secrets. BA_PDF_SECRET is kept as a temporary
+   compatibility alias because existing BA bridges still read it first. */
 function simpanSecretEngineSiSi(wmSecret, pdfSecret) {
   wmSecret = String(wmSecret || '').trim();
   pdfSecret = String(pdfSecret || '').trim();
@@ -21,16 +21,21 @@ function simpanSecretEngineSiSi(wmSecret, pdfSecret) {
     throw new Error('Secret engine minimal 32 karakter.');
   PropertiesService.getScriptProperties().setProperties({
     WM_ENGINE_SECRET: wmSecret,
-    PDF_ENGINE_SECRET: pdfSecret
+    PDF_ENGINE_SECRET: pdfSecret,
+    BA_PDF_SECRET: pdfSecret
   }, false);
   return { ok: true, wmConfigured: true, pdfConfigured: true };
 }
 
 function auditSecretEngineSiSi() {
   var p = PropertiesService.getScriptProperties();
+  var wm = !!p.getProperty(ENGINE_SECRET_KEYS.wm);
+  var pdf = !!p.getProperty(ENGINE_SECRET_KEYS.pdf);
+  var legacyPdf = !!p.getProperty('BA_PDF_SECRET');
   return {
-    ok: !!p.getProperty(ENGINE_SECRET_KEYS.wm) && !!p.getProperty(ENGINE_SECRET_KEYS.pdf),
-    wmConfigured: !!p.getProperty(ENGINE_SECRET_KEYS.wm),
-    pdfConfigured: !!p.getProperty(ENGINE_SECRET_KEYS.pdf)
+    ok: wm && pdf && legacyPdf,
+    wmConfigured: wm,
+    pdfConfigured: pdf,
+    legacyPdfConfigured: legacyPdf
   };
 }
