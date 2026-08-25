@@ -14,6 +14,7 @@ import 'laporan_harian_screen.dart';
 import 'gardu_screen.dart';
 import 'login_screen.dart';
 import 'laporan_row_screen.dart';
+import 'work_order_row_screen.dart';
 import 'laporan_hartek_screen.dart';
 import 'input_temuan_teknik_screen.dart';
 import 'teknik_to_screen.dart';
@@ -713,6 +714,11 @@ class _DashboardScreenState extends State<DashboardScreen>
           'icon': Icons.description_outlined,
           'desc': 'Input & pantau laporan kerja harian dan realisasi ROW'
         },
+        {
+          'title': 'Work Order (WO)',
+          'icon': Icons.assignment_turned_in_outlined,
+          'desc': 'TO Progress Pekerjaan untuk tim ROW ini'
+        },
       ];
     } else if (category.contains('Hartek')) {
       subActions = [
@@ -907,6 +913,13 @@ class _DashboardScreenState extends State<DashboardScreen>
                           targetTim: team['category'],
                         );
                       }
+                    }
+                    if (title == 'Work Order (WO)' && category.contains('ROW')) {
+                      tujuan = WorkOrderRowScreen(
+                        sesi: widget.sesi,
+                        targetSubTim: team['name'],
+                        onBack: () => setState(() => _activeSubScreen = null),
+                      );
                     }
                     if (tujuan == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
