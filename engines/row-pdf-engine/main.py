@@ -1,4 +1,5 @@
 import os
+import hmac
 import re
 import io
 import json
@@ -27,7 +28,7 @@ app = Flask(__name__)
 # CONFIG
 # =========================================================
 
-PDF_SECRET = os.environ.get("PDF_SECRET", "sisi-pdf-2026")
+PDF_SECRET = os.environ.get("PDF_SECRET", "")
 SPREADSHEET_ID = os.environ.get("SPREADSHEET_ID", "")
 SHEET_ROW_EKSEKUSI = os.environ.get(
     "SHEET_ROW_EKSEKUSI", "db_ROW_Eksekusi"
@@ -220,7 +221,7 @@ def _require_secret(req):
     token = req.args.get("token") or req.args.get("secret") or ""
     if not token and req.is_json:
         token = (req.get_json(silent=True) or {}).get("secret", "")
-    if PDF_SECRET and token != PDF_SECRET:
+    if not PDF_SECRET or not hmac.compare_digest(str(token), PDF_SECRET):
         abort(403)
 
 

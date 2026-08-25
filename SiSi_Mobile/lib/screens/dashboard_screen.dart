@@ -14,11 +14,13 @@ import 'laporan_harian_screen.dart';
 import 'gardu_screen.dart';
 import 'login_screen.dart';
 import 'laporan_row_screen.dart';
+import 'work_order_row_screen.dart';
 import 'laporan_hartek_screen.dart';
 import 'input_temuan_teknik_screen.dart';
 import 'teknik_to_screen.dart';
 import 'verifikasi_p0_screen.dart';
 import 'laporan_up3_uiw_screen.dart';
+import 'engine_usage_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final Map<String, dynamic> sesi;
@@ -713,6 +715,11 @@ class _DashboardScreenState extends State<DashboardScreen>
           'icon': Icons.description_outlined,
           'desc': 'Input & pantau laporan kerja harian dan realisasi ROW'
         },
+        {
+          'title': 'Work Order (WO)',
+          'icon': Icons.assignment_turned_in_outlined,
+          'desc': 'TO Progress Pekerjaan untuk tim ROW ini'
+        },
       ];
     } else if (category.contains('Hartek')) {
       subActions = [
@@ -908,6 +915,13 @@ class _DashboardScreenState extends State<DashboardScreen>
                         );
                       }
                     }
+                    if (title == 'Work Order (WO)' && category.contains('ROW')) {
+                      tujuan = WorkOrderRowScreen(
+                        sesi: widget.sesi,
+                        targetSubTim: team['name'],
+                        onBack: () => setState(() => _activeSubScreen = null),
+                      );
+                    }
                     if (tujuan == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('Menu $title segera hadir')),
@@ -961,6 +975,12 @@ class _DashboardScreenState extends State<DashboardScreen>
         'desc': 'Rekapitulasi padam & gangguan distribusi',
         'iconColor': AppColors.amber700,
       },
+      {
+      'title': 'Pemakaian Engine',
+      'icon': Icons.speed_rounded,
+      'desc': 'Pantau request harian Watermark, BA PDF, dan ROW PDF',
+      'iconColor': AppColors.success700,
+    },
       {
         'title': 'Laporan UP3 / UIW',
         'icon': Icons.assessment_outlined,
@@ -1054,6 +1074,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                     );
                   } else if (title == 'Verifikasi P0') {
                     tujuan = VerifikasiP0Screen(sesi: widget.sesi);
+                  } else if (title == 'Pemakaian Engine') {
+          tujuan = EngineUsageScreen(
+            onBack: () => setState(() => _activeSubScreen = null),
+          );
                   } else if (title == 'Laporan UP3 / UIW') {
                     tujuan = LaporanUp3UiwScreen(
                       sesi: widget.sesi,

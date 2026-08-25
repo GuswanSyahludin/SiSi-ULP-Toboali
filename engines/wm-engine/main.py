@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import hmac
 import io
 import json
 import os
@@ -91,7 +92,8 @@ def _format_accuracy(value):
 
 
 def _require_secret(data):
-    if SECRET and data.get("secret") != SECRET:
+    supplied = str(data.get("secret") or "")
+    if not SECRET or not hmac.compare_digest(supplied, SECRET):
         abort(403)
 
 

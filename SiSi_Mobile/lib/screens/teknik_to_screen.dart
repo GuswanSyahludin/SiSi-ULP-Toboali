@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../db/repositories/teknik_to_repository.dart';
+import '../db/repositories/delta_sync_repository.dart';
 import '../theme/app_colors.dart';
 import '../widgets/custom_loading_widget.dart';
 
@@ -20,6 +21,11 @@ class TeknikToScreen extends StatefulWidget {
 class _TeknikToScreenState extends State<TeknikToScreen> {
   final repo = TeknikToRepository();
   final search = TextEditingController();
+  String filterCriterion = 'nomor';
+  String? selectedFinding;
+  String? selectedFeeder;
+  List<String> findingOptions = [];
+  List<String> feederOptions = [];
   List<Map<String, dynamic>> rows = [];
   List<String> availableTeams = [];
   final Map<String, String?> selectedTeams = {};
@@ -51,11 +57,15 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
     final result = await Future.wait([
       repo.cachedList(widget.mode),
       repo.cachedTeams(),
+      DeltaSyncRepository().rows('db_List_Temuan'),
+      DeltaSyncRepository().rows('db_Penyulang'),
     ]);
     if (!mounted) return;
     setState(() {
       rows = result[0] as List<Map<String, dynamic>>;
       availableTeams = result[1] as List<String>;
+      findingOptions = _findingNames(result[2] as List<dynamic>);
+      feederOptions = _feederNames(result[3] as List<dynamic>);
       firstLoad = false;
     });
     unawaited(_refresh(silent: rows.isNotEmpty));
@@ -76,9 +86,50 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
 
   List<Map<String, dynamic>> get filtered {
     final q = search.text.trim().toLowerCase();
-    if (q.isEmpty) return rows;
-    return rows.where((r) => ['kodePekerjaan','temuan','penyulang','section','nomorTiang','nomorGardu','timEksekusi']
-      .any((k) => '${r[k] ?? ''}'.toLowerCase().contains(q))).toList();
+    return rows.where((row) {
+      if (filterCriterion == 'jenis') {
+        final target = (selectedFinding ?? '').trim().toLowerCase();
+        return target.isEmpty || '${row['temuan'] ?? ''}'.trim().toLowerCase() == target;
+      }
+      if (filterCriterion == 'penyulang') {
+        final target = (selectedFeeder ?? '').trim().toLowerCase();
+        return target.isEmpty || '${row['penyulang'] ?? ''}'.trim().toLowerCase() == target;
+      }
+      if (q.isEmpty) return true;
+      return '${row['kodePekerjaan'] ?? ''}'.toLowerCase().contains(q);
+    }).toList();
+  }
+
+  List<String> _findingNames(List<dynamic> source) {
+    final values = <String>{};
+    for (final raw in source) {
+      if (raw is! List || raw.length <= 3) continue;
+      final name = '${raw[3]}'.trim(); // db_List_Temuan kolom D
+      if (name.isNotEmpty) values.add(name);
+    }
+    final out = values.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return out;
+  }
+
+  List<String> _feederNames(List<dynamic> source) {
+    final values = <String>{};
+    for (final raw in source) {
+      if (raw is! List || raw.length <= 2) continue;
+      final name = '${raw[2]}'.trim(); // db_Penyulang kolom C
+      if (name.isNotEmpty) values.add(name);
+    }
+    final out = values.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return out;
+  }
+
+  void _changeCriterion(String? value) {
+    if (value == null || value == filterCriterion) return;
+    setState(() {
+      filterCriterion = value;
+      search.clear();
+      selectedFinding = null;
+      selectedFeeder = null;
+    });
   }
 
   void _back() => widget.onBack != null ? widget.onBack!() : Navigator.maybePop(context);
@@ -104,16 +155,31 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
         body: Column(children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(15, 14, 15, 8),
-            child: TextField(
-              controller: search,
-              decoration: InputDecoration(
-                hintText: 'Cari gardu, tiang, temuan...',
-                prefixIcon: const Icon(Icons.search_rounded),
-                suffixIcon: IconButton(onPressed: syncing ? null : () => _refresh(), icon: const Icon(Icons.sync_rounded)),
-                filled: true, fillColor: Colors.white,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.neutral200)),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.neutral200)),
-              ),
+            child: Column(
+              children: [
+                DropdownButtonFormField<String>(
+                  initialValue: filterCriterion,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    labelText: 'Kriteria pencarian',
+                    prefixIcon: const Icon(Icons.filter_alt_outlined),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: AppColors.neutral200),
+                    ),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'nomor', child: Text('Nomor Temuan')),
+                    DropdownMenuItem(value: 'jenis', child: Text('Jenis Temuan')),
+                    DropdownMenuItem(value: 'penyulang', child: Text('Penyulang')),
+                  ],
+                  onChanged: _changeCriterion,
+                ),
+                const SizedBox(height: 9),
+                _criterionInput(),
+              ],
             ),
           ),
           Padding(
@@ -145,6 +211,53 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
       ),
       if (firstLoad) const Positioned.fill(child: Material(color: Color(0xFFF5F7FB), child: SafeArea(child: CustomLoadingWidget(message: 'Membuka data lokal...', size: 88)))),
     ]);
+  }
+
+  Widget _criterionInput() {
+    if (filterCriterion == 'jenis') {
+      return DropdownButtonFormField<String>(
+        initialValue: selectedFinding,
+        isExpanded: true,
+        decoration: InputDecoration(
+          hintText: findingOptions.isEmpty ? 'Sinkronkan db_List_Temuan dahulu' : 'Pilih jenis temuan',
+          prefixIcon: const Icon(Icons.report_problem_outlined),
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+        items: findingOptions.map((value) => DropdownMenuItem(
+          value: value, child: Text(value, overflow: TextOverflow.ellipsis))).toList(),
+        onChanged: (value) => setState(() => selectedFinding = value),
+      );
+    }
+    if (filterCriterion == 'penyulang') {
+      return DropdownButtonFormField<String>(
+        initialValue: selectedFeeder,
+        isExpanded: true,
+        decoration: InputDecoration(
+          hintText: feederOptions.isEmpty ? 'Sinkronkan db_Penyulang dahulu' : 'Pilih penyulang',
+          prefixIcon: const Icon(Icons.alt_route_rounded),
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+        items: feederOptions.map((value) => DropdownMenuItem(
+          value: value, child: Text(value, overflow: TextOverflow.ellipsis))).toList(),
+        onChanged: (value) => setState(() => selectedFeeder = value),
+      );
+    }
+    return TextField(
+      controller: search,
+      decoration: InputDecoration(
+        hintText: 'Masukkan nomor temuan...',
+        prefixIcon: const Icon(Icons.tag_rounded),
+        suffixIcon: search.text.isEmpty ? null : IconButton(
+          onPressed: search.clear, icon: const Icon(Icons.close_rounded)),
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+    );
   }
 
   Widget _ticket(Map<String, dynamic> r) {
