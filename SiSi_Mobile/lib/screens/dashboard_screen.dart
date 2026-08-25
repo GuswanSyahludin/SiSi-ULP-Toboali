@@ -20,6 +20,7 @@ import 'input_temuan_teknik_screen.dart';
 import 'teknik_to_screen.dart';
 import 'verifikasi_p0_screen.dart';
 import 'laporan_up3_uiw_screen.dart';
+import 'engine_usage_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final Map<String, dynamic> sesi;
@@ -975,6 +976,12 @@ class _DashboardScreenState extends State<DashboardScreen>
         'iconColor': AppColors.amber700,
       },
       {
+      'title': 'Pemakaian Engine',
+      'icon': Icons.speed_rounded,
+      'desc': 'Pantau request harian Watermark, BA PDF, dan ROW PDF',
+      'iconColor': AppColors.success700,
+    },
+      {
         'title': 'Laporan UP3 / UIW',
         'icon': Icons.assessment_outlined,
         'desc': 'Format pelaporan hierarki harian unit induk',
@@ -1067,6 +1074,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                     );
                   } else if (title == 'Verifikasi P0') {
                     tujuan = VerifikasiP0Screen(sesi: widget.sesi);
+                  } else if (title == 'Pemakaian Engine') {
+          tujuan = EngineUsageScreen(
+            onBack: () => setState(() => _activeSubScreen = null),
+          );
                   } else if (title == 'Laporan UP3 / UIW') {
                     tujuan = LaporanUp3UiwScreen(
                       sesi: widget.sesi,
