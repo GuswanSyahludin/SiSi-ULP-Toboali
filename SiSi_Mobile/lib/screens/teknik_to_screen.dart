@@ -64,8 +64,8 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
     setState(() {
       rows = result[0] as List<Map<String, dynamic>>;
       availableTeams = result[1] as List<String>;
-      findingOptions = _findingNames(result[2] as List<dynamic>);
-      feederOptions = _feederNames(result[3] as List<dynamic>);
+      findingOptions = _findingNames(result[2]);
+      feederOptions = _feederNames(result[3]);
       firstLoad = false;
     });
     unawaited(_refresh(silent: rows.isNotEmpty));
