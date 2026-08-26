@@ -27,7 +27,19 @@ class DeltaSyncRepository {
       body: jsonEncode({'action':'getMasterGarduMobile','token':token,
         'ulp':'DELTA_SYNC:${jsonEncode(payload)}'}),
     ).timeout(const Duration(seconds: 60));
-    final decoded = jsonDecode(res.body);
+    final body = res.body.trim();
+    if (body.isEmpty) {
+      throw Exception(
+        'Server tidak mengirim respons saat sinkron data. Deploy ulang Apps Script terbaru, lalu coba lagi.',
+      );
+    }
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(body);
+    } on FormatException {
+      final preview = body.length > 140 ? '${body.substring(0, 140)}…' : body;
+      throw Exception('Respons sinkron bukan JSON valid (HTTP ${res.statusCode}): $preview');
+    }
     if (decoded is! Map) throw Exception('Respons delta sync tidak valid.');
     final out = Map<String,dynamic>.from(decoded);
     if (out['success'] != true) throw Exception(out['message'] ?? 'Delta sync gagal.');

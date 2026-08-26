@@ -1,0 +1,32 @@
+name: Audit Sync Empty Response
+on:
+  push:
+    branches: [fix/sync-empty-response]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch-analyze-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/sync-empty-response
+      - run: python .github/scripts/patch_sync_empty_response.py
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - working-directory: SiSi_Mobile
+        run: flutter pub get
+      - working-directory: SiSi_Mobile
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+      - working-directory: SiSi_Mobile
+        run: flutter build apk --debug
+      - name: Commit audited patch
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add SiSi_BackEnd/Core/Delta-Sync-Mobile.js SiSi_Mobile/lib/db/repositories/delta_sync_repository.dart
+          git commit -m "fix(sync): tolerate dataset failures and empty responses [skip ci]" || exit 0
+          git push origin fix/sync-empty-response

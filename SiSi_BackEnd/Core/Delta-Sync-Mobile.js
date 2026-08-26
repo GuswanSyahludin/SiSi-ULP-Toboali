@@ -113,11 +113,18 @@ function _deltaManifest_(token,force){
   var cache=CacheService.getScriptCache(),ck='delta_manifest_v1_'+scope;
   if(!force){var hit=cache.get(ck);if(hit){try{return JSON.parse(hit);}catch(_){}}}
   var cfgs=_deltaConfigs_(),datasets=[];
+  var warnings=[];
   Object.keys(cfgs).forEach(function(name){
-    var cfg=cfgs[name],rows=_deltaRows_(token,name,cfg);
-    datasets.push({name:name,version:_deltaDigest_(rows),count:rows.length,kind:cfg.support?'support':'main'});
+    var cfg=cfgs[name];
+    try{
+      var rows=_deltaRows_(token,name,cfg);
+      datasets.push({name:name,version:_deltaDigest_(rows),count:rows.length,kind:cfg.support?'support':'main'});
+    }catch(err){
+      warnings.push({name:name,message:String(err&&err.message||err)});
+      Logger.log('Delta sync melewati '+name+': '+String(err&&err.message||err));
+    }
   });
-  var result={success:true,apiVersion:1,generatedAt:new Date().toISOString(),datasets:datasets};
+  var result={success:true,apiVersion:1,generatedAt:new Date().toISOString(),datasets:datasets,warnings:warnings};
   try{cache.put(ck,JSON.stringify(result),DELTA_SYNC_CACHE_SEC);}catch(_){}
   return result;
 }
