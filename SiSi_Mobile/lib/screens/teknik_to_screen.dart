@@ -12,7 +12,8 @@ class TeknikToScreen extends StatefulWidget {
   final Map<String, dynamic> sesi;
   final String mode;
   final VoidCallback? onBack;
-  const TeknikToScreen({super.key, required this.sesi, required this.mode, this.onBack});
+  const TeknikToScreen(
+      {super.key, required this.sesi, required this.mode, this.onBack});
 
   @override
   State<TeknikToScreen> createState() => _TeknikToScreenState();
@@ -49,7 +50,9 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
   @override
   void dispose() {
     search.dispose();
-    for (final controller in notes.values) { controller.dispose(); }
+    for (final controller in notes.values) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
@@ -73,14 +76,26 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
 
   Future<void> _refresh({bool silent = false}) async {
     if (syncing) return;
-    setState(() { syncing = true; if (!silent) warning = null; });
+    setState(() {
+      syncing = true;
+      if (!silent) warning = null;
+    });
     try {
       final fresh = await repo.refreshList(token, widget.mode);
       if (!mounted) return;
-      setState(() { rows = fresh; warning = null; syncing = false; });
+      setState(() {
+        rows = fresh;
+        warning = null;
+        syncing = false;
+      });
     } catch (_) {
       if (!mounted) return;
-      setState(() { syncing = false; warning = rows.isEmpty ? 'Belum ada data lokal. Jalankan Sinkron Semua Data saat online.' : 'Offline, menampilkan data terakhir.'; });
+      setState(() {
+        syncing = false;
+        warning = rows.isEmpty
+            ? 'Belum ada data lokal. Jalankan Sinkron Semua Data saat online.'
+            : 'Offline, menampilkan data terakhir.';
+      });
     }
   }
 
@@ -89,11 +104,13 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
     return rows.where((row) {
       if (filterCriterion == 'jenis') {
         final target = (selectedFinding ?? '').trim().toLowerCase();
-        return target.isEmpty || '${row['temuan'] ?? ''}'.trim().toLowerCase() == target;
+        return target.isEmpty ||
+            '${row['temuan'] ?? ''}'.trim().toLowerCase() == target;
       }
       if (filterCriterion == 'penyulang') {
         final target = (selectedFeeder ?? '').trim().toLowerCase();
-        return target.isEmpty || '${row['penyulang'] ?? ''}'.trim().toLowerCase() == target;
+        return target.isEmpty ||
+            '${row['penyulang'] ?? ''}'.trim().toLowerCase() == target;
       }
       if (q.isEmpty) return true;
       return '${row['kodePekerjaan'] ?? ''}'.toLowerCase().contains(q);
@@ -107,7 +124,8 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
       final name = '${raw[3]}'.trim(); // db_List_Temuan kolom D
       if (name.isNotEmpty) values.add(name);
     }
-    final out = values.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    final out = values.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     return out;
   }
 
@@ -118,7 +136,8 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
       final name = '${raw[2]}'.trim(); // db_Penyulang kolom C
       if (name.isNotEmpty) values.add(name);
     }
-    final out = values.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    final out = values.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     return out;
   }
 
@@ -132,7 +151,8 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
     });
   }
 
-  void _back() => widget.onBack != null ? widget.onBack!() : Navigator.maybePop(context);
+  void _back() =>
+      widget.onBack != null ? widget.onBack!() : Navigator.maybePop(context);
 
   @override
   Widget build(BuildContext context) {
@@ -143,13 +163,16 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
         appBar: AppBar(
           backgroundColor: AppColors.navy700,
           foregroundColor: Colors.white,
-          leading: IconButton(onPressed: _back, icon: const Icon(Icons.arrow_back_rounded)),
+          leading: IconButton(
+              onPressed: _back, icon: const Icon(Icons.arrow_back_rounded)),
           title: Text(
             title,
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
           ),
           actions: [
-            Padding(padding: const EdgeInsets.only(right: 8), child: Center(child: _SyncBadge(syncing: syncing))),
+            Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Center(child: _SyncBadge(syncing: syncing))),
           ],
         ),
         body: Column(children: [
@@ -171,9 +194,12 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
                     ),
                   ),
                   items: const [
-                    DropdownMenuItem(value: 'nomor', child: Text('Nomor Temuan')),
-                    DropdownMenuItem(value: 'jenis', child: Text('Jenis Temuan')),
-                    DropdownMenuItem(value: 'penyulang', child: Text('Penyulang')),
+                    DropdownMenuItem(
+                        value: 'nomor', child: Text('Nomor Temuan')),
+                    DropdownMenuItem(
+                        value: 'jenis', child: Text('Jenis Temuan')),
+                    DropdownMenuItem(
+                        value: 'penyulang', child: Text('Penyulang')),
                   ],
                   onChanged: _changeCriterion,
                 ),
@@ -185,31 +211,55 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(17, 2, 17, 10),
             child: Row(children: [
-              Text('${data.length} ${moving ? 'TO aktif' : 'TO perlu tim'}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: AppColors.navy700)),
+              Text('${data.length} ${moving ? 'TO aktif' : 'TO perlu tim'}',
+                  style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.navy700)),
               const Spacer(),
-              const Icon(Icons.offline_bolt_rounded, size: 14, color: AppColors.success700),
+              const Icon(Icons.offline_bolt_rounded,
+                  size: 14, color: AppColors.success700),
               const SizedBox(width: 4),
-              const Text('Offline siap', style: TextStyle(fontSize: 10, color: AppColors.neutral500)),
+              const Text('Offline siap',
+                  style: TextStyle(fontSize: 10, color: AppColors.neutral500)),
             ]),
           ),
-          if (warning != null) Container(
-            width: double.infinity, margin: const EdgeInsets.fromLTRB(15, 0, 15, 10), padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: const Color(0xFFFFF7E6), borderRadius: BorderRadius.circular(12)),
-            child: Text(warning!, style: const TextStyle(fontSize: 11, color: AppColors.amber700)),
-          ),
-          Expanded(child: firstLoad
-            ? const SizedBox.expand()
-            : data.isEmpty ? _Empty(moving: moving)
-            : RefreshIndicator(onRefresh: _refresh, child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(14, 0, 14, 24),
-                itemCount: data.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (_, i) => _ticket(data[i]),
-              )),
+          if (warning != null)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.fromLTRB(15, 0, 15, 10),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                  color: const Color(0xFFFFF7E6),
+                  borderRadius: BorderRadius.circular(12)),
+              child: Text(warning!,
+                  style:
+                      const TextStyle(fontSize: 11, color: AppColors.amber700)),
+            ),
+          Expanded(
+            child: firstLoad
+                ? const SizedBox.expand()
+                : data.isEmpty
+                    ? _Empty(moving: moving)
+                    : RefreshIndicator(
+                        onRefresh: _refresh,
+                        child: ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(14, 0, 14, 24),
+                          itemCount: data.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 10),
+                          itemBuilder: (_, i) => _ticket(data[i]),
+                        )),
           ),
         ]),
       ),
-      if (firstLoad) const Positioned.fill(child: Material(color: Color(0xFFF5F7FB), child: SafeArea(child: CustomLoadingWidget(message: 'Membuka data lokal...', size: 88)))),
+      if (firstLoad)
+        const Positioned.fill(
+            child: Material(
+                color: Color(0xFFF5F7FB),
+                child: SafeArea(
+                    child: CustomLoadingWidget(
+                        message: 'Membuka data lokal...', size: 88)))),
     ]);
   }
 
@@ -219,14 +269,19 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
         initialValue: selectedFinding,
         isExpanded: true,
         decoration: InputDecoration(
-          hintText: findingOptions.isEmpty ? 'Sinkronkan db_List_Temuan dahulu' : 'Pilih jenis temuan',
+          hintText: findingOptions.isEmpty
+              ? 'Sinkronkan db_List_Temuan dahulu'
+              : 'Pilih jenis temuan',
           prefixIcon: const Icon(Icons.report_problem_outlined),
           filled: true,
           fillColor: Colors.white,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
         ),
-        items: findingOptions.map((value) => DropdownMenuItem(
-          value: value, child: Text(value, overflow: TextOverflow.ellipsis))).toList(),
+        items: findingOptions
+            .map((value) => DropdownMenuItem(
+                value: value,
+                child: Text(value, overflow: TextOverflow.ellipsis)))
+            .toList(),
         onChanged: (value) => setState(() => selectedFinding = value),
       );
     }
@@ -235,14 +290,19 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
         initialValue: selectedFeeder,
         isExpanded: true,
         decoration: InputDecoration(
-          hintText: feederOptions.isEmpty ? 'Sinkronkan db_Penyulang dahulu' : 'Pilih penyulang',
+          hintText: feederOptions.isEmpty
+              ? 'Sinkronkan db_Penyulang dahulu'
+              : 'Pilih penyulang',
           prefixIcon: const Icon(Icons.alt_route_rounded),
           filled: true,
           fillColor: Colors.white,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
         ),
-        items: feederOptions.map((value) => DropdownMenuItem(
-          value: value, child: Text(value, overflow: TextOverflow.ellipsis))).toList(),
+        items: feederOptions
+            .map((value) => DropdownMenuItem(
+                value: value,
+                child: Text(value, overflow: TextOverflow.ellipsis)))
+            .toList(),
         onChanged: (value) => setState(() => selectedFeeder = value),
       );
     }
@@ -251,8 +311,10 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
       decoration: InputDecoration(
         hintText: 'Masukkan nomor temuan...',
         prefixIcon: const Icon(Icons.tag_rounded),
-        suffixIcon: search.text.isEmpty ? null : IconButton(
-          onPressed: search.clear, icon: const Icon(Icons.close_rounded)),
+        suffixIcon: search.text.isEmpty
+            ? null
+            : IconButton(
+                onPressed: search.clear, icon: const Icon(Icons.close_rounded)),
         filled: true,
         fillColor: Colors.white,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
@@ -299,8 +361,7 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                  fontSize: 10,
-                                  color: AppColors.neutral500)),
+                                  fontSize: 10, color: AppColors.neutral500)),
                           const SizedBox(height: 4),
                           Text('${r['temuan'] ?? '-'}',
                               style: const TextStyle(
@@ -323,7 +384,8 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
                     borderRadius: BorderRadius.circular(13),
                   ),
                   child: Column(children: [
-                    _detailRow('Objek / Aset',
+                    _detailRow(
+                        'Objek / Aset',
                         '${r['objek'] ?? '-'} · ${gardu.isNotEmpty ? 'Gardu $gardu' : tiang.isNotEmpty ? 'Tiang $tiang' : '-'}'),
                     _detailRow('Penyulang', '${r['penyulang'] ?? '-'}'),
                     _detailRow('Section', '${r['section'] ?? '-'}'),
@@ -341,7 +403,8 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
                       decoration: BoxDecoration(
                         color: AppColors.cyan100,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.cyan600.withOpacity(.25)),
+                        border: Border.all(
+                            color: AppColors.cyan600.withOpacity(.25)),
                       ),
                       child: Row(children: [
                         Container(
@@ -355,17 +418,20 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
                               color: Colors.white, size: 18),
                         ),
                         const SizedBox(width: 9),
-                        Expanded(child: Column(
+                        Expanded(
+                            child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text('KOORDINAT TEMUAN',
-                                style: TextStyle(fontSize: 8,
+                                style: TextStyle(
+                                    fontSize: 8,
                                     letterSpacing: .7,
                                     color: AppColors.neutral500)),
                             Text(coordinate,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 11,
+                                style: const TextStyle(
+                                    fontSize: 11,
                                     fontWeight: FontWeight.w900,
                                     color: AppColors.navy700)),
                           ],
@@ -381,51 +447,62 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
                   Row(children: [
                     _avatar(current),
                     const SizedBox(width: 8),
-                    Expanded(child: Column(
+                    Expanded(
+                        child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text('TIM SAAT INI',
-                            style: TextStyle(fontSize: 8,
-                                color: AppColors.neutral400)),
+                            style: TextStyle(
+                                fontSize: 8, color: AppColors.neutral400)),
                         Text(current,
-                            style: const TextStyle(fontSize: 11,
-                                fontWeight: FontWeight.w900)),
+                            style: const TextStyle(
+                                fontSize: 11, fontWeight: FontWeight.w900)),
                       ],
                     )),
                     const Icon(Icons.arrow_forward_rounded,
                         color: AppColors.cyan600),
                     const SizedBox(width: 4),
                     const Text('Pilih pengganti',
-                        style: TextStyle(fontSize: 10,
-                            color: AppColors.neutral500)),
+                        style: TextStyle(
+                            fontSize: 10, color: AppColors.neutral500)),
                   ]),
                 ],
                 const SizedBox(height: 13),
-                const Text('TIM EKSEKUSI', style: TextStyle(
-                    fontSize: 9, letterSpacing: .8,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.neutral500)),
+                const Text('TIM EKSEKUSI',
+                    style: TextStyle(
+                        fontSize: 9,
+                        letterSpacing: .8,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.neutral500)),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<String>(
                   value: selectedTeams[code],
                   isExpanded: true,
                   decoration: InputDecoration(
-                    hintText: teams.isEmpty ? 'Belum ada tim lokal' : 'Pilih tim eksekusi',
+                    hintText: teams.isEmpty
+                        ? 'Belum ada tim lokal'
+                        : 'Pilih tim eksekusi',
                     filled: true,
                     fillColor: Colors.white,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(13)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(13)),
                   ),
-                  items: teams.map((team) => DropdownMenuItem(
-                    value: team, child: Text(team))).toList(),
-                  onChanged: saving ? null : (value) =>
-                      setState(() => selectedTeams[code] = value),
+                  items: teams
+                      .map((team) =>
+                          DropdownMenuItem(value: team, child: Text(team)))
+                      .toList(),
+                  onChanged: saving
+                      ? null
+                      : (value) => setState(() => selectedTeams[code] = value),
                 ),
                 const SizedBox(height: 12),
-                const Text('CATATAN SPV', style: TextStyle(
-                    fontSize: 9, letterSpacing: .8,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.neutral500)),
+                const Text('CATATAN SPV',
+                    style: TextStyle(
+                        fontSize: 9,
+                        letterSpacing: .8,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.neutral500)),
                 const SizedBox(height: 6),
                 TextField(
                   controller: note,
@@ -436,7 +513,8 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
                     filled: true,
                     fillColor: Colors.white,
                     counterStyle: const TextStyle(fontSize: 9),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(13)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(13)),
                   ),
                 ),
                 SizedBox(
@@ -444,7 +522,8 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
                   height: 47,
                   child: ElevatedButton(
                     onPressed: saving || selectedTeams[code] == null
-                        ? null : () => _saveCard(r, note.text),
+                        ? null
+                        : () => _saveCard(r, note.text),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.navy700,
                       foregroundColor: Colors.white,
@@ -452,11 +531,15 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
                           borderRadius: BorderRadius.circular(13)),
                     ),
                     child: saving
-                        ? const SizedBox(width: 20, height: 20,
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: Colors.white))
-                        : Text(moving ? 'Simpan Pemindahan' : 'Simpan Penugasan',
-                            style: const TextStyle(fontWeight: FontWeight.w900)),
+                        : Text(
+                            moving ? 'Simpan Pemindahan' : 'Simpan Penugasan',
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w900)),
                   ),
                 ),
               ],
@@ -487,56 +570,80 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
       onTap: url.trim().isEmpty ? null : () => _openPhoto(label, url),
       child: Stack(fit: StackFit.expand, children: [
         if (url.trim().isNotEmpty)
-          Image.network(url, fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => _photoFallback())
-        else _photoFallback(),
-        const DecoratedBox(decoration: BoxDecoration(
-          gradient: LinearGradient(begin: Alignment.topCenter,
+          Image.network(url,
+              fit: BoxFit.cover, errorBuilder: (_, __, ___) => _photoFallback())
+        else
+          _photoFallback(),
+        const DecoratedBox(
+            decoration: BoxDecoration(
+          gradient: LinearGradient(
+              begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [Colors.transparent, Color(0xB000172A)]),
         )),
-        Positioned(left: 8, bottom: 8, child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-          decoration: BoxDecoration(color: AppColors.navy950.withOpacity(.78),
-              borderRadius: BorderRadius.circular(8)),
-          child: Text(label, style: const TextStyle(fontSize: 9,
-              fontWeight: FontWeight.w900, color: Colors.white)),
-        )),
+        Positioned(
+            left: 8,
+            bottom: 8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+              decoration: BoxDecoration(
+                  color: AppColors.navy950.withOpacity(.78),
+                  borderRadius: BorderRadius.circular(8)),
+              child: Text(label,
+                  style: const TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white)),
+            )),
         if (url.trim().isNotEmpty)
-          Positioned(right: 8, top: 8, child: Container(
-            width: 29, height: 29,
-            decoration: BoxDecoration(color: Colors.white.withOpacity(.92),
-                borderRadius: BorderRadius.circular(9)),
-            child: const Icon(Icons.fullscreen_rounded,
-                size: 18, color: AppColors.navy700),
-          )),
+          Positioned(
+              right: 8,
+              top: 8,
+              child: Container(
+                width: 29,
+                height: 29,
+                decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(.92),
+                    borderRadius: BorderRadius.circular(9)),
+                child: const Icon(Icons.fullscreen_rounded,
+                    size: 18, color: AppColors.navy700),
+              )),
       ]),
     );
   }
 
   Widget _photoFallback() => Container(
-    color: AppColors.neutral200,
-    child: const Center(child: Icon(Icons.image_not_supported_outlined,
-        color: AppColors.neutral400, size: 30)),
-  );
+        color: AppColors.neutral200,
+        child: const Center(
+            child: Icon(Icons.image_not_supported_outlined,
+                color: AppColors.neutral400, size: 30)),
+      );
 
   Widget _detailRow(String label, String value) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4),
-    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SizedBox(width: 84, child: Text(label,
-          style: const TextStyle(fontSize: 10, color: AppColors.neutral500))),
-      Expanded(child: Text(value.trim().isEmpty ? '-' : value,
-          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800))),
-    ]),
-  );
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          SizedBox(
+              width: 84,
+              child: Text(label,
+                  style: const TextStyle(
+                      fontSize: 10, color: AppColors.neutral500))),
+          Expanded(
+              child: Text(value.trim().isEmpty ? '-' : value,
+                  style: const TextStyle(
+                      fontSize: 11, fontWeight: FontWeight.w800))),
+        ]),
+      );
 
   Widget _avatar(String team) => Container(
-    width: 30, height: 30, alignment: Alignment.center,
-    decoration: BoxDecoration(color: AppColors.navy700,
-        borderRadius: BorderRadius.circular(9)),
-    child: Text(_initial(team), style: const TextStyle(fontSize: 9,
-        fontWeight: FontWeight.w900, color: Colors.white)),
-  );
+        width: 30,
+        height: 30,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+            color: AppColors.navy700, borderRadius: BorderRadius.circular(9)),
+        child: Text(_initial(team),
+            style: const TextStyle(
+                fontSize: 9, fontWeight: FontWeight.w900, color: Colors.white)),
+      );
 
   Future<void> _saveCard(Map<String, dynamic> row, String note) async {
     final code = '${row['kodePekerjaan'] ?? ''}';
@@ -544,16 +651,19 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
     if (team == null) return;
     setState(() => savingCodes.add(code));
     try {
-      await repo.assign(token: token, mode: widget.mode, kode: code,
-          tim: team, catatan: note.trim());
+      await repo.assign(
+          token: token,
+          mode: widget.mode,
+          kode: code,
+          tim: team,
+          catatan: note.trim());
       if (!mounted) return;
       setState(() {
         rows.removeWhere((item) => item['kodePekerjaan'] == code);
         savingCodes.remove(code);
       });
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(moving
-            ? 'Pemindahan disimpan.' : 'Penugasan disimpan.'),
+        content: Text(moving ? 'Pemindahan disimpan.' : 'Penugasan disimpan.'),
         backgroundColor: AppColors.success700,
       ));
       unawaited(_refresh(silent: true));
@@ -573,20 +683,31 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
       barrierColor: AppColors.navy950.withOpacity(.92),
       builder: (dialogContext) => Dialog.fullscreen(
         backgroundColor: AppColors.navy950,
-        child: SafeArea(child: Column(children: [
-          SizedBox(height: 54, child: Row(children: [
-            const SizedBox(width: 16),
-            Expanded(child: Text(label, style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.w900))),
-            IconButton(onPressed: () => Navigator.pop(dialogContext),
-                icon: const Icon(Icons.close_rounded, color: Colors.white)),
-          ])),
-          Expanded(child: InteractiveViewer(
-            minScale: .8, maxScale: 5,
-            child: Center(child: Image.network(url, fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => const Icon(
-                    Icons.broken_image_outlined,
-                    size: 56, color: AppColors.neutral400))),
+        child: SafeArea(
+            child: Column(children: [
+          SizedBox(
+              height: 54,
+              child: Row(children: [
+                const SizedBox(width: 16),
+                Expanded(
+                    child: Text(label,
+                        style: const TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.w900))),
+                IconButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    icon: const Icon(Icons.close_rounded, color: Colors.white)),
+              ])),
+          Expanded(
+              child: InteractiveViewer(
+            minScale: .8,
+            maxScale: 5,
+            child: Center(
+                child: Image.network(url,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => const Icon(
+                        Icons.broken_image_outlined,
+                        size: 56,
+                        color: AppColors.neutral400))),
           )),
         ])),
       ),
@@ -597,7 +718,8 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
     final cleaned = coordinate.replaceAll(RegExp(r'\s+'), '');
     final uri = Uri.parse(
         'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(cleaned)}');
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication) && mounted) {
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication) &&
+        mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Google Maps tidak dapat dibuka.')),
       );
@@ -605,29 +727,68 @@ class _TeknikToScreenState extends State<TeknikToScreen> {
   }
 
   Widget _chip(String text, {bool highlight = false}) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-    decoration: BoxDecoration(color: highlight ? const Color(0xFFFFF3D6) : AppColors.neutral100, borderRadius: BorderRadius.circular(20)),
-    child: Text(text.trim().isEmpty ? '-' : text, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: highlight ? AppColors.amber700 : AppColors.neutral500)),
-  );
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        decoration: BoxDecoration(
+            color: highlight ? const Color(0xFFFFF3D6) : AppColors.neutral100,
+            borderRadius: BorderRadius.circular(20)),
+        child: Text(text.trim().isEmpty ? '-' : text,
+            style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                color: highlight ? AppColors.amber700 : AppColors.neutral500)),
+      );
 
-  String _initial(String value) => value.split(RegExp(r'\s+')).where((x) => x.isNotEmpty).take(2).map((x) => x[0]).join().toUpperCase();
-
-
+  String _initial(String value) => value
+      .split(RegExp(r'\s+'))
+      .where((x) => x.isNotEmpty)
+      .take(2)
+      .map((x) => x[0])
+      .join()
+      .toUpperCase();
 }
 
 class _SyncBadge extends StatelessWidget {
-  final bool syncing; const _SyncBadge({required this.syncing});
-  @override Widget build(BuildContext context) => Row(mainAxisSize: MainAxisSize.min, children: [
-    if (syncing) const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 1.5, color: Colors.white)) else const Icon(Icons.cloud_done_rounded, size: 15, color: Color(0xFF86EFAC)),
-    const SizedBox(width: 5), Text(syncing ? 'Sinkron' : 'Lokal', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700)),
-  ]);
+  final bool syncing;
+  const _SyncBadge({required this.syncing});
+  @override
+  Widget build(BuildContext context) =>
+      Row(mainAxisSize: MainAxisSize.min, children: [
+        if (syncing)
+          const SizedBox(
+              width: 12,
+              height: 12,
+              child: CircularProgressIndicator(
+                  strokeWidth: 1.5, color: Colors.white))
+        else
+          const Icon(Icons.cloud_done_rounded,
+              size: 15, color: Color(0xFF86EFAC)),
+        const SizedBox(width: 5),
+        Text(syncing ? 'Sinkron' : 'Lokal',
+            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700)),
+      ]);
 }
 
 class _Empty extends StatelessWidget {
-  final bool moving; const _Empty({required this.moving});
-  @override Widget build(BuildContext context) => Center(child: Padding(padding: const EdgeInsets.all(30), child: Column(mainAxisSize: MainAxisSize.min, children: [
-    const Icon(Icons.task_alt_rounded, size: 48, color: AppColors.success700), const SizedBox(height: 12),
-    Text(moving ? 'Tidak ada TO yang dapat dipindahkan' : 'Semua TO sudah memiliki tim', textAlign: TextAlign.center, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900)),
-    const SizedBox(height: 5), const Text('Tarik ke bawah saat online untuk memperbarui data.', textAlign: TextAlign.center, style: TextStyle(fontSize: 11, color: AppColors.neutral500)),
-  ])));
+  final bool moving;
+  const _Empty({required this.moving});
+  @override
+  Widget build(BuildContext context) => Center(
+      child: Padding(
+          padding: const EdgeInsets.all(30),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.task_alt_rounded,
+                size: 48, color: AppColors.success700),
+            const SizedBox(height: 12),
+            Text(
+                moving
+                    ? 'Tidak ada TO yang dapat dipindahkan'
+                    : 'Semua TO sudah memiliki tim',
+                textAlign: TextAlign.center,
+                style:
+                    const TextStyle(fontSize: 15, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 5),
+            const Text('Tarik ke bawah saat online untuk memperbarui data.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 11, color: AppColors.neutral500)),
+          ])));
 }
