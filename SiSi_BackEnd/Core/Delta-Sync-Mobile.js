@@ -66,8 +66,8 @@ function _deltaYandalPetugasRows_(){
     for(var n=0;n<nameCols.length;n++){
       var raw=String(data[r][nameCols[n]]||'').trim();
       if(!raw)continue;
-      var parts=raw.split(/[,;\/&
-]+/);
+      var normalizedRaw=raw.replace(/\r/g,'\n');
+      var parts=normalizedRaw.split(/[,;\/&\n]+/);
       for(var q=0;q<parts.length;q++){
         var person=String(parts[q]||'').trim(),key=person.toLowerCase();
         if(person && !seen[key]){seen[key]=true;out.push([out.length+1,person]);}
