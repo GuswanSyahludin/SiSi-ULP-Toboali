@@ -27,7 +27,7 @@ function _deltaConfigs_(){
     db_Hartek_List_Pekerjaan:{sheet:'db_Hartek_List_Pekerjaan',key:1,width:0,support:true},
     db_Material:{sheet:'db_Material',key:1,width:0,support:true},
     db_Yandal_List_P0:{sheet:'db_Yandal_List_P0',key:1,width:0,support:true},
-    db_List_Petugas_Yandal:{sheet:'db_List_Petugas_Yandal',key:1,width:0,support:true},
+    db_List_Petugas_Yandal:{special:'yandalPetugas',support:true},
     db_Section:{sheet:'db_Section',key:1,width:0,support:true},
     Master_Gardu:{special:'gardu',support:true}
   };
@@ -45,6 +45,37 @@ function _deltaYandalUkurRows_(){
   if(sh.getLastRow()<2)return [];
   return sh.getRange(2,1,sh.getLastRow()-1,24).getValues().map(function(row){return row.map(_deltaPlain_);});
 }
+function _deltaYandalPetugasRows_(){
+  var ss=SpreadsheetApp.openById(SPREADSHEET_ID),sh=null,sheets=ss.getSheets();
+  for(var i=0;i<sheets.length;i++){
+    var normalized=String(sheets[i].getName()||'').trim().toLowerCase();
+    if(normalized==='db_list_petugas_yandal'){sh=sheets[i];break;}
+  }
+  if(!sh||sh.getLastRow()<2)return [];
+  var width=sh.getLastColumn(),headers=sh.getRange(1,1,1,width).getValues()[0];
+  var nameCols=[];
+  for(var c=0;c<headers.length;c++){
+    var h=String(headers[c]||'').trim().toLowerCase();
+    if(h.indexOf('petugas')>=0 || h==='nama' || h==='nama petugas')nameCols.push(c);
+  }
+  if(!nameCols.length){
+    for(var fallback=1;fallback<width;fallback++)nameCols.push(fallback);
+  }
+  var data=sh.getRange(2,1,sh.getLastRow()-1,width).getValues(),out=[],seen={};
+  for(var r=0;r<data.length;r++){
+    for(var n=0;n<nameCols.length;n++){
+      var raw=String(data[r][nameCols[n]]||'').trim();
+      if(!raw)continue;
+      var parts=raw.split(/[,;\/&
+]+/);
+      for(var q=0;q<parts.length;q++){
+        var person=String(parts[q]||'').trim(),key=person.toLowerCase();
+        if(person && !seen[key]){seen[key]=true;out.push([out.length+1,person]);}
+      }
+    }
+  }
+  return out;
+}
 function _deltaRows_(token,name,cfg){
   if(cfg.special==='gardu'){
     var sesi=getSesiByToken(String(token||''));
@@ -54,6 +85,7 @@ function _deltaRows_(token,name,cfg){
     return (r.list||[]).map(function(x){return x;});
   }
   if(cfg.special==='yandalUkurGardu')return _deltaYandalUkurRows_();
+  if(cfg.special==='yandalPetugas')return _deltaYandalPetugasRows_();
   var rows=[];
   if(cfg.dual && typeof _readSheetDual_==='function') rows=_readSheetDual_(cfg.sheet,cfg.key,cfg.width);
   else{
