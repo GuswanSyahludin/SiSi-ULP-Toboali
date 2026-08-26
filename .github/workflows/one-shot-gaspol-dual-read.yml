@@ -1,0 +1,96 @@
+name: One-shot GASPOL UP3 dual-read patch
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-shot-gaspol-dual-read.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Patch and commit
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('SiSi_BackEnd/Teknik/SIE-Teknik-Code.js')
+          s = p.read_text()
+          reps = [
+            ("""   Rev 9 Agu 2026 — DUAL-READ (migrasi arsip): _gaspolFromROW membaca
+   db_ROW_Realisasi dari AKTIF + ARSIP via _readSheetDual_() (Tek-Migrasi.gs).
+   Sumber lain (InsJar / InsDu / Hartek / Yandal) menyusul setelah sheet-nya
+   dimigrasi & arsipnya bersih — jangan dual-read sebelum itu (angka dobel).""",
+             """   Rev 9 Agu 2026 — DUAL-READ (migrasi arsip): _gaspolFromROW membaca
+   db_ROW_Realisasi dari AKTIF + ARSIP via _readSheetDual_() (Tek-Migrasi.gs).
+   Rev 26 Agu 2026 — GASPOL UP3 FULL DUAL-READ: Inspeksi Jaringan, Inspeksi
+   Gardu, Hartek Pekerjaan, dan Yandal P0 juga membaca AKTIF + ARSIP dengan
+   dedup berdasarkan kode unik masing-masing sheet."""),
+            ("""    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sh = ss.getSheetByName('db_InsJar_Realisasi');
+    if(!sh || sh.getLastRow() < 2) return map;
+    // db_InsJar_Realisasi (0-based): kodeHeader1, kodePekerjaanPeny2, hari3,
+    // tanggal4, penyulang5, section6, segmen7, tier8, totalTiang9, jumlahTemuan10
+    var C = { tanggal:4, penyulang:5, section:6, tier:8, totalTiang:9 };
+    var data = sh.getRange(2, 1, sh.getLastRow()-1, 13).getValues();""",
+             """    // DUAL-READ AKTIF + ARSIP; dedup by Kode Pekerjaan Penyulang (kolom C).
+    // db_InsJar_Realisasi (0-based): kodeHeader1, kodePekerjaanPeny2, hari3,
+    // tanggal4, penyulang5, section6, segmen7, tier8, totalTiang9, jumlahTemuan10
+    var C = { kodePekerjaanPeny:2, tanggal:4, penyulang:5, section:6, tier:8, totalTiang:9 };
+    var data = _readSheetDual_('db_InsJar_Realisasi', C.kodePekerjaanPeny, 13);"""),
+            ("""    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sh = ss.getSheetByName('db_InsDu_Realisasi');
+    if(!sh || sh.getLastRow() < 2) return map;
+    // db_InsDu_Realisasi (0-based): kodeHeader1, kodePekerjaanGardu2, hari3,
+    // tanggal4, penyulang5, section6, nomorGardu7, tier8, jumlahTemuan9
+    var C = { tanggal:4, penyulang:5, section:6, nomorGardu:7, tier:8 };
+    var data = sh.getRange(2, 1, sh.getLastRow()-1, 12).getValues();""",
+             """    // DUAL-READ AKTIF + ARSIP; dedup by Kode Pekerjaan Gardu (kolom C).
+    // db_InsDu_Realisasi (0-based): kodeHeader1, kodePekerjaanGardu2, hari3,
+    // tanggal4, penyulang5, section6, nomorGardu7, tier8, jumlahTemuan9
+    var C = { kodePekerjaanGardu:2, tanggal:4, penyulang:5, section:6, nomorGardu:7, tier:8 };
+    var data = _readSheetDual_('db_InsDu_Realisasi', C.kodePekerjaanGardu, 12);"""),
+            ("""    var hmap = _gaspolReadHartekMap();   // Pekerjaan(+Jenis) → kolom GASPOL (dari sheet)
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sh = ss.getSheetByName('db_Hartek_Pekerjaan');
+    if(!sh || sh.getLastRow() < 2) return map;
+    // db_Hartek_Pekerjaan (0-based): tanggal6, jenisPekerjaan7, penyulang8, pekerjaan11, jumlahPekerjaan12
+    var C = { tanggal:6, jenis:7, penyulang:8, pekerjaan:11, jumlahPekerjaan:12 };
+    var data = sh.getRange(2, 1, sh.getLastRow()-1, 17).getValues();""",
+             """    var hmap = _gaspolReadHartekMap();   // Pekerjaan(+Jenis) → kolom GASPOL (dari sheet)
+    // DUAL-READ AKTIF + ARSIP; dedup by Kode Pekerjaan Hartek (kolom D).
+    // db_Hartek_Pekerjaan (0-based): kodePekerjaan3, tanggal6, jenisPekerjaan7,
+    // penyulang8, pekerjaan11, jumlahPekerjaan12
+    var C = { kodePekerjaan:3, tanggal:6, jenis:7, penyulang:8, pekerjaan:11, jumlahPekerjaan:12 };
+    var data = _readSheetDual_('db_Hartek_Pekerjaan', C.kodePekerjaan, 17);"""),
+            ("""    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var sh = ss.getSheetByName('db_Yandal_P0');
+    if(!sh || sh.getLastRow() < 2) return map;
+    // db_Yandal_P0 (0-based): kodeShift:2, kodeP0:3, tanggal6, penyulang9, section10
+    var C = { kodeShift:2, kodeP0:3, tanggal:6, penyulang:9, namaPekerjaan:7, section:10 };
+    var data = sh.getRange(2, 1, sh.getLastRow()-1, 11).getValues();""",
+             """    // DUAL-READ AKTIF + ARSIP; dedup by Kode P0 (kolom D).
+    // db_Yandal_P0 (0-based): kodeShift:2, kodeP0:3, tanggal6, penyulang9, section10
+    var C = { kodeShift:2, kodeP0:3, tanggal:6, penyulang:9, namaPekerjaan:7, section:10 };
+    var data = _readSheetDual_('db_Yandal_P0', C.kodeP0, 11);""")
+          ]
+          for old,new in reps:
+              n=s.count(old)
+              if n != 1: raise SystemExit(f'patch anchor count={n}: {old[:70]}')
+              s=s.replace(old,new)
+          p.write_text(s)
+          PY
+          rm .github/workflows/one-shot-gaspol-dual-read.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'fix: make GASPOL UP3 fully dual-read'
+          git push origin main
