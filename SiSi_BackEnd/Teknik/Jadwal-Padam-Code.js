@@ -6,6 +6,7 @@ var JADWAL_PADAM_STATUSES = ['Terjadwal','Terealisasi','Batal Pemadaman'];
 function _jpSs_(){ return SpreadsheetApp.openById(JADWAL_PADAM_SS_ID); }
 function _jpText_(v){ return String(v == null ? '' : v).trim(); }
 function _jpNorm_(v){ return _jpText_(v).toLowerCase().replace(/\s+/g,' '); }
+function _jpUlpKey_(v){ return _jpNorm_(v).replace(/^ulp\s+/, '').replace(/[^a-z0-9]/g, ''); }
 function _jpSheetKey_(v){ return _jpText_(v).toLowerCase().replace(/[^a-z0-9]/g,''); }
 function _jpHeaderKey_(v){ return _jpNorm_(v).replace(/[^a-z0-9]/g,''); }
 function _jpSheet_(name){var ss=_jpSs_(),direct=ss.getSheetByName(name);if(direct)return direct;var wanted=_jpSheetKey_(name),all=ss.getSheets();for(var i=0;i<all.length;i++)if(_jpSheetKey_(all[i].getName())===wanted)return all[i];return null;}
@@ -14,13 +15,22 @@ function _jpHeaders_(sh){return sh&&sh.getLastColumn()?sh.getRange(1,1,1,sh.getL
 function _jpHeaderMap_(headers){var m={};headers.forEach(function(h,i){m[_jpHeaderKey_(h)]=i;});return m;}
 function _jpGet_(row,map){for(var i=2;i<arguments.length;i++){var idx=map[_jpHeaderKey_(arguments[i])];if(idx!=null)return row[idx];}return '';}
 function _jpPut_(row,map,value){for(var i=3;i<arguments.length;i++){var idx=map[_jpHeaderKey_(arguments[i])];if(idx!=null){row[idx]=value;return true;}}return false;}
-function _jpTgl_(v){if(v instanceof Date)return Utilities.formatDate(v,'Asia/Jakarta','yyyy-MM-dd');var s=_jpText_(v),m=s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);return m?m[3]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[1]).slice(-2):s.slice(0,10);}
+function _jpTgl_(v){
+  if(v instanceof Date&&!isNaN(v.getTime()))return Utilities.formatDate(v,'Asia/Jakarta','yyyy-MM-dd');
+  var s=_jpText_(v),iso=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/),num=s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
+  if(iso)return iso[1]+'-'+('0'+iso[2]).slice(-2)+'-'+('0'+iso[3]).slice(-2);
+  if(num)return num[3]+'-'+('0'+num[2]).slice(-2)+'-'+('0'+num[1]).slice(-2);
+  var bulan={januari:1,februari:2,maret:3,april:4,mei:5,juni:6,juli:7,agustus:8,september:9,oktober:10,november:11,desember:12};
+  var lokal=s.toLowerCase().match(/^(\d{1,2})\s+([a-z]+)\s+(\d{4})/);
+  if(lokal&&bulan[lokal[2]])return lokal[3]+'-'+('0'+bulan[lokal[2]]).slice(-2)+'-'+('0'+lokal[1]).slice(-2);
+  var parsed=new Date(s);return isNaN(parsed.getTime())?'':Utilities.formatDate(parsed,'Asia/Jakarta','yyyy-MM-dd');
+}
 function _jpTimeText_(v){if(v instanceof Date)return Utilities.formatDate(v,'Asia/Jakarta','HH:mm');return _jpText_(v).slice(0,5);}
 function _jpMasterContext_(){var sh=_jpSheet_(JADWAL_PADAM_SHEETS.daerah);if(!sh)throw new Error('Sheet Master Daerah Padam tidak ditemukan.');return {sh:sh,map:_jpHeaderMap_(_jpHeaders_(sh))};}
 function _jpMasterRow_(row,map){return {bebanMw:_jpGet_(row,map,'Beban MW','Beban'),arus:_jpGet_(row,map,'Arus (A)','Arus'),ulp:_jpText_(_jpGet_(row,map,'ULP')),up3:_jpText_(_jpGet_(row,map,'UP3')),gi:_jpText_(_jpGet_(row,map,'GI')),penyulang:_jpText_(_jpGet_(row,map,'Penyulang')),section:_jpText_(_jpGet_(row,map,'Section')),jumlahGardu:_jpGet_(row,map,'Jumlah Gardu'),jumlahPelanggan:_jpGet_(row,map,'Jumlah Pelanggan'),daerahSection:_jpText_(_jpGet_(row,map,'Daerah Section','Daerah Padam','Dearah Padam')),pelangganVip:_jpText_(_jpGet_(row,map,'Pelanggan VIP','Pelanggan VIP Padam'))};}
 function _jpMaster_(peny,section){var rows=_jpRows_(JADWAL_PADAM_SHEETS.daerah),ctx=_jpMasterContext_();for(var i=0;i<rows.length;i++){var x=_jpMasterRow_(rows[i],ctx.map);if(_jpNorm_(x.penyulang)===_jpNorm_(peny)&&(!section||_jpNorm_(x.section)===_jpNorm_(section)))return x;}return null;}
 
-function getJadwalPadamMaster(params){params=params||{};var rows=_jpRows_(JADWAL_PADAM_SHEETS.daerah),ctx=_jpMasterContext_(),out=[];for(var i=0;i<rows.length;i++){var x=_jpMasterRow_(rows[i],ctx.map);if(!x.penyulang||!x.section)continue;if(params.ulp&&_jpNorm_(x.ulp)!==_jpNorm_(params.ulp))continue;out.push(x);}return {ok:true,rows:out};}
+function getJadwalPadamMaster(params){params=params||{};var rows=_jpRows_(JADWAL_PADAM_SHEETS.daerah),ctx=_jpMasterContext_(),out=[];for(var i=0;i<rows.length;i++){var x=_jpMasterRow_(rows[i],ctx.map);if(!x.penyulang||!x.section)continue;if(params.ulp&&_jpUlpKey_(x.ulp)!==_jpUlpKey_(params.ulp))continue;out.push(x);}return {ok:true,rows:out};}
 
 function getJadwalPadamList(params){
   params=params||{};var sh=_jpSheet_(JADWAL_PADAM_SHEETS.rekap);if(!sh)return {ok:false,message:'Sheet Rekap Jadwal Padam tidak ditemukan.',rows:[]};
@@ -28,7 +38,7 @@ function getJadwalPadamList(params){
   for(var i=0;i<rows.length;i++){
     var r=rows[i],status=_jpText_(_jpGet_(r,map,'Status Jadwal Pekerjaan','Status'))||'Terjadwal';
     var item={no:_jpGet_(r,map,'No'),kode:_jpGet_(r,map,'Kode Jadwal Padam'),ulp:_jpGet_(r,map,'ULP'),penyulang:_jpGet_(r,map,'Penyulang'),section:_jpGet_(r,map,'Section'),jenis:_jpGet_(r,map,'Jenis Pekerjaan','Jenis Pekejaan'),tanggal:_jpTgl_(_jpGet_(r,map,'Tanggal')),jamPadam:_jpTimeText_(_jpGet_(r,map,'Jam Padam')),jamNyala:_jpTimeText_(_jpGet_(r,map,'Jam Nyala')),durasi:_jpGet_(r,map,'Durasi'),jumlahGardu:_jpGet_(r,map,'Jumlah Gardu'),jumlahPelanggan:_jpGet_(r,map,'Jumlah Pelanggan'),daerah:_jpGet_(r,map,'Daerah Section','Daerah Padam','Dearah Padam'),bebanMw:_jpGet_(r,map,'Beban MW','Beban'),ens:_jpGet_(r,map,'ENS'),vip:_jpGet_(r,map,'Pelanggan VIP','Pelanggan VIP Padam'),lokasi:_jpGet_(r,map,'Lokasi Pekerjaan'),status:status};
-    if(params.ulp&&_jpNorm_(item.ulp)!==_jpNorm_(params.ulp))continue;
+    if(params.ulp&&_jpUlpKey_(item.ulp)!==_jpUlpKey_(params.ulp))continue;
     if(params.penyulang&&_jpNorm_(item.penyulang)!==_jpNorm_(params.penyulang))continue;
     if(params.section&&_jpNorm_(item.section)!==_jpNorm_(params.section))continue;
     if(params.status&&_jpNorm_(item.status)!==_jpNorm_(params.status))continue;
