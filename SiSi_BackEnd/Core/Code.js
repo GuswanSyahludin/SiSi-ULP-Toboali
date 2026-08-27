@@ -71,7 +71,7 @@ var PAGE_FILE_ALIASES = {
 
   // ── Teknik ──
   "SIE-Teknik": "Teknik/SIE-Teknik",
-  "Jadwal-Padam": "Teknik/SIE-Teknik",
+  "Jadwal-Padam": "Teknik/Jadwal-Padam",
   "SIE-LaporanTeknik": "Teknik/SIE-Teknik",
   "Tek-Data-Checkpoint": "Teknik/Tek-Data-Checkpoint",
 };

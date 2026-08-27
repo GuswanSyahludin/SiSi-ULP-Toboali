@@ -1,0 +1,28 @@
+name: Audit Jadwal Padam Client Access Resolved
+on:
+  push:
+    branches: [fix/jadwal-padam-client-access-resolved]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/jadwal-padam-client-access-resolved
+      - run: python .github/scripts/fix_jadwal_padam_client_access_resolved.py
+      - name: Validate standalone page route and access chain
+        run: |
+          grep -q "'Jadwal-Padam': 'SIE-Teknik'" SiSi_BackEnd/Core/Main.html
+          grep -q '"Jadwal-Padam": "Teknik/Jadwal-Padam"' SiSi_BackEnd/Core/Code.js
+          ! grep -q '"Jadwal-Padam": "Teknik/SIE-Teknik"' SiSi_BackEnd/Core/Code.js
+          test -f SiSi_BackEnd/Teknik/Jadwal-Padam.html
+      - name: Commit audited fix
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+users.noreply.github.com
+          git add SiSi_BackEnd/Core/Main.html SiSi_BackEnd/Core/Code.js
+          git commit -m "fix(web): finalize Jadwal Padam route and access [skip ci]" || exit 0
+          git push origin fix/jadwal-padam-client-access-resolved
