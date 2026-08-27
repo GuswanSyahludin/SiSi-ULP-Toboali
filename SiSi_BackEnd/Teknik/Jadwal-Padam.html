@@ -282,6 +282,29 @@
       .pager-actions { display:flex; gap:8px; }
       .pager-btn { min-height:36px; padding:0 12px; border:1px solid var(--jp-border); border-radius:8px; background:var(--jp-surface); color:var(--jp-text); font:600 13px/1 inherit; cursor:pointer; }
       .pager-btn:disabled { opacity:.45; cursor:not-allowed; }
+      @keyframes jp-spin {
+        to { transform: rotate(360deg); }
+      }
+      .table-spinner {
+        display: inline-block;
+        width: 22px;
+        height: 22px;
+        border: 2.5px solid oklch(85% 0.02 250);
+        border-top-color: var(--jp-brand);
+        border-radius: 50%;
+        animation: jp-spin 0.75s linear infinite;
+        vertical-align: middle;
+      }
+      .loading-cell {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 44px 16px;
+        color: var(--jp-muted);
+        font-weight: 500;
+        font-size: 14px;
+      }
       .empty {
         text-align: center;
         padding: 44px !important;
@@ -417,7 +440,7 @@
             <option>Tanpa Padam</option>
           </select>
         </div>
-        <button class="btn" onclick="loadList(1)">Cari</button>
+        <button class="btn" id="jpSearchBtn" onclick="loadList(1)">Cari</button>
       </section>
       <section class="table-shell">
         <div class="table-scroll">
@@ -757,10 +780,21 @@
         document.getElementById("jpTo").value = jpDateInputValue(last);
       }
       function loadList(page) {
-        var dari=document.getElementById("jpFrom").value,sampai=document.getElementById("jpTo").value;
-        if(!dari||!sampai){jpNotify("Tanggal mulai dan tanggal selesai wajib diisi.","warning");return;}
-        if(dari>sampai){jpNotify("Tanggal mulai tidak boleh melewati tanggal selesai.","warning");return;}
-        jpCurrentPage=Math.max(1,Number(page)||1);
+        var dari = document.getElementById("jpFrom").value,
+          sampai = document.getElementById("jpTo").value,
+          searchBtn = document.getElementById("jpSearchBtn");
+        if (!dari || !sampai) {
+          jpNotify("Tanggal mulai dan tanggal selesai wajib diisi.", "warning");
+          return;
+        }
+        if (dari > sampai) {
+          jpNotify("Tanggal mulai tidak boleh melewati tanggal selesai.", "warning");
+          return;
+        }
+        jpCurrentPage = Math.max(1, Number(page) || 1);
+        if (searchBtn) {
+          searchBtn.disabled = true;
+        }
         var sesi = jpSession(),
           params = {
             tglDari: dari,
@@ -774,10 +808,14 @@
             pageSize: 50,
           };
         document.getElementById("jpBody").innerHTML =
-          '<tr><td class="empty" colspan="21">Isi rentang tanggal, lalu klik Cari.</td></tr>';
+          '<tr><td colspan="21"><div class="loading-cell"><span class="table-spinner"></span><span>Mencari data...</span></div></td></tr>';
         google.script.run
-          .withSuccessHandler(jpRender)
+          .withSuccessHandler(function (res) {
+            if (searchBtn) searchBtn.disabled = false;
+            jpRender(res);
+          })
           .withFailureHandler(function (e) {
+            if (searchBtn) searchBtn.disabled = false;
             document.getElementById("jpBody").innerHTML =
               '<tr><td class="empty" colspan="21">Gagal memuat data</td></tr>';
             jpNotify((e && e.message) || e, "error");
