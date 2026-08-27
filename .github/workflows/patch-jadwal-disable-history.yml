@@ -1,0 +1,20 @@
+name: Disable Jadwal Form History
+on:
+  push:
+    branches: [fix/jadwal-padam-disable-history]
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/jadwal-padam-disable-history
+      - run: python .github/scripts/patch_jadwal_disable_history.py
+      - run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add SiSi_BackEnd/Teknik/Jadwal-Padam.html
+          git commit -m "fix(web): disable Jadwal Padam input history [skip ci]" || exit 0
+          git push origin fix/jadwal-padam-disable-history
