@@ -588,14 +588,14 @@ function getJadwalPadamWaText(params) {
         "*Penyulang:* " + _jpText_(x.penyulang),
         "*Section Pemadaman:* " + _jpText_(x.section),
         "*Jenis Pekerjaan:* " + _jpText_(x.jenis),
-        "*Jam Padam:* " + _jpText_(x.jamPadam) + "WIB",
-        "*Jam Nyala:* " + _jpText_(x.jamNyala) + "WIB",
+        "*Jam Padam:* " + _jpText_(x.jamPadam) + " WIB",
+        "*Jam Nyala:* " + _jpText_(x.jamNyala) + " WIB",
         "*Durasi:* " + _jpWaNumber_((Number(x.durasi) || 0) * 60, 0) + " Menit",
         "*Daerah Padam:* " + _jpText_(x.daerah),
-        "*Jumlah Gardu:* " + _jpWaNumber_(x.jumlahGardu, 0) + "Unit",
+        "*Jumlah Gardu:* " + _jpWaNumber_(x.jumlahGardu, 0) + " Unit",
         "*Jumlah Pelanggan:* " +
           _jpWaNumber_(x.jumlahPelanggan, 0) +
-          "Pelangan",
+          " Pelangan",
         "*Beban:* " + _jpWaNumber_(x.bebanA, 2) + " A",
         "*ENS:* Rp" + _jpWaNumber_(x.ensRupiah, 2),
         "",
