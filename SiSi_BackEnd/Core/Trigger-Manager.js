@@ -89,9 +89,13 @@ function _triggerSisiHandlerWajib_() {
     out.push(TRIGGER_SISI_TUGAS[i].fn);
   for (var j = 0; j < TRIGGER_SISI_HARIAN.length; j++)
     out.push(TRIGGER_SISI_HARIAN[j]);
-  var seen = {}, unik = [];
+  var seen = {},
+    unik = [];
   for (var k = 0; k < out.length; k++) {
-    if (!seen[out[k]]) { seen[out[k]] = true; unik.push(out[k]); }
+    if (!seen[out[k]]) {
+      seen[out[k]] = true;
+      unik.push(out[k]);
+    }
   }
   return unik;
 }
@@ -102,14 +106,18 @@ function tickPusatSiSi() {
   var props = PropertiesService.getScriptProperties();
   var now = Date.now();
   var mutex = Number(props.getProperty(TRIGGER_SISI_MUTEX_PROP) || 0);
-  if (mutex && now - mutex < 390000) return { ok: true, skipped: "masih-berjalan" };
+  if (mutex && now - mutex < 390000)
+    return { ok: true, skipped: "masih-berjalan" };
   props.setProperty(TRIGGER_SISI_MUTEX_PROP, String(now));
 
   var hasil = { ok: true, jalan: [], gagal: [], belumJadwal: [] };
   try {
     var last = {};
-    try { last = JSON.parse(props.getProperty(TRIGGER_SISI_TICK_PROP) || "{}"); }
-    catch (eJson) { last = {}; }
+    try {
+      last = JSON.parse(props.getProperty(TRIGGER_SISI_TICK_PROP) || "{}");
+    } catch (eJson) {
+      last = {};
+    }
 
     var mulai = Date.now();
     for (var i = 0; i < TRIGGER_SISI_TUGAS.length; i++) {
@@ -124,7 +132,10 @@ function tickPusatSiSi() {
       var elapsed = Date.now() - mulai;
       // Tugas berat tidak dimulai setelah 2,5 menit; tugas ringan setelah 4 menit.
       // Yang tertunda tidak distempel, jadi otomatis dicoba tick berikutnya.
-      if ((tugas.berat && elapsed > 150000) || (!tugas.berat && elapsed > 240000))
+      if (
+        (tugas.berat && elapsed > 150000) ||
+        (!tugas.berat && elapsed > 240000)
+      )
         break;
 
       var fn = _triggerSisiHandler_(tugas.fn);
@@ -146,7 +157,9 @@ function tickPusatSiSi() {
       Logger.log("[tickPusatSiSi] " + JSON.stringify(hasil));
     return hasil;
   } finally {
-    try { props.deleteProperty(TRIGGER_SISI_MUTEX_PROP); } catch (eDel) {}
+    try {
+      props.deleteProperty(TRIGGER_SISI_MUTEX_PROP);
+    } catch (eDel) {}
   }
 }
 
@@ -157,9 +170,16 @@ function harianPusatSiSi() {
   for (var i = 0; i < TRIGGER_SISI_HARIAN.length; i++) {
     var nama = TRIGGER_SISI_HARIAN[i];
     var fn = _triggerSisiHandler_(nama);
-    if (!fn) { hasil.gagal.push({ fn: nama, error: "handler tidak ditemukan" }); continue; }
-    try { fn.call(_triggerSisiGlobal_()); hasil.jalan.push(nama); }
-    catch (eRun) { hasil.gagal.push({ fn: nama, error: String(eRun) }); }
+    if (!fn) {
+      hasil.gagal.push({ fn: nama, error: "handler tidak ditemukan" });
+      continue;
+    }
+    try {
+      fn.call(_triggerSisiGlobal_());
+      hasil.jalan.push(nama);
+    } catch (eRun) {
+      hasil.gagal.push({ fn: nama, error: String(eRun) });
+    }
   }
   Logger.log("[harianPusatSiSi] " + JSON.stringify(hasil));
   return hasil;
@@ -196,8 +216,12 @@ function pasangSemuaTriggerSiSi() {
 
   ScriptApp.newTrigger("tickPusatSiSi").timeBased().everyMinutes(1).create();
   ScriptApp.newTrigger("harianPusatSiSi")
-    .timeBased().everyDays(1).atHour(0).nearMinute(30)
-    .inTimezone(TRIGGER_SISI_TZ).create();
+    .timeBased()
+    .everyDays(1)
+    .atHour(0)
+    .nearMinute(30)
+    .inTimezone(TRIGGER_SISI_TZ)
+    .create();
 
   var audit = auditTriggerSiSi();
   audit.dihapus = dihapus;
@@ -211,21 +235,29 @@ function pasangSemuaTriggerSiSi() {
 // Read-only: cek jumlah, kekurangan, kelebihan, dan duplikat trigger.
 function auditTriggerSiSi() {
   var trs = ScriptApp.getProjectTriggers();
-  var perHandler = {}, semua = [];
+  var perHandler = {},
+    semua = [];
   for (var i = 0; i < trs.length; i++) {
     var fn = trs[i].getHandlerFunction();
     semua.push(fn);
     perHandler[fn] = (perHandler[fn] || 0) + 1;
   }
 
-  var kurang = [], lebih = [], duplikat = [], sementara = [];
+  var kurang = [],
+    lebih = [],
+    duplikat = [],
+    sementara = [];
   for (var j = 0; j < TRIGGER_SISI_PERMANEN.length; j++)
-    if (!perHandler[TRIGGER_SISI_PERMANEN[j]]) kurang.push(TRIGGER_SISI_PERMANEN[j]);
+    if (!perHandler[TRIGGER_SISI_PERMANEN[j]])
+      kurang.push(TRIGGER_SISI_PERMANEN[j]);
 
   for (var fn in perHandler) {
     if (perHandler[fn] > 1) duplikat.push({ fn: fn, jumlah: perHandler[fn] });
     if (TRIGGER_SISI_PERMANEN.indexOf(fn) >= 0) continue;
-    if (TRIGGER_SISI_SEMENTARA.indexOf(fn) >= 0) { sementara.push(fn); continue; }
+    if (TRIGGER_SISI_SEMENTARA.indexOf(fn) >= 0) {
+      sementara.push(fn);
+      continue;
+    }
     lebih.push(fn);
   }
 
@@ -238,7 +270,8 @@ function auditTriggerSiSi() {
     lebih: lebih,
     duplikat: duplikat,
     sementara: sementara,
-    catatan: "migrasiSemuaTick/job sekali-jalan boleh muncul sementara dan harus melepas diri saat selesai.",
+    catatan:
+      "migrasiSemuaTick/job sekali-jalan boleh muncul sementara dan harus melepas diri saat selesai.",
   };
   Logger.log("[auditTriggerSiSi] " + JSON.stringify(hasil));
   return hasil;

@@ -12,7 +12,8 @@ var WM_ENGINE_URL =
   "https://wm-engine-1011716929576.asia-southeast2.run.app/watermark/drive";
 
 // Samakan dengan environment WM_SECRET di Cloud Run.
-var WM_ENGINE_SECRET = PropertiesService.getScriptProperties().getProperty("WM_ENGINE_SECRET") || "";
+var WM_ENGINE_SECRET =
+  PropertiesService.getScriptProperties().getProperty("WM_ENGINE_SECRET") || "";
 
 /**
  * Tempel Watermark Compact V4 dan simpan langsung melalui wm-engine.

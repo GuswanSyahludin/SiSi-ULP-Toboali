@@ -63,9 +63,8 @@ function urlFotoUkuran_(nilai, lebar) {
 /** Pastikan file bisa dibaca mobile/web app tanpa login Google. */
 function publikasikanFoto_(fileOrId) {
   try {
-    var file = typeof fileOrId === "string"
-      ? DriveApp.getFileById(fileOrId)
-      : fileOrId;
+    var file =
+      typeof fileOrId === "string" ? DriveApp.getFileById(fileOrId) : fileOrId;
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     return true;
   } catch (e) {
@@ -84,7 +83,8 @@ function normalisasiUrlFotoRowTick() {
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(3000)) return;
   try {
-    var sh = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(FOTO_ROW_SHEET);
+    var sh =
+      SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(FOTO_ROW_SHEET);
     if (!sh || sh.getLastRow() < 2) return;
 
     var cache = CacheService.getScriptCache();
@@ -113,13 +113,16 @@ function normalisasiUrlFotoRowTick() {
     var next = start + count;
     cache.put("fotoRowNormNext", String(next > last ? 2 : next), 21600);
   } finally {
-    try { lock.releaseLock(); } catch (e) {}
+    try {
+      lock.releaseLock();
+    } catch (e) {}
   }
 }
 
 /** Jalankan SEKALI dari editor setelah deploy. */
 function hapusNormalisasiUrlFotoROWTrigger() {
-  var all = ScriptApp.getProjectTriggers(), n = 0;
+  var all = ScriptApp.getProjectTriggers(),
+    n = 0;
   for (var i = 0; i < all.length; i++) {
     if (all[i].getHandlerFunction() === "normalisasiUrlFotoRowTick") {
       ScriptApp.deleteTrigger(all[i]);

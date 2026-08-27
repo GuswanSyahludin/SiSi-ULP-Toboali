@@ -30,7 +30,9 @@ function _devJson_(obj) {
     ContentService.MimeType.JSON,
   );
 }
-function _devProps_() { return PropertiesService.getScriptProperties(); }
+function _devProps_() {
+  return PropertiesService.getScriptProperties();
+}
 function _devSidik_(nilai) {
   var b = Utilities.computeDigest(
     Utilities.DigestAlgorithm.SHA_256,
@@ -41,22 +43,30 @@ function _devSidik_(nilai) {
 }
 function _devTtl_() {
   return typeof SESSION_TTL_SEC !== "undefined" && SESSION_TTL_SEC
-    ? SESSION_TTL_SEC : 900;
+    ? SESSION_TTL_SEC
+    : 900;
 }
 function _devBaca_(deviceToken) {
   if (!deviceToken) return null;
   var raw = _devProps_().getProperty(DEV_PREFIX + deviceToken);
   if (!raw) return null;
-  try { return JSON.parse(raw); } catch (e) { return null; }
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    return null;
+  }
 }
 function _devTulis_(deviceToken, rec) {
   _devProps_().setProperty(DEV_PREFIX + deviceToken, JSON.stringify(rec));
 }
 function _devHapus_(deviceToken) {
-  try { _devProps_().deleteProperty(DEV_PREFIX + deviceToken); } catch (e) {}
+  try {
+    _devProps_().deleteProperty(DEV_PREFIX + deviceToken);
+  } catch (e) {}
 }
 function _devSemua_() {
-  var semua = _devProps_().getProperties(), out = [];
+  var semua = _devProps_().getProperties(),
+    out = [];
   for (var k in semua) {
     if (k.indexOf(DEV_PREFIX) !== 0) continue;
     try {
@@ -71,9 +81,15 @@ function _devSemua_() {
 function _devCariBaris_(username) {
   var data = typeof _usersRowsCache_ === "function" ? _usersRowsCache_() : null;
   if (!data || !data.length) return null;
-  var target = String(username || "").trim().toLowerCase();
+  var target = String(username || "")
+    .trim()
+    .toLowerCase();
   for (var i = 1; i < data.length; i++) {
-    if (String(data[i][COL_USERS.userName] || "").trim().toLowerCase() === target)
+    if (
+      String(data[i][COL_USERS.userName] || "")
+        .trim()
+        .toLowerCase() === target
+    )
       return data[i];
   }
   return null;
@@ -92,24 +108,31 @@ function _devSesiDariBaris_(r) {
   };
 }
 function _devTerbitkanSesi_(dasar) {
-  var token = Utilities.getUuid(), sesi = {};
+  var token = Utilities.getUuid(),
+    sesi = {};
   for (var k in dasar) sesi[k] = dasar[k];
   sesi.token = token;
   sesi.loginAt = new Date().toISOString();
   var ttl = _devTtl_();
   CacheService.getScriptCache().put("sesi_" + token, JSON.stringify(sesi), ttl);
-  try { CacheService.getUserCache().put("userToken", token, ttl); } catch (e) {}
+  try {
+    CacheService.getUserCache().put("userToken", token, ttl);
+  } catch (e) {}
   return sesi;
 }
 function _devPangkas_(username) {
   var target = String(username || "").toLowerCase();
-  var semua = _devSemua_(), milik = [];
+  var semua = _devSemua_(),
+    milik = [];
   for (var i = 0; i < semua.length; i++)
-    if (String(semua[i].username || "").toLowerCase() === target) milik.push(semua[i]);
+    if (String(semua[i].username || "").toLowerCase() === target)
+      milik.push(semua[i]);
   if (milik.length <= DEV_MAX_PER_USER) return 0;
   milik.sort(function (a, b) {
-    return Number(a.terakhirDipakai || a.dibuatPada || 0) -
-      Number(b.terakhirDipakai || b.dibuatPada || 0);
+    return (
+      Number(a.terakhirDipakai || a.dibuatPada || 0) -
+      Number(b.terakhirDipakai || b.dibuatPada || 0)
+    );
   });
   var buang = milik.length - DEV_MAX_PER_USER;
   for (var j = 0; j < buang; j++) _devHapus_(milik[j].deviceToken);
@@ -128,10 +151,13 @@ function loginPerangkat(username, password, perangkat) {
     if (pw !== password) return { success: false, message: "Password salah" };
 
     var deviceToken = Utilities.getUuid().replace(/-/g, "");
-    var now = Date.now(), dasar = _devSesiDariBaris_(r);
+    var now = Date.now(),
+      dasar = _devSesiDariBaris_(r);
     _devTulis_(deviceToken, {
-      username: dasar.username, pwSig: _devSidik_(pw),
-      dibuatPada: now, terakhirDipakai: now,
+      username: dasar.username,
+      pwSig: _devSidik_(pw),
+      dibuatPada: now,
+      terakhirDipakai: now,
       perangkat: String(perangkat || "").substring(0, 80),
     });
     _devPangkas_(dasar.username);
@@ -148,24 +174,42 @@ function cekPerangkat(deviceToken) {
   try {
     deviceToken = String(deviceToken || "").trim();
     if (!deviceToken)
-      return { success: false, kode: "TANPA_TOKEN", message: "deviceToken wajib diisi." };
+      return {
+        success: false,
+        kode: "TANPA_TOKEN",
+        message: "deviceToken wajib diisi.",
+      };
     var rec = _devBaca_(deviceToken);
     if (!rec)
-      return { success: false, kode: "PERANGKAT_TIDAK_DIKENAL", message: "Sesi perangkat tidak dikenali. Silakan login ulang." };
+      return {
+        success: false,
+        kode: "PERANGKAT_TIDAK_DIKENAL",
+        message: "Sesi perangkat tidak dikenali. Silakan login ulang.",
+      };
     var r = _devCariBaris_(rec.username);
     if (!r) {
       _devHapus_(deviceToken);
-      return { success: false, kode: "AKUN_TIDAK_ADA", message: "Akun sudah tidak terdaftar. Hubungi Super User." };
+      return {
+        success: false,
+        kode: "AKUN_TIDAK_ADA",
+        message: "Akun sudah tidak terdaftar. Hubungi Super User.",
+      };
     }
     var pw = String(r[COL_USERS.password] || "").trim();
     if (_devSidik_(pw) !== String(rec.pwSig || "")) {
       _devHapus_(deviceToken);
-      return { success: false, kode: "PASSWORD_BERUBAH", message: "Password akun sudah berubah. Silakan login ulang." };
+      return {
+        success: false,
+        kode: "PASSWORD_BERUBAH",
+        message: "Password akun sudah berubah. Silakan login ulang.",
+      };
     }
     var now = Date.now();
     if (now - Number(rec.terakhirDipakai || 0) > DEV_TOUCH_MS) {
       rec.terakhirDipakai = now;
-      try { _devTulis_(deviceToken, rec); } catch (eT) {}
+      try {
+        _devTulis_(deviceToken, rec);
+      } catch (eT) {}
     }
     var sesi = _devTerbitkanSesi_(_devSesiDariBaris_(r));
     sesi.success = true;
@@ -180,7 +224,10 @@ function logoutPerangkat(deviceToken, token) {
   try {
     deviceToken = String(deviceToken || "").trim();
     if (deviceToken) _devHapus_(deviceToken);
-    if (token) try { CacheService.getScriptCache().remove("sesi_" + String(token).trim()); } catch (eS) {}
+    if (token)
+      try {
+        CacheService.getScriptCache().remove("sesi_" + String(token).trim());
+      } catch (eS) {}
     return { success: true };
   } catch (e) {
     return { success: false, message: "Error logoutPerangkat: " + e.message };
@@ -190,17 +237,27 @@ function logoutPerangkat(deviceToken, token) {
 function daftarPerangkat(token) {
   try {
     if (typeof _assertSuperUser === "function") _assertSuperUser(token);
-    var semua = _devSemua_(), out = [];
-    for (var i = 0; i < semua.length; i++) out.push({
-      deviceToken: semua[i].deviceToken,
-      username: semua[i].username || "",
-      perangkat: semua[i].perangkat || "",
-      dibuatPada: semua[i].dibuatPada ? new Date(Number(semua[i].dibuatPada)).toISOString() : "",
-      terakhirDipakai: semua[i].terakhirDipakai ? new Date(Number(semua[i].terakhirDipakai)).toISOString() : "",
+    var semua = _devSemua_(),
+      out = [];
+    for (var i = 0; i < semua.length; i++)
+      out.push({
+        deviceToken: semua[i].deviceToken,
+        username: semua[i].username || "",
+        perangkat: semua[i].perangkat || "",
+        dibuatPada: semua[i].dibuatPada
+          ? new Date(Number(semua[i].dibuatPada)).toISOString()
+          : "",
+        terakhirDipakai: semua[i].terakhirDipakai
+          ? new Date(Number(semua[i].terakhirDipakai)).toISOString()
+          : "",
+      });
+    out.sort(function (a, b) {
+      return String(a.username).localeCompare(String(b.username));
     });
-    out.sort(function (a, b) { return String(a.username).localeCompare(String(b.username)); });
     return { success: true, jumlah: out.length, perangkat: out };
-  } catch (e) { return { success: false, message: e.message }; }
+  } catch (e) {
+    return { success: false, message: e.message };
+  }
 }
 
 function cabutPerangkat(token, deviceToken, username) {
@@ -209,30 +266,45 @@ function cabutPerangkat(token, deviceToken, username) {
     deviceToken = String(deviceToken || "").trim();
     username = String(username || "").trim();
     if (deviceToken) {
-      if (!_devBaca_(deviceToken)) return { success: false, message: "Perangkat tidak ditemukan." };
+      if (!_devBaca_(deviceToken))
+        return { success: false, message: "Perangkat tidak ditemukan." };
       _devHapus_(deviceToken);
       return { success: true, dicabut: 1 };
     }
     if (username) {
-      var semua = _devSemua_(), n = 0;
+      var semua = _devSemua_(),
+        n = 0;
       for (var i = 0; i < semua.length; i++) {
-        if (String(semua[i].username || "").toLowerCase() === username.toLowerCase()) {
-          _devHapus_(semua[i].deviceToken); n++;
+        if (
+          String(semua[i].username || "").toLowerCase() ===
+          username.toLowerCase()
+        ) {
+          _devHapus_(semua[i].deviceToken);
+          n++;
         }
       }
       return { success: true, dicabut: n, username: username };
     }
-    return { success: false, message: "Sertakan deviceToken atau username yang ingin dicabut." };
-  } catch (e) { return { success: false, message: e.message }; }
+    return {
+      success: false,
+      message: "Sertakan deviceToken atau username yang ingin dicabut.",
+    };
+  } catch (e) {
+    return { success: false, message: e.message };
+  }
 }
 
 function bersihkanPerangkatTerlantar(hari) {
   var batasHari = Number(hari || 365);
   var batas = Date.now() - batasHari * 86400000;
-  var semua = _devSemua_(), n = 0;
+  var semua = _devSemua_(),
+    n = 0;
   for (var i = 0; i < semua.length; i++) {
     var pakai = Number(semua[i].terakhirDipakai || semua[i].dibuatPada || 0);
-    if (pakai && pakai < batas) { _devHapus_(semua[i].deviceToken); n++; }
+    if (pakai && pakai < batas) {
+      _devHapus_(semua[i].deviceToken);
+      n++;
+    }
   }
   return { success: true, dihapus: n };
 }
@@ -253,27 +325,41 @@ function authPerangkatRouter_(e, body) {
         hasil = cekPerangkat((body && body.deviceToken) || p.deviceToken);
         break;
       case "logoutPerangkat":
-        hasil = logoutPerangkat((body && body.deviceToken) || p.deviceToken,
-          (body && body.token) || p.token);
+        hasil = logoutPerangkat(
+          (body && body.deviceToken) || p.deviceToken,
+          (body && body.token) || p.token,
+        );
         break;
       case "daftarPerangkat":
         hasil = daftarPerangkat((body && body.token) || p.token);
         break;
       case "cabutPerangkat":
-        hasil = cabutPerangkat((body && body.token) || p.token,
+        hasil = cabutPerangkat(
+          (body && body.token) || p.token,
           (body && body.deviceToken) || p.deviceToken,
-          (body && body.username) || p.username);
+          (body && body.username) || p.username,
+        );
         break;
       case "getMasterGarduMobile":
         if (body && body.mode === "update") {
-          hasil = typeof updateMasterGarduMobile === "function"
-            ? updateMasterGarduMobile(body.token, body.payload || {})
-            : { success: false, message: "Master-Gardu-Sync-Mobile.js belum terpasang." };
+          hasil =
+            typeof updateMasterGarduMobile === "function"
+              ? updateMasterGarduMobile(body.token, body.payload || {})
+              : {
+                  success: false,
+                  message: "Master-Gardu-Sync-Mobile.js belum terpasang.",
+                };
         } else {
-          hasil = typeof getMasterGarduMobile === "function"
-            ? getMasterGarduMobile((body && body.token) || p.token,
-                (body && body.ulp) || p.ulp)
-            : { success: false, message: "Master-Gardu-Mobile.js belum terpasang." };
+          hasil =
+            typeof getMasterGarduMobile === "function"
+              ? getMasterGarduMobile(
+                  (body && body.token) || p.token,
+                  (body && body.ulp) || p.ulp,
+                )
+              : {
+                  success: false,
+                  message: "Master-Gardu-Mobile.js belum terpasang.",
+                };
         }
         break;
       default:

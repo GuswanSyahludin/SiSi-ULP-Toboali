@@ -1,70 +1,271 @@
 <style>
-  :root{ --primary-lt:#eff6ff; --gray:#64748b; --radius:10px; }
-  [data-theme="dark"]{ --primary-lt:#16233d; --gray:#93a4c0; }
+  :root {
+    --primary-lt: #eff6ff;
+    --gray: #64748b;
+    --radius: 10px;
+  }
+  [data-theme="dark"] {
+    --primary-lt: #16233d;
+    --gray: #93a4c0;
+  }
 
-  body{ background-color:var(--bg); background-image:url('https://drive.google.com/thumbnail?id=1rfN5LJOjjx0t-rjuLquBe6Qsx7hfcqqV&sz=w1920'); background-size:cover; background-position:center; background-attachment:fixed; color:var(--text); font-family:'Segoe UI',sans-serif; font-size:14px; }
-  [data-theme="dark"] body, body[data-theme="dark"]{ background-image:url('https://drive.google.com/thumbnail?id=1T76yS2vAnMufKEKkhQie2zZ4AYVIn1tD&sz=w1920'); }
+  body {
+    background-color: var(--bg);
+    background-image: url("https://drive.google.com/thumbnail?id=1rfN5LJOjjx0t-rjuLquBe6Qsx7hfcqqV&sz=w1920");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    color: var(--text);
+    font-family: "Segoe UI", sans-serif;
+    font-size: 14px;
+  }
+  [data-theme="dark"] body,
+  body[data-theme="dark"] {
+    background-image: url("https://drive.google.com/thumbnail?id=1T76yS2vAnMufKEKkhQie2zZ4AYVIn1tD&sz=w1920");
+  }
 
-  .td-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;}
-  .td-header h2{margin:0;font-size:17px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;}
-  .td-header h2 i{color:var(--primary);}
+  .td-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .td-header h2 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .td-header h2 i {
+    color: var(--primary);
+  }
 
-  .td-container{padding:8px;}
+  .td-container {
+    padding: 8px;
+  }
 
   /* Filter bar */
-  .td-filter{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
-    padding:10px 14px;margin-bottom:10px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;}
-  .td-field{display:flex;flex-direction:column;gap:5px;}
-  .td-field label{font-size:11px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.03em;}
-  .td-field input,.td-field select{
-    border:1.5px solid var(--border);border-radius:8px;padding:7px 12px;
-    font-size:13px;min-width:140px;background:var(--surface);color:var(--text);outline:none;
-    transition:border-color .15s,box-shadow .15s;}
-  .td-field input:focus,.td-field select:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(30,58,138,.12);}
-  [data-theme="dark"] .td-field input:focus,[data-theme="dark"] .td-field select:focus{box-shadow:0 0 0 3px rgba(41,227,255,.15);}
-  .td-btn-filter{background:var(--primary);color:var(--on-primary);border:none;border-radius:8px;
-    padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
-    transition:filter .15s;}
-  .td-btn-filter:hover{filter:brightness(1.08);}
-  .td-btn-reset{background:var(--surface-2);color:var(--gray);border:1.5px solid var(--border);
-    border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
-  .td-btn-reset:hover{background:var(--surface-3);color:var(--text-2);}
+  .td-filter {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    margin-bottom: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: flex-end;
+  }
+  .td-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .td-field label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--gray);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .td-field input,
+  .td-field select {
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 7px 12px;
+    font-size: 13px;
+    min-width: 140px;
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+    transition:
+      border-color 0.15s,
+      box-shadow 0.15s;
+  }
+  .td-field input:focus,
+  .td-field select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.12);
+  }
+  [data-theme="dark"] .td-field input:focus,
+  [data-theme="dark"] .td-field select:focus {
+    box-shadow: 0 0 0 3px rgba(41, 227, 255, 0.15);
+  }
+  .td-btn-filter {
+    background: var(--primary);
+    color: var(--on-primary);
+    border: none;
+    border-radius: 8px;
+    padding: 8px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: filter 0.15s;
+  }
+  .td-btn-filter:hover {
+    filter: brightness(1.08);
+  }
+  .td-btn-reset {
+    background: var(--surface-2);
+    color: var(--gray);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .td-btn-reset:hover {
+    background: var(--surface-3);
+    color: var(--text-2);
+  }
 
   /* Stat cards */
-  .td-stats{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px;}
-  .td-stat{flex:1 1 130px;display:flex;align-items:center;gap:10px;background:var(--surface);
-    border:1px solid var(--border);border-radius:10px;padding:10px 14px;transition:transform .15s,box-shadow .15s;}
-  .td-stat:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);}
-  .td-stat-ic{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
-  .td-stat-meta{display:flex;flex-direction:column;line-height:1.2;}
-  .td-stat-num{font-size:18px;font-weight:800;color:var(--text);}
-  .td-stat-lbl{font-size:10px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.02em;}
-  .td-stat.petugas .td-stat-ic{background:var(--primary-lt);color:var(--primary);}
-  .td-stat.p0 .td-stat-ic{background:rgba(91,140,255,.16);color:var(--info);}
-  .td-stat.point .td-stat-ic{background:rgba(34,197,94,.16);color:var(--success);}
+  .td-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .td-stat {
+    flex: 1 1 130px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    transition:
+      transform 0.15s,
+      box-shadow 0.15s;
+  }
+  .td-stat:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+  .td-stat-ic {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+  .td-stat-meta {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+  }
+  .td-stat-num {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text);
+  }
+  .td-stat-lbl {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--gray);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+  .td-stat.petugas .td-stat-ic {
+    background: var(--primary-lt);
+    color: var(--primary);
+  }
+  .td-stat.p0 .td-stat-ic {
+    background: rgba(91, 140, 255, 0.16);
+    color: var(--info);
+  }
+  .td-stat.point .td-stat-ic {
+    background: rgba(34, 197, 94, 0.16);
+    color: var(--success);
+  }
 
   /* Chart card */
-  .td-chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
-    overflow:hidden;margin-bottom:16px;}
-  .td-chart-head{display:flex;align-items:center;gap:10px;padding:14px 18px;
-    background:var(--surface-2);border-bottom:1px solid var(--border);}
-  .td-chart-head i{font-size:18px;color:var(--primary);}
-  .td-chart-head .ttl{font-weight:700;color:var(--text);font-size:15px;}
-  .td-chart-head .sub{font-size:12px;color:var(--gray);margin-left:auto;}
-  .td-chart-body{padding:12px 14px;position:relative;}
-  .td-chart-wrap{position:relative;height:300px;width:100%;}
+  .td-chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .td-chart-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 18px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+  }
+  .td-chart-head i {
+    font-size: 18px;
+    color: var(--primary);
+  }
+  .td-chart-head .ttl {
+    font-weight: 700;
+    color: var(--text);
+    font-size: 15px;
+  }
+  .td-chart-head .sub {
+    font-size: 12px;
+    color: var(--gray);
+    margin-left: auto;
+  }
+  .td-chart-body {
+    padding: 12px 14px;
+    position: relative;
+  }
+  .td-chart-wrap {
+    position: relative;
+    height: 300px;
+    width: 100%;
+  }
 
   /* Empty / loading */
-  .td-empty{text-align:center;padding:60px 20px;color:var(--gray);}
-  .td-empty i{font-size:40px;margin-bottom:12px;display:block;color:var(--text-muted);}
-  .td-empty p{font-size:14px;margin:0;}
-  .td-loading{text-align:center;padding:60px 20px;color:var(--gray);}
-  .td-loading i{font-size:32px;margin-bottom:12px;display:block;color:var(--primary);}
-
-  </style>
+  .td-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--gray);
+  }
+  .td-empty i {
+    font-size: 40px;
+    margin-bottom: 12px;
+    display: block;
+    color: var(--text-muted);
+  }
+  .td-empty p {
+    font-size: 14px;
+    margin: 0;
+  }
+  .td-loading {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--gray);
+  }
+  .td-loading i {
+    font-size: 32px;
+    margin-bottom: 12px;
+    display: block;
+    color: var(--primary);
+  }
+</style>
 
 <div class="td-header">
-  <h2><i class="fa-solid fa-ranking-star"></i> Dashboard Point Petugas Yandal</h2>
+  <h2>
+    <i class="fa-solid fa-ranking-star"></i> Dashboard Point Petugas Yandal
+  </h2>
 </div>
 
 <div class="td-container">
@@ -72,25 +273,31 @@
   <div class="td-filter">
     <div class="td-field">
       <label>Tgl Dari</label>
-      <input type="date" id="td_dari"/>
+      <input type="date" id="td_dari" />
     </div>
     <div class="td-field">
       <label>Tgl Sampai</label>
-      <input type="date" id="td_sampai"/>
+      <input type="date" id="td_sampai" />
     </div>
-    <div class="td-field" id="tdWrapUlp" style="display:none">
+    <div class="td-field" id="tdWrapUlp" style="display: none">
       <label>ULP</label>
-      <select id="td_ulp"><option value="">Semua ULP</option></select>
+      <select id="td_ulp">
+        <option value="">Semua ULP</option>
+      </select>
     </div>
-    <button class="td-btn-filter" onclick="tdMuat()"><i class="fa-solid fa-magnifying-glass"></i> Muat</button>
-    <button class="td-btn-reset" onclick="tdReset()"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+    <button class="td-btn-filter" onclick="tdMuat()">
+      <i class="fa-solid fa-magnifying-glass"></i> Muat
+    </button>
+    <button class="td-btn-reset" onclick="tdReset()">
+      <i class="fa-solid fa-rotate-left"></i> Reset
+    </button>
   </div>
 
   <!-- Stat cards -->
-  <div class="td-stats" id="tdStats" style="display:none"></div>
+  <div class="td-stats" id="tdStats" style="display: none"></div>
 
   <!-- Chart card -->
-  <div class="td-chart-card" id="tdChartCard" style="display:none">
+  <div class="td-chart-card" id="tdChartCard" style="display: none">
     <div class="td-chart-head">
       <i class="fa-solid fa-chart-column"></i>
       <span class="ttl">Top 10 Petugas (Total Point Approved)</span>
@@ -104,13 +311,13 @@
   </div>
 
   <!-- Empty state -->
-  <div class="td-empty" id="tdEmpty" style="display:none">
+  <div class="td-empty" id="tdEmpty" style="display: none">
     <i class="fa-solid fa-inbox"></i>
     <p>Atur rentang tanggal lalu klik Muat untuk menampilkan dashboard.</p>
   </div>
 
   <!-- Loading state -->
-  <div class="td-loading" id="tdLoading" style="display:none">
+  <div class="td-loading" id="tdLoading" style="display: none">
     <i class="fa-solid fa-spinner fa-spin"></i>
     <p>Memuat data...</p>
   </div>
@@ -120,292 +327,418 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
 <script>
-var _tdSession = {};
-var _tdIsSuperAdmin = false;
-var _tdChart = null;
+  var _tdSession = {};
+  var _tdIsSuperAdmin = false;
+  var _tdChart = null;
 
-function _tdEl(id){ return document.getElementById(id); }
-
-function _tdBoot(){
-  // Sesi: utamakan window.__SISI_SESI__ (di-set Main saat _loadPage)
-  var sesi = window.__SISI_SESI__ || {};
-  _tdSession = sesi;
-  _tdIsSuperAdmin = (['Super User','Admin'].indexOf(String(sesi.role || '').trim()) !== -1);
-
-  // Tampilkan filter ULP hanya untuk Super User / Admin
-  var ulpWrap = _tdEl('tdWrapUlp');
-  if(ulpWrap) ulpWrap.style.display = _tdIsSuperAdmin ? 'flex' : 'none';
-  if(_tdIsSuperAdmin) _tdLoadListUlp();
-
-  // Default rentang: awal bulan s/d hari ini
-  var today   = new Date();
-  var tglAwal = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-  var tglAkhr = today.toISOString().split('T')[0];
-  if(_tdEl('td_dari'))   _tdEl('td_dari').value   = tglAwal;
-  if(_tdEl('td_sampai')) _tdEl('td_sampai').value = tglAkhr;
-
-  // Auto-load saat pertama dibuka
-  setTimeout(tdMuat, 200);
-}
-
-if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _tdBoot);
-else _tdBoot();
-
-// Load ULP list (Super User only)
-function _tdLoadListUlp(){
-  if(typeof google === 'undefined') return;
-  google.script.run.withSuccessHandler(function(list){
-    var sel = _tdEl('td_ulp'); if(!sel) return;
-    sel.innerHTML = '<option value="">Semua ULP</option>';
-    (list||[]).forEach(function(u){ sel.innerHTML += '<option value="'+u+'">'+u+'</option>'; });
-  }).getListUlpIns();
-}
-
-// ULP untukfilter
-function _tdUlp(){
-  return _tdIsSuperAdmin ? (_tdEl('td_ulp') ? _tdEl('td_ulp').value : '') : (_tdSession.ulp || '');
-}
-
-// Load data chart
-function tdMuat(){
-  var dari   = _tdEl('td_dari')   ? _tdEl('td_dari').value   : '';
-  var sampai = _tdEl('td_sampai') ? _tdEl('td_sampai').value : '';
-  if(!dari || !sampai){ tdToast('Atur rentang tanggal dulu.', 'error'); return; }
-  if(dari > sampai){ tdToast('Tgl Dari tidak boleh melebihi Tgl Sampai.', 'error'); return; }
-
-  // Tampilkan loading
-  _tdEl('tdLoading').style.display = 'block';
-  _tdEl('tdEmpty').style.display   = 'none';
-  _tdEl('tdChartCard').style.display = 'none';
-  _tdEl('tdStats').style.display     = 'none';
-
-  if(typeof google === 'undefined'){
-    _tdEl('tdLoading').style.display = 'none';
-    _tdEl('tdEmpty').style.display = 'block';
-    _tdEl('tdEmpty').innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><p>Mode preview — google.script tidak tersedia.</p>';
-    return;
+  function _tdEl(id) {
+    return document.getElementById(id);
   }
 
-  google.script.run
-    .withSuccessHandler(_tdRender)
-    .withFailureHandler(function(err){
-      _tdEl('tdLoading').style.display = 'none';
-      _tdEl('tdEmpty').style.display = 'block';
-      _tdEl('tdEmpty').innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color:var(--danger)"></i><p>' + ((err && err.message) || err) + '</p>';
-    })
-    .getRekapPointPetugasY({ tglAwal: dari, tglAkhir: sampai, ulp: _tdUlp() });
-}
+  function _tdBoot() {
+    // Sesi: utamakan window.__SISI_SESI__ (di-set Main saat _loadPage)
+    var sesi = window.__SISI_SESI__ || {};
+    _tdSession = sesi;
+    _tdIsSuperAdmin =
+      ["Super User", "Admin"].indexOf(String(sesi.role || "").trim()) !== -1;
 
-// Render chart + stats
-function _tdRender(res){
-  _tdEl('tdLoading').style.display = 'none';
-  if(!res || !res.ok){
-    _tdEl('tdEmpty').style.display = 'block';
-    _tdEl('tdEmpty').innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color:var(--danger)"></i><p>' + ((res && res.error) || 'Gagal memuat data') + '</p>';
-    return;
-  }
-  var list = res.list || [];
-  if(!list.length){
-    _tdEl('tdEmpty').style.display = 'block';
-    _tdEl('tdEmpty').innerHTML = '<i class="fa-solid fa-inbox"></i><p>Tidak ada data point pada rentang tanggal ini.</p>';
-    return;
-  }
+    // Tampilkan filter ULP hanya untuk Super User / Admin
+    var ulpWrap = _tdEl("tdWrapUlp");
+    if (ulpWrap) ulpWrap.style.display = _tdIsSuperAdmin ? "flex" : "none";
+    if (_tdIsSuperAdmin) _tdLoadListUlp();
 
-  // Top 10 only
-  var top10 = list.slice(0, 10);
-  var maxPoint = top10.length ? top10[0].totalPoint : 0;
+    // Default rentang: awal bulan s/d hari ini
+    var today = new Date();
+    var tglAwal = new Date(today.getFullYear(), today.getMonth(), 1)
+      .toISOString()
+      .split("T")[0];
+    var tglAkhr = today.toISOString().split("T")[0];
+    if (_tdEl("td_dari")) _tdEl("td_dari").value = tglAwal;
+    if (_tdEl("td_sampai")) _tdEl("td_sampai").value = tglAkhr;
 
-  // Render stat cards
-  var statsEl = _tdEl('tdStats');
-  if(statsEl){
-    statsEl.style.display = 'flex';
-    statsEl.innerHTML =
-      _tdStat('fa-users', 'Petugas', res.jumlahPetugas || 0, 'petugas')
-      + _tdStat('fa-list-check', 'Total P0 (Approved)', res.totalBarisP0 || 0, 'p0')
-      + _tdStat('fa-star', 'Total Point', res.totalPoint || 0, 'point');
+    // Auto-load saat pertama dibuka
+    setTimeout(tdMuat, 200);
   }
 
-  // Chart subtitle
-  var subEl = _tdEl('tdChartSub');
-  if(subEl){
-    var dariTxt = _tdFmtTgl(_tdEl('td_dari').value);
-    var sampTxt = _tdFmtTgl(_tdEl('td_sampai').value);
-    subEl.textContent = dariTxt + ' — ' + sampTxt + (_tdUlp() ? ' • ULP: ' + _tdUlp() : '');
+  if (document.readyState === "loading")
+    document.addEventListener("DOMContentLoaded", _tdBoot);
+  else _tdBoot();
+
+  // Load ULP list (Super User only)
+  function _tdLoadListUlp() {
+    if (typeof google === "undefined") return;
+    google.script.run
+      .withSuccessHandler(function (list) {
+        var sel = _tdEl("td_ulp");
+        if (!sel) return;
+        sel.innerHTML = '<option value="">Semua ULP</option>';
+        (list || []).forEach(function (u) {
+          sel.innerHTML += '<option value="' + u + '">' + u + "</option>";
+        });
+      })
+      .getListUlpIns();
   }
 
-  // Render bar chart
-  _tdRenderChart(top10);
+  // ULP untukfilter
+  function _tdUlp() {
+    return _tdIsSuperAdmin
+      ? _tdEl("td_ulp")
+        ? _tdEl("td_ulp").value
+        : ""
+      : _tdSession.ulp || "";
+  }
 
-  // Show cards
-  _tdEl('tdChartCard').style.display = 'block';
-}
+  // Load data chart
+  function tdMuat() {
+    var dari = _tdEl("td_dari") ? _tdEl("td_dari").value : "";
+    var sampai = _tdEl("td_sampai") ? _tdEl("td_sampai").value : "";
+    if (!dari || !sampai) {
+      tdToast("Atur rentang tanggal dulu.", "error");
+      return;
+    }
+    if (dari > sampai) {
+      tdToast("Tgl Dari tidak boleh melebihi Tgl Sampai.", "error");
+      return;
+    }
 
-function _tdRenderChart(top10){
-  var canvas = _tdEl('tdChart');
-  if(!canvas || typeof Chart === 'undefined') return;
+    // Tampilkan loading
+    _tdEl("tdLoading").style.display = "block";
+    _tdEl("tdEmpty").style.display = "none";
+    _tdEl("tdChartCard").style.display = "none";
+    _tdEl("tdStats").style.display = "none";
 
-  // Destroy chart sebelumnya bila ada
-  if(_tdChart){ _tdChart.destroy(); _tdChart = null; }
+    if (typeof google === "undefined") {
+      _tdEl("tdLoading").style.display = "none";
+      _tdEl("tdEmpty").style.display = "block";
+      _tdEl("tdEmpty").innerHTML =
+        '<i class="fa-solid fa-triangle-exclamation"></i><p>Mode preview — google.script tidak tersedia.</p>';
+      return;
+    }
 
-  var labels = top10.map(function(r){ return r.petugas || '-'; });
-  var pointData = top10.map(function(r){ return r.totalPoint || 0; });
+    google.script.run
+      .withSuccessHandler(_tdRender)
+      .withFailureHandler(function (err) {
+        _tdEl("tdLoading").style.display = "none";
+        _tdEl("tdEmpty").style.display = "block";
+        _tdEl("tdEmpty").innerHTML =
+          '<i class="fa-solid fa-triangle-exclamation" style="color:var(--danger)"></i><p>' +
+          ((err && err.message) || err) +
+          "</p>";
+      })
+      .getRekapPointPetugasY({
+        tglAwal: dari,
+        tglAkhir: sampai,
+        ulp: _tdUlp(),
+      });
+  }
 
-  // Tema warna
-  var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-  var textColor = isDark ? '#93a4c0' : '#64748b';
-  var gridColor  = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.06)';
-  var barColors = top10.map(function(r, i){
-    if(i === 0) return isDark ? 'rgba(251,191,36,.85)' : 'rgba(245,166,35,.85)';
-    if(i === 1) return isDark ? 'rgba(203,213,225,.85)' : 'rgba(148,163,184,.85)';
-    if(i === 2) return isDark ? 'rgba(217,119,6,.85)' : 'rgba(180,83,9,.85)';
-    return isDark ? 'rgba(41,227,255,.75)' : 'rgba(30,58,138,.75)';
-  });
-  var barBorders = top10.map(function(r, i){
-    if(i === 0) return isDark ? '#fbbf24' : '#f59e0b';
-    if(i === 1) return isDark ? '#cbd5e1' : '#94a3b8';
-    if(i === 2) return isDark ? '#d97706' : '#b45309';
-    return isDark ? '#29E3FF' : '#1e3a8a';
-  });
+  // Render chart + stats
+  function _tdRender(res) {
+    _tdEl("tdLoading").style.display = "none";
+    if (!res || !res.ok) {
+      _tdEl("tdEmpty").style.display = "block";
+      _tdEl("tdEmpty").innerHTML =
+        '<i class="fa-solid fa-triangle-exclamation" style="color:var(--danger)"></i><p>' +
+        ((res && res.error) || "Gagal memuat data") +
+        "</p>";
+      return;
+    }
+    var list = res.list || [];
+    if (!list.length) {
+      _tdEl("tdEmpty").style.display = "block";
+      _tdEl("tdEmpty").innerHTML =
+        '<i class="fa-solid fa-inbox"></i><p>Tidak ada data point pada rentang tanggal ini.</p>';
+      return;
+    }
 
-  _tdChart = new Chart(canvas, {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: 'Total Point (Approved)',
-        data: pointData,
-        backgroundColor: barColors,
-        borderColor: barBorders,
-        borderWidth: 1.5,
-        borderRadius: 8,
-        borderSkipped: false,
-        barPercentage: 0.7,
-        categoryPercentage: 0.8
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: {
-          grid: { display: false },
-          ticks: {
-            color: textColor,
-            font: { size: 11, weight: '600' },
-            maxRotation: 45,
-            minRotation: 30,
-            autoSkip: false
+    // Top 10 only
+    var top10 = list.slice(0, 10);
+    var maxPoint = top10.length ? top10[0].totalPoint : 0;
+
+    // Render stat cards
+    var statsEl = _tdEl("tdStats");
+    if (statsEl) {
+      statsEl.style.display = "flex";
+      statsEl.innerHTML =
+        _tdStat("fa-users", "Petugas", res.jumlahPetugas || 0, "petugas") +
+        _tdStat(
+          "fa-list-check",
+          "Total P0 (Approved)",
+          res.totalBarisP0 || 0,
+          "p0",
+        ) +
+        _tdStat("fa-star", "Total Point", res.totalPoint || 0, "point");
+    }
+
+    // Chart subtitle
+    var subEl = _tdEl("tdChartSub");
+    if (subEl) {
+      var dariTxt = _tdFmtTgl(_tdEl("td_dari").value);
+      var sampTxt = _tdFmtTgl(_tdEl("td_sampai").value);
+      subEl.textContent =
+        dariTxt + " — " + sampTxt + (_tdUlp() ? " • ULP: " + _tdUlp() : "");
+    }
+
+    // Render bar chart
+    _tdRenderChart(top10);
+
+    // Show cards
+    _tdEl("tdChartCard").style.display = "block";
+  }
+
+  function _tdRenderChart(top10) {
+    var canvas = _tdEl("tdChart");
+    if (!canvas || typeof Chart === "undefined") return;
+
+    // Destroy chart sebelumnya bila ada
+    if (_tdChart) {
+      _tdChart.destroy();
+      _tdChart = null;
+    }
+
+    var labels = top10.map(function (r) {
+      return r.petugas || "-";
+    });
+    var pointData = top10.map(function (r) {
+      return r.totalPoint || 0;
+    });
+
+    // Tema warna
+    var isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    var textColor = isDark ? "#93a4c0" : "#64748b";
+    var gridColor = isDark ? "rgba(255,255,255,.06)" : "rgba(0,0,0,.06)";
+    var barColors = top10.map(function (r, i) {
+      if (i === 0)
+        return isDark ? "rgba(251,191,36,.85)" : "rgba(245,166,35,.85)";
+      if (i === 1)
+        return isDark ? "rgba(203,213,225,.85)" : "rgba(148,163,184,.85)";
+      if (i === 2) return isDark ? "rgba(217,119,6,.85)" : "rgba(180,83,9,.85)";
+      return isDark ? "rgba(41,227,255,.75)" : "rgba(30,58,138,.75)";
+    });
+    var barBorders = top10.map(function (r, i) {
+      if (i === 0) return isDark ? "#fbbf24" : "#f59e0b";
+      if (i === 1) return isDark ? "#cbd5e1" : "#94a3b8";
+      if (i === 2) return isDark ? "#d97706" : "#b45309";
+      return isDark ? "#29E3FF" : "#1e3a8a";
+    });
+
+    _tdChart = new Chart(canvas, {
+      type: "bar",
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: "Total Point (Approved)",
+            data: pointData,
+            backgroundColor: barColors,
+            borderColor: barBorders,
+            borderWidth: 1.5,
+            borderRadius: 8,
+            borderSkipped: false,
+            barPercentage: 0.7,
+            categoryPercentage: 0.8,
           },
-          title: { display: true, text: 'Petugas', color: textColor, font: { size: 13, weight: '700' } }
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: {
+              color: textColor,
+              font: { size: 11, weight: "600" },
+              maxRotation: 45,
+              minRotation: 30,
+              autoSkip: false,
+            },
+            title: {
+              display: true,
+              text: "Petugas",
+              color: textColor,
+              font: { size: 13, weight: "700" },
+            },
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: gridColor, drawBorder: false },
+            ticks: {
+              color: textColor,
+              font: { size: 12, weight: "600" },
+              precision: 0,
+            },
+            title: {
+              display: true,
+              text: "Total Point (Approved)",
+              color: textColor,
+              font: { size: 13, weight: "700" },
+            },
+          },
         },
-        y: {
-          beginAtZero: true,
-          grid: { color: gridColor, drawBorder: false },
-          ticks: { color: textColor, font: { size: 12, weight: '600' }, precision: 0 },
-          title: { display: true, text: 'Total Point (Approved)', color: textColor, font: { size: 13, weight: '700' } }
-        }
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: isDark ? "#111a2e" : "#1e3a8a",
+            titleColor: "#fff",
+            bodyColor: "#fff",
+            borderColor: isDark ? "#29E3FF" : "#2563eb",
+            borderWidth: 1,
+            cornerRadius: 10,
+            padding: 12,
+            titleFont: { size: 14, weight: "700" },
+            bodyFont: { size: 13 },
+            callbacks: {
+              label: function (ctx) {
+                var idx = ctx.dataIndex;
+                var r = top10[idx];
+                return [
+                  "Total Point: " + (r.totalPoint || 0),
+                  "Jumlah P0: " + (r.jumlahP0 || 0),
+                  "Rata-rata: " + (r.rataRata != null ? r.rataRata : "-"),
+                ];
+              },
+            },
+          },
+        },
+        animation: { duration: 800, easing: "easeOutQuart" },
       },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: isDark ? '#111a2e' : '#1e3a8a',
-          titleColor: '#fff',
-          bodyColor: '#fff',
-          borderColor: isDark ? '#29E3FF' : '#2563eb',
-          borderWidth: 1,
-          cornerRadius: 10,
-          padding: 12,
-          titleFont: { size: 14, weight: '700' },
-          bodyFont: { size: 13 },
-          callbacks: {
-            label: function(ctx){
-              var idx = ctx.dataIndex;
-              var r = top10[idx];
-              return [
-                'Total Point: ' + (r.totalPoint || 0),
-                'Jumlah P0: ' + (r.jumlahP0 || 0),
-                'Rata-rata: ' + (r.rataRata != null ? r.rataRata : '-')
-              ];
-            }
-          }
-        }
-      },
-      animation: { duration: 800, easing: 'easeOutQuart' }
+    });
+  }
+
+  function _tdStat(icon, label, num, cls) {
+    return (
+      '<div class="td-stat ' +
+      cls +
+      '">' +
+      '<div class="td-stat-ic"><i class="fa-solid ' +
+      icon +
+      '"></i></div>' +
+      '<div class="td-stat-meta">' +
+      '<span class="td-stat-num">' +
+      (Number(num) || 0) +
+      "</span>" +
+      '<span class="td-stat-lbl">' +
+      label +
+      "</span>" +
+      "</div></div>"
+    );
+  }
+
+  function tdReset() {
+    var today = new Date();
+    var tglAwal = new Date(today.getFullYear(), today.getMonth(), 1)
+      .toISOString()
+      .split("T")[0];
+    var tglAkhr = today.toISOString().split("T")[0];
+    if (_tdEl("td_dari")) _tdEl("td_dari").value = tglAwal;
+    if (_tdEl("td_sampai")) _tdEl("td_sampai").value = tglAkhr;
+    if (_tdEl("td_ulp")) _tdEl("td_ulp").value = "";
+    tdMuat();
+  }
+
+  function _tdFmtTgl(tgl) {
+    if (!tgl) return "-";
+    var d = new Date(tgl);
+    if (isNaN(d)) return tgl;
+    var bln = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "Mei",
+      "Jun",
+      "Jul",
+      "Agu",
+      "Sep",
+      "Okt",
+      "Nov",
+      "Des",
+    ];
+    return d.getDate() + " " + bln[d.getMonth()] + " " + d.getFullYear();
+  }
+
+  function _tdEsc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function tdToast(msg, type) {
+    if (typeof showToast === "function") {
+      showToast(msg, type || "warning");
+      return;
+    }
+    // Fallback toast sederhana
+    var t = document.createElement("div");
+    t.style.cssText =
+      "position:fixed;bottom:24px;right:24px;z-index:9999;" +
+      "display:flex;align-items:center;gap:10px;" +
+      "background:" +
+      (type === "error" ? "rgba(220,38,38,.15)" : "rgba(245,166,35,.15)") +
+      ";" +
+      "border:1.5px solid " +
+      (type === "error" ? "var(--danger)" : "var(--warning)") +
+      ";" +
+      "color:" +
+      (type === "error" ? "var(--danger)" : "var(--warning)") +
+      ";" +
+      "padding:12px 18px;border-radius:10px;font-size:.87rem;font-weight:600;" +
+      "box-shadow:0 4px 16px rgba(0,0,0,.12);max-width:340px;animation:toastIn .2s ease";
+    t.innerHTML =
+      '<i class="fa-solid ' +
+      (type === "error" ? "fa-circle-xmark" : "fa-triangle-exclamation") +
+      '"></i><span>' +
+      _tdEsc(msg) +
+      "</span>";
+    document.body.appendChild(t);
+    setTimeout(function () {
+      if (t.parentNode) t.remove();
+    }, 3500);
+  }
+
+  // Re-render chart saat tema berganti
+  var _tdThemeObserver = new MutationObserver(function () {
+    if (_tdChart && _tdEl("tdChartCard").style.display !== "none") {
+      var isDark =
+        document.documentElement.getAttribute("data-theme") === "dark";
+      var textColor = isDark ? "#93a4c0" : "#64748b";
+      var gridColor = isDark ? "rgba(255,255,255,.06)" : "rgba(0,0,0,.06)";
+      if (_tdChart.options.scales.x) {
+        _tdChart.options.scales.x.ticks.color = textColor;
+        _tdChart.options.scales.x.title.color = textColor;
+      }
+      if (_tdChart.options.scales.y) {
+        _tdChart.options.scales.y.ticks.color = textColor;
+        _tdChart.options.scales.y.grid.color = gridColor;
+        _tdChart.options.scales.y.title.color = textColor;
+      }
+      _tdChart.data.datasets[0].backgroundColor = _tdChart.data.labels.map(
+        function (_, i) {
+          if (i === 0)
+            return isDark ? "rgba(251,191,36,.85)" : "rgba(245,166,35,.85)";
+          if (i === 1)
+            return isDark ? "rgba(203,213,225,.85)" : "rgba(148,163,184,.85)";
+          if (i === 2)
+            return isDark ? "rgba(217,119,6,.85)" : "rgba(180,83,9,.85)";
+          return isDark ? "rgba(41,227,255,.75)" : "rgba(30,58,138,.75)";
+        },
+      );
+      _tdChart.data.datasets[0].borderColor = _tdChart.data.labels.map(
+        function (_, i) {
+          if (i === 0) return isDark ? "#fbbf24" : "#f59e0b";
+          if (i === 1) return isDark ? "#cbd5e1" : "#94a3b8";
+          if (i === 2) return isDark ? "#d97706" : "#b45309";
+          return isDark ? "#29E3FF" : "#1e3a8a";
+        },
+      );
+      _tdChart.update("none");
     }
   });
-}
-
-function _tdStat(icon, label, num, cls){
-  return '<div class="td-stat ' + cls + '">'
-    + '<div class="td-stat-ic"><i class="fa-solid ' + icon + '"></i></div>'
-    + '<div class="td-stat-meta">'
-    + '<span class="td-stat-num">' + (Number(num) || 0) + '</span>'
-    + '<span class="td-stat-lbl">' + label + '</span>'
-    + '</div></div>';
-}
-
-function tdReset(){
-  var today   = new Date();
-  var tglAwal = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-  var tglAkhr = today.toISOString().split('T')[0];
-  if(_tdEl('td_dari'))   _tdEl('td_dari').value   = tglAwal;
-  if(_tdEl('td_sampai')) _tdEl('td_sampai').value = tglAkhr;
-  if(_tdEl('td_ulp'))   _tdEl('td_ulp').value    = '';
-  tdMuat();
-}
-
-function _tdFmtTgl(tgl){
-  if(!tgl) return '-';
-  var d = new Date(tgl);
-  if(isNaN(d)) return tgl;
-  var bln = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-  return d.getDate() + ' ' + bln[d.getMonth()] + ' ' + d.getFullYear();
-}
-
-function _tdEsc(s){
-  return String(s == null ? '' : s)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-function tdToast(msg, type){
-  if(typeof showToast === 'function'){ showToast(msg, type || 'warning'); return; }
-  // Fallback toast sederhana
-  var t = document.createElement('div');
-  t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;'
-    + 'display:flex;align-items:center;gap:10px;'
-    + 'background:' + (type === 'error' ? 'rgba(220,38,38,.15)' : 'rgba(245,166,35,.15)') + ';'
-    + 'border:1.5px solid ' + (type === 'error' ? 'var(--danger)' : 'var(--warning)') + ';'
-    + 'color:' + (type === 'error' ? 'var(--danger)' : 'var(--warning)') + ';'
-    + 'padding:12px 18px;border-radius:10px;font-size:.87rem;font-weight:600;'
-    + 'box-shadow:0 4px 16px rgba(0,0,0,.12);max-width:340px;animation:toastIn .2s ease';
-  t.innerHTML = '<i class="fa-solid ' + (type === 'error' ? 'fa-circle-xmark' : 'fa-triangle-exclamation') + '"></i><span>' + _tdEsc(msg) + '</span>';
-  document.body.appendChild(t);
-  setTimeout(function(){ if(t.parentNode) t.remove(); }, 3500);
-}
-
-// Re-render chart saat tema berganti
-var _tdThemeObserver = new MutationObserver(function(){
-  if(_tdChart && _tdEl('tdChartCard').style.display !== 'none'){
-    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    var textColor = isDark ? '#93a4c0' : '#64748b';
-    var gridColor  = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.06)';
-    if(_tdChart.options.scales.x){ _tdChart.options.scales.x.ticks.color = textColor; _tdChart.options.scales.x.title.color = textColor; }
-    if(_tdChart.options.scales.y){ _tdChart.options.scales.y.ticks.color = textColor; _tdChart.options.scales.y.grid.color = gridColor; _tdChart.options.scales.y.title.color = textColor; }
-    _tdChart.data.datasets[0].backgroundColor = _tdChart.data.labels.map(function(_, i){
-      if(i === 0) return isDark ? 'rgba(251,191,36,.85)' : 'rgba(245,166,35,.85)';
-      if(i === 1) return isDark ? 'rgba(203,213,225,.85)' : 'rgba(148,163,184,.85)';
-      if(i === 2) return isDark ? 'rgba(217,119,6,.85)' : 'rgba(180,83,9,.85)';
-      return isDark ? 'rgba(41,227,255,.75)' : 'rgba(30,58,138,.75)';
-    });
-    _tdChart.data.datasets[0].borderColor = _tdChart.data.labels.map(function(_, i){
-      if(i === 0) return isDark ? '#fbbf24' : '#f59e0b';
-      if(i === 1) return isDark ? '#cbd5e1' : '#94a3b8';
-      if(i === 2) return isDark ? '#d97706' : '#b45309';
-      return isDark ? '#29E3FF' : '#1e3a8a';
-    });
-    _tdChart.update('none');
-  }
-});
-_tdThemeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  _tdThemeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["data-theme"],
+  });
 </script>

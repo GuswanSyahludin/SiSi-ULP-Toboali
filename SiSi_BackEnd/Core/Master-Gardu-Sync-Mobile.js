@@ -1,50 +1,101 @@
 /* Sinkron edit Master Gardu dari outbox Flutter ke tiga gsheet lewat updateHiUp3. */
 function updateMasterGarduMobile(token, payload) {
   try {
-    var sesi = getSesiByToken(String(token || '').trim());
-    if (!sesi) return { success: false, message: 'Sesi habis, buka aplikasi ulang.' };
-    var role = String(sesi.role || '').trim().toLowerCase();
-    var sub = String(sesi.subTim || '').trim().toLowerCase();
-    var boleh = role === 'super user' || role === 'admin' || sub === 'inspeksi gardu';
-    if (!boleh) return { success: false, message: 'Akses edit Gardu ditolak.' };
+    var sesi = getSesiByToken(String(token || "").trim());
+    if (!sesi)
+      return { success: false, message: "Sesi habis, buka aplikasi ulang." };
+    var role = String(sesi.role || "")
+      .trim()
+      .toLowerCase();
+    var sub = String(sesi.subTim || "")
+      .trim()
+      .toLowerCase();
+    var boleh =
+      role === "super user" || role === "admin" || sub === "inspeksi gardu";
+    if (!boleh) return { success: false, message: "Akses edit Gardu ditolak." };
 
     payload = payload || {};
-    var gardu = String(payload.gardu || '').trim();
-    if (!gardu) return { success: false, message: 'Nomor Gardu wajib.' };
+    var gardu = String(payload.gardu || "").trim();
+    if (!gardu) return { success: false, message: "Nomor Gardu wajib." };
 
-    var ulpSesi = String(sesi.ulp || '').trim();
-    var ulpPayload = String(payload.ulp || '').trim();
-    var targetUlp = role === 'super user' ? (ulpPayload || ulpSesi) : ulpSesi;
-    if (role !== 'super user' && ulpPayload &&
-        ulpPayload.toLowerCase() !== ulpSesi.toLowerCase())
-      return { success: false, message: 'ULP payload tidak sesuai sesi.' };
+    var ulpSesi = String(sesi.ulp || "").trim();
+    var ulpPayload = String(payload.ulp || "").trim();
+    var targetUlp = role === "super user" ? ulpPayload || ulpSesi : ulpSesi;
+    if (
+      role !== "super user" &&
+      ulpPayload &&
+      ulpPayload.toLowerCase() !== ulpSesi.toLowerCase()
+    )
+      return { success: false, message: "ULP payload tidak sesuai sesi." };
 
     var d = payload.data || {};
     var map = {
-      alamat: 'D', jenisGardu: 'K', merk: 'L', kapasitasKva: 'M', noSeri: 'N',
-      tahunTrafo: 'O', typeSeal: 'P', merkPhbTr: 'Q', nomorSeriPhbTr: 'R',
-      tahunPhbTr: 'S', jamUkurWbp: 'T', tanggalPengukuran: 'U', kepemilikan: 'V',
-      wbpRs: 'AB', wbpSt: 'AC', wbpTr: 'AD', wbpRn: 'AE', wbpSn: 'AF', wbpTn: 'AG',
-      wbpR: 'AH', wbpS: 'AI', wbpT: 'AJ', wbpN: 'AK',
-      lwbpRs: 'BE', lwbpSt: 'BF', lwbpTr: 'BG', lwbpRn: 'BH', lwbpSn: 'BI', lwbpTn: 'BJ',
-      lwbpR: 'BK', lwbpS: 'BL', lwbpT: 'BM', lwbpN: 'BN',
-      arusMaxPerFasa: 'DG', pembebananKva: 'EW', pembebananKw: 'EX',
-      persentaseBeban: 'EY', kategoriBeban: 'EZ'
+      alamat: "D",
+      jenisGardu: "K",
+      merk: "L",
+      kapasitasKva: "M",
+      noSeri: "N",
+      tahunTrafo: "O",
+      typeSeal: "P",
+      merkPhbTr: "Q",
+      nomorSeriPhbTr: "R",
+      tahunPhbTr: "S",
+      jamUkurWbp: "T",
+      tanggalPengukuran: "U",
+      kepemilikan: "V",
+      wbpRs: "AB",
+      wbpSt: "AC",
+      wbpTr: "AD",
+      wbpRn: "AE",
+      wbpSn: "AF",
+      wbpTn: "AG",
+      wbpR: "AH",
+      wbpS: "AI",
+      wbpT: "AJ",
+      wbpN: "AK",
+      lwbpRs: "BE",
+      lwbpSt: "BF",
+      lwbpTr: "BG",
+      lwbpRn: "BH",
+      lwbpSn: "BI",
+      lwbpTn: "BJ",
+      lwbpR: "BK",
+      lwbpS: "BL",
+      lwbpT: "BM",
+      lwbpN: "BN",
+      arusMaxPerFasa: "DG",
+      pembebananKva: "EW",
+      pembebananKw: "EX",
+      persentaseBeban: "EY",
+      kategoriBeban: "EZ",
     };
-    var mg = {}, it = {};
-    Object.keys(map).forEach(function(k) {
+    var mg = {},
+      it = {};
+    Object.keys(map).forEach(function (k) {
       if (d[k] === undefined) return;
       mg[map[k]] = d[k];
       it[map[k]] = d[k];
     });
     if (!Object.keys(mg).length)
-      return { success: false, message: 'Tidak ada field yang dapat diperbarui.' };
+      return {
+        success: false,
+        message: "Tidak ada field yang dapat diperbarui.",
+      };
 
-    var res = updateHiUp3({ nomorGardu: gardu, ulp: targetUlp, mg: mg, sf: {}, it: it });
+    var res = updateHiUp3({
+      nomorGardu: gardu,
+      ulp: targetUlp,
+      mg: mg,
+      sf: {},
+      it: it,
+    });
     return res && res.ok
-      ? { success: true, message: res.message || 'Master Gardu tersinkron.' }
-      : { success: false, message: (res && res.message) || 'Sinkron Master Gardu gagal.' };
+      ? { success: true, message: res.message || "Master Gardu tersinkron." }
+      : {
+          success: false,
+          message: (res && res.message) || "Sinkron Master Gardu gagal.",
+        };
   } catch (e) {
-    return { success: false, message: 'Gagal sinkron Gardu: ' + e.message };
+    return { success: false, message: "Gagal sinkron Gardu: " + e.message };
   }
 }
