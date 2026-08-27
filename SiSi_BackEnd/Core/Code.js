@@ -71,12 +71,14 @@ var PAGE_FILE_ALIASES = {
 
   // ── Teknik ──
   "SIE-Teknik": "Teknik/SIE-Teknik",
+  "Jadwal-Padam": "Teknik/SIE-Teknik",
   "SIE-LaporanTeknik": "Teknik/SIE-Teknik",
   "Tek-Data-Checkpoint": "Teknik/Tek-Data-Checkpoint",
 };
 
 var PAGE_ACCESS_PARENT = {
   "SIE-LaporanTeknik": "SIE-Teknik",
+  "Jadwal-Padam": "SIE-Teknik",
   "SIE-BeritaAcara": "SIE-Teknik",
   "Tek-Data-Checkpoint": "SIE-Teknik",
 };

@@ -1,0 +1,28 @@
+name: Audit Jadwal Padam Access
+on:
+  push:
+    branches: [fix/jadwal-padam-access-routing]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/jadwal-padam-access-routing
+      - run: python .github/scripts/fix_jadwal_padam_access.py
+      - name: Validate routing
+        run: |
+          grep -q '"Jadwal-Padam": "Teknik/SIE-Teknik"' SiSi_BackEnd/Core/Code.js
+          grep -q '"Jadwal-Padam": "SIE-Teknik"' SiSi_BackEnd/Core/Code.js
+          grep -q "'Jadwal-Padam':'fa-calendar-xmark'" SiSi_BackEnd/Core/Main.html
+          grep -q "'SIE-Teknik': \['SIE-LaporanTeknik','Jadwal-Padam'" SiSi_BackEnd/Core/Main.html
+      - name: Commit fix
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add SiSi_BackEnd/Core/Code.js
+          git commit -m "fix(web): route Jadwal Padam and inherit SIE access [skip ci]" || exit 0
+          git push origin fix/jadwal-padam-access-routing
