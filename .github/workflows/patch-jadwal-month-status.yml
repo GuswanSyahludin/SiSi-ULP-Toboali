@@ -1,0 +1,20 @@
+name: Patch Jadwal Month Status
+on:
+  push:
+    branches: [fix/jadwal-padam-month-range-status-update]
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/jadwal-padam-month-range-status-update
+      - run: python .github/scripts/patch_jadwal_month_status.py
+      - run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add SiSi_BackEnd/Teknik/Jadwal-Padam.html
+          git commit -m "fix(web): default monthly range and confirm status updates [skip ci]" || exit 0
+          git push origin fix/jadwal-padam-month-range-status-update
