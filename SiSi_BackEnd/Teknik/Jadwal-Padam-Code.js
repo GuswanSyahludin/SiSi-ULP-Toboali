@@ -117,16 +117,38 @@ function _jpTgl_(v) {
     : Utilities.formatDate(parsed, "Asia/Jakarta", "yyyy-MM-dd");
 }
 function _jpDateObject_(value) {
-  var iso = _jpTgl_(value), m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  var iso = _jpTgl_(value),
+    m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : null;
 }
 function _jpHari_(value) {
-  var d = _jpDateObject_(value), names = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+  var d = _jpDateObject_(value),
+    names = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
   return d ? names[d.getDay()] : "";
 }
 function _jpTanggalLabel_(value) {
-  var d = _jpDateObject_(value), months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-  return d ? ("0" + d.getDate()).slice(-2) + " " + months[d.getMonth()] + " " + d.getFullYear() : _jpText_(value);
+  var d = _jpDateObject_(value),
+    months = [
+      "Januari",
+      "Februari",
+      "Maret",
+      "April",
+      "Mei",
+      "Juni",
+      "Juli",
+      "Agustus",
+      "September",
+      "Oktober",
+      "November",
+      "Desember",
+    ];
+  return d
+    ? ("0" + d.getDate()).slice(-2) +
+        " " +
+        months[d.getMonth()] +
+        " " +
+        d.getFullYear()
+    : _jpText_(value);
 }
 function _jpTimeText_(v) {
   if (v instanceof Date)
@@ -206,7 +228,9 @@ function getJadwalPadamList(params) {
     idxHari = map[_jpHeaderKey_("Hari")],
     idxTanggal = map[_jpHeaderKey_("Tanggal")];
   if (idxTanggal != null && sh.getLastRow() >= 2)
-    sh.getRange(2, idxTanggal + 1, sh.getLastRow() - 1, 1).setNumberFormat("dd mmmm yyyy");
+    sh.getRange(2, idxTanggal + 1, sh.getLastRow() - 1, 1).setNumberFormat(
+      "dd mmmm yyyy",
+    );
   for (var i = 0; i < rows.length; i++) {
     var r = rows[i],
       rawStatus = _jpText_(
@@ -294,8 +318,19 @@ function getJadwalPadamList(params) {
   out.sort(function (a, b) {
     return String(a.tanggal).localeCompare(String(b.tanggal));
   });
-  var total=out.length,pageSize=Math.min(50,Math.max(1,Number(params.pageSize)||50)),totalPages=Math.max(1,Math.ceil(total/pageSize)),page=Math.min(totalPages,Math.max(1,Number(params.page)||1)),start=(page-1)*pageSize;
-  return { ok:true, rows:out.slice(start,start+pageSize), total:total, page:page, pageSize:pageSize, totalPages:totalPages };
+  var total = out.length,
+    pageSize = Math.min(50, Math.max(1, Number(params.pageSize) || 50)),
+    totalPages = Math.max(1, Math.ceil(total / pageSize)),
+    page = Math.min(totalPages, Math.max(1, Number(params.page) || 1)),
+    start = (page - 1) * pageSize;
+  return {
+    ok: true,
+    rows: out.slice(start, start + pageSize),
+    total: total,
+    page: page,
+    pageSize: pageSize,
+    totalPages: totalPages,
+  };
 }
 
 function getJadwalPadamMasterBeban(params) {
@@ -491,7 +526,6 @@ function updateStatusJadwalPadam(payload) {
   }
 }
 
-
 function _jpWaDate_(iso) {
   return _jpTanggalLabel_(iso);
 }
@@ -507,9 +541,12 @@ function getJadwalPadamWaText(params) {
   try {
     params = params || {};
     var token = _jpText_(params.token),
-      sesi = typeof getSesiByToken === "function" ? getSesiByToken(token) : null;
-    if (!sesi) return { ok: false, message: "Sesi habis, silakan login ulang." };
-    var dari = _jpText_(params.tglDari), sampai = _jpText_(params.tglSampai);
+      sesi =
+        typeof getSesiByToken === "function" ? getSesiByToken(token) : null;
+    if (!sesi)
+      return { ok: false, message: "Sesi habis, silakan login ulang." };
+    var dari = _jpText_(params.tglDari),
+      sampai = _jpText_(params.tglSampai);
     if (!dari || !sampai || dari > sampai)
       return { ok: false, message: "Rentang tanggal tidak valid." };
     var query = {
@@ -527,31 +564,50 @@ function getJadwalPadamWaText(params) {
       pages = Number(result.totalPages) || 1;
     for (var page = 2; page <= pages; page++) {
       query.page = page;
-      rows = rows.concat((getJadwalPadamList(query).rows || []));
+      rows = rows.concat(getJadwalPadamList(query).rows || []);
     }
     if (!rows.length)
-      return { ok: false, message: "Tidak ada jadwal padam pada rentang tanggal tersebut." };
+      return {
+        ok: false,
+        message: "Tidak ada jadwal padam pada rentang tanggal tersebut.",
+      };
     var lines = [
-      "*LAPORAN JADWAL PADAM*",
+      "*RENCANA PADAM PEKERJAAN PEMELIHARAAN PENYULANG ULP TOBOALI*",
       "*Periode:* " + _jpWaDate_(dari) + " s.d. " + _jpWaDate_(sampai),
-      ""
+      "",
     ];
     rows.forEach(function (x, index) {
       lines.push(
         "*" + (index + 1) + ". " + _jpText_(x.kode) + "*",
-        "*Hari/Tanggal:* " + (_jpText_(x.hari) || _jpHari_(x.tanggal)) + ", " + _jpWaDate_(x.tanggal),
-        "*Waktu:* " + _jpText_(x.jamPadam) + " - " + _jpText_(x.jamNyala) + " (" + _jpWaNumber_(x.durasi, 2) + " jam)",
-        "*Penyulang/Section:* " + _jpText_(x.penyulang) + " / " + _jpText_(x.section),
+        "*Hari/Tanggal:* " +
+          (_jpText_(x.hari) || _jpHari_(x.tanggal)) +
+          ", " +
+          _jpWaDate_(x.tanggal),
+        "*Waktu:* " +
+          _jpText_(x.jamPadam) +
+          " - " +
+          _jpText_(x.jamNyala) +
+          " (" +
+          _jpWaNumber_(x.durasi, 2) +
+          " jam)",
+        "*Penyulang/Section:* " +
+          _jpText_(x.penyulang) +
+          " / " +
+          _jpText_(x.section),
         "*Pekerjaan:* " + _jpText_(x.jenis),
         "*Daerah Padam:* " + _jpText_(x.daerah),
         "*Jumlah Gardu:* " + _jpWaNumber_(x.jumlahGardu, 0),
         "*Jumlah Pelanggan:* " + _jpWaNumber_(x.jumlahPelanggan, 0),
         "*Beban:* " + _jpWaNumber_(x.bebanA, 2) + " A",
         "*ENS:* Rp" + _jpWaNumber_(x.ensRupiah, 2),
-        ""
+        "",
       );
     });
-    return { ok: true, text: lines.join("\n").replace(/\n+$/, ""), count: rows.length };
+    return {
+      ok: true,
+      text: lines.join("\n").replace(/\n+$/, ""),
+      count: rows.length,
+    };
   } catch (e) {
     return { ok: false, message: "Gagal membuat laporan WA: " + e.message };
   }
