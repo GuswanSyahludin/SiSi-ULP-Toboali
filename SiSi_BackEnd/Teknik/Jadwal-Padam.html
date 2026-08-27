@@ -395,13 +395,6 @@
             <option>Tanpa Padam</option>
           </select>
         </div>
-        <div class="field">
-          <label>Urutan Tanggal</label
-          ><select id="jpSortTanggal">
-            <option value="desc">Terbesar ke terkecil</option>
-            <option value="asc">Terkecil ke terbesar</option>
-          </select>
-        </div>
         <button class="btn" onclick="loadList()">Cari</button>
       </section>
       <section class="table-shell">
@@ -553,7 +546,8 @@
     </div>
     <script>
       var jpMaster = {},
-        jpMasterRows = [];
+        jpMasterRows = [],
+        jpAllDatesFallback = false;
       function jpSession() {
         return (
           (typeof _state !== "undefined" && _state.sesi) ||
@@ -744,7 +738,7 @@
             penyulang: document.getElementById("jpPeny").value,
             status: document.getElementById("jpStatus").value,
             statusPekerjaan: document.getElementById("jpWorkStatus").value,
-            sortTanggal: document.getElementById("jpSortTanggal").value,
+            sortTanggal: "asc",
           };
         document.getElementById("jpBody").innerHTML =
           '<tr><td class="empty" colspan="20">Memuat jadwal...</td></tr>';
@@ -760,9 +754,15 @@
       function jpRender(res) {
         var rows = (res && res.rows) || [],
           body = document.getElementById("jpBody");
+        if (!rows.length && !jpAllDatesFallback && document.getElementById("jpFrom").value && document.getElementById("jpTo").value) {
+          jpAllDatesFallback = true;
+          document.getElementById("jpFrom").value = "";
+          document.getElementById("jpTo").value = "";
+          loadList();
+          return;
+        }
         if (!rows.length) {
-          body.innerHTML =
-            '<tr><td class="empty" colspan="20">Tidak ada jadwal untuk filter ini.</td></tr>';
+          body.innerHTML = '<tr><td class="empty" colspan="20">Belum ada data jadwal.</td></tr>';
           return;
         }
         body.innerHTML = rows

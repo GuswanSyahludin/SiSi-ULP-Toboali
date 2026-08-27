@@ -48,7 +48,7 @@ function getJadwalPadamList(params){
     if(params.tglSampai&&item.tanggal>params.tglSampai)continue;
     out.push(item);
   }
-  var arah=_jpNorm_(params.sortTanggal)==='asc'?1:-1;out.sort(function(a,b){return arah*String(a.tanggal).localeCompare(String(b.tanggal));});
+  out.sort(function(a,b){return String(a.tanggal).localeCompare(String(b.tanggal));});
   return {ok:true,rows:out};
 }
 
