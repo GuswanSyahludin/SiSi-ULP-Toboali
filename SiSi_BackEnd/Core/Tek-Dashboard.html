@@ -48,6 +48,302 @@
     padding: 8px;
   }
 
+  /* ── Calendar Card Styles ── */
+  .cal-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  .cal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .cal-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .cal-title-wrap i {
+    font-size: 17px;
+    color: var(--primary);
+  }
+  .cal-title {
+    font-weight: 700;
+    color: var(--text);
+    font-size: 15px;
+  }
+  .cal-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .cal-btn-nav {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 7px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: background 0.15s;
+  }
+  .cal-btn-nav:hover {
+    background: var(--surface-3);
+    color: var(--primary);
+  }
+  .cal-month-label {
+    font-weight: 700;
+    font-size: 14px;
+    min-width: 140px;
+    text-align: center;
+    color: var(--text);
+  }
+  .cal-body {
+    padding: 12px;
+  }
+  .cal-grid-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    text-align: center;
+    margin-bottom: 6px;
+  }
+  .cal-day-name {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--gray);
+    text-transform: uppercase;
+    padding: 6px 0;
+  }
+  .cal-day-name.weekend {
+    color: var(--danger);
+  }
+  .cal-grid-cells {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+  }
+  .cal-cell {
+    min-height: 85px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    position: relative;
+  }
+  .cal-cell:hover {
+    border-color: var(--primary);
+    background: var(--surface-3);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  }
+  .cal-cell.other-month {
+    opacity: 0.4;
+    background: var(--surface-2);
+    cursor: default;
+  }
+  .cal-cell.today {
+    border: 2px solid var(--primary);
+    background: var(--primary-lt);
+  }
+  .cal-cell.has-event {
+    border-color: rgba(37, 99, 235, 0.4);
+  }
+  .cal-cell-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .cal-num {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .cal-cell.today .cal-num {
+    color: var(--primary);
+    font-size: 13px;
+  }
+  .cal-count-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 999px;
+    background: var(--primary);
+    color: var(--on-primary);
+  }
+  .cal-events {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    overflow: hidden;
+  }
+  .cal-pill {
+    font-size: 10px;
+    padding: 2px 5px;
+    border-radius: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.25;
+    font-weight: 600;
+  }
+  .cal-pill.padam {
+    background: rgba(220, 38, 38, 0.12);
+    color: #dc2626;
+    border: 1px solid rgba(220, 38, 38, 0.25);
+  }
+  .cal-pill.tanpa-padam {
+    background: rgba(22, 163, 74, 0.12);
+    color: #16a34a;
+    border: 1px solid rgba(22, 163, 74, 0.25);
+  }
+  .cal-pill-more {
+    font-size: 9px;
+    color: var(--gray);
+    font-weight: 600;
+    padding: 1px 2px;
+  }
+
+  /* Modal Detail Jadwal */
+  .cal-modal {
+    position: fixed;
+    inset: 0;
+    background: var(--overlay);
+    z-index: 9200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    backdrop-filter: blur(4px);
+  }
+  .cal-modal.show {
+    display: flex;
+  }
+  .cal-modal-dialog {
+    background: var(--surface);
+    border-radius: 14px;
+    width: 100%;
+    max-width: 650px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    animation: calModalIn 0.2s ease;
+  }
+  @keyframes calModalIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: none; }
+  }
+  .cal-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-2);
+  }
+  .cal-modal-head h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .cal-modal-head .close-btn {
+    background: transparent;
+    border: none;
+    font-size: 18px;
+    color: var(--gray);
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px;
+  }
+  .cal-modal-head .close-btn:hover {
+    color: var(--danger);
+  }
+  .cal-modal-body {
+    padding: 14px 18px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .cal-item-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .cal-item-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .cal-item-kode {
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--primary);
+  }
+  .cal-item-badge {
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .cal-item-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 6px 12px;
+    font-size: 12px;
+    margin-top: 4px;
+  }
+  .cal-item-field {
+    display: flex;
+    flex-direction: column;
+  }
+  .cal-item-field span:first-child {
+    font-size: 10px;
+    color: var(--gray);
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .cal-item-field span:last-child {
+    color: var(--text);
+    font-weight: 500;
+  }
+  .cal-modal-foot {
+    padding: 12px 18px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+    background: var(--surface-2);
+  }
+
   /* Filter bar */
   .td-filter {
     background: var(--surface);
@@ -264,11 +560,50 @@
 
 <div class="td-header">
   <h2>
-    <i class="fa-solid fa-ranking-star"></i> Dashboard Point Petugas Yandal
+    <i class="fa-solid fa-gauge-high"></i> Dashboard Teknik
   </h2>
 </div>
 
 <div class="td-container">
+  <!-- 1. Kalender Bulanan Jadwal Padam -->
+  <div class="cal-card">
+    <div class="cal-head">
+      <div class="cal-title-wrap">
+        <i class="fa-solid fa-calendar-days"></i>
+        <span class="cal-title">Kalender Jadwal Padam & Pekerjaan</span>
+      </div>
+      <div class="cal-nav">
+        <button class="cal-btn-nav" onclick="calPrevMonth()" title="Bulan Sebelumnya">
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        <span class="cal-month-label" id="calMonthLabel">-</span>
+        <button class="cal-btn-nav" onclick="calNextMonth()" title="Bulan Berikutnya">
+          <i class="fa-solid fa-chevron-right"></i>
+        </button>
+        <button class="cal-btn-nav" onclick="calToday()" title="Bulan Ini">
+          Hari Ini
+        </button>
+      </div>
+    </div>
+    <div class="cal-body">
+      <div class="cal-grid-days">
+        <div class="cal-day-name weekend">Min</div>
+        <div class="cal-day-name">Sen</div>
+        <div class="cal-day-name">Sel</div>
+        <div class="cal-day-name">Rab</div>
+        <div class="cal-day-name">Kam</div>
+        <div class="cal-day-name">Jum</div>
+        <div class="cal-day-name">Sab</div>
+      </div>
+      <div class="cal-grid-cells" id="calGridCells">
+        <div class="td-loading" style="grid-column: 1/-1; padding: 30px;">
+          <i class="fa-solid fa-spinner fa-spin"></i>
+          <p>Memuat kalender...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Filter bar -->
   <div class="td-filter">
     <div class="td-field">
@@ -323,6 +658,22 @@
   </div>
 </div>
 
+<!-- Modal Detail Jadwal Padam per Tanggal -->
+<div class="cal-modal" id="calDetailModal">
+  <div class="cal-modal-dialog">
+    <div class="cal-modal-head">
+      <h3 id="calModalTitle"><i class="fa-solid fa-calendar-day"></i> Jadwal Pekerjaan</h3>
+      <button class="close-btn" onclick="calCloseModal()">&times;</button>
+    </div>
+    <div class="cal-modal-body" id="calModalBody">
+      <!-- List jadwal render di sini -->
+    </div>
+    <div class="cal-modal-foot">
+      <button class="td-btn-reset" onclick="calCloseModal()">Tutup</button>
+    </div>
+  </div>
+</div>
+
 <!-- Chart.js CDN -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
@@ -330,6 +681,10 @@
   var _tdSession = {};
   var _tdIsSuperAdmin = false;
   var _tdChart = null;
+
+  /* State Kalender */
+  var _calCurrentDate = new Date();
+  var _calEventsMap = {}; // { "YYYY-MM-DD": [items...] }
 
   function _tdEl(id) {
     return document.getElementById(id);
@@ -356,7 +711,10 @@
     if (_tdEl("td_dari")) _tdEl("td_dari").value = tglAwal;
     if (_tdEl("td_sampai")) _tdEl("td_sampai").value = tglAkhr;
 
-    // Auto-load saat pertama dibuka
+    // Muat kalender bulan berjalan
+    calFetchMonthData();
+
+    // Auto-load chart point saat pertama dibuka
     setTimeout(tdMuat, 200);
   }
 
@@ -364,7 +722,203 @@
     document.addEventListener("DOMContentLoaded", _tdBoot);
   else _tdBoot();
 
-  // Load ULP list (Super User only)
+  /* ════════════════════════════════════════
+     KALENDER JADWAL PADAM
+  ════════════════════════════════════════ */
+  var CAL_MONTH_NAMES = [
+    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+    "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+  ];
+
+  function calPrevMonth() {
+    _calCurrentDate.setMonth(_calCurrentDate.getMonth() - 1);
+    calFetchMonthData();
+  }
+
+  function calNextMonth() {
+    _calCurrentDate.setMonth(_calCurrentDate.getMonth() + 1);
+    calFetchMonthData();
+  }
+
+  function calToday() {
+    _calCurrentDate = new Date();
+    calFetchMonthData();
+  }
+
+  function _calPad(n) {
+    return ("0" + n).slice(-2);
+  }
+
+  function calFetchMonthData() {
+    var year = _calCurrentDate.getFullYear();
+    var month = _calCurrentDate.getMonth();
+
+    // Label bulan
+    var labelEl = _tdEl("calMonthLabel");
+    if (labelEl) labelEl.textContent = CAL_MONTH_NAMES[month] + " " + year;
+
+    // Tgl awal dan akhir bulan
+    var firstDay = new Date(year, month, 1);
+    var lastDay = new Date(year, month + 1, 0);
+
+    var tglDari = year + "-" + _calPad(month + 1) + "-01";
+    var tglSampai = year + "-" + _calPad(month + 1) + "-" + _calPad(lastDay.getDate());
+
+    var grid = _tdEl("calGridCells");
+    if (grid) {
+      grid.innerHTML = '<div class="td-loading" style="grid-column: 1/-1; padding: 30px;"><i class="fa-solid fa-spinner fa-spin"></i><p>Memuat kalender...</p></div>';
+    }
+
+    if (typeof google === "undefined" || !google.script || !google.script.run) {
+      calRenderGrid({});
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        var rows = (res && res.rows) || [];
+        var map = {};
+        rows.forEach(function(item) {
+          var tgl = String(item.tanggal || "").trim();
+          if (!tgl) return;
+          if (!map[tgl]) map[tgl] = [];
+          map[tgl].push(item);
+        });
+        _calEventsMap = map;
+        calRenderGrid(map);
+      })
+      .withFailureHandler(function(err) {
+        if (grid) {
+          grid.innerHTML = '<div class="td-empty" style="grid-column: 1/-1; padding: 20px; color: var(--danger);"><p>Gagal memuat data kalender: ' + _tdEsc((err && err.message) || err) + '</p></div>';
+        }
+      })
+      .getJadwalPadamList({
+        tglDari: tglDari,
+        tglSampai: tglSampai,
+        ulp: _tdUlp(),
+        page: 1,
+        pageSize: 100
+      });
+  }
+
+  function calRenderGrid(eventsMap) {
+    var grid = _tdEl("calGridCells");
+    if (!grid) return;
+
+    var year = _calCurrentDate.getFullYear();
+    var month = _calCurrentDate.getMonth();
+
+    var firstDayIndex = new Date(year, month, 1).getDay(); // 0 (Min) s/d 6 (Sab)
+    var totalDays = new Date(year, month + 1, 0).getDate();
+    var prevMonthTotalDays = new Date(year, month, 0).getDate();
+
+    var today = new Date();
+    var todayStr = today.getFullYear() + "-" + _calPad(today.getMonth() + 1) + "-" + _calPad(today.getDate());
+
+    var html = "";
+
+    // Hari dari bulan sebelumnya
+    for (var p = firstDayIndex - 1; p >= 0; p--) {
+      var prevDayNum = prevMonthTotalDays - p;
+      html += '<div class="cal-cell other-month"><div class="cal-cell-header"><span class="cal-num">' + prevDayNum + '</span></div></div>';
+    }
+
+    // Hari di bulan aktif
+    for (var d = 1; d <= totalDays; d++) {
+      var dateStr = year + "-" + _calPad(month + 1) + "-" + _calPad(d);
+      var isToday = (dateStr === todayStr);
+      var dayEvents = eventsMap[dateStr] || [];
+      var hasEvents = dayEvents.length > 0;
+
+      var cellCls = "cal-cell" + (isToday ? " today" : "") + (hasEvents ? " has-event" : "");
+
+      var pillsHtml = "";
+      if (hasEvents) {
+        var showCount = Math.min(dayEvents.length, 2);
+        for (var e = 0; e < showCount; e++) {
+          var ev = dayEvents[e];
+          var isPadam = String(ev.statusPekerjaan || "").toLowerCase() === "padam";
+          var pillCls = isPadam ? "cal-pill padam" : "cal-pill tanpa-padam";
+          var title = (ev.penyulang || "Jadwal") + " - " + (ev.jenis || ev.section || "");
+          pillsHtml += '<div class="' + pillCls + '" title="' + _tdEsc(title) + '">' + _tdEsc(title) + '</div>';
+        }
+        if (dayEvents.length > 2) {
+          pillsHtml += '<div class="cal-pill-more">+' + (dayEvents.length - 2) + ' lainnya</div>';
+        }
+      }
+
+      var badgeHtml = hasEvents ? '<span class="cal-count-badge">' + dayEvents.length + '</span>' : '';
+
+      html += '<div class="' + cellCls + '" onclick="calOpenDetail(\'' + dateStr + '\')">' +
+                '<div class="cal-cell-header">' +
+                  '<span class="cal-num">' + d + '</span>' +
+                  badgeHtml +
+                '</div>' +
+                '<div class="cal-events">' + pillsHtml + '</div>' +
+              '</div>';
+    }
+
+    // Hari dari bulan berikutnya (pelengkap 35 atau 42 cell)
+    var totalCells = firstDayIndex + totalDays;
+    var remainingCells = (totalCells % 7 === 0) ? 0 : (7 - (totalCells % 7));
+    for (var n = 1; n <= remainingCells; n++) {
+      html += '<div class="cal-cell other-month"><div class="cal-cell-header"><span class="cal-num">' + n + '</span></div></div>';
+    }
+
+    grid.innerHTML = html;
+  }
+
+  function calOpenDetail(dateStr) {
+    var items = _calEventsMap[dateStr] || [];
+    var dObj = new Date(dateStr + "T00:00:00");
+    var hariNama = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"][dObj.getDay()];
+    var tglFormatted = hariNama + ", " + dObj.getDate() + " " + CAL_MONTH_NAMES[dObj.getMonth()] + " " + dObj.getFullYear();
+
+    _tdEl("calModalTitle").innerHTML = '<i class="fa-solid fa-calendar-day"></i> ' + tglFormatted;
+    var body = _tdEl("calModalBody");
+
+    if (!items.length) {
+      body.innerHTML = '<div class="td-empty" style="padding: 24px;"><i class="fa-solid fa-calendar-check" style="color: var(--success); font-size: 32px;"></i><p>Tidak ada jadwal pekerjaan/pemadaman pada tanggal ini.</p></div>';
+    } else {
+      var html = items.map(function(item) {
+        var isPadam = String(item.statusPekerjaan || "").toLowerCase() === "padam";
+        var statusCls = isPadam ? "background: rgba(220, 38, 38, 0.12); color: #dc2626;" : "background: rgba(22, 163, 74, 0.12); color: #16a34a;";
+        return '<div class="cal-item-card">' +
+                 '<div class="cal-item-head">' +
+                   '<span class="cal-item-kode">' + _tdEsc(item.kode || "Jadwal Padam") + '</span>' +
+                   '<span class="cal-item-badge" style="' + statusCls + '">' + _tdEsc(item.statusPekerjaan || "Padam") + '</span>' +
+                 '</div>' +
+                 '<div class="cal-item-grid">' +
+                   '<div class="cal-item-field"><span>Penyulang / Section</span><span>' + _tdEsc(item.penyulang || "-") + ' / ' + _tdEsc(item.section || "-") + '</span></div>' +
+                   '<div class="cal-item-field"><span>Jenis Pekerjaan</span><span>' + _tdEsc(item.jenis || "-") + '</span></div>' +
+                   '<div class="cal-item-field"><span>Waktu Padam</span><span>' + _tdEsc(item.jamPadam || "-") + ' s/d ' + _tdEsc(item.jamNyala || "-") + ' (' + (item.durasi || 0) + ' jam)</span></div>' +
+                   '<div class="cal-item-field"><span>Status Jadwal</span><span>' + _tdEsc(item.status || "Terjadwal") + '</span></div>' +
+                   '<div class="cal-item-field" style="grid-column: 1/-1;"><span>Daerah Padam</span><span>' + _tdEsc(item.daerah || "-") + '</span></div>' +
+                   '<div class="cal-item-field"><span>Dampak</span><span>' + (item.jumlahGardu || 0) + ' Gardu, ' + (item.jumlahPelanggan || 0) + ' Pelanggan</span></div>' +
+                   '<div class="cal-item-field"><span>Beban / ENS</span><span>' + (item.bebanA ? item.bebanA + ' A' : '-') + ' / ' + (item.ensRupiah ? 'Rp' + Number(item.ensRupiah).toLocaleString('id-ID', {maximumFractionDigits:0}) : '-') + '</span></div>' +
+                 '</div>' +
+               '</div>';
+      }).join("");
+      body.innerHTML = html;
+    }
+
+    _tdEl("calDetailModal").classList.add("show");
+  }
+
+  function calCloseModal() {
+    var modal = _tdEl("calDetailModal");
+    if (modal) modal.classList.remove("show");
+  }
+
+  // Close modal on click outside
+  window.addEventListener("click", function(e) {
+    var modal = _tdEl("calDetailModal");
+    if (modal && e.target === modal) calCloseModal();
+  });
+
+  /* ════════════════════════════════════════
+     GRAFIK POINT & STATS
+  ════════════════════════════════════════ */
   function _tdLoadListUlp() {
     if (typeof google === "undefined") return;
     google.script.run
@@ -379,7 +933,6 @@
       .getListUlpIns();
   }
 
-  // ULP untukfilter
   function _tdUlp() {
     return _tdIsSuperAdmin
       ? _tdEl("td_ulp")
@@ -388,7 +941,6 @@
       : _tdSession.ulp || "";
   }
 
-  // Load data chart
   function tdMuat() {
     var dari = _tdEl("td_dari") ? _tdEl("td_dari").value : "";
     var sampai = _tdEl("td_sampai") ? _tdEl("td_sampai").value : "";
@@ -401,7 +953,6 @@
       return;
     }
 
-    // Tampilkan loading
     _tdEl("tdLoading").style.display = "block";
     _tdEl("tdEmpty").style.display = "none";
     _tdEl("tdChartCard").style.display = "none";
@@ -432,7 +983,6 @@
       });
   }
 
-  // Render chart + stats
   function _tdRender(res) {
     _tdEl("tdLoading").style.display = "none";
     if (!res || !res.ok) {
@@ -451,11 +1001,7 @@
       return;
     }
 
-    // Top 10 only
     var top10 = list.slice(0, 10);
-    var maxPoint = top10.length ? top10[0].totalPoint : 0;
-
-    // Render stat cards
     var statsEl = _tdEl("tdStats");
     if (statsEl) {
       statsEl.style.display = "flex";
@@ -470,7 +1016,6 @@
         _tdStat("fa-star", "Total Point", res.totalPoint || 0, "point");
     }
 
-    // Chart subtitle
     var subEl = _tdEl("tdChartSub");
     if (subEl) {
       var dariTxt = _tdFmtTgl(_tdEl("td_dari").value);
@@ -479,10 +1024,7 @@
         dariTxt + " — " + sampTxt + (_tdUlp() ? " • ULP: " + _tdUlp() : "");
     }
 
-    // Render bar chart
     _tdRenderChart(top10);
-
-    // Show cards
     _tdEl("tdChartCard").style.display = "block";
   }
 
@@ -490,7 +1032,6 @@
     var canvas = _tdEl("tdChart");
     if (!canvas || typeof Chart === "undefined") return;
 
-    // Destroy chart sebelumnya bila ada
     if (_tdChart) {
       _tdChart.destroy();
       _tdChart = null;
@@ -503,7 +1044,6 @@
       return r.totalPoint || 0;
     });
 
-    // Tema warna
     var isDark = document.documentElement.getAttribute("data-theme") === "dark";
     var textColor = isDark ? "#93a4c0" : "#64748b";
     var gridColor = isDark ? "rgba(255,255,255,.06)" : "rgba(0,0,0,.06)";
@@ -635,6 +1175,7 @@
     if (_tdEl("td_sampai")) _tdEl("td_sampai").value = tglAkhr;
     if (_tdEl("td_ulp")) _tdEl("td_ulp").value = "";
     tdMuat();
+    calFetchMonthData();
   }
 
   function _tdFmtTgl(tgl) {
@@ -671,7 +1212,6 @@
       showToast(msg, type || "warning");
       return;
     }
-    // Fallback toast sederhana
     var t = document.createElement("div");
     t.style.cssText =
       "position:fixed;bottom:24px;right:24px;z-index:9999;" +
@@ -699,7 +1239,6 @@
     }, 3500);
   }
 
-  // Re-render chart saat tema berganti
   var _tdThemeObserver = new MutationObserver(function () {
     if (_tdChart && _tdEl("tdChartCard").style.display !== "none") {
       var isDark =
