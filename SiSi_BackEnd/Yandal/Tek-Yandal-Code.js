@@ -1379,6 +1379,21 @@ function _p0FotoObj_(row, linkCol, urlCol) {
 //   • Menunggu = Status Approval kosong TAPI ke-3 foto sudah punya URL
 //   • Foto belum lengkap & belum diputuskan → TIDAK tampil di daftar mana pun
 // Response menyertakan counts per status (mengikuti filter ulp+tanggal) untuk badge tab mobile.
+var APPR_PENDING_CACHE_PREFIX = "apprPendingDecision_";
+var APPR_PENDING_CACHE_TTL = 3600;
+function _apprPendingCacheKey_(kodeP0) {
+  return APPR_PENDING_CACHE_PREFIX + String(kodeP0 || "");
+}
+function _apprRememberPendingDecision_(kodeP0, keputusan) {
+  try {
+    CacheService.getScriptCache().put(
+      _apprPendingCacheKey_(kodeP0),
+      String(keputusan || ""),
+      APPR_PENDING_CACHE_TTL,
+    );
+  } catch (e) {}
+}
+
 function getApprovalP0List(params) {
   try {
     params = params || {};
@@ -1394,7 +1409,14 @@ function getApprovalP0List(params) {
       };
     var d = _allY_(sh),
       C = COL_P0,
-      out = [];
+      out = [],
+      pendingKeys = [],
+      pendingByKey = {};
+    for (var pk = 1; pk < d.length; pk++) {
+      var pendingKode = String(d[pk][C.kodeP0] || "").trim();
+      if (pendingKode) pendingKeys.push(_apprPendingCacheKey_(pendingKode));
+    }
+    try { pendingByKey = CacheService.getScriptCache().getAll(pendingKeys) || {}; } catch (eCache) {}
     var counts = { Menunggu: 0, Approved: 0, Rejected: 0 };
     for (var i = 1; i < d.length; i++) {
       var kodeP0 = String(d[i][C.kodeP0] || "").trim();
@@ -1412,8 +1434,10 @@ function getApprovalP0List(params) {
       // Status approval hanya 2 nilai nyata: Approved / Rejected. Selain itu efektif "Menunggu",
       // TAPI hanya P0 yang ke-3 fotonya sudah ada URL & status approval masih kosong yang masuk antrean approval.
       var raw = String(d[i][C.statusApproval] || "").trim();
+      var pendingDecision = String(pendingByKey[_apprPendingCacheKey_(kodeP0)] || "").trim();
       var status;
       if (raw === "Approved" || raw === "Rejected") status = raw;
+      else if (pendingDecision === "Approved" || pendingDecision === "Rejected") status = pendingDecision;
       else if (fotoLengkap) status = "Menunggu";
       else continue; // foto belum lengkap & belum diputuskan → belum masuk approval admin
 
@@ -1486,6 +1510,9 @@ function setApprovalP0(params) {
     var antre = _apprInboxPush_(kodeP0, keputusan, approver, alasan);
     if (antre !== true)
       antre = enqueueApprovalP0_(kodeP0, keputusan, approver, alasan);
+    if (antre !== true)
+      return { ok: false, error: "Keputusan gagal masuk antrean. Silakan coba lagi." };
+    _apprRememberPendingDecision_(kodeP0, keputusan);
     return {
       ok: true,
       queued: antre,
