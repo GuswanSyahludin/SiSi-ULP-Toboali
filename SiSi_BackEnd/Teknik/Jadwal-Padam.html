@@ -209,9 +209,13 @@
       .work-status { display:inline-flex; padding:5px 9px; border-radius:999px; font-size:12px; font-weight:700; white-space:nowrap; }
       .work-padam { background:oklch(94% 0.055 25); color:oklch(48% 0.17 25); }
       .work-tanpa { background:oklch(94% 0.07 145); color:oklch(43% 0.13 145); }
-      .action-group { display:flex; gap:6px; }
-      .action-btn { min-height:32px; padding:0 10px; border:1px solid var(--jp-border); border-radius:7px; background:var(--jp-surface); color:var(--jp-text); font:600 12px/1 inherit; cursor:pointer; white-space:nowrap; }
-      .action-btn-danger { color:oklch(48% 0.17 25); }
+      .action-head { text-align:center; }
+      .action-group { display:flex; justify-content:center; gap:8px; }
+      .action-btn { min-height:34px; padding:0 12px; border:1px solid transparent; border-radius:7px; color:oklch(98% .005 250); font:700 12px/1 inherit; cursor:pointer; white-space:nowrap; }
+      .action-btn-success { background:oklch(52% .14 145); }
+      .action-btn-success:hover { background:oklch(46% .14 145); }
+      .action-btn-danger { background:oklch(68% .15 58); color:oklch(25% .05 58); }
+      .action-btn-danger:hover { background:oklch(62% .15 58); }
       .empty {
         text-align: center;
         padding: 44px !important;
@@ -360,7 +364,7 @@
                 <th>Lokasi</th>
                 <th>Status Jadwal</th>
                 <th>Status Pekerjaan</th>
-                <th>Aksi</th>
+                <th class="action-head">Update Status Jadwal</th>
               </tr>
             </thead>
             <tbody id="jpBody">
@@ -704,7 +708,7 @@
               jpStatusClass(status) +
               '">' +
               jpEsc(status) +
-              "</span></td><td><span class=\"work-status " + jpWorkStatusClass(x.statusPekerjaan) + "\">" + jpText(x.statusPekerjaan) + "</span></td><td><div class=\"action-group\"><button class=\"action-btn\" onclick=\"jpUpdateStatus(this, \'Terealisasi\')\">Terealisasi</button><button class=\"action-btn action-btn-danger\" onclick=\"jpUpdateStatus(this, \'Batal Pekerjaan\')\">Batal</button></div></td></tr>"
+              "</span></td><td><span class=\"work-status " + jpWorkStatusClass(x.statusPekerjaan) + "\">" + jpText(x.statusPekerjaan) + "</span></td><td><div class=\"action-group\"><button class=\"action-btn action-btn-success\" onclick=\"jpUpdateStatus(this, \'Terealisasi\')\">Terealisasi</button><button class=\"action-btn action-btn-danger\" onclick=\"jpUpdateStatus(this, \'Batal Pekerjaan\')\">Batal</button></div></td></tr>"
             );
           })
           .join("");
