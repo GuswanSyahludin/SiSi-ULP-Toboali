@@ -722,9 +722,7 @@
     setTimeout(tdMuat, 200);
   }
 
-  if (document.readyState === "loading")
-    document.addEventListener("DOMContentLoaded", _tdBoot);
-  else _tdBoot();
+  /* Boot dipanggil di akhir script setelah seluruh konstanta dan fungsi kalender siap. */
 
   /* ════════════════════════════════════════
      KALENDER JADWAL PADAM
@@ -1283,4 +1281,8 @@
     attributes: true,
     attributeFilter: ["data-theme"],
   });
+
+  // Halaman dimuat lewat innerHTML, jadi DOMContentLoaded biasanya sudah selesai.
+  // Jalankan boot hanya setelah CAL_MONTH_NAMES dan semua fungsi kalender didefinisikan.
+  setTimeout(_tdBoot, 0);
 </script>
