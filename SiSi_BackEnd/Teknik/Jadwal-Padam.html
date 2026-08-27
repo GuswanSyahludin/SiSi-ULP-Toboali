@@ -168,12 +168,7 @@
       tbody tr:last-child td {
         border-bottom: 0;
       }
-      .cell-area {
-        min-width: 280px;
-        max-width: 360px;
-        white-space: normal;
-        line-height: 1.45;
-      }
+      .cell-area { display:block; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; line-height:1.45; }
       .cell-empty {
         color: oklch(66% 0.018 250);
         font-style: italic;
@@ -353,8 +348,8 @@
                 <th>Gardu</th>
                 <th>Pelanggan</th>
                 <th>Daerah Padam</th>
-                <th>Beban</th>
-                <th>ENS</th>
+                <th>Beban (A)</th>
+                <th>ENS (Rupiah)</th>
                 <th>Pelanggan VIP</th>
                 <th>Lokasi</th>
                 <th>Status</th>
@@ -490,6 +485,12 @@
               maximumFractionDigits: d == null ? 2 : d,
             });
       }
+      function jpRupiah(v) {
+        var n = Number(v);
+        return v === null || v === "" || isNaN(n)
+          ? '<span class="cell-empty">Belum tersedia</span>'
+          : "Rp" + n.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
       function jpOption(value, label) {
         var o = document.createElement("option");
         o.value = value;
@@ -503,16 +504,7 @@
       function jpClose() {
         document.getElementById("jpModal").classList.remove("show");
       }
-      function jpLoadMaster() {
-        var sesi = jpSession(),
-          filter = jpIsSuper() ? "" : String(sesi.ulp || "");
-        google.script.run
-          .withSuccessHandler(jpPopulate)
-          .withFailureHandler(function (e) {
-            jpNotify((e && e.message) || e, "error");
-          })
-          .getJadwalPadamMaster({ ulp: filter });
-      }
+      function jpLoadMaster() { var filter = jpIsSuper() ? document.getElementById('jpUlp').value : ''; google.script.run.withSuccessHandler(jpPopulate).withFailureHandler(function(e){ jpNotify((e && e.message) || e, 'error'); }).getJadwalPadamMaster({ulp:filter}); }
       function jpPopulate(res) {
         jpMaster = {};
         jpMasterRows = (res && res.rows) || [];
@@ -614,9 +606,7 @@
           params = {
             tglDari: document.getElementById("jpFrom").value,
             tglSampai: document.getElementById("jpTo").value,
-            ulp: jpIsSuper()
-              ? document.getElementById("jpUlp").value
-              : String(sesi.ulp || ""),
+            ulp: jpIsSuper() ? document.getElementById('jpUlp').value : '',
             penyulang: document.getElementById("jpPeny").value,
             section: document.getElementById("jpSection").value,
             status: document.getElementById("jpStatus").value,
@@ -668,14 +658,11 @@
               jpNum(x.jumlahGardu, 0) +
               "</td><td>" +
               jpNum(x.jumlahPelanggan, 0) +
-              '</td><td class="cell-area" title="' +
-              jpEsc(x.daerah || "") +
-              '">' +
-              jpText(x.daerah) +
+              '</td><td><span class="cell-area" title="' + jpEsc(x.daerah || "") + '">' + jpText(x.daerah) + '</span>' +
               "</td><td>" +
-              jpNum(x.bebanMw, 3) +
+              jpNum(x.bebanA, 2) +
               "</td><td>" +
-              jpNum(x.ens, 3) +
+              jpRupiah(x.ensRupiah) +
               '</td><td class="cell-area">' +
               jpText(x.vip) +
               '</td><td class="cell-area">' +

@@ -3,8 +3,6 @@ var JADWAL_PADAM_SS_ID = '15YrBm8dNdaVZe_fIdSk4KCo3E5IXpXLAJ0A9vRjS0iI';
 var JADWAL_PADAM_SHEETS = { rekap:'Rekap_Jadwal_Padam', daerah:'Master Daerah Padam', beban:'Master_Beban' };
 var JADWAL_PADAM_STATUSES = ['Terjadwal','Terealisasi','Batal Pemadaman'];
 var JADWAL_PADAM_TARIF_KWH = 1444.70;
-var JADWAL_PADAM_TARIF_KWH = 1444.70;
-
 function _jpSs_(){ return SpreadsheetApp.openById(JADWAL_PADAM_SS_ID); }
 function _jpText_(v){ return String(v == null ? '' : v).trim(); }
 function _jpNorm_(v){ return _jpText_(v).toLowerCase().replace(/\s+/g,' '); }
@@ -40,7 +38,7 @@ function getJadwalPadamList(params){
   for(var i=0;i<rows.length;i++){
     var r=rows[i],status=_jpText_(_jpGet_(r,map,'Status Jadwal Pekerjaan','Status'))||'Terjadwal';
     var item={no:_jpGet_(r,map,'No'),kode:_jpGet_(r,map,'Kode Jadwal Padam'),ulp:_jpGet_(r,map,'ULP'),penyulang:_jpGet_(r,map,'Penyulang'),section:_jpGet_(r,map,'Section'),jenis:_jpGet_(r,map,'Jenis Pekerjaan','Jenis Pekejaan'),tanggal:_jpTgl_(_jpGet_(r,map,'Tanggal')),jamPadam:_jpTimeText_(_jpGet_(r,map,'Jam Padam')),jamNyala:_jpTimeText_(_jpGet_(r,map,'Jam Nyala')),durasi:_jpGet_(r,map,'Durasi'),jumlahGardu:_jpGet_(r,map,'Jumlah Gardu'),jumlahPelanggan:_jpGet_(r,map,'Jumlah Pelanggan'),daerah:_jpGet_(r,map,'Daerah Section','Daerah Padam','Dearah Padam'),bebanMw:_jpGet_(r,map,'Beban MW','Beban'),ens:_jpGet_(r,map,'ENS'),vip:_jpGet_(r,map,'Pelanggan VIP','Pelanggan VIP Padam'),lokasi:_jpGet_(r,map,'Lokasi Pekerjaan'),status:status};
-    var masterNow=_jpMaster_(item.penyulang,item.section);item.bebanA=masterNow?masterNow.arus:'';item.ensRupiah=masterNow?(Number(masterNow.bebanMw)||0)*(Number(item.durasi)||0)*JADWAL_PADAM_TARIF_KWH:'';item.ensRupiah=masterNow?(Number(masterNow.bebanMw)||0)*(Number(item.durasi)||0)*JADWAL_PADAM_TARIF_KWH:'';
+    var masterNow=_jpMaster_(item.penyulang,item.section);item.bebanA=masterNow?masterNow.arus:'';item.ensRupiah=masterNow?(Number(masterNow.bebanMw)||0)*(Number(item.durasi)||0)*JADWAL_PADAM_TARIF_KWH:'';
     if(params.ulp&&_jpUlpKey_(item.ulp)!==_jpUlpKey_(params.ulp))continue;
     if(params.penyulang&&_jpNorm_(item.penyulang)!==_jpNorm_(params.penyulang))continue;
     if(params.section&&_jpNorm_(item.section)!==_jpNorm_(params.section))continue;
