@@ -1058,6 +1058,15 @@
         document.getElementById("jpTo").addEventListener("change", jpSyncWaButton);
         jpSyncWaButton();
         jpLoadMaster();
+        var prefillDate = String(window.__SISI_JP_PREFILL_DATE__ || "");
+        if (prefillDate) {
+          window.__SISI_JP_PREFILL_DATE__ = "";
+          setTimeout(function () {
+            var tanggalInput = document.getElementById("mTanggal");
+            if (tanggalInput) tanggalInput.value = prefillDate;
+            jpOpen();
+          }, 0);
+        }
       })();
     </script>
   </body>

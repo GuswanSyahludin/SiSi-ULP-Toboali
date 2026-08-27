@@ -609,6 +609,11 @@
   .cal-legend-dot { width:7px;height:7px;border-radius:50%;display:inline-block;margin-left:5px; }.cal-legend-dot:first-child{margin-left:0}.cal-legend-dot.padam{background:oklch(53% .19 27)}.cal-legend-dot.tanpa{background:oklch(48% .13 145)}.cal-legend-dot.batal{background:oklch(63% .15 63)}
   @media(max-width:980px){.cal-layout{grid-template-columns:1fr}.cal-detail-pane{border-left:0;border-top:1px solid oklch(88.5% .016 252)}.cal-detail-pane .cal-modal-body{max-height:none}.cal-cell{min-height:92px}}
   @media(max-width:640px){.cal-layout{border-radius:13px}.cal-head{align-items:flex-start}.cal-title-wrap{width:100%}.cal-nav{width:100%;justify-content:space-between}.cal-month-label{min-width:120px}.cal-cell{min-height:68px;padding:6px}.cal-pill{height:7px;padding:0;font-size:0;border-radius:999px}.cal-count-badge{display:none}.cal-item-grid{grid-template-columns:1fr}}
+
+  .cal-detail-title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+  .cal-add-btn{display:grid;place-items:center;width:40px;height:40px;border:1px solid oklch(86% .025 252);border-radius:10px;background:oklch(43% .16 258);color:oklch(98% .006 252);cursor:pointer;flex:0 0 auto;transition:transform 140ms cubic-bezier(.16,1,.3,1),opacity 140ms}
+  .cal-add-btn[hidden]{display:none}.cal-add-btn:hover{opacity:.9}.cal-add-btn:active{transform:translateY(1px)}.cal-add-btn:focus-visible{outline:3px solid oklch(68% .13 252/.35);outline-offset:2px}
+  .cal-cell.selected{background:oklch(93.5% .045 252);box-shadow:inset 0 0 0 2px oklch(43% .16 258)}
 </style>
 
 <div class="td-header">
@@ -659,8 +664,15 @@
   </div>
   <aside class="cal-detail-pane" aria-live="polite">
     <div class="cal-detail-head">
-      <p class="cal-detail-eyebrow">Rincian tanggal</p>
-      <h3 id="calModalTitle"><i class="fa-solid fa-calendar-day"></i> Pilih tanggal</h3>
+      <div class="cal-detail-title-row">
+        <div>
+          <p class="cal-detail-eyebrow">Rincian tanggal</p>
+          <h3 id="calModalTitle"><i class="fa-solid fa-calendar-day"></i> Pilih tanggal</h3>
+        </div>
+        <button class="cal-add-btn" id="calAddBtn" type="button" title="Input jadwal pada tanggal ini" aria-label="Input jadwal pada tanggal ini" onclick="calOpenJadwalForm()" hidden>
+          <i class="fa-solid fa-pencil"></i>
+        </button>
+      </div>
       <p>Klik tanggal untuk melihat detail jadwal.</p>
     </div>
     <div class="cal-modal-body" id="calModalBody">
@@ -740,6 +752,7 @@
   var _calEventsMap = {}; // { "YYYY-MM-DD": [items...] }
   var _calMonthCache = {};
   var _calRequestSeq = 0;
+  var _calSelectedDate = "";
 
   function _tdEl(id) {
     return document.getElementById(id);
@@ -884,7 +897,7 @@
       var dayEvents = (eventsMap && eventsMap[dateStr]) || [];
       var hasEvents = dayEvents.length > 0;
 
-      var cellCls = "cal-cell" + (isToday ? " today" : "") + (hasEvents ? " has-event" : "");
+      var cellCls = "cal-cell" + (isToday ? " today" : "") + (hasEvents ? " has-event" : "") + (_calSelectedDate === dateStr ? " selected" : "");
 
       var pillsHtml = "";
       if (hasEvents) {
@@ -923,6 +936,10 @@
   }
 
   function calOpenDetail(dateStr) {
+    _calSelectedDate = dateStr;
+    var addBtn = _tdEl("calAddBtn");
+    if (addBtn) addBtn.hidden = false;
+    calRenderGrid(_calEventsMap);
     var items = _calEventsMap[dateStr] || [];
     var dObj = new Date(dateStr + "T00:00:00");
     var hariNama = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"][dObj.getDay()];
@@ -959,6 +976,21 @@
 
     var detailPane = document.querySelector(".cal-detail-pane");
     if (detailPane) detailPane.classList.add("active");
+  }
+
+  function calOpenJadwalForm() {
+    if (!_calSelectedDate) {
+      tdToast("Pilih tanggal terlebih dahulu.", "warning");
+      return;
+    }
+    window.__SISI_JP_PREFILL_DATE__ = _calSelectedDate;
+    if (typeof _loadPage === "function") {
+      _loadPage("Jadwal-Padam");
+    } else if (typeof loadPage === "function") {
+      loadPage("Jadwal-Padam");
+    } else {
+      tdToast("Halaman Jadwal Padam tidak dapat dibuka.", "error");
+    }
   }
 
   function calCloseModal() {
