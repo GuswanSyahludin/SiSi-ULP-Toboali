@@ -584,18 +584,13 @@ function getJadwalPadamWaText(params) {
           (_jpText_(x.hari) || _jpHari_(x.tanggal)) +
           ", " +
           _jpWaDate_(x.tanggal),
-        "*Waktu:* " +
-          _jpText_(x.jamPadam) +
-          " - " +
-          _jpText_(x.jamNyala) +
-          " (" +
-          _jpWaNumber_(x.durasi, 2) +
-          " jam)",
-        "*Penyulang/Section:* " +
-          _jpText_(x.penyulang) +
-          " / " +
-          _jpText_(x.section),
-        "*Pekerjaan:* " + _jpText_(x.jenis),
+        "*ULP:* " + _jpText_(x.ulp),
+        "*Penyulang:* " + _jpText_(x.penyulang),
+        "*Section Pemadaman:* " + _jpText_(x.section),
+        "*Jenis Pekerjaan:* " + _jpText_(x.jenis),
+        "*Jam Padam:* " + _jpText_(x.jamPadam),
+        "*Jam Nyala:* " + _jpText_(x.jamNyala),
+        "*Durasi:* " + _jpWaNumber_(x.durasi, 2) * 60 + "Menit",
         "*Daerah Padam:* " + _jpText_(x.daerah),
         "*Jumlah Gardu:* " + _jpWaNumber_(x.jumlahGardu, 0),
         "*Jumlah Pelanggan:* " + _jpWaNumber_(x.jumlahPelanggan, 0),
