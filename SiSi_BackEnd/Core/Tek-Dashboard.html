@@ -711,7 +711,11 @@
     if (_tdEl("td_dari")) _tdEl("td_dari").value = tglAwal;
     if (_tdEl("td_sampai")) _tdEl("td_sampai").value = tglAkhr;
 
-    // Muat kalender bulan berjalan
+    // Inisialisasi header kalender dulu agar tidak kosong "-"
+    _calUpdateMonthLabel();
+    calRenderGrid({});
+
+    // Muat data kalender bulan berjalan
     calFetchMonthData();
 
     // Auto-load chart point saat pertama dibuka
@@ -729,6 +733,13 @@
     "Januari", "Februari", "Maret", "April", "Mei", "Juni",
     "Juli", "Agustus", "September", "Oktober", "November", "Desember"
   ];
+
+  function _calUpdateMonthLabel() {
+    var year = _calCurrentDate.getFullYear();
+    var month = _calCurrentDate.getMonth();
+    var labelEl = _tdEl("calMonthLabel");
+    if (labelEl) labelEl.textContent = CAL_MONTH_NAMES[month] + " " + year;
+  }
 
   function calPrevMonth() {
     _calCurrentDate.setMonth(_calCurrentDate.getMonth() - 1);
@@ -753,24 +764,18 @@
     var year = _calCurrentDate.getFullYear();
     var month = _calCurrentDate.getMonth();
 
-    // Label bulan
-    var labelEl = _tdEl("calMonthLabel");
-    if (labelEl) labelEl.textContent = CAL_MONTH_NAMES[month] + " " + year;
+    // Update label teks bulan
+    _calUpdateMonthLabel();
+
+    // Render skeleton / grid langsung dulu agar kalender tidak blank/stuck
+    calRenderGrid(_calEventsMap || {});
 
     // Tgl awal dan akhir bulan
-    var firstDay = new Date(year, month, 1);
     var lastDay = new Date(year, month + 1, 0);
-
     var tglDari = year + "-" + _calPad(month + 1) + "-01";
     var tglSampai = year + "-" + _calPad(month + 1) + "-" + _calPad(lastDay.getDate());
 
-    var grid = _tdEl("calGridCells");
-    if (grid) {
-      grid.innerHTML = '<div class="td-loading" style="grid-column: 1/-1; padding: 30px;"><i class="fa-solid fa-spinner fa-spin"></i><p>Memuat kalender...</p></div>';
-    }
-
     if (typeof google === "undefined" || !google.script || !google.script.run) {
-      calRenderGrid({});
       return;
     }
 
@@ -788,9 +793,7 @@
         calRenderGrid(map);
       })
       .withFailureHandler(function(err) {
-        if (grid) {
-          grid.innerHTML = '<div class="td-empty" style="grid-column: 1/-1; padding: 20px; color: var(--danger);"><p>Gagal memuat data kalender: ' + _tdEsc((err && err.message) || err) + '</p></div>';
-        }
+        console.warn("Gagal memuat jadwal padam kalender:", err);
       })
       .getJadwalPadamList({
         tglDari: tglDari,
@@ -827,7 +830,7 @@
     for (var d = 1; d <= totalDays; d++) {
       var dateStr = year + "-" + _calPad(month + 1) + "-" + _calPad(d);
       var isToday = (dateStr === todayStr);
-      var dayEvents = eventsMap[dateStr] || [];
+      var dayEvents = (eventsMap && eventsMap[dateStr]) || [];
       var hasEvents = dayEvents.length > 0;
 
       var cellCls = "cal-cell" + (isToday ? " today" : "") + (hasEvents ? " has-event" : "");
@@ -858,7 +861,7 @@
               '</div>';
     }
 
-    // Hari dari bulan berikutnya (pelengkap 35 atau 42 cell)
+    // Hari dari bulan berikutnya (pelengkap baris 7 kolom)
     var totalCells = firstDayIndex + totalDays;
     var remainingCells = (totalCells % 7 === 0) ? 0 : (7 - (totalCells % 7));
     for (var n = 1; n <= remainingCells; n++) {

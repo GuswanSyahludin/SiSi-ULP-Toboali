@@ -193,6 +193,22 @@ function _jpMaster_(peny, section) {
   return null;
 }
 
+function _jpMasterMap_() {
+  var rows = _jpRows_(JADWAL_PADAM_SHEETS.daerah);
+  if (!rows.length) return {};
+  var ctx = _jpMasterContext_(),
+    map = {};
+  for (var i = 0; i < rows.length; i++) {
+    var x = _jpMasterRow_(rows[i], ctx.map);
+    if (!x.penyulang) continue;
+    var k1 = _jpNorm_(x.penyulang) + "|" + _jpNorm_(x.section);
+    map[k1] = x;
+    var k2 = _jpNorm_(x.penyulang) + "|";
+    if (!map[k2]) map[k2] = x;
+  }
+  return map;
+}
+
 function getJadwalPadamMaster(params) {
   params = params || {};
   var rows = _jpRows_(JADWAL_PADAM_SHEETS.daerah),
@@ -231,6 +247,9 @@ function getJadwalPadamList(params) {
     sh.getRange(2, idxTanggal + 1, sh.getLastRow() - 1, 1).setNumberFormat(
       "dd mmmm yyyy",
     );
+  
+  var masterMap = _jpMasterMap_();
+
   for (var i = 0; i < rows.length; i++) {
     var r = rows[i],
       rawStatus = _jpText_(
@@ -284,7 +303,8 @@ function getJadwalPadamList(params) {
       status: status,
       statusPekerjaan: _jpText_(_jpGet_(r, map, "Status Pekerjaan")) || "Padam",
     };
-    var masterNow = _jpMaster_(item.penyulang, item.section);
+    var mKey = _jpNorm_(item.penyulang) + "|" + _jpNorm_(item.section);
+    var masterNow = masterMap[mKey] || masterMap[_jpNorm_(item.penyulang) + "|"] || null;
     item.bebanA = masterNow ? masterNow.arus : "";
     item.ensRupiah = masterNow
       ? (Number(masterNow.bebanMw) || 0) *
@@ -319,7 +339,7 @@ function getJadwalPadamList(params) {
     return String(a.tanggal).localeCompare(String(b.tanggal));
   });
   var total = out.length,
-    pageSize = Math.min(50, Math.max(1, Number(params.pageSize) || 50)),
+    pageSize = Math.min(100, Math.max(1, Number(params.pageSize) || 50)),
     totalPages = Math.max(1, Math.ceil(total / pageSize)),
     page = Math.min(totalPages, Math.max(1, Number(params.page) || 1)),
     start = (page - 1) * pageSize;
