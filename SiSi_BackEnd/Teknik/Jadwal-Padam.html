@@ -375,7 +375,7 @@
     <div class="modal" id="jpModal">
       <div class="dialog">
         <h3>Input Jadwal Padam</h3>
-        <form id="jpForm" class="form" onsubmit="return saveJadwal(event);">
+        <form id="jpForm" class="form" autocomplete="off" data-form-type="other" onsubmit="return saveJadwal(event);">
           <div class="field">
             <label>Penyulang</label
             ><select id="mPeny" required onchange="loadSections()">
@@ -389,7 +389,7 @@
             </select>
           </div>
           <div class="field">
-            <label>Jenis Pekerjaan</label><input id="mJenis" required />
+            <label>Jenis Pekerjaan</label><input id="mJenis" name="jp_jenis_baru" autocomplete="off" data-lpignore="true" data-form-type="other" spellcheck="false" required />
           </div>
           <div class="field">
             <label>Tanggal</label><input id="mTanggal" type="date" required />
@@ -445,7 +445,7 @@
             ><input id="mVip" class="auto" readonly />
           </div>
           <div class="field full">
-            <label>Lokasi Pekerjaan</label><input id="mLokasi" />
+            <label>Lokasi Pekerjaan</label><input id="mLokasi" name="jp_lokasi_baru" autocomplete="off" data-lpignore="true" data-form-type="other" spellcheck="false" />
           </div>
         </form>
         <div class="foot">
