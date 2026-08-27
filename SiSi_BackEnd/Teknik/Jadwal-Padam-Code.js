@@ -227,13 +227,17 @@ var JADWAL_CALENDAR_CACHE_TTL = 300;
 var JADWAL_CALENDAR_CACHE_VERSION_KEY = "jpCalendarCacheVersion";
 
 function _jpCalendarVersion_() {
-  return PropertiesService.getScriptProperties().getProperty(
-    JADWAL_CALENDAR_CACHE_VERSION_KEY,
-  ) || "1";
+  return (
+    PropertiesService.getScriptProperties().getProperty(
+      JADWAL_CALENDAR_CACHE_VERSION_KEY,
+    ) || "1"
+  );
 }
 function _jpBustCalendarCache_() {
   var props = PropertiesService.getScriptProperties();
-  var next = String((Number(props.getProperty(JADWAL_CALENDAR_CACHE_VERSION_KEY)) || 1) + 1);
+  var next = String(
+    (Number(props.getProperty(JADWAL_CALENDAR_CACHE_VERSION_KEY)) || 1) + 1,
+  );
   props.setProperty(JADWAL_CALENDAR_CACHE_VERSION_KEY, next);
   return next;
 }
@@ -247,7 +251,13 @@ function getJadwalPadamCalendarMonth(params) {
       return { ok: false, rows: [], message: "Bulan kalender tidak valid." };
 
     var monthKey = year + "-" + ("0" + month).slice(-2),
-      cacheKey = "jpCal|" + _jpCalendarVersion_() + "|" + monthKey + "|" + _jpUlpKey_(ulp),
+      cacheKey =
+        "jpCal|" +
+        _jpCalendarVersion_() +
+        "|" +
+        monthKey +
+        "|" +
+        _jpUlpKey_(ulp),
       cache = CacheService.getScriptCache(),
       hit = cache.get(cacheKey);
     if (hit) {
@@ -259,10 +269,13 @@ function getJadwalPadamCalendarMonth(params) {
     }
 
     var sh = _jpSheet_(JADWAL_PADAM_SHEETS.rekap);
-    if (!sh || sh.getLastRow() < 2) return { ok: true, rows: [], month: monthKey };
+    if (!sh || sh.getLastRow() < 2)
+      return { ok: true, rows: [], month: monthKey };
     var headers = _jpHeaders_(sh),
       map = _jpHeaderMap_(headers),
-      values = sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues(),
+      values = sh
+        .getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn())
+        .getValues(),
       rows = [];
     for (var i = 0; i < values.length; i++) {
       var r = values[i],
@@ -283,22 +296,43 @@ function getJadwalPadamCalendarMonth(params) {
         durasi: Number(_jpGet_(r, map, "Durasi")) || 0,
         jumlahGardu: Number(_jpGet_(r, map, "Jumlah Gardu")) || 0,
         jumlahPelanggan: Number(_jpGet_(r, map, "Jumlah Pelanggan")) || 0,
-        daerah: _jpText_(_jpGet_(r, map, "Daerah Section", "Daerah Padam", "Dearah Padam")),
+        daerah: _jpText_(
+          _jpGet_(r, map, "Daerah Section", "Daerah Padam", "Dearah Padam"),
+        ),
         lokasi: _jpText_(_jpGet_(r, map, "Lokasi Pekerjaan")),
         bebanA: _jpGet_(r, map, "Beban (A)", "Arus (A)", "Beban"),
         ensRupiah: _jpGet_(r, map, "ENS (Rupiah)", "ENS"),
-        status: _jpText_(_jpGet_(r, map, "Status Jadwal Padam", "Status Jadwal Pekerjaan", "Status")) || "Terjadwal",
-        statusPekerjaan: _jpText_(_jpGet_(r, map, "Status Pekerjaan")) || "Padam",
+        status:
+          _jpText_(
+            _jpGet_(
+              r,
+              map,
+              "Status Jadwal Padam",
+              "Status Jadwal Pekerjaan",
+              "Status",
+            ),
+          ) || "Terjadwal",
+        statusPekerjaan:
+          _jpText_(_jpGet_(r, map, "Status Pekerjaan")) || "Padam",
       });
     }
     rows.sort(function (a, b) {
-      return a.tanggal.localeCompare(b.tanggal) || a.jamPadam.localeCompare(b.jamPadam);
+      return (
+        a.tanggal.localeCompare(b.tanggal) ||
+        a.jamPadam.localeCompare(b.jamPadam)
+      );
     });
     var result = { ok: true, rows: rows, month: monthKey, cached: false };
-    try { cache.put(cacheKey, JSON.stringify(result), JADWAL_CALENDAR_CACHE_TTL); } catch (ignorePut) {}
+    try {
+      cache.put(cacheKey, JSON.stringify(result), JADWAL_CALENDAR_CACHE_TTL);
+    } catch (ignorePut) {}
     return result;
   } catch (e) {
-    return { ok: false, rows: [], message: "Gagal memuat kalender: " + e.message };
+    return {
+      ok: false,
+      rows: [],
+      message: "Gagal memuat kalender: " + e.message,
+    };
   }
 }
 
@@ -326,7 +360,7 @@ function getJadwalPadamList(params) {
     sh.getRange(2, idxTanggal + 1, sh.getLastRow() - 1, 1).setNumberFormat(
       "dd mmmm yyyy",
     );
-  
+
   var masterMap = _jpMasterMap_();
 
   for (var i = 0; i < rows.length; i++) {
@@ -383,7 +417,8 @@ function getJadwalPadamList(params) {
       statusPekerjaan: _jpText_(_jpGet_(r, map, "Status Pekerjaan")) || "Padam",
     };
     var mKey = _jpNorm_(item.penyulang) + "|" + _jpNorm_(item.section);
-    var masterNow = masterMap[mKey] || masterMap[_jpNorm_(item.penyulang) + "|"] || null;
+    var masterNow =
+      masterMap[mKey] || masterMap[_jpNorm_(item.penyulang) + "|"] || null;
     item.bebanA = masterNow ? masterNow.arus : "";
     item.ensRupiah = masterNow
       ? (Number(masterNow.bebanMw) || 0) *
@@ -587,28 +622,64 @@ function simpanJadwalPadam(payload) {
 function updateJadwalPadam(payload) {
   try {
     payload = payload || {};
-    var sesi = typeof getSesiByToken === "function" ? getSesiByToken(_jpText_(payload.token)) : null;
-    if (!sesi) return { ok: false, message: "Sesi habis, silakan login ulang." };
-    var kode = _jpText_(payload.kode), peny = _jpText_(payload.penyulang), section = _jpText_(payload.section),
-      jenis = _jpText_(payload.jenis), tanggal = _jpText_(payload.tanggal), jamPadam = _jpText_(payload.jamPadam),
-      jamNyala = _jpText_(payload.jamNyala), statusPekerjaan = _jpText_(payload.statusPekerjaan);
-    if (!kode || !peny || !section || !jenis || !tanggal || !jamPadam || !jamNyala || !statusPekerjaan)
+    var sesi =
+      typeof getSesiByToken === "function"
+        ? getSesiByToken(_jpText_(payload.token))
+        : null;
+    if (!sesi)
+      return { ok: false, message: "Sesi habis, silakan login ulang." };
+    var kode = _jpText_(payload.kode),
+      peny = _jpText_(payload.penyulang),
+      section = _jpText_(payload.section),
+      jenis = _jpText_(payload.jenis),
+      tanggal = _jpText_(payload.tanggal),
+      jamPadam = _jpText_(payload.jamPadam),
+      jamNyala = _jpText_(payload.jamNyala),
+      statusPekerjaan = _jpText_(payload.statusPekerjaan);
+    if (
+      !kode ||
+      !peny ||
+      !section ||
+      !jenis ||
+      !tanggal ||
+      !jamPadam ||
+      !jamNyala ||
+      !statusPekerjaan
+    )
       return { ok: false, message: "Semua data utama jadwal wajib diisi." };
     if (["Padam", "Tanpa Padam"].indexOf(statusPekerjaan) === -1)
       return { ok: false, message: "Status Pekerjaan tidak valid." };
     var master = _jpMaster_(peny, section);
-    if (!master) return { ok: false, message: "Penyulang dan Section tidak ditemukan di master." };
-    var mulai = _jpParseTime_(jamPadam), selesai = _jpParseTime_(jamNyala);
-    if (mulai == null || selesai == null) return { ok: false, message: "Format jam tidak valid." };
+    if (!master)
+      return {
+        ok: false,
+        message: "Penyulang dan Section tidak ditemukan di master.",
+      };
+    var mulai = _jpParseTime_(jamPadam),
+      selesai = _jpParseTime_(jamNyala);
+    if (mulai == null || selesai == null)
+      return { ok: false, message: "Format jam tidak valid." };
     if (selesai < mulai) selesai += 1440;
     var durasi = (selesai - mulai) / 60,
-      ensRupiah = (Number(master.bebanMw) || 0) * durasi * JADWAL_PADAM_TARIF_KWH,
+      ensRupiah =
+        (Number(master.bebanMw) || 0) * durasi * JADWAL_PADAM_TARIF_KWH,
       sh = _jpSheet_(JADWAL_PADAM_SHEETS.rekap);
-    if (!sh || sh.getLastRow() < 2) return { ok: false, message: "Data jadwal tidak ditemukan." };
-    var headers = _jpHeaders_(sh), map = _jpHeaderMap_(headers), kodeIdx = map[_jpHeaderKey_("Kode Jadwal Padam")];
-    if (kodeIdx == null) return { ok: false, message: "Kolom kode jadwal tidak ditemukan." };
-    var values = sh.getRange(2, kodeIdx + 1, sh.getLastRow() - 1, 1).getDisplayValues(), rowNumber = -1;
-    for (var i = 0; i < values.length; i++) if (_jpText_(values[i][0]) === kode) { rowNumber = i + 2; break; }
+    if (!sh || sh.getLastRow() < 2)
+      return { ok: false, message: "Data jadwal tidak ditemukan." };
+    var headers = _jpHeaders_(sh),
+      map = _jpHeaderMap_(headers),
+      kodeIdx = map[_jpHeaderKey_("Kode Jadwal Padam")];
+    if (kodeIdx == null)
+      return { ok: false, message: "Kolom kode jadwal tidak ditemukan." };
+    var values = sh
+        .getRange(2, kodeIdx + 1, sh.getLastRow() - 1, 1)
+        .getDisplayValues(),
+      rowNumber = -1;
+    for (var i = 0; i < values.length; i++)
+      if (_jpText_(values[i][0]) === kode) {
+        rowNumber = i + 2;
+        break;
+      }
     if (rowNumber < 0) return { ok: false, message: "Jadwal tidak ditemukan." };
     var row = sh.getRange(rowNumber, 1, 1, headers.length).getValues()[0];
     _jpPut_(row, map, master.ulp, "ULP");
@@ -622,17 +693,35 @@ function updateJadwalPadam(payload) {
     _jpPut_(row, map, durasi, "Durasi");
     _jpPut_(row, map, master.jumlahGardu, "Jumlah Gardu");
     _jpPut_(row, map, master.jumlahPelanggan, "Jumlah Pelanggan");
-    _jpPut_(row, map, master.daerahSection, "Daerah Section", "Daerah Padam", "Dearah Padam");
+    _jpPut_(
+      row,
+      map,
+      master.daerahSection,
+      "Daerah Section",
+      "Daerah Padam",
+      "Dearah Padam",
+    );
     _jpPut_(row, map, master.arus, "Beban (A)", "Beban", "Arus (A)");
     _jpPut_(row, map, ensRupiah, "ENS", "ENS (Rupiah)");
-    _jpPut_(row, map, master.pelangganVip, "Pelanggan VIP", "Pelanggan VIP Padam");
+    _jpPut_(
+      row,
+      map,
+      master.pelangganVip,
+      "Pelanggan VIP",
+      "Pelanggan VIP Padam",
+    );
     _jpPut_(row, map, _jpText_(payload.lokasi), "Lokasi Pekerjaan");
     _jpPut_(row, map, statusPekerjaan, "Status Pekerjaan");
     sh.getRange(rowNumber, 1, 1, headers.length).setValues([row]);
-    var idxTgl=map[_jpHeaderKey_("Tanggal")],idxPadam=map[_jpHeaderKey_("Jam Padam")],idxNyala=map[_jpHeaderKey_("Jam Nyala")];
-    if(idxTgl!=null) sh.getRange(rowNumber,idxTgl+1).setNumberFormat("dd mmmm yyyy");
-    if(idxPadam!=null) sh.getRange(rowNumber,idxPadam+1).setNumberFormat("HH:mm");
-    if(idxNyala!=null) sh.getRange(rowNumber,idxNyala+1).setNumberFormat("HH:mm");
+    var idxTgl = map[_jpHeaderKey_("Tanggal")],
+      idxPadam = map[_jpHeaderKey_("Jam Padam")],
+      idxNyala = map[_jpHeaderKey_("Jam Nyala")];
+    if (idxTgl != null)
+      sh.getRange(rowNumber, idxTgl + 1).setNumberFormat("dd mmmm yyyy");
+    if (idxPadam != null)
+      sh.getRange(rowNumber, idxPadam + 1).setNumberFormat("HH:mm");
+    if (idxNyala != null)
+      sh.getRange(rowNumber, idxNyala + 1).setNumberFormat("HH:mm");
     SpreadsheetApp.flush();
     _jpBustCalendarCache_();
     return { ok: true, kode: kode, message: "Jadwal berhasil diperbarui." };
