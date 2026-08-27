@@ -754,7 +754,12 @@
       function jpRender(res) {
         var rows = (res && res.rows) || [],
           body = document.getElementById("jpBody");
-        if (!rows.length && !jpAllDatesFallback && document.getElementById("jpFrom").value && document.getElementById("jpTo").value) {
+        if (
+          !rows.length &&
+          !jpAllDatesFallback &&
+          document.getElementById("jpFrom").value &&
+          document.getElementById("jpTo").value
+        ) {
           jpAllDatesFallback = true;
           document.getElementById("jpFrom").value = "";
           document.getElementById("jpTo").value = "";
@@ -762,7 +767,8 @@
           return;
         }
         if (!rows.length) {
-          body.innerHTML = '<tr><td class="empty" colspan="20">Belum ada data jadwal.</td></tr>';
+          body.innerHTML =
+            '<tr><td class="empty" colspan="20">Belum ada data jadwal.</td></tr>';
           return;
         }
         body.innerHTML = rows
