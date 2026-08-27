@@ -578,8 +578,9 @@ function getJadwalPadamWaText(params) {
     ];
     rows.forEach(function (x, index) {
       lines.push(
-        "*" + (index + 1) + ". " + _jpText_(x.kode) + "*",
-        "*Hari/Tanggal:* " +
+        "*" +
+          (index + 1) +
+          ". Hari/Tanggal:* " +
           (_jpText_(x.hari) || _jpHari_(x.tanggal)) +
           ", " +
           _jpWaDate_(x.tanggal),
