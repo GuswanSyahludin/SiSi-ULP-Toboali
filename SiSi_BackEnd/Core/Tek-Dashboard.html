@@ -614,6 +614,17 @@
   .cal-add-btn{display:grid;place-items:center;width:40px;height:40px;border:1px solid oklch(86% .025 252);border-radius:10px;background:oklch(43% .16 258);color:oklch(98% .006 252);cursor:pointer;flex:0 0 auto;transition:transform 140ms cubic-bezier(.16,1,.3,1),opacity 140ms}
   .cal-add-btn[hidden]{display:none}.cal-add-btn:hover{opacity:.9}.cal-add-btn:active{transform:translateY(1px)}.cal-add-btn:focus-visible{outline:3px solid oklch(68% .13 252/.35);outline-offset:2px}
   .cal-cell.selected{background:oklch(93.5% .045 252);box-shadow:inset 0 0 0 2px oklch(43% .16 258)}
+
+  .cal-form-modal{position:fixed;inset:0;z-index:9300;display:none;align-items:center;justify-content:center;padding:18px;background:oklch(22% .025 255/.58)}
+  .cal-form-modal.show{display:flex}.cal-form-open{overflow:hidden}
+  .cal-form-dialog{width:min(720px,100%);max-height:92vh;overflow:auto;border:1px solid oklch(87% .02 252);border-radius:16px;background:var(--surface);box-shadow:0 24px 70px oklch(20% .03 255/.25)}
+  .cal-form-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 20px;border-bottom:1px solid var(--border)}
+  .cal-form-head p{margin:0 0 3px;color:var(--primary);font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase}.cal-form-head h3{margin:0;color:var(--text);font-size:18px}
+  .cal-form-close{display:grid;place-items:center;width:40px;height:40px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);color:var(--gray);cursor:pointer}.cal-form-close:hover{color:var(--danger)}
+  .cal-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px;padding:20px}.cal-form-grid label{display:flex;flex-direction:column;gap:6px}.cal-form-grid label>span{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--gray)}
+  .cal-form-grid input,.cal-form-grid select{width:100%;height:42px;padding:0 11px;border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--text);font:inherit;font-size:13px}.cal-form-grid input:focus-visible,.cal-form-grid select:focus-visible{outline:3px solid oklch(68% .13 252/.3);outline-offset:1px}.cal-form-full{grid-column:1/-1}
+  .cal-form-foot{display:flex;justify-content:flex-end;gap:10px;padding:15px 20px;border-top:1px solid var(--border);background:var(--surface-2)}.cal-form-cancel,.cal-form-save{min-height:42px;padding:0 16px;border-radius:9px;font:700 13px/1 inherit;cursor:pointer}.cal-form-cancel{border:1px solid var(--border);background:var(--surface);color:var(--text)}.cal-form-save{border:0;background:var(--primary);color:var(--on-primary)}.cal-form-save:disabled{opacity:.55;cursor:not-allowed}
+  @media(max-width:640px){.cal-form-modal{padding:0;align-items:flex-end}.cal-form-dialog{width:100%;max-height:94vh;border-radius:16px 16px 0 0}.cal-form-grid{grid-template-columns:1fr;padding:16px}.cal-form-full{grid-column:auto}.cal-form-foot{position:sticky;bottom:0}}
 </style>
 
 <div class="td-header">
@@ -738,7 +749,27 @@
   </div>
 </div>
 
-<!-- Modal lama dihapus, detail sekarang menetap di panel kanan -->
+<!-- Form Input Jadwal Padam langsung dari kalender -->
+<div class="cal-form-modal" id="calFormModal" role="dialog" aria-modal="true" aria-labelledby="calFormTitle">
+  <div class="cal-form-dialog">
+    <div class="cal-form-head">
+      <div><p>Jadwal Padam</p><h3 id="calFormTitle">Input Jadwal Pekerjaan</h3></div>
+      <button type="button" class="cal-form-close" onclick="calCloseJadwalForm()" aria-label="Tutup"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form id="calJadwalForm" class="cal-form-grid" autocomplete="off" onsubmit="return calSaveJadwal(event)">
+      <label><span>Tanggal</span><input type="date" id="calJpTanggal" required></label>
+      <label><span>Status Pekerjaan</span><select id="calJpStatus" required><option value="">Pilih status</option><option value="Padam">Padam</option><option value="Tanpa Padam">Tanpa Padam</option></select></label>
+      <label><span>Penyulang</span><select id="calJpPeny" required onchange="calLoadSections()"><option value="">Memuat penyulang...</option></select></label>
+      <label><span>Section</span><select id="calJpSection" required><option value="">Pilih penyulang dulu</option></select></label>
+      <label class="cal-form-full"><span>Jenis Pekerjaan</span><input type="text" id="calJpJenis" required autocomplete="off"></label>
+      <label><span>Jam Padam</span><input type="time" id="calJpPadam" step="60" required></label>
+      <label><span>Jam Nyala</span><input type="time" id="calJpNyala" step="60" required></label>
+      <label class="cal-form-full"><span>Lokasi Pekerjaan</span><input type="text" id="calJpLokasi" autocomplete="off"></label>
+    </form>
+    <div class="cal-form-foot"><button type="button" class="cal-form-cancel" onclick="calCloseJadwalForm()">Batal</button><button type="submit" form="calJadwalForm" class="cal-form-save" id="calJpSave"><i class="fa-solid fa-floppy-disk"></i> Simpan Jadwal</button></div>
+  </div>
+</div>
+
 <!-- Chart.js CDN -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
@@ -753,6 +784,8 @@
   var _calMonthCache = {};
   var _calRequestSeq = 0;
   var _calSelectedDate = "";
+  var _calJadwalMaster = [];
+  var _calJadwalMasterLoaded = false;
 
   function _tdEl(id) {
     return document.getElementById(id);
@@ -983,14 +1016,85 @@
       tdToast("Pilih tanggal terlebih dahulu.", "warning");
       return;
     }
-    window.__SISI_JP_PREFILL_DATE__ = _calSelectedDate;
-    if (typeof _loadPage === "function") {
-      _loadPage("Jadwal-Padam");
-    } else if (typeof loadPage === "function") {
-      loadPage("Jadwal-Padam");
-    } else {
-      tdToast("Halaman Jadwal Padam tidak dapat dibuka.", "error");
-    }
+    var modal = _tdEl("calFormModal");
+    var tanggal = _tdEl("calJpTanggal");
+    if (tanggal) tanggal.value = _calSelectedDate;
+    if (modal) modal.classList.add("show");
+    document.documentElement.classList.add("cal-form-open");
+    if (!_calJadwalMasterLoaded) calLoadJadwalMaster();
+    setTimeout(function(){ var el=_tdEl("calJpPeny"); if(el) el.focus(); }, 40);
+  }
+
+  function calCloseJadwalForm() {
+    var modal = _tdEl("calFormModal");
+    if (modal) modal.classList.remove("show");
+    document.documentElement.classList.remove("cal-form-open");
+  }
+
+  function calMasterKey(value) {
+    return String(value || "").trim().replace(/\s+/g, " ").toUpperCase();
+  }
+
+  function calLoadJadwalMaster() {
+    var peny = _tdEl("calJpPeny");
+    if (peny) peny.innerHTML = '<option value="">Memuat penyulang...</option>';
+    google.script.run
+      .withSuccessHandler(function(res){
+        _calJadwalMaster = (res && res.rows) || [];
+        _calJadwalMasterLoaded = true;
+        var names = {}, html = '<option value="">Pilih penyulang</option>';
+        _calJadwalMaster.forEach(function(row){
+          var value=String(row.penyulang||"").trim(), key=calMasterKey(value);
+          if(value && !names[key]) names[key]=value;
+        });
+        Object.keys(names).sort(function(a,b){return names[a].localeCompare(names[b]);}).forEach(function(key){html += '<option value="'+_tdEsc(names[key])+'">'+_tdEsc(names[key])+'</option>';});
+        if (peny) peny.innerHTML = html;
+      })
+      .withFailureHandler(function(err){
+        if (peny) peny.innerHTML = '<option value="">Gagal memuat penyulang</option>';
+        tdToast("Gagal memuat master jadwal: "+((err&&err.message)||err),"error");
+      })
+      .getJadwalPadamMaster({ ulp: _tdUlp() });
+  }
+
+  function calLoadSections() {
+    var selected=calMasterKey(_tdEl("calJpPeny").value), seen={}, html='<option value="">Pilih section</option>';
+    _calJadwalMaster.forEach(function(row){
+      if(calMasterKey(row.penyulang)!==selected) return;
+      var value=String(row.section||"").trim(), key=calMasterKey(value);
+      if(value && !seen[key]){seen[key]=1;html+='<option value="'+_tdEsc(value)+'">'+_tdEsc(value)+'</option>';}
+    });
+    _tdEl("calJpSection").innerHTML=html;
+  }
+
+  function calSaveJadwal(event) {
+    event.preventDefault();
+    var btn=_tdEl("calJpSave"), payload={
+      token:(typeof _state!=="undefined"&&_state.token)||"",
+      tanggal:_tdEl("calJpTanggal").value,
+      statusPekerjaan:_tdEl("calJpStatus").value,
+      penyulang:_tdEl("calJpPeny").value,
+      section:_tdEl("calJpSection").value,
+      jenis:_tdEl("calJpJenis").value.trim(),
+      jamPadam:_tdEl("calJpPadam").value,
+      jamNyala:_tdEl("calJpNyala").value,
+      lokasi:_tdEl("calJpLokasi").value.trim()
+    };
+    btn.disabled=true;btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+    google.script.run
+      .withSuccessHandler(function(res){
+        btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-floppy-disk"></i> Simpan Jadwal';
+        if(!res||!res.ok){tdToast((res&&res.message)||"Gagal menyimpan jadwal","error");return;}
+        calCloseJadwalForm();
+        _tdEl("calJadwalForm").reset();
+        _calMonthCache={};
+        _calSelectedDate=payload.tanggal;
+        calFetchMonthData();
+        tdToast("Jadwal "+res.kode+" berhasil disimpan.","success");
+      })
+      .withFailureHandler(function(err){btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-floppy-disk"></i> Simpan Jadwal';tdToast("Gagal menyimpan: "+((err&&err.message)||err),"error");})
+      .simpanJadwalPadam(payload);
+    return false;
   }
 
   function calCloseModal() {
@@ -1368,6 +1472,10 @@
     attributes: true,
     attributeFilter: ["data-theme"],
   });
+
+  var calFormModalEl = _tdEl("calFormModal");
+  if (calFormModalEl) calFormModalEl.addEventListener("click", function(e){ if(e.target===this) calCloseJadwalForm(); });
+  document.addEventListener("keydown", function(e){ if(e.key==="Escape" && _tdEl("calFormModal") && _tdEl("calFormModal").classList.contains("show")) calCloseJadwalForm(); });
 
   // Halaman dimuat lewat innerHTML, jadi DOMContentLoaded biasanya sudah selesai.
   // Jalankan boot hanya setelah CAL_MONTH_NAMES dan semua fungsi kalender didefinisikan.
