@@ -1,489 +1,72 @@
 <!doctype html>
 <html lang="id">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Jadwal Padam</title>
-    <style>
-      body {
-        font:
-          14px Arial,
-          sans-serif;
-        margin: 0;
-        background: #f4f7fb;
-        color: #1e293b;
-      }
-      .wrap {
-        padding: 24px;
-      }
-      .head {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 16px;
-      }
-      .head h2 {
-        margin: 0;
-        color: #1e3a8a;
-      }
-      .btn {
-        background: #1e3a8a;
-        color: white;
-        border: 0;
-        border-radius: 8px;
-        padding: 10px 14px;
-        cursor: pointer;
-      }
-      .filter,
-      .table {
-        background: white;
-        border: 1px solid #dbe3ef;
-        border-radius: 12px;
-        padding: 16px;
-        margin-top: 16px;
-      }
-      .filter {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        align-items: end;
-      }
-      .field {
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-        min-width: 150px;
-      }
-      .field label {
-        font-size: 11px;
-        font-weight: 700;
-        color: #64748b;
-        text-transform: uppercase;
-      }
-      .field input,
-      .field select {
-        height: 36px;
-        border: 1px solid #cbd5e1;
-        border-radius: 7px;
-        padding: 0 9px;
-      }
-      .table {
-        overflow: auto;
-      }
-      table {
-        border-collapse: collapse;
-        min-width: 1350px;
-        width: 100%;
-      }
-      th,
-      td {
-        padding: 10px;
-        border-bottom: 1px solid #e2e8f0;
-        text-align: left;
-        white-space: nowrap;
-      }
-      th {
-        background: #eef3f9;
-        color: #64748b;
-        font-size: 11px;
-        text-transform: uppercase;
-      }
-      .auto {
-        background: #eef0f3 !important;
-        color: #68717c !important;
-        cursor: not-allowed;
-      }
-      .modal {
-        display: none;
-        position: fixed;
-        inset: 0;
-        background: #0f172a99;
-        align-items: center;
-        justify-content: center;
-        padding: 16px;
-      }
-      .modal.show {
-        display: flex;
-      }
-      .dialog {
-        background: white;
-        width: min(780px, 100%);
-        max-height: 90vh;
-        overflow: auto;
-        border-radius: 14px;
-      }
-      .dialog h3 {
-        margin: 0;
-        padding: 18px;
-        border-bottom: 1px solid #e2e8f0;
-      }
-      .form {
-        padding: 18px;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-      }
-      .form .full {
-        grid-column: 1/-1;
-      }
-      .foot {
-        display: flex;
-        justify-content: flex-end;
-        gap: 8px;
-        padding: 14px 18px;
-        border-top: 1px solid #e2e8f0;
-      }
-      @media (max-width: 700px) {
-        .wrap {
-          padding: 14px;
-        }
-        .form {
-          grid-template-columns: 1fr;
-        }
-        .form .full {
-          grid-column: auto;
-        }
-        .head {
-          display: block;
-        }
-        .head .btn {
-          margin-top: 12px;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <main class="wrap">
-      <div class="head">
-        <div>
-          <h2>Rincian Jadwal Padam</h2>
-          <p>Data jadwal padam dan dampak pelanggan.</p>
-        </div>
-        <button class="btn" onclick="show('jpModal')">
-          Input Jadwal Padam
-        </button>
-      </div>
-      <section class="filter">
-        <div class="field">
-          <label>Tanggal Mulai</label><input type="date" id="jpFrom" />
-        </div>
-        <div class="field">
-          <label>Tanggal Selesai</label><input type="date" id="jpTo" />
-        </div>
-        <div class="field" id="jpUlpWrap">
-          <label>ULP</label
-          ><select id="jpUlp">
-            <option value="">Semua ULP</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Penyulang</label
-          ><select id="jpPeny">
-            <option value="">Semua Penyulang</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Section</label
-          ><select id="jpSection">
-            <option value="">Semua Section</option>
-          </select>
-        </div>
-        <button class="btn" onclick="loadList()">Cari</button>
-      </section>
-      <section class="table">
-        <table>
-          <thead>
-            <tr>
-              <th>No</th>
-              <th>Kode Jadwal Padam</th>
-              <th>ULP</th>
-              <th>UP3</th>
-              <th>GI</th>
-              <th>Penyulang</th>
-              <th>Section</th>
-              <th>Jenis Pekerjaan</th>
-              <th>Tanggal</th>
-              <th>Jam Padam</th>
-              <th>Jam Nyala</th>
-              <th>Durasi</th>
-              <th>Beban MW</th>
-              <th>Arus (A)</th>
-              <th>Jumlah Gardu</th>
-              <th>Jumlah Pelanggan</th>
-              <th>Daerah Section</th>
-              <th>Pelanggan VIP</th>
-            </tr>
-          </thead>
-          <tbody id="jpBody">
-            <tr>
-              <td colspan="18">Pilih filter lalu klik Cari.</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
-    </main>
-    <div class="modal" id="jpModal">
-      <div class="dialog">
-        <h3>Input Jadwal Padam</h3>
-        <form class="form" onsubmit="return saveJadwal(event);">
-          <div class="field">
-            <label>Penyulang</label
-            ><select id="mPeny" required onchange="loadSections()">
-              <option value="">Pilih Penyulang</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Section</label
-            ><select id="mSection" required onchange="loadAuto()">
-              <option value="">Pilih Penyulang dulu</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Jenis Pekerjaan</label><input id="mJenis" required />
-          </div>
-          <div class="field">
-            <label>Tanggal</label><input id="mTanggal" type="date" required />
-          </div>
-          <div class="field">
-            <label>Jam Padam</label><input id="mPadam" type="time" step="60" required onclick="this.showPicker&&this.showPicker()" />
-          </div>
-          <div class="field">
-            <label>Jam Nyala</label><input id="mNyala" type="time" step="60" required onclick="this.showPicker&&this.showPicker()" />
-          </div>
-          <div class="field">
-            <label>Beban MW</label
-            ><input
-              id="mBeban"
-              class="auto"
-              readonly
-              placeholder="Otomatis dari Master_Beban"
-            />
-          </div>
-          <div class="field">
-            <label>Arus (A)</label><input id="mArus" class="auto" readonly />
-          </div>
-          <div class="field">
-            <label>Jumlah Gardu</label
-            ><input id="mGardu" class="auto" readonly />
-          </div>
-          <div class="field">
-            <label>Jumlah Pelanggan</label
-            ><input id="mPelanggan" class="auto" readonly />
-          </div>
-          <div class="field">
-            <label>Daerah Section</label
-            ><input id="mDaerah" class="auto" readonly />
-          </div>
-          <div class="field">
-            <label>Pelanggan VIP</label
-            ><input id="mVip" class="auto" readonly />
-          </div>
-          <div class="field full">
-            <label>Lokasi Pekerjaan</label><input id="mLokasi" />
-          </div>
-        </form>
-        <div class="foot">
-          <button
-            class="btn"
-            style="background: #64748b"
-            onclick="hide('jpModal')"
-          >
-            Batal</button
-          ><button
-            class="btn" id="jpSaveBtn"
-            onclick="document.querySelector('form').requestSubmit()"
-          >
-            Simpan
-          </button>
-        </div>
-      </div>
-    </div>
-    <script>
-      var jpMaster = {};
-      function show(id) {
-        document.getElementById(id).classList.add("show");
-        if (window.google && google.script)
-          google.script.run
-            .withSuccessHandler(jpPopulate)
-            .getJadwalPadamMaster({});
-      }
-      function hide(id) {
-        document.getElementById(id).classList.remove("show");
-      }
-      function jpKey(value) {
-        return String(value || "")
-          .normalize("NFKC")
-          .replace(/\u00a0/g, " ")
-          .trim()
-          .replace(/\s+/g, " ")
-          .toUpperCase();
-      }
-      function jpPopulate(res) {
-        jpMaster = {};
-        var p = document.getElementById("mPeny");
-        p.innerHTML = '<option value="">Pilih Penyulang</option>';
-        var uniquePenyulang = {};
-        (res.rows || []).forEach(function (x) {
-          var name = String(x.penyulang || "").trim().replace(/\s+/g, " ");
-          var key = jpKey(name);
-          if (!key) return;
-          if (!jpMaster[key]) jpMaster[key] = [];
-          jpMaster[key].push(x);
-          if (!uniquePenyulang[key]) uniquePenyulang[key] = name;
-        });
-        Object.keys(uniquePenyulang)
-          .sort(function (a, b) { return uniquePenyulang[a].localeCompare(uniquePenyulang[b]); })
-          .forEach(function (key) {
-            var o = document.createElement("option");
-            o.value = uniquePenyulang[key];
-            o.textContent = uniquePenyulang[key];
-            p.appendChild(o);
-          });
-      }
-      function loadSections() {
-        var key = jpKey(document.getElementById("mPeny").value),
-          s = document.getElementById("mSection");
-        s.innerHTML = '<option value="">Pilih Section</option>';
-        var uniqueSection = {};
-        (jpMaster[key] || []).forEach(function (x) {
-          var section = String(x.section || "").trim().replace(/\s+/g, " ");
-          var sectionKey = jpKey(section);
-          if (sectionKey && !uniqueSection[sectionKey]) uniqueSection[sectionKey] = section;
-        });
-        Object.keys(uniqueSection).forEach(function (sectionKey) {
-          var o = document.createElement("option");
-          o.value = uniqueSection[sectionKey];
-          o.textContent = uniqueSection[sectionKey];
-          s.appendChild(o);
-        });
-      }
-      function loadAuto() {
-        var key = jpKey(document.getElementById("mPeny").value),
-          sec = document.getElementById("mSection").value.toLowerCase(),
-          x = (jpMaster[key] || []).find(function (r) {
-            return jpKey(r.section) === jpKey(sec);
-          });
-        if (!x) return;
-        ["Gardu", "Pelanggan", "Daerah", "Vip"].forEach(function (k) {
-          var id = "m" + k;
-          document.getElementById(id).value =
-            x[
-              k === "Gardu"
-                ? "jumlahGardu"
-                : k === "Pelanggan"
-                  ? "jumlahPelanggan"
-                  : k === "Daerah"
-                    ? "daerahSection"
-                    : "pelangganVip"
-            ] || "";
-        });
-        if (window.google && google.script)
-          google.script.run
-            .withSuccessHandler(function (r) {
-              var b = (r.rows || [])[0];
-              document.getElementById("mBeban").value = b ? b.beban : "";
-              document.getElementById("mArus").value = b
-                ? (
-                    ((Number(b.beban) || 0) * 1000) /
-                    (1.732 * 20000 * 0.85)
-                  ).toFixed(2)
-                : "";
-            })
-            .getJadwalPadamMasterBeban({
-              penyulang: document.getElementById("mPeny").value,
-            });
-      }
-      function loadList() {
-        if (window.google && google.script)
-          google.script.run
-            .withSuccessHandler(function (r) {
-              var b = document.getElementById("jpBody");
-              b.innerHTML =
-                (r.rows || [])
-                  .map(function (x) {
-                    return (
-                      "<tr><td>" +
-                      x.no +
-                      "</td><td>" +
-                      x.kode +
-                      "</td><td>" +
-                      x.ulp +
-                      "</td><td>" +
-                      x.up3 +
-                      "</td><td>" +
-                      x.gi +
-                      "</td><td>" +
-                      x.penyulang +
-                      "</td><td>" +
-                      x.section +
-                      "</td><td>" +
-                      x.jenis +
-                      "</td><td>" +
-                      x.tanggal +
-                      "</td><td>" +
-                      x.jamPadam +
-                      "</td><td>" +
-                      x.jamNyala +
-                      "</td><td>" +
-                      x.durasi +
-                      "</td><td>" +
-                      x.bebanMw +
-                      "</td><td>" +
-                      x.arus +
-                      "</td><td>" +
-                      x.jumlahGardu +
-                      "</td><td>" +
-                      x.jumlahPelanggan +
-                      "</td><td>" +
-                      x.daerah +
-                      "</td><td>" +
-                      x.vip +
-                      "</td></tr>"
-                    );
-                  })
-                  .join("") || '<tr><td colspan="18">Tidak ada data.</td></tr>';
-            })
-            .getJadwalPadamList({});
-      }
-      function saveJadwal(e) {
-        e.preventDefault();
-        var btn = document.getElementById("jpSaveBtn");
-        var token = typeof _state !== "undefined" && _state.token ? _state.token : "";
-        var payload = {
-          token: token,
-          penyulang: document.getElementById("mPeny").value,
-          section: document.getElementById("mSection").value,
-          jenis: document.getElementById("mJenis").value.trim(),
-          tanggal: document.getElementById("mTanggal").value,
-          jamPadam: document.getElementById("mPadam").value,
-          jamNyala: document.getElementById("mNyala").value,
-          lokasi: document.getElementById("mLokasi").value.trim()
-        };
-        if (btn) { btn.disabled = true; btn.textContent = "Menyimpan..."; }
-        google.script.run
-          .withSuccessHandler(function (res) {
-            if (btn) { btn.disabled = false; btn.textContent = "Simpan"; }
-            if (!res || !res.ok) {
-              if (typeof showToast === "function") showToast((res && res.message) || "Gagal menyimpan", "error");
-              else alert((res && res.message) || "Gagal menyimpan");
-              return;
-            }
-            document.querySelector("#jpModal form").reset();
-            document.getElementById("mSection").innerHTML = '<option value="">Pilih Penyulang dulu</option>';
-            ["mBeban","mArus","mGardu","mPelanggan","mDaerah","mVip"].forEach(function(id){ document.getElementById(id).value = ""; });
-            hide("jpModal");
-            if (typeof sisiSukses === "function") sisiSukses("Jadwal padam " + res.kode + " berhasil disimpan");
-            else if (typeof showToast === "function") showToast(res.message, "success");
-            loadList();
-          })
-          .withFailureHandler(function (err) {
-            if (btn) { btn.disabled = false; btn.textContent = "Simpan"; }
-            var msg = "Gagal menyimpan: " + ((err && err.message) || err);
-            if (typeof showToast === "function") showToast(msg, "error"); else alert(msg);
-          })
-          .simpanJadwalPadam(payload);
-        return false;
-      }
-    </script>
-  </body>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Jadwal Padam</title>
+  <style>
+    :root{--jp-bg:oklch(97% .008 250);--jp-surface:oklch(99% .004 250);--jp-text:oklch(27% .025 250);--jp-muted:oklch(53% .025 250);--jp-border:oklch(89% .015 250);--jp-brand:oklch(42% .15 257);--jp-brand-hover:oklch(36% .15 257);--jp-head:oklch(94% .025 250)}
+    *{box-sizing:border-box}body{margin:0;background:var(--jp-bg);color:var(--jp-text);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;font-optical-sizing:auto}.wrap{padding:24px}.head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px}.head h2{margin:0;color:var(--jp-text);font-size:24px;line-height:1.2}.head p{margin:6px 0 0;color:var(--jp-muted)}.btn{min-height:40px;padding:0 16px;border:0;border-radius:9px;background:var(--jp-brand);color:oklch(98% .005 250);font:600 14px/1 inherit;cursor:pointer;transition:transform 120ms cubic-bezier(.22,1,.36,1),opacity 120ms}.btn:hover{background:var(--jp-brand-hover)}.btn:active{transform:translateY(1px)}.btn:disabled{opacity:.55;cursor:not-allowed}.btn-secondary{background:oklch(51% .025 250)}.filter{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin-top:24px;padding:16px;background:var(--jp-surface);border:1px solid var(--jp-border);border-radius:12px}.field{display:flex;flex:1 1 145px;min-width:130px;flex-direction:column;gap:6px}.field label{color:var(--jp-muted);font-size:11px;font-weight:750;letter-spacing:.08em;text-transform:uppercase}.field input,.field select{width:100%;height:40px;padding:0 10px;border:1px solid var(--jp-border);border-radius:8px;background:var(--jp-surface);color:var(--jp-text);font:inherit}.field input:focus-visible,.field select:focus-visible,.btn:focus-visible{outline:3px solid oklch(70% .13 245/.35);outline-offset:2px}.auto{background:oklch(95% .008 250)!important;color:var(--jp-muted)!important}.table-shell{margin-top:20px;overflow:hidden;border:1px solid var(--jp-border);border-radius:12px;background:var(--jp-surface)}.table-scroll{overflow:auto;max-height:62vh}table{width:100%;min-width:1680px;border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-nums}th{position:sticky;top:0;z-index:1;padding:12px 10px;background:var(--jp-head);border-bottom:1px solid var(--jp-border);color:var(--jp-muted);font-size:11px;letter-spacing:.06em;text-align:left;text-transform:uppercase;white-space:nowrap}td{padding:12px 10px;border-bottom:1px solid oklch(93% .009 250);vertical-align:top;white-space:nowrap}tbody tr:nth-child(even){background:oklch(98% .006 250)}tbody tr:hover{background:oklch(95% .025 245)}tbody tr:last-child td{border-bottom:0}.cell-area{min-width:280px;max-width:360px;white-space:normal;line-height:1.45}.cell-empty{color:oklch(66% .018 250);font-style:italic}.status{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap}.status:before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}.status-terjadwal{background:oklch(93% .05 250);color:oklch(45% .16 257)}.status-terealisasi{background:oklch(94% .07 145);color:oklch(43% .13 145)}.status-batal{background:oklch(94% .055 25);color:oklch(48% .17 25)}.empty{text-align:center;padding:44px!important;color:var(--jp-muted)}.modal{display:none;position:fixed;inset:0;z-index:500;background:oklch(20% .025 250/.62);align-items:center;justify-content:center;padding:16px}.modal.show{display:flex}.dialog{width:min(780px,100%);max-height:90vh;overflow:auto;border-radius:14px;background:var(--jp-surface);box-shadow:0 24px 70px oklch(20% .03 250/.28)}.dialog h3{margin:0;padding:20px 22px;border-bottom:1px solid var(--jp-border);font-size:20px}.form{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px;padding:20px 22px}.form .full{grid-column:1/-1}.foot{display:flex;justify-content:flex-end;gap:10px;padding:16px 22px;border-top:1px solid var(--jp-border)}
+    @media(max-width:700px){.wrap{padding:14px}.head{display:block}.head .btn{width:100%;margin-top:16px}.filter{margin-top:16px}.field{flex-basis:100%}.form{grid-template-columns:1fr;padding:18px}.form .full{grid-column:auto}.dialog h3,.foot{padding-left:18px;padding-right:18px}.table-scroll{max-height:58vh}}
+  </style>
+</head>
+<body>
+<main class="wrap">
+  <div class="head"><div><h2>Rincian Jadwal Padam</h2><p>Jadwal pekerjaan dan dampak pelanggan.</p></div><button class="btn" onclick="jpOpen()">Input Jadwal Padam</button></div>
+  <section class="filter">
+    <div class="field"><label>Tanggal Mulai</label><input type="date" id="jpFrom"></div>
+    <div class="field"><label>Tanggal Selesai</label><input type="date" id="jpTo"></div>
+    <div class="field" id="jpUlpWrap"><label>ULP</label><select id="jpUlp"><option value="">Semua ULP</option></select></div>
+    <div class="field"><label>Penyulang</label><select id="jpPeny" onchange="jpFilterSections()"><option value="">Semua Penyulang</option></select></div>
+    <div class="field"><label>Section</label><select id="jpSection"><option value="">Semua Section</option></select></div>
+    <div class="field"><label>Status Jadwal</label><select id="jpStatus"><option value="">Semua Status</option><option>Terjadwal</option><option>Terealisasi</option><option>Batal Pemadaman</option></select></div>
+    <button class="btn" onclick="loadList()">Cari</button>
+  </section>
+  <section class="table-shell"><div class="table-scroll"><table><thead><tr><th>No</th><th>Kode Jadwal</th><th>ULP</th><th>Penyulang</th><th>Section</th><th>Jenis Pekerjaan</th><th>Tanggal</th><th>Jam Padam</th><th>Jam Nyala</th><th>Durasi</th><th>Gardu</th><th>Pelanggan</th><th>Daerah Padam</th><th>Beban</th><th>ENS</th><th>Pelanggan VIP</th><th>Lokasi</th><th>Status</th></tr></thead><tbody id="jpBody"><tr><td class="empty" colspan="18">Memuat jadwal...</td></tr></tbody></table></div></section>
+</main>
+<div class="modal" id="jpModal"><div class="dialog"><h3>Input Jadwal Padam</h3><form id="jpForm" class="form" onsubmit="return saveJadwal(event)">
+  <div class="field"><label>Penyulang</label><select id="mPeny" required onchange="loadSections()"><option value="">Pilih Penyulang</option></select></div>
+  <div class="field"><label>Section</label><select id="mSection" required onchange="loadAuto()"><option value="">Pilih Penyulang dulu</option></select></div>
+  <div class="field"><label>Jenis Pekerjaan</label><input id="mJenis" required></div>
+  <div class="field"><label>Tanggal</label><input id="mTanggal" type="date" required></div>
+  <div class="field"><label>Jam Padam</label><input id="mPadam" type="time" step="60" required onclick="this.showPicker&&this.showPicker()"></div>
+  <div class="field"><label>Jam Nyala</label><input id="mNyala" type="time" step="60" required onclick="this.showPicker&&this.showPicker()"></div>
+  <div class="field"><label>Beban</label><input id="mBeban" class="auto" readonly></div>
+  <div class="field"><label>Arus (A)</label><input id="mArus" class="auto" readonly></div>
+  <div class="field"><label>Jumlah Gardu</label><input id="mGardu" class="auto" readonly></div>
+  <div class="field"><label>Jumlah Pelanggan</label><input id="mPelanggan" class="auto" readonly></div>
+  <div class="field full"><label>Daerah Padam</label><input id="mDaerah" class="auto" readonly></div>
+  <div class="field full"><label>Pelanggan VIP</label><input id="mVip" class="auto" readonly></div>
+  <div class="field full"><label>Lokasi Pekerjaan</label><input id="mLokasi"></div>
+</form><div class="foot"><button class="btn btn-secondary" onclick="jpClose()">Batal</button><button class="btn" id="jpSaveBtn" onclick="document.getElementById('jpForm').requestSubmit()">Simpan</button></div></div></div>
+<script>
+var jpMaster={},jpMasterRows=[];
+function jpSession(){return (typeof _state!=='undefined'&&_state.sesi)||window.__SISI_SESI__||{};}
+function jpIsSuper(){return String(jpSession().role||'').trim()==='Super User';}
+function jpKey(v){return String(v||'').normalize('NFKC').replace(/\u00a0/g,' ').trim().replace(/\s+/g,' ').toUpperCase();}
+function jpEsc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function jpText(v){return v===null||v===undefined||String(v).trim()===''?'<span class="cell-empty">Belum tersedia</span>':jpEsc(v);}
+function jpNum(v,d){var n=Number(v);return v===null||v===''||isNaN(n)?'<span class="cell-empty">Belum tersedia</span>':n.toLocaleString('id-ID',{maximumFractionDigits:d==null?2:d});}
+function jpOption(value,label){var o=document.createElement('option');o.value=value;o.textContent=label||value;return o;}
+function jpOpen(){document.getElementById('jpModal').classList.add('show');jpLoadMaster();}
+function jpClose(){document.getElementById('jpModal').classList.remove('show');}
+function jpLoadMaster(){var sesi=jpSession(),filter=jpIsSuper()?'':String(sesi.ulp||'');google.script.run.withSuccessHandler(jpPopulate).withFailureHandler(function(e){jpNotify((e&&e.message)||e,'error');}).getJadwalPadamMaster({ulp:filter});}
+function jpPopulate(res){
+  jpMaster={};jpMasterRows=(res&&res.rows)||[];var unique={},ulps={};
+  jpMasterRows.forEach(function(x){var name=String(x.penyulang||'').trim().replace(/\s+/g,' '),key=jpKey(name);if(!key)return;(jpMaster[key]||(jpMaster[key]=[])).push(x);unique[key]=unique[key]||name;if(x.ulp)ulps[jpKey(x.ulp)]=x.ulp;});
+  var modal=document.getElementById('mPeny'),filter=document.getElementById('jpPeny');modal.innerHTML='<option value="">Pilih Penyulang</option>';filter.innerHTML='<option value="">Semua Penyulang</option>';
+  Object.keys(unique).sort(function(a,b){return unique[a].localeCompare(unique[b]);}).forEach(function(k){modal.appendChild(jpOption(unique[k]));filter.appendChild(jpOption(unique[k]));});
+  var ulp=document.getElementById('jpUlp');ulp.innerHTML='<option value="">Semua ULP</option>';Object.keys(ulps).sort().forEach(function(k){ulp.appendChild(jpOption(ulps[k]));});jpFilterSections();
+}
+function loadSections(){var rows=jpMaster[jpKey(document.getElementById('mPeny').value)]||[],select=document.getElementById('mSection'),seen={};select.innerHTML='<option value="">Pilih Section</option>';rows.forEach(function(x){var v=String(x.section||'').trim(),k=jpKey(v);if(v&&!seen[k]){seen[k]=1;select.appendChild(jpOption(v));}});['mBeban','mArus','mGardu','mPelanggan','mDaerah','mVip'].forEach(function(id){document.getElementById(id).value='';});}
+function jpFilterSections(){var key=jpKey(document.getElementById('jpPeny').value),rows=key?(jpMaster[key]||[]):jpMasterRows,select=document.getElementById('jpSection'),seen={};select.innerHTML='<option value="">Semua Section</option>';rows.forEach(function(x){var v=String(x.section||'').trim(),k=jpKey(v);if(v&&!seen[k]){seen[k]=1;select.appendChild(jpOption(v));}});}
+function loadAuto(){var key=jpKey(document.getElementById('mPeny').value),sec=jpKey(document.getElementById('mSection').value),x=(jpMaster[key]||[]).find(function(r){return jpKey(r.section)===sec;});if(!x)return;document.getElementById('mBeban').value=x.bebanMw==null?'':x.bebanMw;document.getElementById('mArus').value=x.arus==null?'':x.arus;document.getElementById('mGardu').value=x.jumlahGardu==null?'':x.jumlahGardu;document.getElementById('mPelanggan').value=x.jumlahPelanggan==null?'':x.jumlahPelanggan;document.getElementById('mDaerah').value=x.daerahSection||'';document.getElementById('mVip').value=x.pelangganVip||'';}
+function jpStatusClass(v){var k=jpKey(v);return k==='TEREALISASI'?'status-terealisasi':k==='BATAL PEMADAMAN'?'status-batal':'status-terjadwal';}
+function loadList(){var sesi=jpSession(),params={tglDari:document.getElementById('jpFrom').value,tglSampai:document.getElementById('jpTo').value,ulp:jpIsSuper()?document.getElementById('jpUlp').value:String(sesi.ulp||''),penyulang:document.getElementById('jpPeny').value,section:document.getElementById('jpSection').value,status:document.getElementById('jpStatus').value};document.getElementById('jpBody').innerHTML='<tr><td class="empty" colspan="18">Memuat jadwal...</td></tr>';google.script.run.withSuccessHandler(jpRender).withFailureHandler(function(e){document.getElementById('jpBody').innerHTML='<tr><td class="empty" colspan="18">Gagal memuat data</td></tr>';jpNotify((e&&e.message)||e,'error');}).getJadwalPadamList(params);}
+function jpRender(res){var rows=(res&&res.rows)||[],body=document.getElementById('jpBody');if(!rows.length){body.innerHTML='<tr><td class="empty" colspan="18">Tidak ada jadwal untuk filter ini.</td></tr>';return;}body.innerHTML=rows.map(function(x){var status=x.status||'Terjadwal';return '<tr><td>'+jpText(x.no)+'</td><td><b>'+jpText(x.kode)+'</b></td><td>'+jpText(x.ulp)+'</td><td><b>'+jpText(x.penyulang)+'</b></td><td>'+jpText(x.section)+'</td><td>'+jpText(x.jenis)+'</td><td>'+jpText(x.tanggal)+'</td><td>'+jpText(x.jamPadam)+'</td><td>'+jpText(x.jamNyala)+'</td><td>'+jpNum(x.durasi,2)+' jam</td><td>'+jpNum(x.jumlahGardu,0)+'</td><td>'+jpNum(x.jumlahPelanggan,0)+'</td><td class="cell-area" title="'+jpEsc(x.daerah||'')+'">'+jpText(x.daerah)+'</td><td>'+jpNum(x.bebanMw,3)+'</td><td>'+jpNum(x.ens,3)+'</td><td class="cell-area">'+jpText(x.vip)+'</td><td class="cell-area">'+jpText(x.lokasi)+'</td><td><span class="status '+jpStatusClass(status)+'">'+jpEsc(status)+'</span></td></tr>';}).join('');}
+function jpNotify(msg,type){if(typeof showToast==='function')showToast(String(msg),type||'info');else alert(msg);}
+function saveJadwal(e){e.preventDefault();var btn=document.getElementById('jpSaveBtn'),payload={token:(typeof _state!=='undefined'&&_state.token)||'',penyulang:document.getElementById('mPeny').value,section:document.getElementById('mSection').value,jenis:document.getElementById('mJenis').value.trim(),tanggal:document.getElementById('mTanggal').value,jamPadam:document.getElementById('mPadam').value,jamNyala:document.getElementById('mNyala').value,lokasi:document.getElementById('mLokasi').value.trim()};btn.disabled=true;btn.textContent='Menyimpan...';google.script.run.withSuccessHandler(function(res){btn.disabled=false;btn.textContent='Simpan';if(!res||!res.ok){jpNotify((res&&res.message)||'Gagal menyimpan','error');return;}document.getElementById('jpForm').reset();document.getElementById('mSection').innerHTML='<option value="">Pilih Penyulang dulu</option>';['mBeban','mArus','mGardu','mPelanggan','mDaerah','mVip'].forEach(function(id){document.getElementById(id).value='';});jpClose();if(typeof sisiSukses==='function')sisiSukses('Jadwal padam '+res.kode+' berhasil disimpan');else jpNotify(res.message,'success');loadList();}).withFailureHandler(function(err){btn.disabled=false;btn.textContent='Simpan';jpNotify('Gagal menyimpan: '+((err&&err.message)||err),'error');}).simpanJadwalPadam(payload);return false;}
+(function initJadwalPadam(){document.getElementById('jpUlpWrap').style.display=jpIsSuper()?'flex':'none';jpLoadMaster();loadList();})();
+</script>
+</body>
 </html>
