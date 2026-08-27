@@ -168,11 +168,25 @@
       tbody tr:last-child td {
         border-bottom: 0;
       }
-      .cell-area { max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; line-height:1.45; }
-      span.cell-area { display:block; }
-      td.cell-area { display:table-cell; }
-      span.cell-area { display:block; }
-      td.cell-area { display:table-cell; }
+      .cell-area {
+        max-width: 260px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        line-height: 1.45;
+      }
+      span.cell-area {
+        display: block;
+      }
+      td.cell-area {
+        display: table-cell;
+      }
+      span.cell-area {
+        display: block;
+      }
+      td.cell-area {
+        display: table-cell;
+      }
       .cell-empty {
         color: oklch(66% 0.018 250);
         font-style: italic;
@@ -206,16 +220,53 @@
         background: oklch(94% 0.055 25);
         color: oklch(48% 0.17 25);
       }
-      .work-status { display:inline-flex; padding:5px 9px; border-radius:999px; font-size:12px; font-weight:700; white-space:nowrap; }
-      .work-padam { background:oklch(94% 0.055 25); color:oklch(48% 0.17 25); }
-      .work-tanpa { background:oklch(94% 0.07 145); color:oklch(43% 0.13 145); }
-      .action-head { text-align:center; }
-      .action-group { display:flex; justify-content:center; gap:8px; }
-      .action-btn { min-height:34px; padding:0 12px; border:1px solid transparent; border-radius:7px; color:oklch(98% .005 250); font:700 12px/1 inherit; cursor:pointer; white-space:nowrap; }
-      .action-btn-success { background:oklch(52% .14 145); }
-      .action-btn-success:hover { background:oklch(46% .14 145); }
-      .action-btn-danger { background:oklch(68% .15 58); color:oklch(25% .05 58); }
-      .action-btn-danger:hover { background:oklch(62% .15 58); }
+      .work-status {
+        display: inline-flex;
+        padding: 5px 9px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+      .work-padam {
+        background: oklch(94% 0.055 25);
+        color: oklch(48% 0.17 25);
+      }
+      .work-tanpa {
+        background: oklch(94% 0.07 145);
+        color: oklch(43% 0.13 145);
+      }
+      .action-head {
+        text-align: center;
+      }
+      .action-group {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+      }
+      .action-btn {
+        min-height: 34px;
+        padding: 0 12px;
+        border: 1px solid transparent;
+        border-radius: 7px;
+        color: oklch(98% 0.005 250);
+        font: 700 12px/1 inherit;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .action-btn-success {
+        background: oklch(52% 0.14 145);
+      }
+      .action-btn-success:hover {
+        background: oklch(46% 0.14 145);
+      }
+      .action-btn-danger {
+        background: oklch(68% 0.15 58);
+        color: oklch(25% 0.05 58);
+      }
+      .action-btn-danger:hover {
+        background: oklch(62% 0.15 58);
+      }
       .empty {
         text-align: center;
         padding: 44px !important;
@@ -336,8 +387,21 @@
             <option>Batal Pekerjaan</option>
           </select>
         </div>
-        <div class="field"><label>Status Pekerjaan</label><select id="jpWorkStatus"><option value="">Semua</option><option>Padam</option><option>Tanpa Padam</option></select></div>
-        <div class="field"><label>Urutan Tanggal</label><select id="jpSortTanggal"><option value="desc">Terbesar ke terkecil</option><option value="asc">Terkecil ke terbesar</option></select></div>
+        <div class="field">
+          <label>Status Pekerjaan</label
+          ><select id="jpWorkStatus">
+            <option value="">Semua</option>
+            <option>Padam</option>
+            <option>Tanpa Padam</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Urutan Tanggal</label
+          ><select id="jpSortTanggal">
+            <option value="desc">Terbesar ke terkecil</option>
+            <option value="asc">Terkecil ke terbesar</option>
+          </select>
+        </div>
         <button class="btn" onclick="loadList()">Cari</button>
       </section>
       <section class="table-shell">
@@ -379,7 +443,13 @@
     <div class="modal" id="jpModal">
       <div class="dialog">
         <h3>Input Jadwal Padam</h3>
-        <form id="jpForm" class="form" autocomplete="off" data-form-type="other" onsubmit="return saveJadwal(event);">
+        <form
+          id="jpForm"
+          class="form"
+          autocomplete="off"
+          data-form-type="other"
+          onsubmit="return saveJadwal(event);"
+        >
           <div class="field">
             <label>Penyulang</label
             ><select id="mPeny" required onchange="loadSections()">
@@ -393,7 +463,16 @@
             </select>
           </div>
           <div class="field">
-            <label>Jenis Pekerjaan</label><input id="mJenis" name="jp_jenis_baru" autocomplete="off" data-lpignore="true" data-form-type="other" spellcheck="false" required />
+            <label>Jenis Pekerjaan</label
+            ><input
+              id="mJenis"
+              name="jp_jenis_baru"
+              autocomplete="off"
+              data-lpignore="true"
+              data-form-type="other"
+              spellcheck="false"
+              required
+            />
           </div>
           <div class="field">
             <label>Tanggal</label><input id="mTanggal" type="date" required />
@@ -449,7 +528,15 @@
             ><input id="mVip" class="auto" readonly />
           </div>
           <div class="field full">
-            <label>Lokasi Pekerjaan</label><input id="mLokasi" name="jp_lokasi_baru" autocomplete="off" data-lpignore="true" data-form-type="other" spellcheck="false" />
+            <label>Lokasi Pekerjaan</label
+            ><input
+              id="mLokasi"
+              name="jp_lokasi_baru"
+              autocomplete="off"
+              data-lpignore="true"
+              data-form-type="other"
+              spellcheck="false"
+            />
           </div>
         </form>
         <div class="foot">
@@ -624,23 +711,29 @@
         document.getElementById("mDaerah").value = x.daerahSection || "";
         document.getElementById("mVip").value = x.pelangganVip || "";
       }
-      function jpWorkStatusClass(v) { return jpKey(v) === "TANPA PADAM" ? "work-tanpa" : "work-padam"; }
+      function jpWorkStatusClass(v) {
+        return jpKey(v) === "TANPA PADAM" ? "work-tanpa" : "work-padam";
+      }
       function jpStatusClass(v) {
         var k = jpKey(v);
         return k === "TEREALISASI"
           ? "status-terealisasi"
-          : (k === "BATAL PEMADAMAN" || k === "BATAL PEKERJAAN")
+          : k === "BATAL PEMADAMAN" || k === "BATAL PEKERJAAN"
             ? "status-batal"
             : "status-terjadwal";
       }
       function jpDateInputValue(date) {
-        var y=date.getFullYear(),m=String(date.getMonth()+1).padStart(2,"0"),d=String(date.getDate()).padStart(2,"0");
-        return y+"-"+m+"-"+d;
+        var y = date.getFullYear(),
+          m = String(date.getMonth() + 1).padStart(2, "0"),
+          d = String(date.getDate()).padStart(2, "0");
+        return y + "-" + m + "-" + d;
       }
       function jpSetCurrentMonthRange() {
-        var now=new Date(),first=new Date(now.getFullYear(),now.getMonth(),1),last=new Date(now.getFullYear(),now.getMonth()+1,0);
-        document.getElementById("jpFrom").value=jpDateInputValue(first);
-        document.getElementById("jpTo").value=jpDateInputValue(last);
+        var now = new Date(),
+          first = new Date(now.getFullYear(), now.getMonth(), 1),
+          last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        document.getElementById("jpFrom").value = jpDateInputValue(first);
+        document.getElementById("jpTo").value = jpDateInputValue(last);
       }
       function loadList() {
         var sesi = jpSession(),
@@ -676,7 +769,9 @@
           .map(function (x) {
             var status = x.status || "Terjadwal";
             return (
-              '<tr data-kode="' + jpEsc(x.kode) + '"><td>' +
+              '<tr data-kode="' +
+              jpEsc(x.kode) +
+              '"><td>' +
               jpText(x.no) +
               "</td><td><b>" +
               jpText(x.kode) +
@@ -717,19 +812,54 @@
               jpStatusClass(status) +
               '">' +
               jpEsc(status) +
-              "</span></td><td><span class=\"work-status " + jpWorkStatusClass(x.statusPekerjaan) + "\">" + jpText(x.statusPekerjaan) + "</span></td><td><div class=\"action-group\"><button class=\"action-btn action-btn-success\" onclick=\"jpUpdateStatus(this, \'Terealisasi\')\">Terealisasi</button><button class=\"action-btn action-btn-danger\" onclick=\"jpUpdateStatus(this, \'Batal Pekerjaan\')\">Batal</button></div></td></tr>"
+              '</span></td><td><span class="work-status ' +
+              jpWorkStatusClass(x.statusPekerjaan) +
+              '">' +
+              jpText(x.statusPekerjaan) +
+              '</span></td><td><div class="action-group"><button class="action-btn action-btn-success" onclick="jpUpdateStatus(this, \'Terealisasi\')">Terealisasi</button><button class="action-btn action-btn-danger" onclick="jpUpdateStatus(this, \'Batal Pekerjaan\')">Batal</button></div></td></tr>'
             );
           })
           .join("");
       }
       function jpUpdateStatus(button, status) {
-        var row=button.closest("tr"),kode=row?row.getAttribute("data-kode"):"";
-        if(!kode)return;
-        var buttons=row.querySelectorAll(".action-btn");buttons.forEach(function(b){b.disabled=true;});button.textContent="Memproses...";
-        google.script.run.withSuccessHandler(function(res){
-          if(!res||!res.ok){buttons.forEach(function(b){b.disabled=false;});button.textContent=status==="Terealisasi"?"Terealisasi":"Batal";jpNotify((res&&res.message)||"Gagal memperbarui status","error");return;}
-          jpNotify("Status jadwal "+kode+" menjadi "+status,"success");loadList();
-        }).withFailureHandler(function(err){buttons.forEach(function(b){b.disabled=false;});button.textContent=status==="Terealisasi"?"Terealisasi":"Batal";jpNotify((err&&err.message)||err,"error");}).updateStatusJadwalPadam({token:(typeof _state!=="undefined"&&_state.token)||"",kode:kode,status:status});
+        var row = button.closest("tr"),
+          kode = row ? row.getAttribute("data-kode") : "";
+        if (!kode) return;
+        var buttons = row.querySelectorAll(".action-btn");
+        buttons.forEach(function (b) {
+          b.disabled = true;
+        });
+        button.textContent = "Memproses...";
+        google.script.run
+          .withSuccessHandler(function (res) {
+            if (!res || !res.ok) {
+              buttons.forEach(function (b) {
+                b.disabled = false;
+              });
+              button.textContent =
+                status === "Terealisasi" ? "Terealisasi" : "Batal";
+              jpNotify(
+                (res && res.message) || "Gagal memperbarui status",
+                "error",
+              );
+              return;
+            }
+            jpNotify("Status jadwal " + kode + " menjadi " + status, "success");
+            loadList();
+          })
+          .withFailureHandler(function (err) {
+            buttons.forEach(function (b) {
+              b.disabled = false;
+            });
+            button.textContent =
+              status === "Terealisasi" ? "Terealisasi" : "Batal";
+            jpNotify((err && err.message) || err, "error");
+          })
+          .updateStatusJadwalPadam({
+            token: (typeof _state !== "undefined" && _state.token) || "",
+            kode: kode,
+            status: status,
+          });
       }
       function jpNotify(msg, type) {
         if (typeof showToast === "function")
