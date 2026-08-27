@@ -37,6 +37,8 @@ var SHEET_YANDAL = {
   SHIFT: "db_Yandal_Shift",
   P0: "db_Yandal_P0",
   SWITCHING: "db_Yandal_Pengecekan_Switching",
+  RANK: "db_Yandal_Rank",
+  PETUGAS: "db_List_Petugas_Yandal",
   LIST_P0: "db_Yandal_List_P0",
 };
 // db_Yandal_List_P0 — master bobot tiap jenis pekerjaan P0 (0-based): No | Nama Pekerjaan | Bobot Pekerjaan
@@ -231,6 +233,11 @@ function _padY_(n, len) {
   return s;
 }
 function _allY_(sh) {
+  if (sh) {
+    var name = String(sh.getName() || "");
+    if (name === SHEET_YANDAL.RANK || name === SHEET_YANDAL.PETUGAS)
+      return _allDualSheetY_(name);
+  }
   return sh.getDataRange().getValues();
 }
 function _setY_(sh, rowNum, col0, val) {
@@ -255,6 +262,36 @@ function _findRowY_(sh, col0, value) {
   }
   return null;
 }
+// Dual-read untuk sheet Yandal yang dimigrasikan: aktif + arsip.
+// Urutan aktif lebih dulu, lalu arsip. Baris duplikat identik hanya dihitung sekali.
+function _allDualSheetY_(sheetName) {
+  var ids = [SPREADSHEET_ID];
+  if (typeof SPREADSHEET_ID_ARSIP !== "undefined" && SPREADSHEET_ID_ARSIP)
+    ids.push(SPREADSHEET_ID_ARSIP);
+  var out = [], seen = {}, headerAdded = false;
+  for (var s = 0; s < ids.length; s++) {
+    try {
+      var sh = SpreadsheetApp.openById(ids[s]).getSheetByName(sheetName);
+      if (!sh || sh.getLastRow() < 1) continue;
+      var rows = sh.getDataRange().getValues();
+      for (var i = 0; i < rows.length; i++) {
+        var row = rows[i];
+        var key = JSON.stringify(row.map(function(v){ return v instanceof Date ? v.toISOString() : String(v == null ? "" : v).trim(); }));
+        if (seen[key]) continue;
+        seen[key] = true;
+        if (i === 0) {
+          if (!headerAdded) { out.push(row); headerAdded = true; }
+        } else out.push(row);
+      }
+    } catch (e) {
+      Logger.log("_allDualSheetY_: gagal membaca " + sheetName + " sumber " + s + " — " + e);
+    }
+  }
+  return out;
+}
+function _allDualYandalRank_() { return _allDualSheetY_(SHEET_YANDAL.RANK); }
+function _allDualYandalPetugas_() { return _allDualSheetY_(SHEET_YANDAL.PETUGAS); }
+
 function _countByValueY_(sh, col0, value) {
   var d = _allY_(sh),
     c = 0;

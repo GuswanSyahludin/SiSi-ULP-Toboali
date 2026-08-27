@@ -1,0 +1,23 @@
+name: Apply Yandal dual wire
+on:
+  push:
+    branches: [feat/yandal-rank-petugas-dual-read]
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/yandal-rank-petugas-dual-read
+          fetch-depth: 0
+      - run: python3 .github/scripts/wire_yandal_dual_read.py
+      - run: |
+          rm .github/scripts/wire_yandal_dual_read.py
+          rm .github/workflows/apply-yandal-dual-wire-push.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add SiSi_BackEnd/Yandal/Tek-Yandal-Code.js .github/
+          git commit -m "fix: route Rank and Petugas reads through dual source" || exit 0
+          git push origin HEAD:feat/yandal-rank-petugas-dual-read
