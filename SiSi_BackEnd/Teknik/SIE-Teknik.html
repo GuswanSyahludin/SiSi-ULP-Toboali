@@ -340,6 +340,10 @@
     <button class="st-tab" id="stTab-gaspol" onclick="_stSwitchTab('gaspol')">
       <i class="fa-solid fa-gauge-high"></i> GASPOL UP3
     </button>
+    <button class="st-tab" id="stTab-jadwal" onclick="_stSwitchTab('jadwal')">
+      <i class="fa-solid fa-calendar-xmark"></i> Jadwal Padam
+    </button>
+
     <!-- Tab "Data Pendukung CheckPoint" DIPINDAH ke file Tek-Data-Checkpoint.html (sub-menu SIE Teknik, Rev 11 Agu 2026) -->
   </div>
 
@@ -653,6 +657,23 @@
         </tbody>
       </table>
     </div>
+  </div>
+
+
+  <!-- TAB JADWAL PADAM -->
+  <div class="st-tab-content" id="sttab-jadwal">
+    <div class="filter-bar">
+      <div class="filter-group"><label>Tgl Dari</label><input type="date" id="stjp_dari"></div>
+      <div class="filter-group"><label>Tgl Sampai</label><input type="date" id="stjp_sampai"></div>
+      <div class="filter-group" id="stjpWrapUlp" style="display:none"><label>ULP</label><select id="stjp_ulp"><option value="">Semua ULP</option></select></div>
+      <div class="filter-group"><label>Penyulang</label><select id="stjp_peny"><option value="">Semua Penyulang</option></select></div>
+      <div class="filter-group"><label>Section</label><select id="stjp_section"><option value="">Semua Section</option></select></div>
+      <button class="btn-filter" onclick="_stJpLoad()"><i class="fa-solid fa-magnifying-glass"></i> Cari</button>
+      <button class="btn-reset" onclick="_stJpReset()">Reset</button>
+    </div>
+    <div class="tbl-wrap"><table><thead><tr>
+      <th>No</th><th>Kode Jadwal Padam</th><th>ULP</th><th>UP3</th><th>GI</th><th>Penyulang</th><th>Section</th><th>Jenis Pekerjaan</th><th>Tanggal</th><th>Jam Padam</th><th>Jam Nyala</th><th>Durasi</th><th>Beban MW</th><th>Arus (A)</th><th>Jumlah Gardu</th><th>Jumlah Pelanggan</th><th>Daerah Section</th><th>Pelanggan VIP</th><th>Status</th>
+    </tr></thead><tbody id="stJpBody"><tr><td colspan="19"><div class="empty-state"><i class="fa-solid fa-calendar-xmark"></i><p>Pilih filter lalu klik Muat.</p></div></td></tr></tbody></table></div>
   </div>
 
   <!-- TAB 5: GASPOL UP3 -->
@@ -2966,6 +2987,23 @@ function _stShowError(bodyId, cols, err){
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tiBoot);
   else tiBoot();
 })();
+
+// JADWAL PADAM
+function _stJpIsSuper(){ return String((_stSession&&_stSession.role)||'').trim()==='Super User'; }
+function _stJpLoad(){
+  var p={tglDari:_stEl('stjp_dari').value,tglSampai:_stEl('stjp_sampai').value,ulp:_stJpIsSuper()?(_stEl('stjp_ulp').value):(_stSession.ulp||''),penyulang:_stEl('stjp_peny').value,section:_stEl('stjp_section').value};
+  google.script.run.withSuccessHandler(function(r){var b=_stEl('stJpBody');if(!r||!r.ok){b.innerHTML='<tr><td colspan="19">Gagal memuat jadwal padam.</td></tr>';return;}var a=r.rows||[];b.innerHTML=a.length?a.map(function(x){return '<tr><td>'+_stEsc(x.no)+'</td><td><code>'+_stEsc(x.kode)+'</code></td><td>'+_stEsc(x.ulp)+'</td><td>'+_stEsc(x.up3)+'</td><td>'+_stEsc(x.gi)+'</td><td>'+_stEsc(x.penyulang)+'</td><td>'+_stEsc(x.section)+'</td><td>'+_stEsc(x.jenis)+'</td><td>'+_stEsc(x.tanggal)+'</td><td>'+_stEsc(x.jamPadam)+'</td><td>'+_stEsc(x.jamNyala)+'</td><td>'+_stEsc(x.durasi)+'</td><td>'+_stEsc(x.bebanMw)+'</td><td>'+_stEsc(x.arus)+'</td><td>'+_stEsc(x.jumlahGardu)+'</td><td>'+_stEsc(x.jumlahPelanggan)+'</td><td>'+_stEsc(x.daerah)+'</td><td>'+_stEsc(x.vip)+'</td><td>'+_stEsc(x.status)+'</td></tr>';}).join(''):'<tr><td colspan="19"><div class="empty-state">Tidak ada jadwal padam.</div></td></tr>';}).getJadwalPadamList(p);}
+function _stJpReset(){['stjp_dari','stjp_sampai'].forEach(function(id){_stEl(id).value='';});['stjp_ulp','stjp_peny','stjp_section'].forEach(function(id){_stEl(id).selectedIndex=0;});_stJpLoad();}
+function _stJpInit(){
+  var now=new Date(),iso=now.toISOString().slice(0,10),first=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);
+  _stEl('stjp_dari').value=first;_stEl('stjp_sampai').value=iso;
+  _stEl('stjpWrapUlp').style.display=_stJpIsSuper()?'flex':'none';
+  google.script.run.withSuccessHandler(function(r){var ps={},ss={};(r.rows||[]).forEach(function(x){var pk=x.penyulang;ps[pk]=1;(ss[pk]||(ss[pk]=[])).push(x.section);});var p=_stEl('stjp_peny');Object.keys(ps).sort().forEach(function(x){p.innerHTML+='<option value="'+_stEsc(x)+'">'+_stEsc(x)+'</option>';});p.onchange=function(){var q=_stEl('stjp_section');q.innerHTML='<option value="">Semua Section</option>';(ss[p.value]||[]).filter(function(x,i,a){return a.indexOf(x)===i;}).forEach(function(x){q.innerHTML+='<option value="'+_stEsc(x)+'">'+_stEsc(x)+'</option>';});};}).getJadwalPadamMaster({ulp:_stJpIsSuper()?'':(_stSession.ulp||'')});
+  if(_stJpIsSuper()) _stLoadListUlpJp();
+  _stJpLoad();
+}
+function _stLoadListUlpJp(){google.script.run.withSuccessHandler(function(a){var s=_stEl('stjp_ulp');(a||[]).forEach(function(x){s.innerHTML+='<option value="'+_stEsc(x)+'">'+_stEsc(x)+'</option>';});}).getListUlpIns();}
+function _stEsc(x){return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 </script>
 
 <!-- MODAL dpgCoverModal & dpgRekapModal: DIPINDAH ke Tek-Data-Checkpoint.html (Rev 11 Agu 2026) -->

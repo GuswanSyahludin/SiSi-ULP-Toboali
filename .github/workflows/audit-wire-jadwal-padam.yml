@@ -1,0 +1,27 @@
+name: Audit Wire Jadwal Padam
+on:
+  push:
+    branches: [feat/wire-jadwal-padam-menu]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/wire-jadwal-padam-menu
+      - run: python .github/scripts/wire_jadwal_padam_menu.py
+      - name: Validate anchors
+        run: |
+          grep -q "id=\"stTab-jadwal\"" SiSi_BackEnd/Teknik/SIE-Teknik.html
+          grep -q "id=\"sttab-jadwal\"" SiSi_BackEnd/Teknik/SIE-Teknik.html
+          grep -q "'Jadwal-Padam'" SiSi_BackEnd/Core/Main.html
+      - name: Commit implementation
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add SiSi_BackEnd/Core/Main.html SiSi_BackEnd/Teknik/SIE-Teknik.html
+          git commit -m "feat(web): wire Jadwal Padam into SIE Teknik [skip ci]" || exit 0
+          git push origin feat/wire-jadwal-padam-menu
