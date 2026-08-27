@@ -38,6 +38,7 @@ function getJadwalPadamList(params){
   for(var i=0;i<rows.length;i++){
     var r=rows[i],status=_jpText_(_jpGet_(r,map,'Status Jadwal Pekerjaan','Status'))||'Terjadwal';
     var item={no:_jpGet_(r,map,'No'),kode:_jpGet_(r,map,'Kode Jadwal Padam'),ulp:_jpGet_(r,map,'ULP'),penyulang:_jpGet_(r,map,'Penyulang'),section:_jpGet_(r,map,'Section'),jenis:_jpGet_(r,map,'Jenis Pekerjaan','Jenis Pekejaan'),tanggal:_jpTgl_(_jpGet_(r,map,'Tanggal')),jamPadam:_jpTimeText_(_jpGet_(r,map,'Jam Padam')),jamNyala:_jpTimeText_(_jpGet_(r,map,'Jam Nyala')),durasi:_jpGet_(r,map,'Durasi'),jumlahGardu:_jpGet_(r,map,'Jumlah Gardu'),jumlahPelanggan:_jpGet_(r,map,'Jumlah Pelanggan'),daerah:_jpGet_(r,map,'Daerah Section','Daerah Padam','Dearah Padam'),bebanMw:_jpGet_(r,map,'Beban MW','Beban'),ens:_jpGet_(r,map,'ENS'),vip:_jpGet_(r,map,'Pelanggan VIP','Pelanggan VIP Padam'),lokasi:_jpGet_(r,map,'Lokasi Pekerjaan'),status:status};
+    var masterNow=_jpMaster_(item.penyulang,item.section);item.bebanA=masterNow?masterNow.arus:'';
     if(params.ulp&&_jpUlpKey_(item.ulp)!==_jpUlpKey_(params.ulp))continue;
     if(params.penyulang&&_jpNorm_(item.penyulang)!==_jpNorm_(params.penyulang))continue;
     if(params.section&&_jpNorm_(item.section)!==_jpNorm_(params.section))continue;
