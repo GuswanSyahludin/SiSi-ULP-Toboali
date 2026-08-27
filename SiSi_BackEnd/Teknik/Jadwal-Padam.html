@@ -239,23 +239,16 @@
             </select>
           </div>
           <div class="field">
-            <label>TIPE SWITCHING</label
-            ><select id="mTipe">
-              <option>ZONE</option>
-              <option>SECTION</option>
-            </select>
-          </div>
-          <div class="field">
             <label>Jenis Pekerjaan</label><input id="mJenis" required />
           </div>
           <div class="field">
             <label>Tanggal</label><input id="mTanggal" type="date" required />
           </div>
           <div class="field">
-            <label>Jam Padam</label><input id="mPadam" type="time" required />
+            <label>Jam Padam</label><input id="mPadam" type="time" step="60" required onclick="this.showPicker&&this.showPicker()" />
           </div>
           <div class="field">
-            <label>Jam Nyala</label><input id="mNyala" type="time" required />
+            <label>Jam Nyala</label><input id="mNyala" type="time" step="60" required onclick="this.showPicker&&this.showPicker()" />
           </div>
           <div class="field">
             <label>Beban MW</label
@@ -288,9 +281,6 @@
           <div class="field full">
             <label>Lokasi Pekerjaan</label><input id="mLokasi" />
           </div>
-          <div class="field full">
-            <label>Keterangan</label><input id="mKeterangan" />
-          </div>
         </form>
         <div class="foot">
           <button
@@ -320,32 +310,58 @@
       function hide(id) {
         document.getElementById(id).classList.remove("show");
       }
+      function jpKey(value) {
+        return String(value || "")
+          .normalize("NFKC")
+          .replace(/\u00a0/g, " ")
+          .trim()
+          .replace(/\s+/g, " ")
+          .toUpperCase();
+      }
       function jpPopulate(res) {
         jpMaster = {};
         var p = document.getElementById("mPeny");
         p.innerHTML = '<option value="">Pilih Penyulang</option>';
+        var uniquePenyulang = {};
         (res.rows || []).forEach(function (x) {
-          var k = (x.penyulang || "").trim().toLowerCase();
-          if (!jpMaster[k]) jpMaster[k] = [];
-          jpMaster[k].push(x);
-          p.innerHTML +=
-            '<option value="' + x.penyulang + '">' + x.penyulang + "</option>";
+          var name = String(x.penyulang || "").trim().replace(/\s+/g, " ");
+          var key = jpKey(name);
+          if (!key) return;
+          if (!jpMaster[key]) jpMaster[key] = [];
+          jpMaster[key].push(x);
+          if (!uniquePenyulang[key]) uniquePenyulang[key] = name;
         });
+        Object.keys(uniquePenyulang)
+          .sort(function (a, b) { return uniquePenyulang[a].localeCompare(uniquePenyulang[b]); })
+          .forEach(function (key) {
+            var o = document.createElement("option");
+            o.value = uniquePenyulang[key];
+            o.textContent = uniquePenyulang[key];
+            p.appendChild(o);
+          });
       }
       function loadSections() {
-        var key = document.getElementById("mPeny").value.toLowerCase(),
+        var key = jpKey(document.getElementById("mPeny").value),
           s = document.getElementById("mSection");
         s.innerHTML = '<option value="">Pilih Section</option>';
+        var uniqueSection = {};
         (jpMaster[key] || []).forEach(function (x) {
-          s.innerHTML +=
-            '<option value="' + x.section + '">' + x.section + "</option>";
+          var section = String(x.section || "").trim().replace(/\s+/g, " ");
+          var sectionKey = jpKey(section);
+          if (sectionKey && !uniqueSection[sectionKey]) uniqueSection[sectionKey] = section;
+        });
+        Object.keys(uniqueSection).forEach(function (sectionKey) {
+          var o = document.createElement("option");
+          o.value = uniqueSection[sectionKey];
+          o.textContent = uniqueSection[sectionKey];
+          s.appendChild(o);
         });
       }
       function loadAuto() {
-        var key = document.getElementById("mPeny").value.toLowerCase(),
+        var key = jpKey(document.getElementById("mPeny").value),
           sec = document.getElementById("mSection").value.toLowerCase(),
           x = (jpMaster[key] || []).find(function (r) {
-            return String(r.section).toLowerCase() === sec;
+            return jpKey(r.section) === jpKey(sec);
           });
         if (!x) return;
         ["Gardu", "Pelanggan", "Daerah", "Vip"].forEach(function (k) {
