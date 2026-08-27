@@ -267,6 +267,11 @@
       .action-btn-danger:hover {
         background: oklch(62% 0.15 58);
       }
+      .pager { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px 16px; border-top:1px solid var(--jp-border); color:var(--jp-muted); font-size:13px; }
+      .pager[hidden] { display:none; }
+      .pager-actions { display:flex; gap:8px; }
+      .pager-btn { min-height:36px; padding:0 12px; border:1px solid var(--jp-border); border-radius:8px; background:var(--jp-surface); color:var(--jp-text); font:600 13px/1 inherit; cursor:pointer; }
+      .pager-btn:disabled { opacity:.45; cursor:not-allowed; }
       .empty {
         text-align: center;
         padding: 44px !important;
@@ -395,7 +400,7 @@
             <option>Tanpa Padam</option>
           </select>
         </div>
-        <button class="btn" onclick="loadList()">Cari</button>
+        <button class="btn" onclick="loadList(1)">Cari</button>
       </section>
       <section class="table-shell">
         <div class="table-scroll">
@@ -426,10 +431,14 @@
             </thead>
             <tbody id="jpBody">
               <tr>
-                <td class="empty" colspan="20">Memuat jadwal...</td>
+                <td class="empty" colspan="20">Isi rentang tanggal, lalu klik Cari.</td>
               </tr>
             </tbody>
           </table>
+        </div>
+        <div class="pager" id="jpPager" hidden>
+          <span id="jpPageInfo"></span>
+          <div class="pager-actions"><button class="pager-btn" id="jpPrev" onclick="jpChangePage(-1)">Sebelumnya</button><button class="pager-btn" id="jpNext" onclick="jpChangePage(1)">Berikutnya</button></div>
         </div>
       </section>
     </main>
@@ -547,7 +556,7 @@
     <script>
       var jpMaster = {},
         jpMasterRows = [],
-        jpAllDatesFallback = false;
+        jpCurrentPage = 1;
       function jpSession() {
         return (
           (typeof _state !== "undefined" && _state.sesi) ||
@@ -729,16 +738,22 @@
         document.getElementById("jpFrom").value = jpDateInputValue(first);
         document.getElementById("jpTo").value = jpDateInputValue(last);
       }
-      function loadList() {
+      function loadList(page) {
+        var dari=document.getElementById("jpFrom").value,sampai=document.getElementById("jpTo").value;
+        if(!dari||!sampai){jpNotify("Tanggal mulai dan tanggal selesai wajib diisi.","warning");return;}
+        if(dari>sampai){jpNotify("Tanggal mulai tidak boleh melewati tanggal selesai.","warning");return;}
+        jpCurrentPage=Math.max(1,Number(page)||1);
         var sesi = jpSession(),
           params = {
-            tglDari: document.getElementById("jpFrom").value,
-            tglSampai: document.getElementById("jpTo").value,
+            tglDari: dari,
+            tglSampai: sampai,
             ulp: jpIsSuper() ? document.getElementById("jpUlp").value : "",
             penyulang: document.getElementById("jpPeny").value,
             status: document.getElementById("jpStatus").value,
             statusPekerjaan: document.getElementById("jpWorkStatus").value,
             sortTanggal: "asc",
+            page: jpCurrentPage,
+            pageSize: 50,
           };
         document.getElementById("jpBody").innerHTML =
           '<tr><td class="empty" colspan="20">Memuat jadwal...</td></tr>';
@@ -751,21 +766,17 @@
           })
           .getJadwalPadamList(params);
       }
+      function jpRenderPager(res) {
+        var pager=document.getElementById("jpPager"),total=Number(res.total)||0,page=Number(res.page)||1,pages=Number(res.totalPages)||1;
+        pager.hidden=total===0;document.getElementById("jpPageInfo").textContent=total+" data, halaman "+page+" dari "+pages+" (maks. 50 per halaman)";
+        document.getElementById("jpPrev").disabled=page<=1;document.getElementById("jpNext").disabled=page>=pages;
+      }
+      function jpChangePage(delta) { loadList(jpCurrentPage+delta); }
       function jpRender(res) {
-        var rows = (res && res.rows) || [],
+        var rows = (res && res.rows) || [];
+        jpRenderPager(res || {});
+        var
           body = document.getElementById("jpBody");
-        if (
-          !rows.length &&
-          !jpAllDatesFallback &&
-          document.getElementById("jpFrom").value &&
-          document.getElementById("jpTo").value
-        ) {
-          jpAllDatesFallback = true;
-          document.getElementById("jpFrom").value = "";
-          document.getElementById("jpTo").value = "";
-          loadList();
-          return;
-        }
         if (!rows.length) {
           body.innerHTML =
             '<tr><td class="empty" colspan="20">Belum ada data jadwal.</td></tr>';
@@ -930,9 +941,9 @@
         document.getElementById("jpUlpWrap").style.display = jpIsSuper()
           ? "flex"
           : "none";
-        jpSetCurrentMonthRange();
+        document.getElementById("jpFrom").value="";
+        document.getElementById("jpTo").value="";
         jpLoadMaster();
-        loadList();
       })();
     </script>
   </body>

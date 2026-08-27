@@ -271,7 +271,8 @@ function getJadwalPadamList(params) {
   out.sort(function (a, b) {
     return String(a.tanggal).localeCompare(String(b.tanggal));
   });
-  return { ok: true, rows: out };
+  var total=out.length,pageSize=Math.min(50,Math.max(1,Number(params.pageSize)||50)),totalPages=Math.max(1,Math.ceil(total/pageSize)),page=Math.min(totalPages,Math.max(1,Number(params.page)||1)),start=(page-1)*pageSize;
+  return { ok:true, rows:out.slice(start,start+pageSize), total:total, page:page, pageSize:pageSize, totalPages:totalPages };
 }
 
 function getJadwalPadamMasterBeban(params) {
