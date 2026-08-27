@@ -168,14 +168,11 @@
       tbody tr:last-child td {
         border-bottom: 0;
       }
-      .cell-area {
-        display: block;
-        max-width: 260px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        line-height: 1.45;
-      }
+      .cell-area { max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; line-height:1.45; }
+      span.cell-area { display:block; }
+      td.cell-area { display:table-cell; }
+      span.cell-area { display:block; }
+      td.cell-area { display:table-cell; }
       .cell-empty {
         color: oklch(66% 0.018 250);
         font-style: italic;
@@ -209,6 +206,9 @@
         background: oklch(94% 0.055 25);
         color: oklch(48% 0.17 25);
       }
+      .work-status { display:inline-flex; padding:5px 9px; border-radius:999px; font-size:12px; font-weight:700; white-space:nowrap; }
+      .work-padam { background:oklch(94% 0.055 25); color:oklch(48% 0.17 25); }
+      .work-tanpa { background:oklch(94% 0.07 145); color:oklch(43% 0.13 145); }
       .empty {
         text-align: center;
         padding: 44px !important;
@@ -359,12 +359,13 @@
                 <th>ENS (Rupiah)</th>
                 <th>Pelanggan VIP</th>
                 <th>Lokasi</th>
-                <th>Status</th>
+                <th>Status Jadwal</th>
+                <th>Status Pekerjaan</th>
               </tr>
             </thead>
             <tbody id="jpBody">
               <tr>
-                <td class="empty" colspan="18">Memuat jadwal...</td>
+                <td class="empty" colspan="19">Memuat jadwal...</td>
               </tr>
             </tbody>
           </table>
@@ -412,6 +413,14 @@
               required
               onclick="this.showPicker && this.showPicker()"
             />
+          </div>
+          <div class="field">
+            <label>Status Pekerjaan</label>
+            <select id="mStatusPekerjaan" required>
+              <option value="">Pilih status pekerjaan</option>
+              <option value="Padam">Padam</option>
+              <option value="Tanpa Padam">Tanpa Padam</option>
+            </select>
           </div>
           <div class="field">
             <label>Beban</label><input id="mBeban" class="auto" readonly />
@@ -612,6 +621,7 @@
         document.getElementById("mDaerah").value = x.daerahSection || "";
         document.getElementById("mVip").value = x.pelangganVip || "";
       }
+      function jpWorkStatusClass(v) { return jpKey(v) === "TANPA PADAM" ? "work-tanpa" : "work-padam"; }
       function jpStatusClass(v) {
         var k = jpKey(v);
         return k === "TEREALISASI"
@@ -631,12 +641,12 @@
             status: document.getElementById("jpStatus").value,
           };
         document.getElementById("jpBody").innerHTML =
-          '<tr><td class="empty" colspan="18">Memuat jadwal...</td></tr>';
+          '<tr><td class="empty" colspan="19">Memuat jadwal...</td></tr>';
         google.script.run
           .withSuccessHandler(jpRender)
           .withFailureHandler(function (e) {
             document.getElementById("jpBody").innerHTML =
-              '<tr><td class="empty" colspan="18">Gagal memuat data</td></tr>';
+              '<tr><td class="empty" colspan="19">Gagal memuat data</td></tr>';
             jpNotify((e && e.message) || e, "error");
           })
           .getJadwalPadamList(params);
@@ -646,7 +656,7 @@
           body = document.getElementById("jpBody");
         if (!rows.length) {
           body.innerHTML =
-            '<tr><td class="empty" colspan="18">Tidak ada jadwal untuk filter ini.</td></tr>';
+            '<tr><td class="empty" colspan="19">Tidak ada jadwal untuk filter ini.</td></tr>';
           return;
         }
         body.innerHTML = rows
@@ -694,7 +704,7 @@
               jpStatusClass(status) +
               '">' +
               jpEsc(status) +
-              "</span></td></tr>"
+              "</span></td><td><span class=\"work-status " + jpWorkStatusClass(x.statusPekerjaan) + "\">" + jpText(x.statusPekerjaan) + "</span></td></tr>"
             );
           })
           .join("");
@@ -716,6 +726,7 @@
             jamPadam: document.getElementById("mPadam").value,
             jamNyala: document.getElementById("mNyala").value,
             lokasi: document.getElementById("mLokasi").value.trim(),
+            statusPekerjaan: document.getElementById("mStatusPekerjaan").value,
           };
         btn.disabled = true;
         btn.textContent = "Menyimpan...";
