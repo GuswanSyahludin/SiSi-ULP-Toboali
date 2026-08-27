@@ -2124,6 +2124,64 @@ function getLampiranPengecekanP0(params) {
   }
 }
 
+// Validasi otomatis P0 Pengecekan Switching/Gardu.
+// Jalankan manual atau pasang trigger time-driven sesuai kebutuhan operasional.
+// Hanya memproses P0 yang Status Approval-nya masih kosong; keputusan lama tidak disentuh.
+function validasiPengecekanP0DanTolakOtomatis() {
+  var hasil = { ok: true, diperiksa: 0, dilewati: 0, ditolak: 0, valid: 0, error: [] };
+  try {
+    var shP0 = _shY_(SHEET_YANDAL.P0);
+    if (!shP0 || shP0.getLastRow() <= 1) return hasil;
+    var dataP0 = _allY_(shP0), C = COL_P0;
+    var kodeSwitching = {}, shSwitching = _shY_(SHEET_YANDAL.SWITCHING);
+    if (shSwitching && shSwitching.getLastRow() > 1) {
+      var dataSwitching = _allY_(shSwitching), S = COL_SWITCHING;
+      for (var i = 1; i < dataSwitching.length; i++) {
+        var kodeInduk = String(dataSwitching[i][S.kodeP0] || "").trim();
+        if (kodeInduk) kodeSwitching[kodeInduk] = true;
+      }
+    }
+
+    var kodeGardu = {};
+    var ssUkur = SpreadsheetApp.openById(YANDAL_UKUR_SS_ID);
+    var shGardu = ssUkur.getSheetByName("db_Yandal_Pengukuran_Gardu") || _sheetUkurGardu_(ssUkur);
+    if (shGardu && shGardu.getLastRow() > 1) {
+      var dataGardu = shGardu.getDataRange().getValues(), U = COL_UKUR_GARDU;
+      for (var j = 1; j < dataGardu.length; j++) {
+        var kodeGarduInduk = String(dataGardu[j][U.kodeP0] || "").trim();
+        if (kodeGarduInduk) kodeGardu[kodeGarduInduk] = true;
+      }
+    }
+
+    var now = _nowY_();
+    for (var k = 1; k < dataP0.length; k++) {
+      var row = dataP0[k], kodeP0 = String(row[C.kodeP0] || "").trim();
+      if (!kodeP0) continue;
+      var status = String(row[C.statusApproval] || "").trim();
+      if (status) { hasil.dilewati++; continue; }
+      var pekerjaan = (String(row[C.namaPekerjaan] || "").trim() || String(row[C.pekerjaanLainnya] || "").trim()).toLowerCase();
+      var alasan = "";
+      if (pekerjaan === "pengecekan switching" && !kodeSwitching[kodeP0]) alasan = "Tidak ada History Arus Gangguan";
+      else if (pekerjaan === "pengecekan gardu" && !kodeGardu[kodeP0]) alasan = "Tidak ada Pengukuran Gardu";
+      else { hasil.valid++; continue; }
+      hasil.diperiksa++;
+      var rowNum = k + 1;
+      _setY_(shP0, rowNum, C.statusApproval, "Rejected");
+      _setTextY_(shP0, rowNum, C.alasanRejected, alasan);
+      _setTextY_(shP0, rowNum, C.approvedBy, "Sistem");
+      _setDateFmtY_(shP0, rowNum, C.timestampApprove, now);
+      try { _setY_(shP0, rowNum, C.point, ""); } catch (ePoint) {}
+      hasil.ditolak++;
+    }
+    SpreadsheetApp.flush();
+    return hasil;
+  } catch (e) {
+    hasil.ok = false;
+    hasil.error.push(e.message);
+    return hasil;
+  }
+}
+
 // ====== POINT P0 (NILAI BOBOT PEKERJAAN) ======
 // Poin = Skor Durasi (1-5, dari kolom AN) + (Bobot Pekerjaan × pengali, dari db_Yandal_List_P0).
 // Pengali default 2; menjadi 2,5 bila Nama Pekerjaan mengandung "ROW" DAN dikerjakan pukul 22:00–05:00 (jam acuan = Time Stamp Pembuatan / kolom W).
