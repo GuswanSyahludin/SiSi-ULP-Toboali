@@ -209,6 +209,9 @@
       .work-status { display:inline-flex; padding:5px 9px; border-radius:999px; font-size:12px; font-weight:700; white-space:nowrap; }
       .work-padam { background:oklch(94% 0.055 25); color:oklch(48% 0.17 25); }
       .work-tanpa { background:oklch(94% 0.07 145); color:oklch(43% 0.13 145); }
+      .action-group { display:flex; gap:6px; }
+      .action-btn { min-height:32px; padding:0 10px; border:1px solid var(--jp-border); border-radius:7px; background:var(--jp-surface); color:var(--jp-text); font:600 12px/1 inherit; cursor:pointer; white-space:nowrap; }
+      .action-btn-danger { color:oklch(48% 0.17 25); }
       .empty {
         text-align: center;
         padding: 44px !important;
@@ -321,20 +324,16 @@
           </select>
         </div>
         <div class="field">
-          <label>Section</label
-          ><select id="jpSection">
-            <option value="">Semua Section</option>
-          </select>
-        </div>
-        <div class="field">
           <label>Status Jadwal</label
           ><select id="jpStatus">
             <option value="">Semua Status</option>
             <option>Terjadwal</option>
             <option>Terealisasi</option>
-            <option>Batal Pemadaman</option>
+            <option>Batal Pekerjaan</option>
           </select>
         </div>
+        <div class="field"><label>Status Pekerjaan</label><select id="jpWorkStatus"><option value="">Semua</option><option>Padam</option><option>Tanpa Padam</option></select></div>
+        <div class="field"><label>Urutan Tanggal</label><select id="jpSortTanggal"><option value="desc">Terbesar ke terkecil</option><option value="asc">Terkecil ke terbesar</option></select></div>
         <button class="btn" onclick="loadList()">Cari</button>
       </section>
       <section class="table-shell">
@@ -361,11 +360,12 @@
                 <th>Lokasi</th>
                 <th>Status Jadwal</th>
                 <th>Status Pekerjaan</th>
+                <th>Aksi</th>
               </tr>
             </thead>
             <tbody id="jpBody">
               <tr>
-                <td class="empty" colspan="19">Memuat jadwal...</td>
+                <td class="empty" colspan="20">Memuat jadwal...</td>
               </tr>
             </tbody>
           </table>
@@ -567,7 +567,6 @@
           .forEach(function (k) {
             ulp.appendChild(jpOption(ulps[k]));
           });
-        jpFilterSections();
       }
       function loadSections() {
         var rows =
@@ -626,7 +625,7 @@
         var k = jpKey(v);
         return k === "TEREALISASI"
           ? "status-terealisasi"
-          : k === "BATAL PEMADAMAN"
+          : (k === "BATAL PEMADAMAN" || k === "BATAL PEKERJAAN")
             ? "status-batal"
             : "status-terjadwal";
       }
@@ -637,16 +636,17 @@
             tglSampai: document.getElementById("jpTo").value,
             ulp: jpIsSuper() ? document.getElementById("jpUlp").value : "",
             penyulang: document.getElementById("jpPeny").value,
-            section: document.getElementById("jpSection").value,
             status: document.getElementById("jpStatus").value,
+            statusPekerjaan: document.getElementById("jpWorkStatus").value,
+            sortTanggal: document.getElementById("jpSortTanggal").value,
           };
         document.getElementById("jpBody").innerHTML =
-          '<tr><td class="empty" colspan="19">Memuat jadwal...</td></tr>';
+          '<tr><td class="empty" colspan="20">Memuat jadwal...</td></tr>';
         google.script.run
           .withSuccessHandler(jpRender)
           .withFailureHandler(function (e) {
             document.getElementById("jpBody").innerHTML =
-              '<tr><td class="empty" colspan="19">Gagal memuat data</td></tr>';
+              '<tr><td class="empty" colspan="20">Gagal memuat data</td></tr>';
             jpNotify((e && e.message) || e, "error");
           })
           .getJadwalPadamList(params);
@@ -656,14 +656,14 @@
           body = document.getElementById("jpBody");
         if (!rows.length) {
           body.innerHTML =
-            '<tr><td class="empty" colspan="19">Tidak ada jadwal untuk filter ini.</td></tr>';
+            '<tr><td class="empty" colspan="20">Tidak ada jadwal untuk filter ini.</td></tr>';
           return;
         }
         body.innerHTML = rows
           .map(function (x) {
             var status = x.status || "Terjadwal";
             return (
-              "<tr><td>" +
+              '<tr data-kode="' + jpEsc(x.kode) + '"><td>' +
               jpText(x.no) +
               "</td><td><b>" +
               jpText(x.kode) +
@@ -704,10 +704,15 @@
               jpStatusClass(status) +
               '">' +
               jpEsc(status) +
-              "</span></td><td><span class=\"work-status " + jpWorkStatusClass(x.statusPekerjaan) + "\">" + jpText(x.statusPekerjaan) + "</span></td></tr>"
+              "</span></td><td><span class=\"work-status " + jpWorkStatusClass(x.statusPekerjaan) + "\">" + jpText(x.statusPekerjaan) + "</span></td><td><div class=\"action-group\"><button class=\"action-btn\" onclick=\"jpUpdateStatus(this, \'Terealisasi\')\">Terealisasi</button><button class=\"action-btn action-btn-danger\" onclick=\"jpUpdateStatus(this, \'Batal Pekerjaan\')\">Batal</button></div></td></tr>"
             );
           })
           .join("");
+      }
+      function jpUpdateStatus(button, status) {
+        var row=button.closest("tr"),kode=row?row.getAttribute("data-kode"):"";
+        if(!kode)return;
+        google.script.run.withSuccessHandler(function(res){if(!res||!res.ok){jpNotify((res&&res.message)||"Gagal memperbarui status","error");return;}jpNotify(res.message,"success");loadList();}).withFailureHandler(function(err){jpNotify((err&&err.message)||err,"error");}).updateStatusJadwalPadam({token:(typeof _state!=="undefined"&&_state.token)||"",kode:kode,status:status});
       }
       function jpNotify(msg, type) {
         if (typeof showToast === "function")
