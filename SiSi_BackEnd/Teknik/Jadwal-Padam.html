@@ -22,7 +22,7 @@
     <div class="field"><label>Status Jadwal</label><select id="jpStatus"><option value="">Semua Status</option><option>Terjadwal</option><option>Terealisasi</option><option>Batal Pemadaman</option></select></div>
     <button class="btn" onclick="loadList()">Cari</button>
   </section>
-  <section class="table-shell"><div class="table-scroll"><table><thead><tr><th>No</th><th>Kode Jadwal</th><th>ULP</th><th>Penyulang</th><th>Section</th><th>Jenis Pekerjaan</th><th>Tanggal</th><th>Jam Padam</th><th>Jam Nyala</th><th>Durasi</th><th>Gardu</th><th>Pelanggan</th><th>Daerah Padam</th><th>Beban (A)</th><th>ENS (kWh)</th><th>Pelanggan VIP</th><th>Lokasi</th><th>Status</th></tr></thead><tbody id="jpBody"><tr><td class="empty" colspan="18">Memuat jadwal...</td></tr></tbody></table></div></section>
+  <section class="table-shell"><div class="table-scroll"><table><thead><tr><th>No</th><th>Kode Jadwal</th><th>ULP</th><th>Penyulang</th><th>Section</th><th>Jenis Pekerjaan</th><th>Tanggal</th><th>Jam Padam</th><th>Jam Nyala</th><th>Durasi</th><th>Gardu</th><th>Pelanggan</th><th>Daerah Padam</th><th>Beban (A)</th><th>ENS (MWh)</th><th>Pelanggan VIP</th><th>Lokasi</th><th>Status</th></tr></thead><tbody id="jpBody"><tr><td class="empty" colspan="18">Memuat jadwal...</td></tr></tbody></table></div></section>
 </main>
 <div class="modal" id="jpModal"><div class="dialog"><h3>Input Jadwal Padam</h3><form id="jpForm" class="form" onsubmit="return saveJadwal(event)">
   <div class="field"><label>Penyulang</label><select id="mPeny" required onchange="loadSections()"><option value="">Pilih Penyulang</option></select></div>
@@ -31,7 +31,7 @@
   <div class="field"><label>Tanggal</label><input id="mTanggal" type="date" required></div>
   <div class="field"><label>Jam Padam</label><input id="mPadam" type="time" step="60" required onclick="this.showPicker&&this.showPicker()"></div>
   <div class="field"><label>Jam Nyala</label><input id="mNyala" type="time" step="60" required onclick="this.showPicker&&this.showPicker()"></div>
-  <div class="field"><label>Beban</label><input id="mBeban" class="auto" readonly></div>
+  <div class="field"><label>Beban MW (ENS)</label><input id="mBeban" class="auto" readonly></div>
   <div class="field"><label>Arus (A)</label><input id="mArus" class="auto" readonly></div>
   <div class="field"><label>Jumlah Gardu</label><input id="mGardu" class="auto" readonly></div>
   <div class="field"><label>Jumlah Pelanggan</label><input id="mPelanggan" class="auto" readonly></div>
