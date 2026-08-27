@@ -290,7 +290,7 @@
           >
             Batal</button
           ><button
-            class="btn"
+            class="btn" id="jpSaveBtn"
             onclick="document.querySelector('form').requestSubmit()"
           >
             Simpan
@@ -447,7 +447,41 @@
       }
       function saveJadwal(e) {
         e.preventDefault();
-        hide("jpModal");
+        var btn = document.getElementById("jpSaveBtn");
+        var token = typeof _state !== "undefined" && _state.token ? _state.token : "";
+        var payload = {
+          token: token,
+          penyulang: document.getElementById("mPeny").value,
+          section: document.getElementById("mSection").value,
+          jenis: document.getElementById("mJenis").value.trim(),
+          tanggal: document.getElementById("mTanggal").value,
+          jamPadam: document.getElementById("mPadam").value,
+          jamNyala: document.getElementById("mNyala").value,
+          lokasi: document.getElementById("mLokasi").value.trim()
+        };
+        if (btn) { btn.disabled = true; btn.textContent = "Menyimpan..."; }
+        google.script.run
+          .withSuccessHandler(function (res) {
+            if (btn) { btn.disabled = false; btn.textContent = "Simpan"; }
+            if (!res || !res.ok) {
+              if (typeof showToast === "function") showToast((res && res.message) || "Gagal menyimpan", "error");
+              else alert((res && res.message) || "Gagal menyimpan");
+              return;
+            }
+            document.querySelector("#jpModal form").reset();
+            document.getElementById("mSection").innerHTML = '<option value="">Pilih Penyulang dulu</option>';
+            ["mBeban","mArus","mGardu","mPelanggan","mDaerah","mVip"].forEach(function(id){ document.getElementById(id).value = ""; });
+            hide("jpModal");
+            if (typeof sisiSukses === "function") sisiSukses("Jadwal padam " + res.kode + " berhasil disimpan");
+            else if (typeof showToast === "function") showToast(res.message, "success");
+            loadList();
+          })
+          .withFailureHandler(function (err) {
+            if (btn) { btn.disabled = false; btn.textContent = "Simpan"; }
+            var msg = "Gagal menyimpan: " + ((err && err.message) || err);
+            if (typeof showToast === "function") showToast(msg, "error"); else alert(msg);
+          })
+          .simpanJadwalPadam(payload);
         return false;
       }
     </script>

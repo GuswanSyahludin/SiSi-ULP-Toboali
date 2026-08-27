@@ -1,108 +1,57 @@
 /* Jadwal Padam: source spreadsheet eksternal */
 var JADWAL_PADAM_SS_ID = '15YrBm8dNdaVZe_fIdSk4KCo3E5IXpXLAJ0A9vRjS0iI';
-var JADWAL_PADAM_SHEETS = {
-  rekap: 'Rekap_Jadwal_Padam',
-  daerah: 'Master Daerah Padam',
-  beban: 'Master_Beban'
-};
-var JADWAL_PADAM_COLS = { no:0,kode:1,ulp:2,up3:3,gi:4,penyulang:5,section:6,jenis:7,tanggal:8,jamPadam:9,jamNyala:10,durasi:11,bebanMw:12,arus:13,jumlahGardu:14,jumlahPelanggan:15,daerah:16,vip:17,status:18,lokasi:19 };
+var JADWAL_PADAM_SHEETS = { rekap:'Rekap_Jadwal_Padam', daerah:'Master Daerah Padam', beban:'Master_Beban' };
 
 function _jpSs_(){ return SpreadsheetApp.openById(JADWAL_PADAM_SS_ID); }
 function _jpText_(v){ return String(v == null ? '' : v).trim(); }
-function _jpNorm_(v){ return _jpText_(v).toLowerCase().replace(/\s+/g, ' '); }
-function _jpSheetKey_(v){ return _jpText_(v).toLowerCase().replace(/[^a-z0-9]/g, ''); }
-
-/* Nama tab pernah memakai underscore dan spasi. Resolver ini membuat keduanya tetap terbaca. */
+function _jpNorm_(v){ return _jpText_(v).toLowerCase().replace(/\s+/g,' '); }
+function _jpSheetKey_(v){ return _jpText_(v).toLowerCase().replace(/[^a-z0-9]/g,''); }
+function _jpHeaderKey_(v){ return _jpNorm_(v).replace(/[^a-z0-9]/g,''); }
 function _jpSheet_(name){
-  var ss = _jpSs_();
-  var direct = ss.getSheetByName(name);
-  if (direct) return direct;
-  var wanted = _jpSheetKey_(name);
-  var sheets = ss.getSheets();
-  for (var i = 0; i < sheets.length; i++) {
-    if (_jpSheetKey_(sheets[i].getName()) === wanted) return sheets[i];
-  }
+  var ss=_jpSs_(), direct=ss.getSheetByName(name); if(direct)return direct;
+  var wanted=_jpSheetKey_(name), sheets=ss.getSheets();
+  for(var i=0;i<sheets.length;i++)if(_jpSheetKey_(sheets[i].getName())===wanted)return sheets[i];
   return null;
 }
+function _jpRows_(name){ var sh=_jpSheet_(name); return !sh||sh.getLastRow()<2?[]:sh.getRange(2,1,sh.getLastRow()-1,sh.getLastColumn()).getValues(); }
+function _jpHeaders_(sh){ return sh&&sh.getLastColumn()?sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0]:[]; }
+function _jpHeaderMap_(headers){ var m={};headers.forEach(function(h,i){m[_jpHeaderKey_(h)]=i;});return m; }
+function _jpGet_(row,map){ for(var i=2;i<arguments.length;i++){var idx=map[_jpHeaderKey_(arguments[i])];if(idx!=null)return row[idx];}return ''; }
+function _jpPut_(row,map,value){ for(var i=3;i<arguments.length;i++){var idx=map[_jpHeaderKey_(arguments[i])];if(idx!=null){row[idx]=value;return true;}}return false; }
+function _jpTgl_(v){ if(v instanceof Date)return Utilities.formatDate(v,'Asia/Jakarta','yyyy-MM-dd');var s=_jpText_(v),m=s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);return m?m[3]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[1]).slice(-2):s.slice(0,10); }
+function _jpTimeText_(v){ if(v instanceof Date)return Utilities.formatDate(v,'Asia/Jakarta','HH:mm');return _jpText_(v).slice(0,5); }
+function _jpMasterContext_(){var sh=_jpSheet_(JADWAL_PADAM_SHEETS.daerah);if(!sh)throw new Error('Sheet Master Daerah Padam tidak ditemukan.');return {sh:sh,map:_jpHeaderMap_(_jpHeaders_(sh))};}
+function _jpMasterRow_(row,map){return {bebanMw:_jpGet_(row,map,'Beban MW','Beban'),arus:_jpGet_(row,map,'Arus (A)','Arus'),ulp:_jpText_(_jpGet_(row,map,'ULP')),up3:_jpText_(_jpGet_(row,map,'UP3')),gi:_jpText_(_jpGet_(row,map,'GI')),penyulang:_jpText_(_jpGet_(row,map,'Penyulang')),section:_jpText_(_jpGet_(row,map,'Section')),jumlahGardu:_jpGet_(row,map,'Jumlah Gardu'),jumlahPelanggan:_jpGet_(row,map,'Jumlah Pelanggan'),daerahSection:_jpText_(_jpGet_(row,map,'Daerah Section','Daerah Padam','Dearah Padam')),pelangganVip:_jpText_(_jpGet_(row,map,'Pelanggan VIP','Pelanggan VIP Padam'))};}
+function _jpMaster_(peny,section){var rows=_jpRows_(JADWAL_PADAM_SHEETS.daerah),ctx=_jpMasterContext_();for(var i=0;i<rows.length;i++){var x=_jpMasterRow_(rows[i],ctx.map);if(_jpNorm_(x.penyulang)===_jpNorm_(peny)&&(!section||_jpNorm_(x.section)===_jpNorm_(section)))return x;}return null;}
 
-function _jpRows_(name){
-  var sh = _jpSheet_(name);
-  if (!sh || sh.getLastRow() < 2) return [];
-  return sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues();
-}
-function _jpTgl_(v){
-  if (v instanceof Date) return Utilities.formatDate(v, 'Asia/Jakarta', 'yyyy-MM-dd');
-  var s = _jpText_(v), m = s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
-  return m ? m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2) : s.slice(0, 10);
-}
-function _jpHeaders_(rows){ return rows.length ? rows[0].map(_jpText_) : []; }
-function _jpHeaderMap_(headers){ var m = {}; headers.forEach(function(h, i){ m[_jpNorm_(h)] = i; }); return m; }
-function _jpMasterContext_(){
-  var sh = _jpSheet_(JADWAL_PADAM_SHEETS.daerah);
-  if (!sh) throw new Error('Sheet Master Daerah Padam tidak ditemukan.');
-  var head = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
-  return { sh: sh, map: _jpHeaderMap_(_jpHeaders_([head])) };
-}
-function _jpValue_(row, map, key){ var i = map[key]; return i == null ? '' : row[i]; }
-
-function _jpMaster_(peny, section){
-  var rows = _jpRows_(JADWAL_PADAM_SHEETS.daerah), ctx = _jpMasterContext_(), map = ctx.map;
-  for (var i = 0; i < rows.length; i++) {
-    if (_jpNorm_(_jpValue_(rows[i], map, 'penyulang')) !== _jpNorm_(peny)) continue;
-    if (section && _jpNorm_(_jpValue_(rows[i], map, 'section')) !== _jpNorm_(section)) continue;
-    return _jpMasterRow_(rows[i], map);
-  }
-  return null;
-}
-
-function _jpMasterRow_(row, map){
-  return {
-    bebanMw: _jpValue_(row, map, 'beban mw'),
-    arus: _jpValue_(row, map, 'arus (a)'),
-    ulp: _jpText_(_jpValue_(row, map, 'ulp')),
-    up3: _jpText_(_jpValue_(row, map, 'up3')),
-    gi: _jpText_(_jpValue_(row, map, 'gi')),
-    penyulang: _jpText_(_jpValue_(row, map, 'penyulang')),
-    section: _jpText_(_jpValue_(row, map, 'section')),
-    tipeSwitching: _jpText_(_jpValue_(row, map, 'tipe switching')),
-    jumlahGardu: _jpValue_(row, map, 'jumlah gardu'),
-    jumlahPelanggan: _jpValue_(row, map, 'jumlah pelanggan'),
-    daerahSection: _jpText_(_jpValue_(row, map, 'daerah section')),
-    pelangganVip: _jpText_(_jpValue_(row, map, 'pelanggan vip'))
-  };
-}
-
-function getJadwalPadamMaster(params){
-  params = params || {};
-  var rows = _jpRows_(JADWAL_PADAM_SHEETS.daerah), ctx = _jpMasterContext_(), map = ctx.map, out = [];
-  for (var i = 0; i < rows.length; i++) {
-    var item = _jpMasterRow_(rows[i], map);
-    if (!item.penyulang || !item.section) continue;
-    if (params.ulp && _jpNorm_(item.ulp) !== _jpNorm_(params.ulp)) continue;
-    out.push(item);
-  }
-  return { ok: true, rows: out };
-}
+function getJadwalPadamMaster(params){params=params||{};var rows=_jpRows_(JADWAL_PADAM_SHEETS.daerah),ctx=_jpMasterContext_(),out=[];for(var i=0;i<rows.length;i++){var x=_jpMasterRow_(rows[i],ctx.map);if(!x.penyulang||!x.section)continue;if(params.ulp&&_jpNorm_(x.ulp)!==_jpNorm_(params.ulp))continue;out.push(x);}return {ok:true,rows:out};}
 
 function getJadwalPadamList(params){
-  params = params || {};
-  var rows = _jpRows_(JADWAL_PADAM_SHEETS.rekap), out = [];
-  for (var i = 0; i < rows.length; i++) {
-    var r = rows[i], item = { no:r[0],kode:r[1],ulp:r[2],up3:r[3],gi:r[4],penyulang:r[5],section:r[6],jenis:r[7],tanggal:_jpTgl_(r[8]),jamPadam:r[9],jamNyala:r[10],durasi:r[11],bebanMw:r[12],arus:r[13],jumlahGardu:r[14],jumlahPelanggan:r[15],daerah:r[16],vip:r[17],status:r[18],lokasi:r[19] };
-    if (params.ulp && _jpNorm_(item.ulp) !== _jpNorm_(params.ulp)) continue;
-    if (params.penyulang && _jpNorm_(item.penyulang) !== _jpNorm_(params.penyulang)) continue;
-    if (params.section && _jpNorm_(item.section) !== _jpNorm_(params.section)) continue;
-    if (params.tglDari && item.tanggal < params.tglDari) continue;
-    if (params.tglSampai && item.tanggal > params.tglSampai) continue;
-    out.push(item);
-  }
-  return { ok: true, rows: out };
+  params=params||{};var sh=_jpSheet_(JADWAL_PADAM_SHEETS.rekap);if(!sh)return {ok:false,message:'Sheet Rekap Jadwal Padam tidak ditemukan.',rows:[]};
+  var rows=_jpRows_(JADWAL_PADAM_SHEETS.rekap),map=_jpHeaderMap_(_jpHeaders_(sh)),out=[];
+  for(var i=0;i<rows.length;i++){var r=rows[i],item={no:_jpGet_(r,map,'No'),kode:_jpGet_(r,map,'Kode Jadwal Padam'),ulp:_jpGet_(r,map,'ULP'),up3:_jpGet_(r,map,'UP3'),gi:_jpGet_(r,map,'GI'),penyulang:_jpGet_(r,map,'Penyulang'),section:_jpGet_(r,map,'Section'),jenis:_jpGet_(r,map,'Jenis Pekerjaan','Jenis Pekejaan'),tanggal:_jpTgl_(_jpGet_(r,map,'Tanggal')),jamPadam:_jpTimeText_(_jpGet_(r,map,'Jam Padam')),jamNyala:_jpTimeText_(_jpGet_(r,map,'Jam Nyala')),durasi:_jpGet_(r,map,'Durasi'),bebanMw:_jpGet_(r,map,'Beban MW','Beban'),arus:_jpGet_(r,map,'Arus (A)','Arus'),jumlahGardu:_jpGet_(r,map,'Jumlah Gardu'),jumlahPelanggan:_jpGet_(r,map,'Jumlah Pelanggan'),daerah:_jpGet_(r,map,'Daerah Section','Daerah Padam','Dearah Padam'),vip:_jpGet_(r,map,'Pelanggan VIP','Pelanggan VIP Padam'),lokasi:_jpGet_(r,map,'Lokasi Pekerjaan')};
+    if(params.ulp&&_jpNorm_(item.ulp)!==_jpNorm_(params.ulp))continue;if(params.penyulang&&_jpNorm_(item.penyulang)!==_jpNorm_(params.penyulang))continue;if(params.section&&_jpNorm_(item.section)!==_jpNorm_(params.section))continue;if(params.tglDari&&item.tanggal<params.tglDari)continue;if(params.tglSampai&&item.tanggal>params.tglSampai)continue;out.push(item);
+  }return {ok:true,rows:out};
 }
 
-function getJadwalPadamMasterBeban(params){
-  params = params || {};
-  /* Sumber utama beban sekarang Master Daerah Padam agar pilihan feeder/section selalu konsisten. */
-  var master = _jpMaster_(params.penyulang, params.section || '');
-  if (master) return { ok:true, rows:[{ penyulang:master.penyulang, bebanMw:master.bebanMw, beban:master.bebanMw, arus:master.arus }] };
-  return { ok:true, rows:[] };
+function getJadwalPadamMasterBeban(params){params=params||{};var x=_jpMaster_(params.penyulang,params.section||'');return {ok:true,rows:x?[{penyulang:x.penyulang,bebanMw:x.bebanMw,beban:x.bebanMw,arus:x.arus}]:[]};}
+
+function _jpParseTime_(value){var m=_jpText_(value).match(/^(\d{2}):(\d{2})$/);if(!m)return null;var h=Number(m[1]),n=Number(m[2]);return h<24&&n<60?h*60+n:null;}
+function _jpTimeDate_(value){var mins=_jpParseTime_(value);if(mins==null)return '';var d=new Date(1899,11,30,0,0,0,0);d.setMinutes(mins);return d;}
+function simpanJadwalPadam(payload){
+  try{
+    payload=payload||{};
+    var token=_jpText_(payload.token),sesi=typeof getSesiByToken==='function'?getSesiByToken(token):null;
+    if(!sesi)return {ok:false,message:'Sesi habis, silakan login ulang.'};
+    var peny=_jpText_(payload.penyulang),section=_jpText_(payload.section),jenis=_jpText_(payload.jenis),tanggal=_jpText_(payload.tanggal),jamPadam=_jpText_(payload.jamPadam),jamNyala=_jpText_(payload.jamNyala);
+    if(!peny||!section||!jenis||!tanggal||!jamPadam||!jamNyala)return {ok:false,message:'Penyulang, Section, jenis pekerjaan, tanggal, dan jam wajib diisi.'};
+    var master=_jpMaster_(peny,section);if(!master)return {ok:false,message:'Penyulang dan Section tidak ditemukan di Master Daerah Padam.'};
+    var mulai=_jpParseTime_(jamPadam),selesai=_jpParseTime_(jamNyala);if(mulai==null||selesai==null)return {ok:false,message:'Format jam tidak valid.'};
+    if(selesai<mulai)selesai+=1440;var durasi=(selesai-mulai)/60,beban=Number(master.bebanMw)||0,ens=beban*durasi;
+    var sh=_jpSheet_(JADWAL_PADAM_SHEETS.rekap);if(!sh)throw new Error('Sheet Rekap Jadwal Padam tidak ditemukan.');
+    var headers=_jpHeaders_(sh),map=_jpHeaderMap_(headers),row=new Array(headers.length).fill(''),kode='JP-'+Utilities.formatDate(new Date(),'Asia/Jakarta','yyyyMMdd-HHmmss');
+    _jpPut_(row,map,sh.getLastRow(),'No');_jpPut_(row,map,kode,'Kode Jadwal Padam');_jpPut_(row,map,master.ulp,'ULP');_jpPut_(row,map,master.up3,'UP3');_jpPut_(row,map,master.gi,'GI');_jpPut_(row,map,master.penyulang,'Penyulang');_jpPut_(row,map,master.section,'Section');_jpPut_(row,map,jenis,'Jenis Pekerjaan','Jenis Pekejaan');_jpPut_(row,map,new Date(tanggal+'T00:00:00'),'Tanggal');_jpPut_(row,map,_jpTimeDate_(jamPadam),'Jam Padam');_jpPut_(row,map,_jpTimeDate_(jamNyala),'Jam Nyala');_jpPut_(row,map,durasi,'Durasi');_jpPut_(row,map,master.jumlahGardu,'Jumlah Gardu');_jpPut_(row,map,master.jumlahPelanggan,'Jumlah Pelanggan');_jpPut_(row,map,master.daerahSection,'Daerah Section','Daerah Padam','Dearah Padam');_jpPut_(row,map,beban,'Beban MW','Beban');_jpPut_(row,map,master.arus,'Arus (A)','Arus');_jpPut_(row,map,ens,'ENS');_jpPut_(row,map,master.pelangganVip,'Pelanggan VIP','Pelanggan VIP Padam');_jpPut_(row,map,_jpText_(payload.lokasi),'Lokasi Pekerjaan');
+    sh.appendRow(row);var savedRow=sh.getLastRow();var idxTgl=map[_jpHeaderKey_('Tanggal')],idxPadam=map[_jpHeaderKey_('Jam Padam')],idxNyala=map[_jpHeaderKey_('Jam Nyala')];if(idxTgl!=null)sh.getRange(savedRow,idxTgl+1).setNumberFormat('dd/MM/yyyy');if(idxPadam!=null)sh.getRange(savedRow,idxPadam+1).setNumberFormat('HH:mm');if(idxNyala!=null)sh.getRange(savedRow,idxNyala+1).setNumberFormat('HH:mm');SpreadsheetApp.flush();
+    return {ok:true,kode:kode,message:'Jadwal padam berhasil disimpan.'};
+  }catch(e){return {ok:false,message:'Gagal menyimpan: '+e.message};}
 }
