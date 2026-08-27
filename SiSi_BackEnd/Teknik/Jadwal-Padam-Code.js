@@ -116,6 +116,18 @@ function _jpTgl_(v) {
     ? ""
     : Utilities.formatDate(parsed, "Asia/Jakarta", "yyyy-MM-dd");
 }
+function _jpDateObject_(value) {
+  var iso = _jpTgl_(value), m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : null;
+}
+function _jpHari_(value) {
+  var d = _jpDateObject_(value), names = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+  return d ? names[d.getDay()] : "";
+}
+function _jpTanggalLabel_(value) {
+  var d = _jpDateObject_(value), months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+  return d ? ("0" + d.getDate()).slice(-2) + " " + months[d.getMonth()] + " " + d.getFullYear() : _jpText_(value);
+}
 function _jpTimeText_(v) {
   if (v instanceof Date)
     return Utilities.formatDate(v, "Asia/Jakarta", "HH:mm");
@@ -190,7 +202,11 @@ function getJadwalPadamList(params) {
   if (idxStatusJadwal == null)
     idxStatusJadwal = map[_jpHeaderKey_("Status Jadwal Pekerjaan")];
   if (idxStatusJadwal == null) idxStatusJadwal = map[_jpHeaderKey_("Status")];
-  var idxStatusPekerjaan = map[_jpHeaderKey_("Status Pekerjaan")];
+  var idxStatusPekerjaan = map[_jpHeaderKey_("Status Pekerjaan")],
+    idxHari = map[_jpHeaderKey_("Hari")],
+    idxTanggal = map[_jpHeaderKey_("Tanggal")];
+  if (idxTanggal != null && sh.getLastRow() >= 2)
+    sh.getRange(2, idxTanggal + 1, sh.getLastRow() - 1, 1).setNumberFormat("dd mmmm yyyy");
   for (var i = 0; i < rows.length; i++) {
     var r = rows[i],
       rawStatus = _jpText_(
@@ -203,7 +219,10 @@ function getJadwalPadamList(params) {
         ),
       ),
       rawWork = _jpText_(_jpGet_(r, map, "Status Pekerjaan")),
-      status = rawStatus || "Terjadwal";
+      status = rawStatus || "Terjadwal",
+      tanggalIso = _jpTgl_(_jpGet_(r, map, "Tanggal")),
+      rawHari = _jpText_(_jpGet_(r, map, "Hari")),
+      hari = rawHari || _jpHari_(tanggalIso);
     if (!rawStatus && idxStatusJadwal != null)
       backfill.push({
         row: i + 2,
@@ -216,6 +235,8 @@ function getJadwalPadamList(params) {
         col: idxStatusPekerjaan + 1,
         value: "Padam",
       });
+    if (!rawHari && hari && idxHari != null)
+      backfill.push({ row: i + 2, col: idxHari + 1, value: hari });
     var item = {
       no: _jpGet_(r, map, "No"),
       kode: _jpGet_(r, map, "Kode Jadwal Padam"),
@@ -223,7 +244,9 @@ function getJadwalPadamList(params) {
       penyulang: _jpGet_(r, map, "Penyulang"),
       section: _jpGet_(r, map, "Section"),
       jenis: _jpGet_(r, map, "Jenis Pekerjaan", "Jenis Pekejaan"),
-      tanggal: _jpTgl_(_jpGet_(r, map, "Tanggal")),
+      hari: hari,
+      tanggal: tanggalIso,
+      tanggalLabel: _jpTanggalLabel_(tanggalIso),
       jamPadam: _jpTimeText_(_jpGet_(r, map, "Jam Padam")),
       jamNyala: _jpTimeText_(_jpGet_(r, map, "Jam Nyala")),
       durasi: _jpGet_(r, map, "Durasi"),
@@ -367,6 +390,7 @@ function simpanJadwalPadam(payload) {
     _jpPut_(row, map, master.penyulang, "Penyulang");
     _jpPut_(row, map, master.section, "Section");
     _jpPut_(row, map, jenis, "Jenis Pekerjaan", "Jenis Pekejaan");
+    _jpPut_(row, map, _jpHari_(tanggal), "Hari");
     _jpPut_(row, map, new Date(tanggal + "T00:00:00"), "Tanggal");
     _jpPut_(row, map, _jpTimeDate_(jamPadam), "Jam Padam");
     _jpPut_(row, map, _jpTimeDate_(jamNyala), "Jam Nyala");
@@ -413,7 +437,7 @@ function simpanJadwalPadam(payload) {
     if (idxSP != null)
       sh.getRange(savedRow, idxSP + 1).setValue(statusPekerjaan);
     if (idxTgl != null)
-      sh.getRange(savedRow, idxTgl + 1).setNumberFormat("dd/MM/yyyy");
+      sh.getRange(savedRow, idxTgl + 1).setNumberFormat("dd mmmm yyyy");
     if (idxPadam != null)
       sh.getRange(savedRow, idxPadam + 1).setNumberFormat("HH:mm");
     if (idxNyala != null)
@@ -469,8 +493,7 @@ function updateStatusJadwalPadam(payload) {
 
 
 function _jpWaDate_(iso) {
-  var m = _jpText_(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  return m ? m[3] + "/" + m[2] + "/" + m[1] : _jpText_(iso);
+  return _jpTanggalLabel_(iso);
 }
 function _jpWaNumber_(value, digits) {
   var n = Number(value);
@@ -508,34 +531,27 @@ function getJadwalPadamWaText(params) {
     }
     if (!rows.length)
       return { ok: false, message: "Tidak ada jadwal padam pada rentang tanggal tersebut." };
-    var lines = ["*LAPORAN JADWAL PADAM*", "Periode: " + _jpWaDate_(dari) + " s.d. " + _jpWaDate_(sampai), ""],
-      totalDurasi = 0, totalEns = 0, totalGardu = 0, totalPelanggan = 0;
+    var lines = [
+      "*LAPORAN JADWAL PADAM*",
+      "*Periode:* " + _jpWaDate_(dari) + " s.d. " + _jpWaDate_(sampai),
+      ""
+    ];
     rows.forEach(function (x, index) {
-      totalDurasi += Number(x.durasi) || 0;
-      totalEns += Number(x.ensRupiah) || 0;
-      totalGardu += Number(x.jumlahGardu) || 0;
-      totalPelanggan += Number(x.jumlahPelanggan) || 0;
       lines.push(
         "*" + (index + 1) + ". " + _jpText_(x.kode) + "*",
-        "Tanggal: " + _jpWaDate_(x.tanggal),
-        "Waktu: " + _jpText_(x.jamPadam) + " - " + _jpText_(x.jamNyala) + " (" + _jpWaNumber_(x.durasi, 2) + " jam)",
-        "Penyulang/Section: " + _jpText_(x.penyulang) + " / " + _jpText_(x.section),
-        "Pekerjaan: " + _jpText_(x.jenis),
-        "Daerah padam: " + _jpText_(x.daerah),
-        "Dampak: " + _jpWaNumber_(x.jumlahGardu, 0) + " gardu, " + _jpWaNumber_(x.jumlahPelanggan, 0) + " pelanggan",
-        "Beban: " + _jpWaNumber_(x.bebanA, 2) + " A",
-        "ENS: Rp" + _jpWaNumber_(x.ensRupiah, 2), ""
+        "*Hari/Tanggal:* " + (_jpText_(x.hari) || _jpHari_(x.tanggal)) + ", " + _jpWaDate_(x.tanggal),
+        "*Waktu:* " + _jpText_(x.jamPadam) + " - " + _jpText_(x.jamNyala) + " (" + _jpWaNumber_(x.durasi, 2) + " jam)",
+        "*Penyulang/Section:* " + _jpText_(x.penyulang) + " / " + _jpText_(x.section),
+        "*Pekerjaan:* " + _jpText_(x.jenis),
+        "*Daerah Padam:* " + _jpText_(x.daerah),
+        "*Jumlah Gardu:* " + _jpWaNumber_(x.jumlahGardu, 0),
+        "*Jumlah Pelanggan:* " + _jpWaNumber_(x.jumlahPelanggan, 0),
+        "*Beban:* " + _jpWaNumber_(x.bebanA, 2) + " A",
+        "*ENS:* Rp" + _jpWaNumber_(x.ensRupiah, 2),
+        ""
       );
     });
-    lines.push(
-      "*TOTAL REKAP*",
-      "Jadwal: " + rows.length,
-      "Durasi: " + _jpWaNumber_(totalDurasi, 2) + " jam",
-      "Gardu: " + _jpWaNumber_(totalGardu, 0),
-      "Pelanggan: " + _jpWaNumber_(totalPelanggan, 0),
-      "ENS: Rp" + _jpWaNumber_(totalEns, 2)
-    );
-    return { ok: true, text: lines.join("\n"), count: rows.length };
+    return { ok: true, text: lines.join("\n").replace(/\n+$/, ""), count: rows.length };
   } catch (e) {
     return { ok: false, message: "Gagal membuat laporan WA: " + e.message };
   }

@@ -430,6 +430,7 @@
                 <th>Penyulang</th>
                 <th>Section</th>
                 <th>Jenis Pekerjaan</th>
+                <th>Hari</th>
                 <th>Tanggal</th>
                 <th>Jam Padam</th>
                 <th>Jam Nyala</th>
@@ -448,7 +449,7 @@
             </thead>
             <tbody id="jpBody">
               <tr>
-                <td class="empty" colspan="20">Isi rentang tanggal, lalu klik Cari.</td>
+                <td class="empty" colspan="21">Isi rentang tanggal, lalu klik Cari.</td>
               </tr>
             </tbody>
           </table>
@@ -773,12 +774,12 @@
             pageSize: 50,
           };
         document.getElementById("jpBody").innerHTML =
-          '<tr><td class="empty" colspan="20">Isi rentang tanggal, lalu klik Cari.</td></tr>';
+          '<tr><td class="empty" colspan="21">Isi rentang tanggal, lalu klik Cari.</td></tr>';
         google.script.run
           .withSuccessHandler(jpRender)
           .withFailureHandler(function (e) {
             document.getElementById("jpBody").innerHTML =
-              '<tr><td class="empty" colspan="20">Gagal memuat data</td></tr>';
+              '<tr><td class="empty" colspan="21">Gagal memuat data</td></tr>';
             jpNotify((e && e.message) || e, "error");
           })
           .getJadwalPadamList(params);
@@ -796,7 +797,7 @@
           body = document.getElementById("jpBody");
         if (!rows.length) {
           body.innerHTML =
-            '<tr><td class="empty" colspan="20">Belum ada data jadwal.</td></tr>';
+            '<tr><td class="empty" colspan="21">Belum ada data jadwal.</td></tr>';
           return;
         }
         body.innerHTML = rows
@@ -818,7 +819,9 @@
               "</td><td>" +
               jpText(x.jenis) +
               "</td><td>" +
-              jpText(x.tanggal) +
+              jpText(x.hari) +
+              "</td><td>" +
+              jpText(x.tanggalLabel || x.tanggal) +
               "</td><td>" +
               jpText(x.jamPadam) +
               "</td><td>" +
