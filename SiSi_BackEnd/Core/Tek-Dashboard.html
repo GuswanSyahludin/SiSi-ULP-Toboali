@@ -625,6 +625,8 @@
   .cal-form-grid input,.cal-form-grid select{width:100%;height:42px;padding:0 11px;border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--text);font:inherit;font-size:13px}.cal-form-grid input:focus-visible,.cal-form-grid select:focus-visible{outline:3px solid oklch(68% .13 252/.3);outline-offset:1px}.cal-form-full{grid-column:1/-1}
   .cal-form-foot{display:flex;justify-content:flex-end;gap:10px;padding:15px 20px;border-top:1px solid var(--border);background:var(--surface-2)}.cal-form-cancel,.cal-form-save{min-height:42px;padding:0 16px;border-radius:9px;font:700 13px/1 inherit;cursor:pointer}.cal-form-cancel{border:1px solid var(--border);background:var(--surface);color:var(--text)}.cal-form-save{border:0;background:var(--primary);color:var(--on-primary)}.cal-form-save:disabled{opacity:.55;cursor:not-allowed}
   @media(max-width:640px){.cal-form-modal{padding:0;align-items:flex-end}.cal-form-dialog{width:100%;max-height:94vh;border-radius:16px 16px 0 0}.cal-form-grid{grid-template-columns:1fr;padding:16px}.cal-form-full{grid-column:auto}.cal-form-foot{position:sticky;bottom:0}}
+
+  .cal-item-actions{display:flex;align-items:center;gap:7px}.cal-item-edit{display:grid;place-items:center;width:32px;height:32px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--primary);cursor:pointer}.cal-item-edit:hover{background:var(--primary-lt)}.cal-item-edit:focus-visible{outline:3px solid oklch(68% .13 252/.3);outline-offset:1px}
 </style>
 
 <div class="td-header">
@@ -757,6 +759,7 @@
       <button type="button" class="cal-form-close" onclick="calCloseJadwalForm()" aria-label="Tutup"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <form id="calJadwalForm" class="cal-form-grid" autocomplete="off" onsubmit="return calSaveJadwal(event)">
+      <input type="hidden" id="calJpKode">
       <label><span>Tanggal</span><input type="date" id="calJpTanggal" required></label>
       <label><span>Status Pekerjaan</span><select id="calJpStatus" required><option value="">Pilih status</option><option value="Padam">Padam</option><option value="Tanpa Padam">Tanpa Padam</option></select></label>
       <label><span>Penyulang</span><select id="calJpPeny" required onchange="calLoadSections()"><option value="">Memuat penyulang...</option></select></label>
@@ -786,6 +789,7 @@
   var _calSelectedDate = "";
   var _calJadwalMaster = [];
   var _calJadwalMasterLoaded = false;
+  var _calEditingKode = "";
 
   function _tdEl(id) {
     return document.getElementById(id);
@@ -991,7 +995,7 @@
         return '<div class="cal-item-card">' +
                  '<div class="cal-item-head">' +
                    '<span class="cal-item-kode">' + _tdEsc(item.kode || "Jadwal Padam") + '</span>' +
-                   '<span class="cal-item-badge" style="' + statusCls + '">' + _tdEsc(item.statusPekerjaan || "Padam") + '</span>' +
+                   '<div class="cal-item-actions"><span class="cal-item-badge" style="' + statusCls + '">' + _tdEsc(item.statusPekerjaan || "Padam") + '</span><button type="button" class="cal-item-edit" title="Edit jadwal" aria-label="Edit jadwal ' + _tdEsc(item.kode || "") + '" onclick="calEditJadwal(\'' + _tdEsc(item.kode || "") + '\')"><i class="fa-solid fa-pencil"></i></button></div>' +
                  '</div>' +
                  '<div class="cal-item-grid">' +
                    '<div class="cal-item-field"><span>Penyulang / Section</span><span>' + _tdEsc(item.penyulang || "-") + ' / ' + _tdEsc(item.section || "-") + '</span></div>' +
@@ -1017,12 +1021,53 @@
       return;
     }
     var modal = _tdEl("calFormModal");
+    _calEditingKode = "";
+    _tdEl("calJadwalForm").reset();
+    _tdEl("calJpKode").value = "";
+    _tdEl("calFormTitle").textContent = "Input Jadwal Pekerjaan";
+    _tdEl("calJpSave").innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Simpan Jadwal';
     var tanggal = _tdEl("calJpTanggal");
     if (tanggal) tanggal.value = _calSelectedDate;
     if (modal) modal.classList.add("show");
     document.documentElement.classList.add("cal-form-open");
     if (!_calJadwalMasterLoaded) calLoadJadwalMaster();
     setTimeout(function(){ var el=_tdEl("calJpPeny"); if(el) el.focus(); }, 40);
+  }
+
+  function calFindJadwal(kode) {
+    var found = null;
+    Object.keys(_calEventsMap || {}).some(function(tanggal){
+      return (_calEventsMap[tanggal] || []).some(function(item){
+        if (String(item.kode || "") === String(kode || "")) { found = item; return true; }
+        return false;
+      });
+    });
+    return found;
+  }
+
+  function calEditJadwal(kode) {
+    var item = calFindJadwal(kode);
+    if (!item) { tdToast("Jadwal tidak ditemukan di kalender.", "error"); return; }
+    _calEditingKode = String(item.kode || "");
+    var modal = _tdEl("calFormModal");
+    _tdEl("calFormTitle").textContent = "Edit Jadwal Pekerjaan";
+    _tdEl("calJpKode").value = _calEditingKode;
+    _tdEl("calJpTanggal").value = item.tanggal || "";
+    _tdEl("calJpStatus").value = item.statusPekerjaan || "Padam";
+    _tdEl("calJpJenis").value = item.jenis || "";
+    _tdEl("calJpPadam").value = item.jamPadam || "";
+    _tdEl("calJpNyala").value = item.jamNyala || "";
+    _tdEl("calJpLokasi").value = item.lokasi || "";
+    _tdEl("calJpSave").innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Simpan Perubahan';
+    if (modal) modal.classList.add("show");
+    document.documentElement.classList.add("cal-form-open");
+    function fillMasterSelection(){
+      _tdEl("calJpPeny").value = item.penyulang || "";
+      calLoadSections();
+      _tdEl("calJpSection").value = item.section || "";
+    }
+    if (_calJadwalMasterLoaded) fillMasterSelection();
+    else calLoadJadwalMaster(fillMasterSelection);
   }
 
   function calCloseJadwalForm() {
@@ -1035,7 +1080,7 @@
     return String(value || "").trim().replace(/\s+/g, " ").toUpperCase();
   }
 
-  function calLoadJadwalMaster() {
+  function calLoadJadwalMaster(done) {
     var peny = _tdEl("calJpPeny");
     if (peny) peny.innerHTML = '<option value="">Memuat penyulang...</option>';
     google.script.run
@@ -1049,6 +1094,7 @@
         });
         Object.keys(names).sort(function(a,b){return names[a].localeCompare(names[b]);}).forEach(function(key){html += '<option value="'+_tdEsc(names[key])+'">'+_tdEsc(names[key])+'</option>';});
         if (peny) peny.innerHTML = html;
+        if (typeof done === "function") done();
       })
       .withFailureHandler(function(err){
         if (peny) peny.innerHTML = '<option value="">Gagal memuat penyulang</option>';
@@ -1069,8 +1115,9 @@
 
   function calSaveJadwal(event) {
     event.preventDefault();
-    var btn=_tdEl("calJpSave"), payload={
+    var btn=_tdEl("calJpSave"), isEdit=!!_calEditingKode, payload={
       token:(typeof _state!=="undefined"&&_state.token)||"",
+      kode:_calEditingKode,
       tanggal:_tdEl("calJpTanggal").value,
       statusPekerjaan:_tdEl("calJpStatus").value,
       penyulang:_tdEl("calJpPeny").value,
@@ -1081,7 +1128,7 @@
       lokasi:_tdEl("calJpLokasi").value.trim()
     };
     btn.disabled=true;btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
-    google.script.run
+    var runner=google.script.run
       .withSuccessHandler(function(res){
         btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-floppy-disk"></i> Simpan Jadwal';
         if(!res||!res.ok){tdToast((res&&res.message)||"Gagal menyimpan jadwal","error");return;}
@@ -1090,10 +1137,11 @@
         _calMonthCache={};
         _calSelectedDate=payload.tanggal;
         calFetchMonthData();
-        tdToast("Jadwal "+res.kode+" berhasil disimpan.","success");
+        _calEditingKode="";
+        tdToast(isEdit ? "Perubahan jadwal berhasil disimpan." : "Jadwal "+res.kode+" berhasil disimpan.","success");
       })
-      .withFailureHandler(function(err){btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-floppy-disk"></i> Simpan Jadwal';tdToast("Gagal menyimpan: "+((err&&err.message)||err),"error");})
-      .simpanJadwalPadam(payload);
+      .withFailureHandler(function(err){btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-floppy-disk"></i> '+(isEdit?"Simpan Perubahan":"Simpan Jadwal");tdToast("Gagal menyimpan: "+((err&&err.message)||err),"error");});
+    if(isEdit) runner.updateJadwalPadam(payload); else runner.simpanJadwalPadam(payload);
     return false;
   }
 
