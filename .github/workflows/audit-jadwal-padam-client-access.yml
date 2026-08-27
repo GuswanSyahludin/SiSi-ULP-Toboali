@@ -1,0 +1,27 @@
+name: Audit Jadwal Padam Client Access
+on:
+  push:
+    branches: [fix/jadwal-padam-client-access]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/jadwal-padam-client-access
+      - run: python .github/scripts/fix_jadwal_padam_client_access.py
+      - name: Validate sidebar access chain
+        run: |
+          grep -q "'Jadwal-Padam': 'SIE-Teknik'" SiSi_BackEnd/Core/Main.html
+          grep -q "'SIE-Teknik': \['SIE-LaporanTeknik','Jadwal-Padam'" SiSi_BackEnd/Core/Main.html
+          grep -q '"Jadwal-Padam": "Teknik/SIE-Teknik"' SiSi_BackEnd/Core/Code.js
+      - name: Commit audited fix
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add SiSi_BackEnd/Core/Main.html
+          git commit -m "fix(web): show Jadwal Padam for SIE users [skip ci]" || exit 0
+          git push origin fix/jadwal-padam-client-access
