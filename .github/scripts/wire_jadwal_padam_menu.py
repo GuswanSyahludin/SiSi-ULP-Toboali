@@ -1,0 +1,30 @@
+from pathlib import Path
+
+p=Path('SiSi_BackEnd/Core/Main.html')
+s=p.read_text()
+s=s.replace("'SIE-Teknik'],", "'SIE-Teknik'],", 1)
+s=s.replace("'Tek-Data-Checkpoint':'fa-bolt-lightning'", "'Tek-Data-Checkpoint':'fa-bolt-lightning',\n      'Jadwal-Padam':'fa-calendar-xmark'", 1)
+s=s.replace("'SIE-Teknik': ['SIE-LaporanTeknik','SIE-BeritaAcara','Tek-Data-Checkpoint']", "'SIE-Teknik': ['SIE-LaporanTeknik','Jadwal-Padam','SIE-BeritaAcara','Tek-Data-Checkpoint']", 1)
+s=s.replace("'SIE-LaporanTeknik':'Laporan Teknik',", "'SIE-LaporanTeknik':'Laporan Teknik',\n      'Jadwal-Padam':'Jadwal Padam',", 1)
+p.write_text(s)
+
+p=Path('SiSi_BackEnd/Teknik/SIE-Teknik.html')
+s=p.read_text()
+button='''    <button class="st-tab" id="stTab-jadwal" onclick="_stSwitchTab('jadwal')">\n      <i class="fa-solid fa-calendar-xmark"></i> Jadwal Padam\n    </button>\n'''
+anchor='''    <button class="st-tab" id="stTab-gaspol" onclick="_stSwitchTab('gaspol')">\n      <i class="fa-solid fa-gauge-high"></i> GASPOL UP3\n    </button>'''
+if 'id="stTab-jadwal"' not in s:
+    if anchor not in s: raise SystemExit('SIE tab anchor missing')
+    s=s.replace(anchor,anchor+'\n'+button,1)
+content='''\n  <!-- TAB JADWAL PADAM -->\n  <div class="st-tab-content" id="sttab-jadwal">\n    <div class="filter-bar">\n      <div class="filter-group"><label>Tgl Dari</label><input type="date" id="stjp_dari"></div>\n      <div class="filter-group"><label>Tgl Sampai</label><input type="date" id="stjp_sampai"></div>\n      <div class="filter-group" id="stjpWrapUlp" style="display:none"><label>ULP</label><select id="stjp_ulp"><option value="">Semua ULP</option></select></div>\n      <div class="filter-group"><label>Penyulang</label><select id="stjp_peny"><option value="">Semua Penyulang</option></select></div>\n      <div class="filter-group"><label>Section</label><select id="stjp_section"><option value="">Semua Section</option></select></div>\n      <button class="btn-filter" onclick="_stJpLoad()"><i class="fa-solid fa-magnifying-glass"></i> Cari</button>\n      <button class="btn-reset" onclick="_stJpReset()">Reset</button>\n    </div>\n    <div class="tbl-wrap"><table><thead><tr>\n      <th>No</th><th>Kode Jadwal Padam</th><th>ULP</th><th>UP3</th><th>GI</th><th>Penyulang</th><th>Section</th><th>Jenis Pekerjaan</th><th>Tanggal</th><th>Jam Padam</th><th>Jam Nyala</th><th>Durasi</th><th>Beban MW</th><th>Arus (A)</th><th>Jumlah Gardu</th><th>Jumlah Pelanggan</th><th>Daerah Section</th><th>Pelanggan VIP</th><th>Status</th>\n    </tr></thead><tbody id="stJpBody"><tr><td colspan="19"><div class="empty-state"><i class="fa-solid fa-calendar-xmark"></i><p>Pilih filter lalu klik Muat.</p></div></td></tr></tbody></table></div>\n  </div>\n'''
+anchor2='''  <!-- TAB 5: GASPOL UP3 -->'''
+if 'id="sttab-jadwal"' not in s:
+    if anchor2 not in s: raise SystemExit('SIE content anchor missing')
+    s=s.replace(anchor2,content+'\n'+anchor2,1)
+script='''\n// JADWAL PADAM\nfunction _stJpIsSuper(){ return String((_stSession&&_stSession.role)||'').trim()==='Super User'; }\nfunction _stJpLoad(){\n  var p={tglDari:_stEl('stjp_dari').value,tglSampai:_stEl('stjp_sampai').value,ulp:_stJpIsSuper()?(_stEl('stjp_ulp').value):(_stSession.ulp||''),penyulang:_stEl('stjp_peny').value,section:_stEl('stjp_section').value};\n  google.script.run.withSuccessHandler(function(r){var b=_stEl('stJpBody');if(!r||!r.ok){b.innerHTML='<tr><td colspan="19">Gagal memuat jadwal padam.</td></tr>';return;}var a=r.rows||[];b.innerHTML=a.length?a.map(function(x){return '<tr><td>'+_stEsc(x.no)+'</td><td><code>'+_stEsc(x.kode)+'</code></td><td>'+_stEsc(x.ulp)+'</td><td>'+_stEsc(x.up3)+'</td><td>'+_stEsc(x.gi)+'</td><td>'+_stEsc(x.penyulang)+'</td><td>'+_stEsc(x.section)+'</td><td>'+_stEsc(x.jenis)+'</td><td>'+_stEsc(x.tanggal)+'</td><td>'+_stEsc(x.jamPadam)+'</td><td>'+_stEsc(x.jamNyala)+'</td><td>'+_stEsc(x.durasi)+'</td><td>'+_stEsc(x.bebanMw)+'</td><td>'+_stEsc(x.arus)+'</td><td>'+_stEsc(x.jumlahGardu)+'</td><td>'+_stEsc(x.jumlahPelanggan)+'</td><td>'+_stEsc(x.daerah)+'</td><td>'+_stEsc(x.vip)+'</td><td>'+_stEsc(x.status)+'</td></tr>';}).join(''):'<tr><td colspan="19"><div class="empty-state">Tidak ada jadwal padam.</div></td></tr>';}).getJadwalPadamList(p);}\nfunction _stJpReset(){['stjp_dari','stjp_sampai'].forEach(function(id){_stEl(id).value='';});['stjp_ulp','stjp_peny','stjp_section'].forEach(function(id){_stEl(id).selectedIndex=0;});_stJpLoad();}\nfunction _stJpInit(){\n  var now=new Date(),iso=now.toISOString().slice(0,10),first=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);\n  _stEl('stjp_dari').value=first;_stEl('stjp_sampai').value=iso;\n  _stEl('stjpWrapUlp').style.display=_stJpIsSuper()?'flex':'none';\n  google.script.run.withSuccessHandler(function(r){var ps={},ss={};(r.rows||[]).forEach(function(x){var pk=x.penyulang;ps[pk]=1;(ss[pk]||(ss[pk]=[])).push(x.section);});var p=_stEl('stjp_peny');Object.keys(ps).sort().forEach(function(x){p.innerHTML+='<option value="'+_stEsc(x)+'">'+_stEsc(x)+'</option>';});p.onchange=function(){var q=_stEl('stjp_section');q.innerHTML='<option value="">Semua Section</option>';(ss[p.value]||[]).filter(function(x,i,a){return a.indexOf(x)===i;}).forEach(function(x){q.innerHTML+='<option value="'+_stEsc(x)+'">'+_stEsc(x)+'</option>';});};}).getJadwalPadamMaster({ulp:_stJpIsSuper()?'':(_stSession.ulp||'')});\n  if(_stJpIsSuper()) _stLoadListUlpJp();\n  _stJpLoad();\n}\nfunction _stLoadListUlpJp(){google.script.run.withSuccessHandler(function(a){var s=_stEl('stjp_ulp');(a||[]).forEach(function(x){s.innerHTML+='<option value="'+_stEsc(x)+'">'+_stEsc(x)+'</option>';});}).getListUlpIns();}\nfunction _stEsc(x){return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}\n'''
+# insert before final script close, once
+idx=s.rfind('</script>')
+if idx<0: raise SystemExit('script close missing')
+if 'function _stJpLoad()' not in s:
+    s=s[:idx]+script+s[idx:]
+s=s.replace("if(tabId === 'gaspol') _stLoadGaspol();", "if(tabId === 'gaspol') _stLoadGaspol();\n  if(tabId === 'jadwal') _stJpInit();", 1)
+p.write_text(s)
