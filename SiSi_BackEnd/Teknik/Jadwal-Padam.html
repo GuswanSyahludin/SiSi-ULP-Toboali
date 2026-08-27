@@ -633,6 +633,15 @@
             ? "status-batal"
             : "status-terjadwal";
       }
+      function jpDateInputValue(date) {
+        var y=date.getFullYear(),m=String(date.getMonth()+1).padStart(2,"0"),d=String(date.getDate()).padStart(2,"0");
+        return y+"-"+m+"-"+d;
+      }
+      function jpSetCurrentMonthRange() {
+        var now=new Date(),first=new Date(now.getFullYear(),now.getMonth(),1),last=new Date(now.getFullYear(),now.getMonth()+1,0);
+        document.getElementById("jpFrom").value=jpDateInputValue(first);
+        document.getElementById("jpTo").value=jpDateInputValue(last);
+      }
       function loadList() {
         var sesi = jpSession(),
           params = {
@@ -716,7 +725,11 @@
       function jpUpdateStatus(button, status) {
         var row=button.closest("tr"),kode=row?row.getAttribute("data-kode"):"";
         if(!kode)return;
-        google.script.run.withSuccessHandler(function(res){if(!res||!res.ok){jpNotify((res&&res.message)||"Gagal memperbarui status","error");return;}jpNotify(res.message,"success");loadList();}).withFailureHandler(function(err){jpNotify((err&&err.message)||err,"error");}).updateStatusJadwalPadam({token:(typeof _state!=="undefined"&&_state.token)||"",kode:kode,status:status});
+        var buttons=row.querySelectorAll(".action-btn");buttons.forEach(function(b){b.disabled=true;});button.textContent="Memproses...";
+        google.script.run.withSuccessHandler(function(res){
+          if(!res||!res.ok){buttons.forEach(function(b){b.disabled=false;});button.textContent=status==="Terealisasi"?"Terealisasi":"Batal";jpNotify((res&&res.message)||"Gagal memperbarui status","error");return;}
+          jpNotify("Status jadwal "+kode+" menjadi "+status,"success");loadList();
+        }).withFailureHandler(function(err){buttons.forEach(function(b){b.disabled=false;});button.textContent=status==="Terealisasi"?"Terealisasi":"Batal";jpNotify((err&&err.message)||err,"error");}).updateStatusJadwalPadam({token:(typeof _state!=="undefined"&&_state.token)||"",kode:kode,status:status});
       }
       function jpNotify(msg, type) {
         if (typeof showToast === "function")
@@ -781,6 +794,7 @@
         document.getElementById("jpUlpWrap").style.display = jpIsSuper()
           ? "flex"
           : "none";
+        jpSetCurrentMonthRange();
         jpLoadMaster();
         loadList();
       })();
