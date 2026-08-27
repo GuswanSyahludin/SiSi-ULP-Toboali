@@ -738,6 +738,8 @@
   /* State Kalender */
   var _calCurrentDate = new Date();
   var _calEventsMap = {}; // { "YYYY-MM-DD": [items...] }
+  var _calMonthCache = {};
+  var _calRequestSeq = 0;
 
   function _tdEl(id) {
     return document.getElementById(id);
@@ -812,47 +814,45 @@
   }
 
   function calFetchMonthData() {
-    var year = _calCurrentDate.getFullYear();
-    var month = _calCurrentDate.getMonth();
-
-    // Update label teks bulan
+    var year = _calCurrentDate.getFullYear(),
+      month = _calCurrentDate.getMonth(),
+      ulp = _tdUlp(),
+      cacheKey = year + "-" + _calPad(month + 1) + "|" + ulp,
+      requestSeq = ++_calRequestSeq;
     _calUpdateMonthLabel();
 
-    // Render skeleton / grid langsung dulu agar kalender tidak blank/stuck
-    calRenderGrid(_calEventsMap || {});
-
-    // Tgl awal dan akhir bulan
-    var lastDay = new Date(year, month + 1, 0);
-    var tglDari = year + "-" + _calPad(month + 1) + "-01";
-    var tglSampai = year + "-" + _calPad(month + 1) + "-" + _calPad(lastDay.getDate());
-
-    if (typeof google === "undefined" || !google.script || !google.script.run) {
+    if (_calMonthCache[cacheKey]) {
+      _calEventsMap = _calMonthCache[cacheKey];
+      calRenderGrid(_calEventsMap);
       return;
     }
 
+    _calEventsMap = {};
+    calRenderGrid({});
+    if (typeof google === "undefined" || !google.script || !google.script.run) return;
+
     google.script.run
       .withSuccessHandler(function(res) {
-        var rows = (res && res.rows) || [];
+        if (requestSeq !== _calRequestSeq) return;
+        if (!res || !res.ok) {
+          tdToast((res && res.message) || "Gagal memuat kalender.", "error");
+          return;
+        }
         var map = {};
-        rows.forEach(function(item) {
+        (res.rows || []).forEach(function(item) {
           var tgl = String(item.tanggal || "").trim();
           if (!tgl) return;
-          if (!map[tgl]) map[tgl] = [];
-          map[tgl].push(item);
+          (map[tgl] || (map[tgl] = [])).push(item);
         });
+        _calMonthCache[cacheKey] = map;
         _calEventsMap = map;
         calRenderGrid(map);
       })
       .withFailureHandler(function(err) {
-        console.warn("Gagal memuat jadwal padam kalender:", err);
+        if (requestSeq !== _calRequestSeq) return;
+        tdToast("Gagal memuat kalender: " + ((err && err.message) || err), "error");
       })
-      .getJadwalPadamList({
-        tglDari: tglDari,
-        tglSampai: tglSampai,
-        ulp: _tdUlp(),
-        page: 1,
-        pageSize: 100
-      });
+      .getJadwalPadamCalendarMonth({ year: year, month: month + 1, ulp: ulp });
   }
 
   function calRenderGrid(eventsMap) {

@@ -223,6 +223,84 @@ function getJadwalPadamMaster(params) {
   return { ok: true, rows: out };
 }
 
+var JADWAL_CALENDAR_CACHE_TTL = 300;
+var JADWAL_CALENDAR_CACHE_VERSION_KEY = "jpCalendarCacheVersion";
+
+function _jpCalendarVersion_() {
+  return PropertiesService.getScriptProperties().getProperty(
+    JADWAL_CALENDAR_CACHE_VERSION_KEY,
+  ) || "1";
+}
+function _jpBustCalendarCache_() {
+  var props = PropertiesService.getScriptProperties();
+  var next = String((Number(props.getProperty(JADWAL_CALENDAR_CACHE_VERSION_KEY)) || 1) + 1);
+  props.setProperty(JADWAL_CALENDAR_CACHE_VERSION_KEY, next);
+  return next;
+}
+function getJadwalPadamCalendarMonth(params) {
+  try {
+    params = params || {};
+    var year = Number(params.year),
+      month = Number(params.month),
+      ulp = _jpText_(params.ulp);
+    if (year < 2000 || year > 2100 || month < 1 || month > 12)
+      return { ok: false, rows: [], message: "Bulan kalender tidak valid." };
+
+    var monthKey = year + "-" + ("0" + month).slice(-2),
+      cacheKey = "jpCal|" + _jpCalendarVersion_() + "|" + monthKey + "|" + _jpUlpKey_(ulp),
+      cache = CacheService.getScriptCache(),
+      hit = cache.get(cacheKey);
+    if (hit) {
+      try {
+        var cached = JSON.parse(hit);
+        cached.cached = true;
+        return cached;
+      } catch (ignore) {}
+    }
+
+    var sh = _jpSheet_(JADWAL_PADAM_SHEETS.rekap);
+    if (!sh || sh.getLastRow() < 2) return { ok: true, rows: [], month: monthKey };
+    var headers = _jpHeaders_(sh),
+      map = _jpHeaderMap_(headers),
+      values = sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues(),
+      rows = [];
+    for (var i = 0; i < values.length; i++) {
+      var r = values[i],
+        tanggal = _jpTgl_(_jpGet_(r, map, "Tanggal"));
+      if (tanggal.slice(0, 7) !== monthKey) continue;
+      var rowUlp = _jpText_(_jpGet_(r, map, "ULP"));
+      if (ulp && _jpUlpKey_(rowUlp) !== _jpUlpKey_(ulp)) continue;
+      rows.push({
+        kode: _jpText_(_jpGet_(r, map, "Kode Jadwal Padam")),
+        tanggal: tanggal,
+        hari: _jpText_(_jpGet_(r, map, "Hari")) || _jpHari_(tanggal),
+        ulp: rowUlp,
+        penyulang: _jpText_(_jpGet_(r, map, "Penyulang")),
+        section: _jpText_(_jpGet_(r, map, "Section")),
+        jenis: _jpText_(_jpGet_(r, map, "Jenis Pekerjaan", "Jenis Pekejaan")),
+        jamPadam: _jpTimeText_(_jpGet_(r, map, "Jam Padam")),
+        jamNyala: _jpTimeText_(_jpGet_(r, map, "Jam Nyala")),
+        durasi: Number(_jpGet_(r, map, "Durasi")) || 0,
+        jumlahGardu: Number(_jpGet_(r, map, "Jumlah Gardu")) || 0,
+        jumlahPelanggan: Number(_jpGet_(r, map, "Jumlah Pelanggan")) || 0,
+        daerah: _jpText_(_jpGet_(r, map, "Daerah Section", "Daerah Padam", "Dearah Padam")),
+        bebanA: _jpGet_(r, map, "Beban (A)", "Arus (A)", "Beban"),
+        ensRupiah: _jpGet_(r, map, "ENS (Rupiah)", "ENS"),
+        status: _jpText_(_jpGet_(r, map, "Status Jadwal Padam", "Status Jadwal Pekerjaan", "Status")) || "Terjadwal",
+        statusPekerjaan: _jpText_(_jpGet_(r, map, "Status Pekerjaan")) || "Padam",
+      });
+    }
+    rows.sort(function (a, b) {
+      return a.tanggal.localeCompare(b.tanggal) || a.jamPadam.localeCompare(b.jamPadam);
+    });
+    var result = { ok: true, rows: rows, month: monthKey, cached: false };
+    try { cache.put(cacheKey, JSON.stringify(result), JADWAL_CALENDAR_CACHE_TTL); } catch (ignorePut) {}
+    return result;
+  } catch (e) {
+    return { ok: false, rows: [], message: "Gagal memuat kalender: " + e.message };
+  }
+}
+
 function getJadwalPadamList(params) {
   params = params || {};
   var sh = _jpSheet_(JADWAL_PADAM_SHEETS.rekap);
@@ -498,6 +576,7 @@ function simpanJadwalPadam(payload) {
     if (idxNyala != null)
       sh.getRange(savedRow, idxNyala + 1).setNumberFormat("HH:mm");
     SpreadsheetApp.flush();
+    _jpBustCalendarCache_();
     return { ok: true, kode: kode, message: "Jadwal padam berhasil disimpan." };
   } catch (e) {
     return { ok: false, message: "Gagal menyimpan: " + e.message };
@@ -540,6 +619,7 @@ function updateStatusJadwalPadam(payload) {
     if (row < 0) return { ok: false, message: "Jadwal tidak ditemukan." };
     sh.getRange(row, is + 1).setValue(status);
     SpreadsheetApp.flush();
+    _jpBustCalendarCache_();
     return { ok: true, message: "Status jadwal diperbarui." };
   } catch (e) {
     return { ok: false, message: "Gagal memperbarui status: " + e.message };
