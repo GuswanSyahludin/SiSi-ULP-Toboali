@@ -466,3 +466,77 @@ function updateStatusJadwalPadam(payload) {
     return { ok: false, message: "Gagal memperbarui status: " + e.message };
   }
 }
+
+
+function _jpWaDate_(iso) {
+  var m = _jpText_(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? m[3] + "/" + m[2] + "/" + m[1] : _jpText_(iso);
+}
+function _jpWaNumber_(value, digits) {
+  var n = Number(value);
+  if (!isFinite(n)) n = 0;
+  return n.toLocaleString("id-ID", {
+    minimumFractionDigits: digits || 0,
+    maximumFractionDigits: digits || 0,
+  });
+}
+function getJadwalPadamWaText(params) {
+  try {
+    params = params || {};
+    var token = _jpText_(params.token),
+      sesi = typeof getSesiByToken === "function" ? getSesiByToken(token) : null;
+    if (!sesi) return { ok: false, message: "Sesi habis, silakan login ulang." };
+    var dari = _jpText_(params.tglDari), sampai = _jpText_(params.tglSampai);
+    if (!dari || !sampai || dari > sampai)
+      return { ok: false, message: "Rentang tanggal tidak valid." };
+    var query = {
+        tglDari: dari,
+        tglSampai: sampai,
+        ulp: _jpText_(params.ulp),
+        penyulang: _jpText_(params.penyulang),
+        status: _jpText_(params.status),
+        statusPekerjaan: "Padam",
+        page: 1,
+        pageSize: 50,
+      },
+      result = getJadwalPadamList(query),
+      rows = result.rows || [],
+      pages = Number(result.totalPages) || 1;
+    for (var page = 2; page <= pages; page++) {
+      query.page = page;
+      rows = rows.concat((getJadwalPadamList(query).rows || []));
+    }
+    if (!rows.length)
+      return { ok: false, message: "Tidak ada jadwal padam pada rentang tanggal tersebut." };
+    var lines = ["*LAPORAN JADWAL PADAM*", "Periode: " + _jpWaDate_(dari) + " s.d. " + _jpWaDate_(sampai), ""],
+      totalDurasi = 0, totalEns = 0, totalGardu = 0, totalPelanggan = 0;
+    rows.forEach(function (x, index) {
+      totalDurasi += Number(x.durasi) || 0;
+      totalEns += Number(x.ensRupiah) || 0;
+      totalGardu += Number(x.jumlahGardu) || 0;
+      totalPelanggan += Number(x.jumlahPelanggan) || 0;
+      lines.push(
+        "*" + (index + 1) + ". " + _jpText_(x.kode) + "*",
+        "Tanggal: " + _jpWaDate_(x.tanggal),
+        "Waktu: " + _jpText_(x.jamPadam) + " - " + _jpText_(x.jamNyala) + " (" + _jpWaNumber_(x.durasi, 2) + " jam)",
+        "Penyulang/Section: " + _jpText_(x.penyulang) + " / " + _jpText_(x.section),
+        "Pekerjaan: " + _jpText_(x.jenis),
+        "Daerah padam: " + _jpText_(x.daerah),
+        "Dampak: " + _jpWaNumber_(x.jumlahGardu, 0) + " gardu, " + _jpWaNumber_(x.jumlahPelanggan, 0) + " pelanggan",
+        "Beban: " + _jpWaNumber_(x.bebanA, 2) + " A",
+        "ENS: Rp" + _jpWaNumber_(x.ensRupiah, 2), ""
+      );
+    });
+    lines.push(
+      "*TOTAL REKAP*",
+      "Jadwal: " + rows.length,
+      "Durasi: " + _jpWaNumber_(totalDurasi, 2) + " jam",
+      "Gardu: " + _jpWaNumber_(totalGardu, 0),
+      "Pelanggan: " + _jpWaNumber_(totalPelanggan, 0),
+      "ENS: Rp" + _jpWaNumber_(totalEns, 2)
+    );
+    return { ok: true, text: lines.join("\n"), count: rows.length };
+  } catch (e) {
+    return { ok: false, message: "Gagal membuat laporan WA: " + e.message };
+  }
+}

@@ -49,6 +49,12 @@
         margin: 6px 0 0;
         color: var(--jp-muted);
       }
+      .head-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: 0 0 auto;
+      }
       .btn {
         min-height: 40px;
         padding: 0 16px;
@@ -74,6 +80,8 @@
       }
       .wa-btn { background:oklch(55% .15 145); }
       .wa-btn:hover { background:oklch(48% .15 145); }
+      .wa-btn:disabled,
+      .wa-btn:disabled:hover { background:oklch(73% .035 145); }
       .btn-secondary {
         background: oklch(51% 0.025 250);
       }
@@ -329,9 +337,13 @@
         .head {
           display: block;
         }
+        .head-actions {
+          display: grid;
+          grid-template-columns: 1fr;
+          margin-top: 16px;
+        }
         .head .btn {
           width: 100%;
-          margin-top: 16px;
         }
         .filter {
           margin-top: 16px;
@@ -364,7 +376,10 @@
           <h2>Rincian Jadwal Padam</h2>
           <p>Jadwal pekerjaan dan dampak pelanggan.</p>
         </div>
-        <button class="btn" onclick="jpOpen()">Input Jadwal Padam</button>
+        <div class="head-actions">
+          <button class="btn wa-btn" id="jpWaBtn" onclick="jpKirimWa()" disabled>Kirim WA</button>
+          <button class="btn" onclick="jpOpen()">Input Jadwal Padam</button>
+        </div>
       </div>
       <section class="filter">
         <div class="field">
@@ -403,7 +418,6 @@
           </select>
         </div>
         <button class="btn" onclick="loadList(1)">Cari</button>
-        <button class="btn wa-btn" id="jpWaBtn" onclick="jpKirimWa()">Kirim WA</button>
       </section>
       <section class="table-shell">
         <div class="table-scroll">
@@ -882,7 +896,56 @@
             status: status,
           });
       }
-      function jpKirimWa() { var dari=document.getElementById("jpFrom").value,sampai=document.getElementById("jpTo").value;if(!dari||!sampai){jpNotify("Isi rentang tanggal terlebih dahulu.","warning");return;}if(dari>sampai){jpNotify("Tanggal mulai tidak boleh melewati tanggal selesai.","warning");return;}var btn=document.getElementById("jpWaBtn"),popup=window.open("","_blank");btn.disabled=true;btn.textContent="Menyiapkan...";var params={token:(typeof _state!=="undefined"&&_state.token)||"",tglDari:dari,tglSampai:sampai,ulp:jpIsSuper()?document.getElementById("jpUlp").value:"",penyulang:document.getElementById("jpPeny").value,status:document.getElementById("jpStatus").value};google.script.run.withSuccessHandler(function(res){btn.disabled=false;btn.textContent="Kirim WA";if(!res||!res.ok){if(popup)popup.close();jpNotify((res&&res.message)||"Gagal membuat laporan WA","error");return;}var url="https://wa.me/?text="+encodeURIComponent(res.text);if(popup)popup.location.href=url;else window.open(url,"_blank");}).withFailureHandler(function(err){btn.disabled=false;btn.textContent="Kirim WA";if(popup)popup.close();jpNotify((err&&err.message)||err,"error");}).getJadwalPadamWaText(params); }
+      function jpSyncWaButton() {
+        var dari = document.getElementById("jpFrom").value,
+          sampai = document.getElementById("jpTo").value,
+          btn = document.getElementById("jpWaBtn");
+        btn.disabled = !dari || !sampai || dari > sampai;
+      }
+      function jpKirimWa() {
+        var dari = document.getElementById("jpFrom").value,
+          sampai = document.getElementById("jpTo").value,
+          btn = document.getElementById("jpWaBtn");
+        if (!dari || !sampai || dari > sampai) {
+          jpSyncWaButton();
+          jpNotify("Isi rentang tanggal yang valid terlebih dahulu.", "warning");
+          return;
+        }
+        var popup = window.open("about:blank", "jpWhatsApp");
+        if (!popup) {
+          jpNotify("Popup diblokir browser. Izinkan popup untuk membuka WhatsApp.", "warning");
+          return;
+        }
+        popup.document.title = "Menyiapkan WhatsApp";
+        popup.document.body.textContent = "Menyiapkan laporan WhatsApp...";
+        btn.disabled = true;
+        btn.textContent = "Menyiapkan...";
+        google.script.run
+          .withSuccessHandler(function (res) {
+            btn.textContent = "Kirim WA";
+            jpSyncWaButton();
+            if (!res || !res.ok) {
+              popup.close();
+              jpNotify((res && res.message) || "Gagal membuat laporan WA", "error");
+              return;
+            }
+            popup.location.replace("https://wa.me/?text=" + encodeURIComponent(res.text));
+          })
+          .withFailureHandler(function (err) {
+            btn.textContent = "Kirim WA";
+            jpSyncWaButton();
+            popup.close();
+            jpNotify((err && err.message) || err, "error");
+          })
+          .getJadwalPadamWaText({
+            token: (typeof _state !== "undefined" && _state.token) || "",
+            tglDari: dari,
+            tglSampai: sampai,
+            ulp: jpIsSuper() ? document.getElementById("jpUlp").value : "",
+            penyulang: document.getElementById("jpPeny").value,
+            status: document.getElementById("jpStatus").value,
+          });
+      }
       function jpNotify(msg, type) {
         if (typeof showToast === "function")
           showToast(String(msg), type || "info");
@@ -948,6 +1011,11 @@
           : "none";
         document.getElementById("jpFrom").value="";
         document.getElementById("jpTo").value="";
+        document.getElementById("jpFrom").addEventListener("input", jpSyncWaButton);
+        document.getElementById("jpFrom").addEventListener("change", jpSyncWaButton);
+        document.getElementById("jpTo").addEventListener("input", jpSyncWaButton);
+        document.getElementById("jpTo").addEventListener("change", jpSyncWaButton);
+        jpSyncWaButton();
         jpLoadMaster();
       })();
     </script>
