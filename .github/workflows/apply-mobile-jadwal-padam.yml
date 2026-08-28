@@ -1,40 +1,55 @@
-name: Apply centered Beranda navigation
+name: Audit Beranda and Jadwal Padam Mobile
+
 on:
+  pull_request:
+    paths:
+      - "SiSi_BackEnd/Core/Jadwal-Padam-Mobile.js"
+      - "SiSi_BackEnd/Core/Auth-Perangkat.js"
+      - "SiSi_Mobile/lib/screens/beranda_screen.dart"
+      - "SiSi_Mobile/lib/screens/jadwal_padam_screen.dart"
+      - "SiSi_Mobile/lib/services/jadwal_padam_service.dart"
+      - "SiSi_Mobile/lib/screens/dashboard_screen.dart"
+      - ".github/workflows/apply-mobile-jadwal-padam.yml"
   push:
-    branches: [feat/mobile-jadwal-padam]
-    paths: [.github/workflows/apply-mobile-jadwal-padam.yml]
+    branches: [main]
+    paths:
+      - "SiSi_BackEnd/Core/Jadwal-Padam-Mobile.js"
+      - "SiSi_BackEnd/Core/Auth-Perangkat.js"
+      - "SiSi_Mobile/lib/screens/beranda_screen.dart"
+      - "SiSi_Mobile/lib/screens/jadwal_padam_screen.dart"
+      - "SiSi_Mobile/lib/services/jadwal_padam_service.dart"
+      - "SiSi_Mobile/lib/screens/dashboard_screen.dart"
+      - ".github/workflows/apply-mobile-jadwal-padam.yml"
+  workflow_dispatch:
+
 permissions:
-  contents: write
+  contents: read
+
 jobs:
-  patch:
+  wiring:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: feat/mobile-jadwal-padam
-      - run: |
-          python - <<'PY'
-          from pathlib import Path
-          p=Path('SiSi_Mobile/lib/screens/dashboard_screen.dart')
-          s=p.read_text()
-          s=s.replace("import 'jadwal_padam_screen.dart';\n", "import 'jadwal_padam_screen.dart';\nimport 'beranda_screen.dart';\n")
-          s=s.replace("return ['Tim', 'Gardu', 'Teknik', 'Pengaturan'];", "return ['Tim', 'Gardu', 'Beranda', 'Teknik', 'Pengaturan'];")
-          s=s.replace("return ['Tim', 'Gardu', 'Pengaturan'];", "return ['Tim', 'Gardu', 'Beranda', 'Pengaturan'];")
-          s=s.replace("return ['Tim', 'Pengaturan'];", "return ['Tim', 'Beranda', 'Pengaturan'];")
-          s=s.replace("Icons.electrical_services_outlined,\n        Icons.handyman_outlined,", "Icons.electrical_services_outlined,\n        Icons.home_rounded,\n        Icons.handyman_outlined,")
-          s=s.replace("Icons.electrical_services_outlined,\n        Icons.settings_outlined,", "Icons.electrical_services_outlined,\n        Icons.home_rounded,\n        Icons.settings_outlined,")
-          s=s.replace("return [\n      Icons.people_outline_rounded,\n      Icons.settings_outlined,\n    ];", "return [\n      Icons.people_outline_rounded,\n      Icons.home_rounded,\n      Icons.settings_outlined,\n    ];")
-          s=s.replace("_bubbleController = AnimationController(vsync: this);\n    unawaited", "_bubbleController = AnimationController(vsync: this);\n    selectedIndex = currentMenuItems.indexOf('Beranda');\n    previousIndex = selectedIndex;\n    _bubbleController.value = 1;\n    unawaited")
-          s=s.replace("previousIndex = -1;\n      selectedIndex = -1;", "previousIndex = selectedIndex;\n      selectedIndex = currentMenuItems.indexOf('Beranda');")
-          s=s.replace("case 'Gardu':\n        return GarduScreen(sesi: widget.sesi);\n      case 'Teknik':", "case 'Gardu':\n        return GarduScreen(sesi: widget.sesi);\n      case 'Beranda':\n        return BerandaScreen(sesi: widget.sesi);\n      case 'Teknik':")
-          p.write_text(s)
-          PY
+      - name: Verify centered Beranda navigation
+        run: |
           grep -q "import 'beranda_screen.dart';" SiSi_Mobile/lib/screens/dashboard_screen.dart
           grep -q "case 'Beranda':" SiSi_Mobile/lib/screens/dashboard_screen.dart
           grep -q "'Tim', 'Gardu', 'Beranda', 'Teknik', 'Pengaturan'" SiSi_Mobile/lib/screens/dashboard_screen.dart
-      - run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add SiSi_Mobile/lib/screens/dashboard_screen.dart
-          git commit -m "Add centered Beranda navigation"
-          git push origin HEAD:feat/mobile-jadwal-padam
+          grep -q "selectedIndex = currentMenuItems.indexOf('Beranda')" SiSi_Mobile/lib/screens/dashboard_screen.dart
+      - name: Verify work calendar connection
+        run: |
+          grep -q 'class BerandaScreen' SiSi_Mobile/lib/screens/beranda_screen.dart
+          grep -q 'getMobileJadwalPadamCalendar' SiSi_Mobile/lib/services/jadwal_padam_service.dart
+          grep -q 'getMobileJadwalPadamCalendar' SiSi_BackEnd/Core/Jadwal-Padam-Mobile.js
+      - name: Verify Jadwal Padam menu and API
+        run: |
+          grep -q "'title': 'Jadwal Padam'" SiSi_Mobile/lib/screens/dashboard_screen.dart
+          grep -q 'jadwalPadamMobileRouter_' SiSi_BackEnd/Core/Auth-Perangkat.js
+          grep -q 'simpanMobileJadwalPadam' SiSi_BackEnd/Core/Jadwal-Padam-Mobile.js
+      - name: Reject deployment commands
+        run: |
+          ! grep -R -n -E 'gcloud (run deploy|builds submit)|firebase deploy|clasp push' \
+            SiSi_BackEnd/Core/Jadwal-Padam-Mobile.js \
+            SiSi_Mobile/lib/screens/beranda_screen.dart \
+            SiSi_Mobile/lib/screens/jadwal_padam_screen.dart \
+            SiSi_Mobile/lib/services/jadwal_padam_service.dart
