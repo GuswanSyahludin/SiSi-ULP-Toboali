@@ -1,0 +1,87 @@
+name: Audit Engines
+
+on:
+  pull_request:
+    paths:
+      - "engines/**"
+      - ".github/workflows/audit-engines.yml"
+  push:
+    branches: [main]
+    paths:
+      - "engines/**"
+      - ".github/workflows/audit-engines.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: audit-engines-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ENGINE_MAX_BODY_BYTES: 15000000
+  ENGINE_DAILY_REQUEST_BUDGET: 2000
+  ENGINE_GUARD_COOLDOWN_SECONDS: 10
+
+jobs:
+  audit:
+    name: ${{ matrix.engine }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [ba-pdf-engine, row-pdf-engine, wm-engine]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compile Python
+        run: python -m py_compile engines/${{ matrix.engine }}/*.py
+
+      - name: Build image (local only)
+        run: docker build --pull=false -t sisi-${{ matrix.engine }}:audit engines/${{ matrix.engine }}
+
+      - name: Start container (local only)
+        run: |
+          docker run -d --rm --name sisi-audit-${{ matrix.engine }} -p 18080:8080 sisi-${{ matrix.engine }}:audit
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18080/ >/tmp/health.txt; then exit 0; fi
+            sleep 2
+          done
+          docker logs sisi-audit-${{ matrix.engine }}
+          exit 1
+
+      - name: Verify payload guard
+        run: |
+          code=$(curl -sS -o /tmp/body -w '%{http_code}' -X POST \
+            -H 'Content-Length: 15000001' http://127.0.0.1:18080/not-a-route || true)
+          test "$code" = "413"
+          grep -q PAYLOAD_TOO_LARGE /tmp/body
+
+      - name: Verify missing secret is rejected
+        run: |
+          case '${{ matrix.engine }}' in
+            wm-engine) URL='http://127.0.0.1:18080/watermark'; METHOD='POST' ;;
+            row-pdf-engine) URL='http://127.0.0.1:18080/row/rekap'; METHOD='GET' ;;
+            ba-pdf-engine) URL='http://127.0.0.1:18080/ba/pengoperasian'; METHOD='POST' ;;
+          esac
+          code=$(curl -sS -o /tmp/auth-body -w '%{http_code}' -X "$METHOD" -H 'Content-Type: application/json' -d '{}' "$URL" || true)
+          test "$code" = "403"
+
+      - name: Verify guard status
+        run: |
+          curl -fsS http://127.0.0.1:18080/guard/status >/tmp/status.json
+          python - <<'PY'
+          import json
+          x=json.load(open('/tmp/status.json'))
+          assert x['ok'] is True
+          assert x['budget'] == 2000
+          assert x['scope'] == 'instance'
+          # The rejected-secret probe is still a request seen by the guard.
+          assert x['count'] == 1
+          PY
+
+      - name: Cleanup local container
+        if: always()
+        run: docker rm -f sisi-audit-${{ matrix.engine }} 2>/dev/null || true
