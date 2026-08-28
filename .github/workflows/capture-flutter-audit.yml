@@ -1,4 +1,4 @@
-name: Capture Flutter audit diagnostics
+name: Fix Jadwal Padam Dart errors
 on:
   push:
     branches: [feat/mobile-jadwal-padam]
@@ -6,26 +6,27 @@ on:
 permissions:
   contents: write
 jobs:
-  capture:
+  fix:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: feat/mobile-jadwal-padam
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-      - working-directory: SiSi_Mobile
-        run: flutter pub get
-      - name: Capture analyzer output
+      - name: Replace JavaScript-style Number with Dart num
         run: |
-          cd SiSi_Mobile
-          flutter analyze --no-fatal-infos --no-fatal-warnings > ../flutter-audit.txt 2>&1 || true
-      - name: Commit diagnostics
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('SiSi_Mobile/lib/screens/jadwal_padam_screen.dart')
+          s=p.read_text()
+          s=s.replace("Number.tryParse('${row['ensRupiah']}')", "num.tryParse('${row['ensRupiah']}')")
+          s=s.replace("Number.parse('${row['ensRupiah']}')", "num.parse('${row['ensRupiah']}')")
+          p.write_text(s)
+          PY
+          ! grep -q 'Number\.' SiSi_Mobile/lib/screens/jadwal_padam_screen.dart
+      - name: Commit fix
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add flutter-audit.txt
-          git commit -m "Capture Flutter audit diagnostics"
+          git add SiSi_Mobile/lib/screens/jadwal_padam_screen.dart
+          git commit -m "Fix Dart number parsing in Jadwal Padam"
           git push origin HEAD:feat/mobile-jadwal-padam
