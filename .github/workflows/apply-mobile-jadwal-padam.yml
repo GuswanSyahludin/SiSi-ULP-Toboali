@@ -1,13 +1,10 @@
 name: Apply centered Beranda navigation
-
 on:
   push:
     branches: [feat/mobile-jadwal-padam]
     paths: [.github/workflows/apply-mobile-jadwal-padam.yml]
-
 permissions:
   contents: write
-
 jobs:
   patch:
     runs-on: ubuntu-latest
@@ -15,86 +12,27 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: feat/mobile-jadwal-padam
-      - name: Patch dashboard navigation
-        run: |
+      - run: |
           python - <<'PY'
           from pathlib import Path
-          import re
           p=Path('SiSi_Mobile/lib/screens/dashboard_screen.dart')
           s=p.read_text()
-          if "import 'beranda_screen.dart';" not in s:
-            s=s.replace("import 'jadwal_padam_screen.dart';", "import 'jadwal_padam_screen.dart';\nimport 'beranda_screen.dart';",1)
-
-          menu='''  List<String> get currentMenuItems {
-            if (_isSuperUser) {
-              return ['Tim', 'Gardu', 'Beranda', 'Teknik', 'Pengaturan'];
-            }
-            if (_bolehGardu) {
-              return ['Tim', 'Gardu', 'Beranda', 'Pengaturan'];
-            }
-            return ['Tim', 'Beranda', 'Pengaturan'];
-          }
-
-          List<IconData> get currentMenuIcons {'''
-          s,n=re.subn(r'  List<String> get currentMenuItems \{.*?\n  List<IconData> get currentMenuIcons \{',menu,s,count=1,flags=re.S)
-          assert n==1
-          icons='''  List<IconData> get currentMenuIcons {
-            if (_isSuperUser) {
-              return [
-                Icons.people_outline_rounded,
-                Icons.electrical_services_outlined,
-                Icons.home_rounded,
-                Icons.handyman_outlined,
-                Icons.settings_outlined,
-              ];
-            }
-            if (_bolehGardu) {
-              return [
-                Icons.people_outline_rounded,
-                Icons.electrical_services_outlined,
-                Icons.home_rounded,
-                Icons.settings_outlined,
-              ];
-            }
-            return [
-              Icons.people_outline_rounded,
-              Icons.home_rounded,
-              Icons.settings_outlined,
-            ];
-          }
-
-          void _selectMenu'''
-          s,n=re.subn(r'  List<IconData> get currentMenuIcons \{.*?\n  void _selectMenu',icons,s,count=1,flags=re.S)
-          assert n==1
-
-          init='''    _bubbleController = AnimationController(vsync: this);
-              selectedIndex = currentMenuItems.indexOf('Beranda');
-              previousIndex = selectedIndex;
-              _bubbleController.value = 1;
-              unawaited(AutoSyncService.syncNow(widget.sesi));'''
-          s=s.replace("    _bubbleController = AnimationController(vsync: this);\n    unawaited(AutoSyncService.syncNow(widget.sesi));",init,1)
-
-          back='''  void _kembaliKeAwal() {
-            setState(() {
-              previousIndex = selectedIndex;
-              selectedIndex = currentMenuItems.indexOf('Beranda');
-              _activeSubScreen = null;
-              _selectedTeamDetail = null;
-            });
-          }
-
-          Future<void> _cekKoneksi'''
-          s,n=re.subn(r'  void _kembaliKeAwal\(\) \{.*?\n  Future<void> _cekKoneksi',back,s,count=1,flags=re.S)
-          assert n==1
-
-          if "case 'Beranda':" not in s:
-            anchor="      case 'Gardu':\n        return GarduScreen(sesi: widget.sesi);"
-            assert anchor in s
-            s=s.replace(anchor,anchor+"\n      case 'Beranda':\n        return BerandaScreen(sesi: widget.sesi);",1)
+          s=s.replace("import 'jadwal_padam_screen.dart';\n", "import 'jadwal_padam_screen.dart';\nimport 'beranda_screen.dart';\n")
+          s=s.replace("return ['Tim', 'Gardu', 'Teknik', 'Pengaturan'];", "return ['Tim', 'Gardu', 'Beranda', 'Teknik', 'Pengaturan'];")
+          s=s.replace("return ['Tim', 'Gardu', 'Pengaturan'];", "return ['Tim', 'Gardu', 'Beranda', 'Pengaturan'];")
+          s=s.replace("return ['Tim', 'Pengaturan'];", "return ['Tim', 'Beranda', 'Pengaturan'];")
+          s=s.replace("Icons.electrical_services_outlined,\n        Icons.handyman_outlined,", "Icons.electrical_services_outlined,\n        Icons.home_rounded,\n        Icons.handyman_outlined,")
+          s=s.replace("Icons.electrical_services_outlined,\n        Icons.settings_outlined,", "Icons.electrical_services_outlined,\n        Icons.home_rounded,\n        Icons.settings_outlined,")
+          s=s.replace("return [\n      Icons.people_outline_rounded,\n      Icons.settings_outlined,\n    ];", "return [\n      Icons.people_outline_rounded,\n      Icons.home_rounded,\n      Icons.settings_outlined,\n    ];")
+          s=s.replace("_bubbleController = AnimationController(vsync: this);\n    unawaited", "_bubbleController = AnimationController(vsync: this);\n    selectedIndex = currentMenuItems.indexOf('Beranda');\n    previousIndex = selectedIndex;\n    _bubbleController.value = 1;\n    unawaited")
+          s=s.replace("previousIndex = -1;\n      selectedIndex = -1;", "previousIndex = selectedIndex;\n      selectedIndex = currentMenuItems.indexOf('Beranda');")
+          s=s.replace("case 'Gardu':\n        return GarduScreen(sesi: widget.sesi);\n      case 'Teknik':", "case 'Gardu':\n        return GarduScreen(sesi: widget.sesi);\n      case 'Beranda':\n        return BerandaScreen(sesi: widget.sesi);\n      case 'Teknik':")
           p.write_text(s)
           PY
-      - name: Commit navigation
-        run: |
+          grep -q "import 'beranda_screen.dart';" SiSi_Mobile/lib/screens/dashboard_screen.dart
+          grep -q "case 'Beranda':" SiSi_Mobile/lib/screens/dashboard_screen.dart
+          grep -q "'Tim', 'Gardu', 'Beranda', 'Teknik', 'Pengaturan'" SiSi_Mobile/lib/screens/dashboard_screen.dart
+      - run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add SiSi_Mobile/lib/screens/dashboard_screen.dart
