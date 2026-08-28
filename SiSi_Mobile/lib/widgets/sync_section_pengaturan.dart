@@ -11,26 +11,20 @@ import '../services/auto_sync_service.dart';
 
 class SyncSectionPengaturan extends StatefulWidget {
   final Map<String, dynamic> sesi;
-
   const SyncSectionPengaturan({super.key, required this.sesi});
-
-  @override
-  State<SyncSectionPengaturan> createState() => _State();
+  @override State<SyncSectionPengaturan> createState() => _State();
 }
 
 class _State extends State<SyncSectionPengaturan> {
   final repo = SyncRepository();
-
   StreamSubscription<List<SyncInfo>>? _syncSub;
   StreamSubscription<List<P0Outbox>>? _p0Sub;
   StreamSubscription<List<GarduOutbox>>? _garduSub;
-
   Map<String, SyncInfo> status = {};
   List<P0Outbox> p0 = [];
   List<GarduOutbox> gardu = [];
   String device = '…';
   bool proses = false;
-
   String get token => (widget.sesi['token'] ?? '').toString();
 
   @override
@@ -62,29 +56,23 @@ class _State extends State<SyncSectionPengaturan> {
     if (info == null || info.lastSyncAt.trim().isEmpty) return '';
     final waktu = DateTime.tryParse(info.lastSyncAt)?.toLocal();
     if (waktu == null) return '';
-    final jam = waktu.hour.toString().padLeft(2, '0');
-    final menit = waktu.minute.toString().padLeft(2, '0');
-    return '$jam:$menit WIB';
+    return '${waktu.hour.toString().padLeft(2, '0')}:${waktu.minute.toString().padLeft(2, '0')} WIB';
   }
 
   Future<void> _sinkronSemua() async {
     if (proses) return;
     setState(() => proses = true);
-
     final hasil = await repo.sinkronSemua(token);
     if (!mounted) return;
-
     setState(() => proses = false);
     final ok = hasil['ok'] == true;
     if (ok) await AutoSyncService.activate();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content:
-            Text((hasil['message'] ?? (ok ? 'Selesai' : 'Gagal')).toString()),
-        backgroundColor: ok ? AppColors.success700 : AppColors.red600,
-        duration: const Duration(seconds: 5),
-      ),
-    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text((hasil['message'] ?? (ok ? 'Selesai' : 'Gagal')).toString()),
+      backgroundColor: ok ? AppColors.success700 : AppColors.red600,
+      duration: const Duration(seconds: 5),
+    ));
   }
 
   @override
@@ -93,7 +81,6 @@ class _State extends State<SyncSectionPengaturan> {
     final sudahPernahSinkron = info != null && info.lastSyncAt.isNotEmpty;
     final totalAntrean = p0.length + gardu.length;
     final warna = totalAntrean > 0 ? AppColors.amber700 : AppColors.navy700;
-
     final subtitle = proses
         ? 'Proses Sinkron....'
         : totalAntrean > 0
@@ -105,100 +92,38 @@ class _State extends State<SyncSectionPengaturan> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Data & Server Lokal',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: AppColors.navy700,
-          ),
-        ),
+        const Text('Data & Server Lokal', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.navy700)),
         const SizedBox(height: 4),
-        Text(
-          'ID server lokal HP ini: $device',
-          style: const TextStyle(fontSize: 11, color: AppColors.neutral500),
-        ),
+        Text('ID server lokal HP ini: $device', style: const TextStyle(fontSize: 11, color: AppColors.neutral500)),
         const SizedBox(height: 10),
         Card(
           elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: warna.withOpacity(.25)),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: warna.withOpacity(.25))),
           child: ListTile(
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             leading: Container(
               padding: const EdgeInsets.all(9),
-              decoration: BoxDecoration(
-                color: warna.withOpacity(.10),
-                borderRadius: BorderRadius.circular(9),
-              ),
-              child: Icon(
-                sudahPernahSinkron
-                    ? Icons.sync_rounded
-                    : Icons.cloud_download_rounded,
-                color: warna,
-              ),
+              decoration: BoxDecoration(color: warna.withOpacity(.10), borderRadius: BorderRadius.circular(9)),
+              child: Icon(Icons.sync_alt_rounded, color: warna),
             ),
-            title: const Text(
-              'Sinkron Semua Data',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-                color: AppColors.navy700,
-              ),
-            ),
+            title: const Text('Sinkron Semua Data', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.navy700)),
             subtitle: Padding(
               padding: const EdgeInsets.only(top: 3),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.neutral500,
-                    ),
-                  ),
-                  if (sudahPernahSinkron) ...[
-                    const SizedBox(height: 3),
-                    Text(
-                      'Terakhir sinkron ${_jamSinkron(info)}',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.success700,
-                      ),
-                    ),
-                  ],
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.neutral500)),
+                if (sudahPernahSinkron) ...[
+                  const SizedBox(height: 3),
+                  Text('Terakhir sinkron ${_jamSinkron(info)}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.success700)),
                 ],
-              ),
+              ]),
             ),
             trailing: proses
-                ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
+                ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))
                 : totalAntrean > 0
                     ? Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFEF3C7),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          '$totalAntrean',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w900,
-                            color: AppColors.amber700,
-                          ),
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(color: const Color(0xFFFEF3C7), borderRadius: BorderRadius.circular(20)),
+                        child: Text('$totalAntrean', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AppColors.amber700)),
                       )
                     : Icon(Icons.chevron_right_rounded, color: warna),
             onTap: proses ? null : _sinkronSemua,
