@@ -78,7 +78,8 @@ jobs:
           assert x['ok'] is True
           assert x['budget'] == 2000
           assert x['scope'] == 'instance'
-          assert x['count'] == 0
+          # The rejected-secret probe is still a request seen by the guard.
+          assert x['count'] == 1
           PY
 
       - name: Cleanup local container
