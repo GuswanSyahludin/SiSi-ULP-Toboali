@@ -1,72 +1,47 @@
-name: Apply mobile Jadwal Padam wiring
+name: Audit Jadwal Padam Mobile
 
 on:
+  pull_request:
+    paths:
+      - "SiSi_BackEnd/Core/Jadwal-Padam-Mobile.js"
+      - "SiSi_BackEnd/Core/Auth-Perangkat.js"
+      - "SiSi_Mobile/lib/screens/jadwal_padam_screen.dart"
+      - "SiSi_Mobile/lib/services/jadwal_padam_service.dart"
+      - "SiSi_Mobile/lib/screens/dashboard_screen.dart"
+      - ".github/workflows/apply-mobile-jadwal-padam.yml"
   push:
-    branches: [feat/mobile-jadwal-padam]
-    paths: [.github/workflows/apply-mobile-jadwal-padam.yml]
+    branches: [main]
+    paths:
+      - "SiSi_BackEnd/Core/Jadwal-Padam-Mobile.js"
+      - "SiSi_BackEnd/Core/Auth-Perangkat.js"
+      - "SiSi_Mobile/lib/screens/jadwal_padam_screen.dart"
+      - "SiSi_Mobile/lib/services/jadwal_padam_service.dart"
+      - "SiSi_Mobile/lib/screens/dashboard_screen.dart"
+      - ".github/workflows/apply-mobile-jadwal-padam.yml"
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  patch:
+  wiring:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: feat/mobile-jadwal-padam
-      - name: Patch router and dashboard
+      - name: Verify Teknik menu and route
         run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          auth = Path('SiSi_BackEnd/Core/Auth-Perangkat.js')
-          text = auth.read_text()
-          anchor = '  if (AUTH_PERANGKAT_ACTIONS.indexOf(action) < 0) return null;'
-          if 'var lewatJadwal =' not in text:
-            assert anchor in text
-            text = text.replace(anchor, '''  if (typeof jadwalPadamMobileRouter_ === "function") {
-            var lewatJadwal = jadwalPadamMobileRouter_(e, body);
-            if (lewatJadwal) return _devJson_(lewatJadwal);
-          }
-          ''' + anchor, 1)
-          auth.write_text(text)
-
-          dashboard = Path('SiSi_Mobile/lib/screens/dashboard_screen.dart')
-          text = dashboard.read_text()
-          if "import 'jadwal_padam_screen.dart';" not in text:
-            anchor = "import 'engine_usage_screen.dart';"
-            assert anchor in text
-            text = text.replace(anchor, anchor + "\nimport 'jadwal_padam_screen.dart';", 1)
-
-          if "'title': 'Jadwal Padam'" not in text:
-            anchor = '    final List<Map<String, dynamic>> subTeknik = ['
-            assert anchor in text
-            item = """
-                {
-                  'title': 'Jadwal Padam',
-                  'icon': Icons.calendar_month_rounded,
-                  'desc': 'Rencana pemadaman, dampak pelanggan, status, dan laporan WA',
-                  'iconColor': AppColors.plnRed,
-                },"""
-            text = text.replace(anchor, anchor + item, 1)
-
-          if 'tujuan = JadwalPadamScreen(' not in text:
-            anchor = "                  if (title == 'Input Temuan') {"
-            assert anchor in text
-            replacement = """                  if (title == 'Jadwal Padam') {
-                    tujuan = JadwalPadamScreen(
-                      sesi: widget.sesi,
-                      onBack: () => setState(() => _activeSubScreen = null),
-                    );
-                  } else if (title == 'Input Temuan') {"""
-            text = text.replace(anchor, replacement, 1)
-          dashboard.write_text(text)
-          PY
-      - name: Commit wiring
+          grep -q "import 'jadwal_padam_screen.dart';" SiSi_Mobile/lib/screens/dashboard_screen.dart
+          grep -q "'title': 'Jadwal Padam'" SiSi_Mobile/lib/screens/dashboard_screen.dart
+          grep -q "tujuan = JadwalPadamScreen" SiSi_Mobile/lib/screens/dashboard_screen.dart
+      - name: Verify guarded mobile API gateway
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add SiSi_BackEnd/Core/Auth-Perangkat.js SiSi_Mobile/lib/screens/dashboard_screen.dart
-          git commit -m "Wire Jadwal Padam into Teknik mobile menu"
-          git push origin HEAD:feat/mobile-jadwal-padam
+          grep -q 'jadwalPadamMobileRouter_' SiSi_BackEnd/Core/Auth-Perangkat.js
+          grep -q 'getMobileJadwalPadamList' SiSi_BackEnd/Core/Jadwal-Padam-Mobile.js
+          grep -q 'simpanMobileJadwalPadam' SiSi_BackEnd/Core/Jadwal-Padam-Mobile.js
+          grep -q 'updateMobileStatusJadwalPadam' SiSi_BackEnd/Core/Jadwal-Padam-Mobile.js
+      - name: Reject deployment commands
+        run: |
+          ! grep -R -n -E 'gcloud (run deploy|builds submit)|firebase deploy|clasp push' \
+            SiSi_BackEnd/Core/Jadwal-Padam-Mobile.js \
+            SiSi_Mobile/lib/screens/jadwal_padam_screen.dart \
+            SiSi_Mobile/lib/services/jadwal_padam_service.dart
