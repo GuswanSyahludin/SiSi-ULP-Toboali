@@ -1,0 +1,88 @@
+name: Fix icon layout
+on:
+  push:
+    branches: [feat/refresh-icons]
+    paths: [.github/workflows/fix-icon-layout.yml]
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/refresh-icons
+      - name: Separate bell badge from refresh action
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('SiSi_Mobile/lib/screens/beranda_screen.dart')
+          s = p.read_text()
+          old = '''              Positioned(
+                right: 7,
+                top: 7,
+                child: IgnorePointer(
+                  child: Container(
+                    width: 16,
+                    height: 16,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: AppColors.red600,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.navy700, width: 2),
+                    ),
+                    child: const Text(
+                      '0',
+                      style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Muat ulang',
+                onPressed: _loading ? null : _load,
+                icon: const Icon(Icons.refresh_rounded),
+              ),
+            ],
+          ),
+        ],'''
+          new = '''              Positioned(
+                right: 7,
+                top: 7,
+                child: IgnorePointer(
+                  child: Container(
+                    width: 16,
+                    height: 16,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: AppColors.red600,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.navy700, width: 2),
+                    ),
+                    child: const Text(
+                      '0',
+                      style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          IconButton(
+            tooltip: 'Muat ulang',
+            onPressed: _loading ? null : _load,
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+        ],'''
+          if old not in s:
+              raise SystemExit('Beranda action anchor not found')
+          p.write_text(s.replace(old, new, 1))
+          PY
+      - name: Commit fix
+        run: |
+          rm .github/workflows/fix-icon-layout.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add SiSi_Mobile/lib/screens/beranda_screen.dart .github/workflows/fix-icon-layout.yml
+          git commit -m "Fix bell and refresh action layout"
+          git push origin HEAD:feat/refresh-icons
