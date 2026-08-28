@@ -1,0 +1,32 @@
+name: Fix Jadwal Padam Dart errors
+on:
+  push:
+    branches: [feat/mobile-jadwal-padam]
+    paths: [.github/workflows/capture-flutter-audit.yml]
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/mobile-jadwal-padam
+      - name: Replace JavaScript-style Number with Dart num
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('SiSi_Mobile/lib/screens/jadwal_padam_screen.dart')
+          s=p.read_text()
+          s=s.replace("Number.tryParse('${row['ensRupiah']}')", "num.tryParse('${row['ensRupiah']}')")
+          s=s.replace("Number.parse('${row['ensRupiah']}')", "num.parse('${row['ensRupiah']}')")
+          p.write_text(s)
+          PY
+          ! grep -q 'Number\.' SiSi_Mobile/lib/screens/jadwal_padam_screen.dart
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add SiSi_Mobile/lib/screens/jadwal_padam_screen.dart
+          git commit -m "Fix Dart number parsing in Jadwal Padam"
+          git push origin HEAD:feat/mobile-jadwal-padam
