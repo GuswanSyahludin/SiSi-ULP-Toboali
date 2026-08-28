@@ -41,6 +41,17 @@ class JadwalPadamService {
   static Future<Map<String, dynamic>> master({required String token}) =>
       _get('getMobileJadwalPadamMaster', {'token': token});
 
+  static Future<Map<String, dynamic>> calendar({
+    required String token,
+    required int year,
+    required int month,
+  }) =>
+      _get('getMobileJadwalPadamCalendar', {
+        'token': token,
+        'year': year,
+        'month': month,
+      });
+
   static Future<Map<String, dynamic>> list({
     required String token,
     required String tglDari,
