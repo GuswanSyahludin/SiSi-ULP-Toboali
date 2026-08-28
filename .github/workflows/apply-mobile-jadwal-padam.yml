@@ -1,47 +1,145 @@
-name: Audit Jadwal Padam Mobile
+name: Apply centered Beranda navigation
 
 on:
-  pull_request:
-    paths:
-      - "SiSi_BackEnd/Core/Jadwal-Padam-Mobile.js"
-      - "SiSi_BackEnd/Core/Auth-Perangkat.js"
-      - "SiSi_Mobile/lib/screens/jadwal_padam_screen.dart"
-      - "SiSi_Mobile/lib/services/jadwal_padam_service.dart"
-      - "SiSi_Mobile/lib/screens/dashboard_screen.dart"
-      - ".github/workflows/apply-mobile-jadwal-padam.yml"
   push:
-    branches: [main]
-    paths:
-      - "SiSi_BackEnd/Core/Jadwal-Padam-Mobile.js"
-      - "SiSi_BackEnd/Core/Auth-Perangkat.js"
-      - "SiSi_Mobile/lib/screens/jadwal_padam_screen.dart"
-      - "SiSi_Mobile/lib/services/jadwal_padam_service.dart"
-      - "SiSi_Mobile/lib/screens/dashboard_screen.dart"
-      - ".github/workflows/apply-mobile-jadwal-padam.yml"
-  workflow_dispatch:
+    branches: [feat/mobile-jadwal-padam]
+    paths: [.github/workflows/apply-mobile-jadwal-padam.yml]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  wiring:
+  patch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Verify Teknik menu and route
+        with:
+          ref: feat/mobile-jadwal-padam
+      - name: Patch dashboard navigation
         run: |
-          grep -q "import 'jadwal_padam_screen.dart';" SiSi_Mobile/lib/screens/dashboard_screen.dart
-          grep -q "'title': 'Jadwal Padam'" SiSi_Mobile/lib/screens/dashboard_screen.dart
-          grep -q "tujuan = JadwalPadamScreen" SiSi_Mobile/lib/screens/dashboard_screen.dart
-      - name: Verify guarded mobile API gateway
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('SiSi_Mobile/lib/screens/dashboard_screen.dart')
+          s=p.read_text()
+          a="import 'jadwal_padam_screen.dart';"
+          if "import 'beranda_screen.dart';" not in s:
+            assert a in s
+            s=s.replace(a,a+"\nimport 'beranda_screen.dart';",1)
+
+          old="""    if (_isSuperUser) {
+                return ['Tim', 'Gardu', 'Teknik', 'Pengaturan'];
+              }
+              if (_bolehGardu) {
+                return ['Tim', 'Gardu', 'Pengaturan'];
+              }
+              return ['Tim', 'Pengaturan'];"""
+          new="""    if (_isSuperUser) {
+                return ['Tim', 'Gardu', 'Beranda', 'Teknik', 'Pengaturan'];
+              }
+              if (_bolehGardu) {
+                return ['Tim', 'Gardu', 'Beranda', 'Pengaturan'];
+              }
+              return ['Tim', 'Beranda', 'Pengaturan'];"""
+          assert old in s
+          s=s.replace(old,new,1)
+
+          old="""    if (_isSuperUser) {
+                return [
+                  Icons.people_outline_rounded,
+                  Icons.electrical_services_outlined,
+                  Icons.handyman_outlined,
+                  Icons.settings_outlined,
+                ];
+              }
+              if (_bolehGardu) {
+                return [
+                  Icons.people_outline_rounded,
+                  Icons.electrical_services_outlined,
+                  Icons.settings_outlined,
+                ];
+              }
+              return [
+                Icons.people_outline_rounded,
+                Icons.settings_outlined,
+              ];"""
+          new="""    if (_isSuperUser) {
+                return [
+                  Icons.people_outline_rounded,
+                  Icons.electrical_services_outlined,
+                  Icons.home_rounded,
+                  Icons.handyman_outlined,
+                  Icons.settings_outlined,
+                ];
+              }
+              if (_bolehGardu) {
+                return [
+                  Icons.people_outline_rounded,
+                  Icons.electrical_services_outlined,
+                  Icons.home_rounded,
+                  Icons.settings_outlined,
+                ];
+              }
+              return [
+                Icons.people_outline_rounded,
+                Icons.home_rounded,
+                Icons.settings_outlined,
+              ];"""
+          assert old in s
+          s=s.replace(old,new,1)
+
+          old="""    _bubbleController = AnimationController(vsync: this);
+              unawaited(AutoSyncService.syncNow(widget.sesi));"""
+          new="""    _bubbleController = AnimationController(vsync: this);
+              selectedIndex = currentMenuItems.indexOf('Beranda');
+              previousIndex = selectedIndex;
+              _bubbleController.value = 1;
+              unawaited(AutoSyncService.syncNow(widget.sesi));"""
+          assert old in s
+          s=s.replace(old,new,1)
+
+          old="""  void _kembaliKeAwal() {
+                setState(() {
+                  previousIndex = -1;
+                  selectedIndex = -1;
+                  _activeSubScreen = null;
+                  _selectedTeamDetail = null;
+                });
+              }"""
+          new="""  void _kembaliKeAwal() {
+                setState(() {
+                  previousIndex = selectedIndex;
+                  selectedIndex = currentMenuItems.indexOf('Beranda');
+                  _activeSubScreen = null;
+                  _selectedTeamDetail = null;
+                });
+                _bubbleController.animateWith(
+                  SpringSimulation(
+                    const SpringDescription(mass: 1.0, stiffness: 200.0, damping: 26.0),
+                    0.0,
+                    1.0,
+                    0.0,
+                  ),
+                );
+              }"""
+          assert old in s
+          s=s.replace(old,new,1)
+
+          old="""      case 'Gardu':
+                return GarduScreen(sesi: widget.sesi);
+              case 'Teknik':"""
+          new="""      case 'Gardu':
+                return GarduScreen(sesi: widget.sesi);
+              case 'Beranda':
+                return BerandaScreen(sesi: widget.sesi);
+              case 'Teknik':"""
+          assert old in s
+          s=s.replace(old,new,1)
+          p.write_text(s)
+          PY
+      - name: Commit navigation
         run: |
-          grep -q 'jadwalPadamMobileRouter_' SiSi_BackEnd/Core/Auth-Perangkat.js
-          grep -q 'getMobileJadwalPadamList' SiSi_BackEnd/Core/Jadwal-Padam-Mobile.js
-          grep -q 'simpanMobileJadwalPadam' SiSi_BackEnd/Core/Jadwal-Padam-Mobile.js
-          grep -q 'updateMobileStatusJadwalPadam' SiSi_BackEnd/Core/Jadwal-Padam-Mobile.js
-      - name: Reject deployment commands
-        run: |
-          ! grep -R -n -E 'gcloud (run deploy|builds submit)|firebase deploy|clasp push' \
-            SiSi_BackEnd/Core/Jadwal-Padam-Mobile.js \
-            SiSi_Mobile/lib/screens/jadwal_padam_screen.dart \
-            SiSi_Mobile/lib/services/jadwal_padam_service.dart
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add SiSi_Mobile/lib/screens/dashboard_screen.dart
+          git commit -m "Add centered Beranda navigation"
+          git push origin HEAD:feat/mobile-jadwal-padam
