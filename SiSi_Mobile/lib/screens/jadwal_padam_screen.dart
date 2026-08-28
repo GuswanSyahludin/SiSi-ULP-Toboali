@@ -324,7 +324,7 @@ class _JadwalPadamScreenState extends State<JadwalPadamScreen> {
               'Kode Jadwal': row['kode'], 'Jenis Pekerjaan': row['jenis'], 'Waktu': '${row['jamPadam']} - ${row['jamNyala']} WIB',
               'Durasi': '${row['durasi']} jam', 'Daerah Padam': row['daerah'], 'Lokasi': row['lokasi'], 'Pelanggan VIP': row['vip'],
               'Jumlah Gardu': row['jumlahGardu'], 'Jumlah Pelanggan': row['jumlahPelanggan'], 'Beban': '${row['bebanA'] ?? '-'} A',
-              'ENS': Number.tryParse('${row['ensRupiah']}') == null ? row['ensRupiah'] : NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 2).format(Number.parse('${row['ensRupiah']}')),
+              'ENS': num.tryParse('${row['ensRupiah']}') == null ? row['ensRupiah'] : NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 2).format(num.parse('${row['ensRupiah']}')),
             }.entries.map((e) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
