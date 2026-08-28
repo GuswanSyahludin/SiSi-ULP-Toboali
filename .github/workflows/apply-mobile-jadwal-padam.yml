@@ -2,7 +2,7 @@ name: Apply mobile Jadwal Padam wiring
 
 on:
   push:
-    branches: [feat/mobile-jadwal-padam]
+    branches: [main, feat/mobile-jadwal-padam]
     paths: [.github/workflows/apply-mobile-jadwal-padam.yml]
 
 permissions:
@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: feat/mobile-jadwal-padam
+          ref: ${{ github.ref_name }}
       - name: Wire router and Teknik menu
         run: |
           python - <<'PY'
@@ -77,4 +77,4 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add SiSi_BackEnd/Core/Auth-Perangkat.js SiSi_Mobile/lib/screens/dashboard_screen.dart .github/workflows/apply-mobile-jadwal-padam.yml
           git commit -m "Wire Jadwal Padam into Teknik mobile menu"
-          git push origin HEAD:feat/mobile-jadwal-padam
+          git push origin HEAD:${GITHUB_REF_NAME}
