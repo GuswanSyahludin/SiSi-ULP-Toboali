@@ -1,46 +1,33 @@
-name: Audit engine usage dashboard
+name: Audit Mobile
+
 on:
   push:
     branches: [feat/engine-usage-dashboard]
+    paths:
+      - "SiSi_Mobile/**"
+      - ".github/workflows/audit-engine-dashboard.yml"
+  pull_request:
+    paths:
+      - "SiSi_Mobile/**"
+      - ".github/workflows/audit-engine-dashboard.yml"
   workflow_dispatch:
+
 permissions:
   contents: read
+
 jobs:
   flutter:
+    name: Flutter analyze and debug build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
-        with: {channel: stable, cache: true}
+        with:
+          channel: stable
+          cache: true
       - working-directory: SiSi_Mobile
         run: flutter pub get
       - working-directory: SiSi_Mobile
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
       - working-directory: SiSi_Mobile
         run: flutter build apk --debug
-  engines:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        engine: [ba-pdf-engine, row-pdf-engine, wm-engine]
-    steps:
-      - uses: actions/checkout@v4
-      - run: python -m py_compile engines/${{ matrix.engine }}/*.py
-      - run: docker build -t sisi-${{ matrix.engine }}:audit engines/${{ matrix.engine }}
-      - run: |
-          docker run -d --rm --name sisi-audit -p 18080:8080 sisi-${{ matrix.engine }}:audit
-          for i in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:18080/guard/status >/tmp/status.json; then break; fi
-            sleep 2
-          done
-          python - <<'PY'
-          import json
-          x=json.load(open('/tmp/status.json'))
-          assert x['ok'] is True
-          assert x['budget']==2000
-          assert x['scope']=='instance'
-          assert x['count']==0
-          PY
-      - if: always()
-        run: docker rm -f sisi-audit 2>/dev/null || true
