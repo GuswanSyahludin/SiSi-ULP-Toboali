@@ -22,6 +22,7 @@ import 'verifikasi_p0_screen.dart';
 import 'laporan_up3_uiw_screen.dart';
 import 'engine_usage_screen.dart';
 import 'jadwal_padam_screen.dart';
+import 'beranda_screen.dart';
 import 'yandal_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -132,6 +133,9 @@ class _DashboardScreenState extends State<DashboardScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _bubbleController = AnimationController(vsync: this);
+    selectedIndex = currentMenuItems.indexOf('Beranda');
+    previousIndex = selectedIndex;
+    _bubbleController.value = 1;
     unawaited(AutoSyncService.syncNow(widget.sesi));
     _cekKoneksi();
     _onlineTimer = Timer.periodic(
@@ -164,12 +168,12 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   List<String> get currentMenuItems {
     if (_isSuperUser) {
-      return ['Tim', 'Gardu', 'Teknik', 'Pengaturan'];
+      return ['Tim', 'Gardu', 'Beranda', 'Teknik', 'Pengaturan'];
     }
     if (_bolehGardu) {
-      return ['Tim', 'Gardu', 'Pengaturan'];
+      return ['Tim', 'Gardu', 'Beranda', 'Pengaturan'];
     }
-    return ['Tim', 'Pengaturan'];
+    return ['Tim', 'Beranda', 'Pengaturan'];
   }
 
   List<IconData> get currentMenuIcons {
@@ -177,6 +181,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       return [
         Icons.people_outline_rounded,
         Icons.electrical_services_outlined,
+        Icons.home_rounded,
         Icons.handyman_outlined,
         Icons.settings_outlined,
       ];
@@ -185,11 +190,13 @@ class _DashboardScreenState extends State<DashboardScreen>
       return [
         Icons.people_outline_rounded,
         Icons.electrical_services_outlined,
+        Icons.home_rounded,
         Icons.settings_outlined,
       ];
     }
     return [
       Icons.people_outline_rounded,
+      Icons.home_rounded,
       Icons.settings_outlined,
     ];
   }
@@ -242,8 +249,8 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   void _kembaliKeAwal() {
     setState(() {
-      previousIndex = -1;
-      selectedIndex = -1;
+      previousIndex = selectedIndex;
+      selectedIndex = currentMenuItems.indexOf('Beranda');
       _activeSubScreen = null;
       _selectedTeamDetail = null;
     });
@@ -528,6 +535,8 @@ class _DashboardScreenState extends State<DashboardScreen>
         return _buildMenuTim();
       case 'Gardu':
         return GarduScreen(sesi: widget.sesi);
+      case 'Beranda':
+        return BerandaScreen(sesi: widget.sesi);
       case 'Teknik':
         return _buildMenuTeknik();
       case 'Pengaturan':
