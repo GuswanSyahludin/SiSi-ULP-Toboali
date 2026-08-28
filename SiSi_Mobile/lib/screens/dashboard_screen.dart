@@ -21,6 +21,7 @@ import 'teknik_to_screen.dart';
 import 'verifikasi_p0_screen.dart';
 import 'laporan_up3_uiw_screen.dart';
 import 'engine_usage_screen.dart';
+import 'jadwal_padam_screen.dart';
 import 'yandal_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -943,6 +944,12 @@ class _DashboardScreenState extends State<DashboardScreen>
   Widget _buildMenuTeknik() {
     final List<Map<String, dynamic>> subTeknik = [
       {
+        'title': 'Jadwal Padam',
+        'icon': Icons.calendar_month_rounded,
+        'desc': 'Rencana pemadaman, dampak pelanggan, status, dan laporan WA',
+        'iconColor': AppColors.plnRed,
+      },
+      {
         'title': 'Input Temuan',
         'icon': Icons.add_alert_rounded,
         'desc': 'Temuan C4A',
@@ -1061,7 +1068,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                 onTap: () {
                   final title = item['title'];
                   Widget? tujuan;
-                  if (title == 'Input Temuan') {
+                  if (title == 'Jadwal Padam') {
+          tujuan = JadwalPadamScreen(
+            sesi: widget.sesi,
+            onBack: () => setState(() => _activeSubScreen = null),
+          );
+        } else if (title == 'Input Temuan') {
                     tujuan = InputTemuanTeknikScreen(sesi: widget.sesi);
                   } else if (title == 'Penugasan Tim') {
                     tujuan = TeknikToScreen(
