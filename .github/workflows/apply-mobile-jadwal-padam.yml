@@ -22,51 +22,48 @@ jobs:
 
           auth = Path('SiSi_BackEnd/Core/Auth-Perangkat.js')
           text = auth.read_text()
-          old = '''  var action = String((body && body.action) || p.action || "").trim();
-          if (AUTH_PERANGKAT_ACTIONS.indexOf(action) < 0) return null;'''
-          new = '''  var action = String((body && body.action) || p.action || "").trim();
-          if (typeof jadwalPadamMobileRouter_ === "function") {
+          anchor = '  if (AUTH_PERANGKAT_ACTIONS.indexOf(action) < 0) return null;'
+          insert = '''  if (typeof jadwalPadamMobileRouter_ === "function") {
             var lewatJadwal = jadwalPadamMobileRouter_(e, body);
             if (lewatJadwal) return _devJson_(lewatJadwal);
           }
-          if (AUTH_PERANGKAT_ACTIONS.indexOf(action) < 0) return null;'''
-          if old not in text:
-            raise SystemExit('Auth router anchor not found')
-          auth.write_text(text.replace(old, new, 1))
+          ''' + anchor
+          if 'var lewatJadwal =' not in text:
+            if anchor not in text: raise SystemExit('Auth router anchor not found')
+            text = text.replace(anchor, insert, 1)
+          auth.write_text(text)
 
           dashboard = Path('SiSi_Mobile/lib/screens/dashboard_screen.dart')
           text = dashboard.read_text()
           import_anchor = "import 'engine_usage_screen.dart';"
           if "import 'jadwal_padam_screen.dart';" not in text:
+            if import_anchor not in text: raise SystemExit('Import anchor not found')
             text = text.replace(import_anchor, import_anchor + "\nimport 'jadwal_padam_screen.dart';", 1)
 
-          list_anchor = '''    final List<Map<String, dynamic>> subTeknik = [
-                {'''
-          list_new = '''    final List<Map<String, dynamic>> subTeknik = [
+          list_anchor = "    final List<Map<String, dynamic>> subTeknik = [\n      {"
+          list_new = """    final List<Map<String, dynamic>> subTeknik = [
                 {
                   'title': 'Jadwal Padam',
                   'icon': Icons.calendar_month_rounded,
                   'desc': 'Rencana pemadaman, dampak pelanggan, status, dan laporan WA',
                   'iconColor': AppColors.plnRed,
                 },
-                {'''
+                {"""
           if "'title': 'Jadwal Padam'" not in text:
-            if list_anchor not in text:
-              raise SystemExit('Teknik menu anchor not found')
+            if list_anchor not in text: raise SystemExit('Teknik menu anchor not found')
             text = text.replace(list_anchor, list_new, 1)
 
-          route_anchor = '''                  if (title == 'Input Temuan') {
-                            tujuan = InputTemuanTeknikScreen(sesi: widget.sesi);'''
-          route_new = '''                  if (title == 'Jadwal Padam') {
-                            tujuan = JadwalPadamScreen(
-                              sesi: widget.sesi,
-                              onBack: () => setState(() => _activeSubScreen = null),
-                            );
-                          } else if (title == 'Input Temuan') {
-                            tujuan = InputTemuanTeknikScreen(sesi: widget.sesi);'''
+          route_anchor = """                  if (title == 'Input Temuan') {
+                    tujuan = InputTemuanTeknikScreen(sesi: widget.sesi);"""
+          route_new = """                  if (title == 'Jadwal Padam') {
+                    tujuan = JadwalPadamScreen(
+                      sesi: widget.sesi,
+                      onBack: () => setState(() => _activeSubScreen = null),
+                    );
+                  } else if (title == 'Input Temuan') {
+                    tujuan = InputTemuanTeknikScreen(sesi: widget.sesi);"""
           if 'tujuan = JadwalPadamScreen(' not in text:
-            if route_anchor not in text:
-              raise SystemExit('Teknik route anchor not found')
+            if route_anchor not in text: raise SystemExit('Teknik route anchor not found')
             text = text.replace(route_anchor, route_new, 1)
           dashboard.write_text(text)
           PY
