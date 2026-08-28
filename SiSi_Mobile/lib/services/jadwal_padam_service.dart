@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'api_service.dart';
 
+/// HTTP bridge to the existing Apps Script Jadwal Padam domain flow.
 class JadwalPadamService {
   static Future<Map<String, dynamic>> _get(
     String action,
