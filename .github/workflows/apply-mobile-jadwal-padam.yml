@@ -19,121 +19,78 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
           p=Path('SiSi_Mobile/lib/screens/dashboard_screen.dart')
           s=p.read_text()
-          a="import 'jadwal_padam_screen.dart';"
           if "import 'beranda_screen.dart';" not in s:
-            assert a in s
-            s=s.replace(a,a+"\nimport 'beranda_screen.dart';",1)
+            s=s.replace("import 'jadwal_padam_screen.dart';", "import 'jadwal_padam_screen.dart';\nimport 'beranda_screen.dart';",1)
 
-          old="""    if (_isSuperUser) {
-                return ['Tim', 'Gardu', 'Teknik', 'Pengaturan'];
-              }
-              if (_bolehGardu) {
-                return ['Tim', 'Gardu', 'Pengaturan'];
-              }
-              return ['Tim', 'Pengaturan'];"""
-          new="""    if (_isSuperUser) {
-                return ['Tim', 'Gardu', 'Beranda', 'Teknik', 'Pengaturan'];
-              }
-              if (_bolehGardu) {
-                return ['Tim', 'Gardu', 'Beranda', 'Pengaturan'];
-              }
-              return ['Tim', 'Beranda', 'Pengaturan'];"""
-          assert old in s
-          s=s.replace(old,new,1)
+          menu='''  List<String> get currentMenuItems {
+            if (_isSuperUser) {
+              return ['Tim', 'Gardu', 'Beranda', 'Teknik', 'Pengaturan'];
+            }
+            if (_bolehGardu) {
+              return ['Tim', 'Gardu', 'Beranda', 'Pengaturan'];
+            }
+            return ['Tim', 'Beranda', 'Pengaturan'];
+          }
 
-          old="""    if (_isSuperUser) {
-                return [
-                  Icons.people_outline_rounded,
-                  Icons.electrical_services_outlined,
-                  Icons.handyman_outlined,
-                  Icons.settings_outlined,
-                ];
-              }
-              if (_bolehGardu) {
-                return [
-                  Icons.people_outline_rounded,
-                  Icons.electrical_services_outlined,
-                  Icons.settings_outlined,
-                ];
-              }
+          List<IconData> get currentMenuIcons {'''
+          s,n=re.subn(r'  List<String> get currentMenuItems \{.*?\n  List<IconData> get currentMenuIcons \{',menu,s,count=1,flags=re.S)
+          assert n==1
+          icons='''  List<IconData> get currentMenuIcons {
+            if (_isSuperUser) {
               return [
                 Icons.people_outline_rounded,
+                Icons.electrical_services_outlined,
+                Icons.home_rounded,
+                Icons.handyman_outlined,
                 Icons.settings_outlined,
-              ];"""
-          new="""    if (_isSuperUser) {
-                return [
-                  Icons.people_outline_rounded,
-                  Icons.electrical_services_outlined,
-                  Icons.home_rounded,
-                  Icons.handyman_outlined,
-                  Icons.settings_outlined,
-                ];
-              }
-              if (_bolehGardu) {
-                return [
-                  Icons.people_outline_rounded,
-                  Icons.electrical_services_outlined,
-                  Icons.home_rounded,
-                  Icons.settings_outlined,
-                ];
-              }
+              ];
+            }
+            if (_bolehGardu) {
               return [
                 Icons.people_outline_rounded,
+                Icons.electrical_services_outlined,
                 Icons.home_rounded,
                 Icons.settings_outlined,
-              ];"""
-          assert old in s
-          s=s.replace(old,new,1)
+              ];
+            }
+            return [
+              Icons.people_outline_rounded,
+              Icons.home_rounded,
+              Icons.settings_outlined,
+            ];
+          }
 
-          old="""    _bubbleController = AnimationController(vsync: this);
-              unawaited(AutoSyncService.syncNow(widget.sesi));"""
-          new="""    _bubbleController = AnimationController(vsync: this);
+          void _selectMenu'''
+          s,n=re.subn(r'  List<IconData> get currentMenuIcons \{.*?\n  void _selectMenu',icons,s,count=1,flags=re.S)
+          assert n==1
+
+          init='''    _bubbleController = AnimationController(vsync: this);
               selectedIndex = currentMenuItems.indexOf('Beranda');
               previousIndex = selectedIndex;
               _bubbleController.value = 1;
-              unawaited(AutoSyncService.syncNow(widget.sesi));"""
-          assert old in s
-          s=s.replace(old,new,1)
+              unawaited(AutoSyncService.syncNow(widget.sesi));'''
+          s=s.replace("    _bubbleController = AnimationController(vsync: this);\n    unawaited(AutoSyncService.syncNow(widget.sesi));",init,1)
 
-          old="""  void _kembaliKeAwal() {
-                setState(() {
-                  previousIndex = -1;
-                  selectedIndex = -1;
-                  _activeSubScreen = null;
-                  _selectedTeamDetail = null;
-                });
-              }"""
-          new="""  void _kembaliKeAwal() {
-                setState(() {
-                  previousIndex = selectedIndex;
-                  selectedIndex = currentMenuItems.indexOf('Beranda');
-                  _activeSubScreen = null;
-                  _selectedTeamDetail = null;
-                });
-                _bubbleController.animateWith(
-                  SpringSimulation(
-                    const SpringDescription(mass: 1.0, stiffness: 200.0, damping: 26.0),
-                    0.0,
-                    1.0,
-                    0.0,
-                  ),
-                );
-              }"""
-          assert old in s
-          s=s.replace(old,new,1)
+          back='''  void _kembaliKeAwal() {
+            setState(() {
+              previousIndex = selectedIndex;
+              selectedIndex = currentMenuItems.indexOf('Beranda');
+              _activeSubScreen = null;
+              _selectedTeamDetail = null;
+            });
+          }
 
-          old="""      case 'Gardu':
-                return GarduScreen(sesi: widget.sesi);
-              case 'Teknik':"""
-          new="""      case 'Gardu':
-                return GarduScreen(sesi: widget.sesi);
-              case 'Beranda':
-                return BerandaScreen(sesi: widget.sesi);
-              case 'Teknik':"""
-          assert old in s
-          s=s.replace(old,new,1)
+          Future<void> _cekKoneksi'''
+          s,n=re.subn(r'  void _kembaliKeAwal\(\) \{.*?\n  Future<void> _cekKoneksi',back,s,count=1,flags=re.S)
+          assert n==1
+
+          if "case 'Beranda':" not in s:
+            anchor="      case 'Gardu':\n        return GarduScreen(sesi: widget.sesi);"
+            assert anchor in s
+            s=s.replace(anchor,anchor+"\n      case 'Beranda':\n        return BerandaScreen(sesi: widget.sesi);",1)
           p.write_text(s)
           PY
       - name: Commit navigation
