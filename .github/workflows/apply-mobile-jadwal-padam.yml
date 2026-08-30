@@ -1,0 +1,55 @@
+name: Audit Beranda and Jadwal Padam Mobile
+
+on:
+  pull_request:
+    paths:
+      - "SiSi_BackEnd/Core/Jadwal-Padam-Mobile.js"
+      - "SiSi_BackEnd/Core/Auth-Perangkat.js"
+      - "SiSi_Mobile/lib/screens/beranda_screen.dart"
+      - "SiSi_Mobile/lib/screens/jadwal_padam_screen.dart"
+      - "SiSi_Mobile/lib/services/jadwal_padam_service.dart"
+      - "SiSi_Mobile/lib/screens/dashboard_screen.dart"
+      - ".github/workflows/apply-mobile-jadwal-padam.yml"
+  push:
+    branches: [main]
+    paths:
+      - "SiSi_BackEnd/Core/Jadwal-Padam-Mobile.js"
+      - "SiSi_BackEnd/Core/Auth-Perangkat.js"
+      - "SiSi_Mobile/lib/screens/beranda_screen.dart"
+      - "SiSi_Mobile/lib/screens/jadwal_padam_screen.dart"
+      - "SiSi_Mobile/lib/services/jadwal_padam_service.dart"
+      - "SiSi_Mobile/lib/screens/dashboard_screen.dart"
+      - ".github/workflows/apply-mobile-jadwal-padam.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  wiring:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify centered Beranda navigation
+        run: |
+          grep -q "import 'beranda_screen.dart';" SiSi_Mobile/lib/screens/dashboard_screen.dart
+          grep -q "case 'Beranda':" SiSi_Mobile/lib/screens/dashboard_screen.dart
+          grep -q "'Tim', 'Gardu', 'Beranda', 'Teknik', 'Pengaturan'" SiSi_Mobile/lib/screens/dashboard_screen.dart
+          grep -q "selectedIndex = currentMenuItems.indexOf('Beranda')" SiSi_Mobile/lib/screens/dashboard_screen.dart
+      - name: Verify work calendar connection
+        run: |
+          grep -q 'class BerandaScreen' SiSi_Mobile/lib/screens/beranda_screen.dart
+          grep -q 'getMobileJadwalPadamCalendar' SiSi_Mobile/lib/services/jadwal_padam_service.dart
+          grep -q 'getMobileJadwalPadamCalendar' SiSi_BackEnd/Core/Jadwal-Padam-Mobile.js
+      - name: Verify Jadwal Padam menu and API
+        run: |
+          grep -q "'title': 'Jadwal Padam'" SiSi_Mobile/lib/screens/dashboard_screen.dart
+          grep -q 'jadwalPadamMobileRouter_' SiSi_BackEnd/Core/Auth-Perangkat.js
+          grep -q 'simpanMobileJadwalPadam' SiSi_BackEnd/Core/Jadwal-Padam-Mobile.js
+      - name: Reject deployment commands
+        run: |
+          ! grep -R -n -E 'gcloud (run deploy|builds submit)|firebase deploy|clasp push' \
+            SiSi_BackEnd/Core/Jadwal-Padam-Mobile.js \
+            SiSi_Mobile/lib/screens/beranda_screen.dart \
+            SiSi_Mobile/lib/screens/jadwal_padam_screen.dart \
+            SiSi_Mobile/lib/services/jadwal_padam_service.dart

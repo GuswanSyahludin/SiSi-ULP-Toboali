@@ -324,6 +324,10 @@ function bersihkanPerangkatTerlantar(hari) {
 function authPerangkatRouter_(e, body) {
   var p = (e && e.parameter) || {};
   var action = String((body && body.action) || p.action || "").trim();
+  if (typeof jadwalPadamMobileRouter_ === "function") {
+  var lewatJadwal = jadwalPadamMobileRouter_(e, body);
+  if (lewatJadwal) return _devJson_(lewatJadwal);
+}
   if (AUTH_PERANGKAT_ACTIONS.indexOf(action) < 0) return null;
   var hasil;
   try {
