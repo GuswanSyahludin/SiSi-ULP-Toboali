@@ -13,7 +13,12 @@ function auditPredeployMobile_() {
   function fn(name) {
     var ok = false;
     try {
-      var g = typeof globalThis !== "undefined" ? globalThis : (function () { return this; })();
+      var g =
+        typeof globalThis !== "undefined"
+          ? globalThis
+          : (function () {
+              return this;
+            })();
       ok = !!g && typeof g[name] === "function";
     } catch (e) {}
     add("function " + name, ok, ok ? "tersedia" : "TIDAK DITEMUKAN");
@@ -89,4 +94,8 @@ function auditPredeployMobile_() {
   };
   Logger.log(JSON.stringify(result, null, 2));
   return result;
+}
+
+function jalankanAuditPredeoloymobile() {
+  return auditPredeployMobile_();
 }
