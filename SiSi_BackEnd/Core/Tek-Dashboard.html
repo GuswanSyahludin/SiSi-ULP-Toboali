@@ -879,9 +879,9 @@
 
     _calEventsMap = {};
     calRenderGrid({});
-    if (typeof google === "undefined" || !google.script || !google.script.run) return;
+    if (typeof google === "undefined" || !google.script || !SisiRun) return;
 
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(res) {
         if (requestSeq !== _calRequestSeq) return;
         if (!res || !res.ok) {
@@ -1083,7 +1083,7 @@
   function calLoadJadwalMaster(done) {
     var peny = _tdEl("calJpPeny");
     if (peny) peny.innerHTML = '<option value="">Memuat penyulang...</option>';
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(res){
         _calJadwalMaster = (res && res.rows) || [];
         _calJadwalMasterLoaded = true;
@@ -1128,7 +1128,7 @@
       lokasi:_tdEl("calJpLokasi").value.trim()
     };
     btn.disabled=true;btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
-    var runner=google.script.run
+    var runner=SisiRun
       .withSuccessHandler(function(res){
         btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-floppy-disk"></i> Simpan Jadwal';
         if(!res||!res.ok){tdToast((res&&res.message)||"Gagal menyimpan jadwal","error");return;}
@@ -1161,7 +1161,7 @@
   ════════════════════════════════════════ */
   function _tdLoadListUlp() {
     if (typeof google === "undefined") return;
-    google.script.run
+    SisiRun
       .withSuccessHandler(function (list) {
         var sel = _tdEl("td_ulp");
         if (!sel) return;
@@ -1206,7 +1206,7 @@
       return;
     }
 
-    google.script.run
+    SisiRun
       .withSuccessHandler(_tdRender)
       .withFailureHandler(function (err) {
         _tdEl("tdLoading").style.display = "none";

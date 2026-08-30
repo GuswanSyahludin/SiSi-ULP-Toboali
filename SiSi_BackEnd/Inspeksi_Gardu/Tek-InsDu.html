@@ -397,8 +397,8 @@ body{ background-image:url('https://drive.google.com/thumbnail?id=1rfN5LJOjjx0t-
 
     var pjbCard=document.getElementById('gduPejabatCard');
     if(pjbCard) pjbCard.style.display=_idu.boleh?'block':'none';
-    google.script.run.withSuccessHandler(function(u){ _idu.execUrl=String(u||''); }).getExecUrlInsGardu();
-    google.script.run.withSuccessHandler(function(p){ _isiPejabatGardu(p); }).getPejabatRekapInsGardu();
+    SisiRun.withSuccessHandler(function(u){ _idu.execUrl=String(u||''); }).getExecUrlInsGardu();
+    SisiRun.withSuccessHandler(function(p){ _isiPejabatGardu(p); }).getPejabatRekapInsGardu();
 
     if(_idu.role==='Super User'){
       document.getElementById('wrapUlpGardu').style.display='block';
@@ -416,7 +416,7 @@ body{ background-image:url('https://drive.google.com/thumbnail?id=1rfN5LJOjjx0t-
   }
 
   function _loadUlpOptions(){
-    google.script.run.withSuccessHandler(function(list){
+    SisiRun.withSuccessHandler(function(list){
       list=list||[];
       var selF=document.getElementById('gdu_ulp');
       var selL=document.getElementById('lph_ulp');
@@ -472,7 +472,7 @@ body{ background-image:url('https://drive.google.com/thumbnail?id=1rfN5LJOjjx0t-
 
     var btn=document.getElementById('btnSimpanHeaderGardu');
     btn.disabled=true; btn.textContent='Menyimpan…';
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(res){
         btn.disabled=false; btn.textContent='Simpan';
         if(res&&res.ok){ _sukses('Data header telah diinput.'); tutupTambahHeaderGardu(); muatHeaderGardu(); }
@@ -504,7 +504,7 @@ body{ background-image:url('https://drive.google.com/thumbnail?id=1rfN5LJOjjx0t-
       koordinator:(document.getElementById('gpjKoordinator')||{}).value||''
     };
     if(btn){ btn.disabled=true; btn.textContent='Menyimpan…'; }
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(res){
         if(btn){ btn.disabled=false; btn.textContent='Simpan Pejabat'; }
         if(res&&(res.ok||res.success)){ _isiPejabatGardu(res.pejabat); _sukses('Pejabat tanda tangan disimpan.'); }
@@ -527,7 +527,7 @@ body{ background-image:url('https://drive.google.com/thumbnail?id=1rfN5LJOjjx0t-
     var base=String(_idu.execUrl||'');
     if(base){ go(base); return; }
     _toast('Menyiapkan tautan PDF…','info');
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(u){ _idu.execUrl=String(u||''); if(_idu.execUrl) go(_idu.execUrl); else _toast('Gagal mendapatkan URL web app.','error'); })
       .withFailureHandler(function(err){ _toast('Error: '+(err&&err.message?err.message:err)); })
       .getExecUrlInsGardu();
@@ -551,7 +551,7 @@ body{ background-image:url('https://drive.google.com/thumbnail?id=1rfN5LJOjjx0t-
     var kode=_idu.fwgKode; if(!kode) return;
     var btn=document.getElementById('fwgUpdBtn');
     if(btn){ btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-rotate fa-spin"></i> Memperbarui…'; }
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(res){
         if(btn){ btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-rotate"></i> Update Data'; }
         if(res&&res.ok){
@@ -575,7 +575,7 @@ body{ background-image:url('https://drive.google.com/thumbnail?id=1rfN5LJOjjx0t-
                  tglSampai:(document.getElementById('gdu_tglSampai')||{}).value||'' };
     if(_idu.role==='Super User') params.ulp=(document.getElementById('gdu_ulp')||{}).value||'';
     else params.ulp=_idu.ulp;
-    google.script.run
+    SisiRun
       .withSuccessHandler(_renderRekapGardu)
       .withFailureHandler(function(err){ wrap.innerHTML='<div class="idu-empty">Gagal memuat: '+_esc(err&&err.message?err.message:err)+'</div>'; })
       .getRekapInsGarduRows(params);
@@ -657,7 +657,7 @@ body{ background-image:url('https://drive.google.com/thumbnail?id=1rfN5LJOjjx0t-
     document.getElementById('trgGardu').innerHTML='<option value="">— pilih penyulang dulu —</option>';
     document.getElementById('trgTier').value='';
     document.getElementById('modalTambahRealisasiGardu').style.display='flex';
-    google.script.run.withSuccessHandler(function(res){
+    SisiRun.withSuccessHandler(function(res){
       var list=(res&&res.list)||[];
       var o='<option value="">Pilih penyulang…</option>';
       list.forEach(function(p){ o+='<option value="'+_esc(p)+'">'+_esc(p)+'</option>'; });
@@ -672,7 +672,7 @@ body{ background-image:url('https://drive.google.com/thumbnail?id=1rfN5LJOjjx0t-
     var selG=document.getElementById('trgGardu');
     if(!pen){ selG.innerHTML='<option value="">— pilih penyulang dulu —</option>'; return; }
     selG.innerHTML='<option value="">Memuat…</option>';
-    google.script.run.withSuccessHandler(function(res){
+    SisiRun.withSuccessHandler(function(res){
       var list=(res&&res.list)||[];
       if(!list.length){ selG.innerHTML='<option value="">(tidak ada gardu)</option>'; return; }
       var o='<option value="">Pilih gardu…</option>';
@@ -693,7 +693,7 @@ body{ background-image:url('https://drive.google.com/thumbnail?id=1rfN5LJOjjx0t-
     if(!tier){ _toast('Pilih Tier.'); return; }
     var btn=document.getElementById('btnSimpanRealisasiGardu');
     btn.disabled=true; btn.textContent='Menyimpan…';
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(res){
         btn.disabled=false; btn.textContent='Simpan Gardu';
         if(res&&res.ok){
@@ -712,7 +712,7 @@ body{ background-image:url('https://drive.google.com/thumbnail?id=1rfN5LJOjjx0t-
     document.getElementById('drgTitle').textContent='Realisasi Gardu — '+kode;
     document.getElementById('drgBody').innerHTML='<div class="idu-empty">Memuat…</div>';
     document.getElementById('modalDetailRealisasiGardu').style.display='flex';
-    google.script.run.withSuccessHandler(_renderDetailRealisasiGardu)
+    SisiRun.withSuccessHandler(_renderDetailRealisasiGardu)
       .withFailureHandler(function(err){ document.getElementById('drgBody').innerHTML='<div class="idu-empty">Gagal: '+_esc(err&&err.message?err.message:err)+'</div>'; })
       .getDetailRealisasiGardu(kode);
   };
@@ -765,7 +765,7 @@ body{ background-image:url('https://drive.google.com/thumbnail?id=1rfN5LJOjjx0t-
   window.simpanEditHeaderGardu=function(){
     var btn=document.getElementById('btnSimpanEditHeaderGardu');
     btn.disabled=true; btn.textContent='Menyimpan…';
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(res){
         btn.disabled=false; btn.textContent='Simpan';
         if(res&&res.ok){ _sukses('Data telah diperbarui.'); tutupEditHeaderGardu(); _refreshActiveIduTab(); }
@@ -833,7 +833,7 @@ body{ background-image:url('https://drive.google.com/thumbnail?id=1rfN5LJOjjx0t-
     document.getElementById('ttgPrevGardu').style.display='none';
     var sel=document.getElementById('ttgTemuan');
     sel.innerHTML='<option value="">Memuat…</option>';
-    google.script.run.withSuccessHandler(function(res){
+    SisiRun.withSuccessHandler(function(res){
       var list=(res&&res.list)||[];
       var o='<option value="">Pilih temuan…</option>';
       list.forEach(function(n){ o+='<option value="'+_esc(n)+'">'+_esc(n)+'</option>'; });
@@ -851,7 +851,7 @@ body{ background-image:url('https://drive.google.com/thumbnail?id=1rfN5LJOjjx0t-
     var fG=(document.getElementById('ttgFotoGardu').files||[])[0]||null;
     _kompresGambar(fT,function(foTemuan){
       _kompresGambar(fG,function(foGardu){
-        google.script.run
+        SisiRun
           .withSuccessHandler(function(res){
             btn.disabled=false; btn.textContent='Simpan Temuan';
             if(res&&res.ok){ tutupTambahTemuanGardu(); _sukses('Temuan gardu telah diinput.'); if(_idu.drgHeader) bukaDetailRealisasiGardu(_idu.drgHeader.kodeHeader); }
@@ -877,7 +877,7 @@ body{ background-image:url('https://drive.google.com/thumbnail?id=1rfN5LJOjjx0t-
     document.getElementById('dtgTitle').textContent='Temuan Gardu — '+r.nomorGardu;
     document.getElementById('dtgBody').innerHTML='<div class="idu-empty">Memuat…</div>';
     document.getElementById('modalDetailTemuanGardu').style.display='flex';
-    google.script.run.withSuccessHandler(_renderDetailTemuanGardu)
+    SisiRun.withSuccessHandler(_renderDetailTemuanGardu)
       .withFailureHandler(function(err){ document.getElementById('dtgBody').innerHTML='<div class="idu-empty">Gagal: '+_esc(err&&err.message?err.message:err)+'</div>'; })
       .getTemuanGardu(_idu.dtg.kodeHeader, _idu.dtg.nomorGardu);
   };
@@ -914,7 +914,7 @@ body{ background-image:url('https://drive.google.com/thumbnail?id=1rfN5LJOjjx0t-
     var sel=document.getElementById('etgTemuan');
     var cur=t.temuan||'';
     sel.innerHTML='<option value="">Memuat…</option>';
-    google.script.run.withSuccessHandler(function(res){
+    SisiRun.withSuccessHandler(function(res){
       var list=(res&&res.list)?res.list.slice():[];
       if(cur&&list.indexOf(cur)===-1) list.unshift(cur);
       var o='<option value="">Pilih temuan…</option>';
@@ -929,13 +929,13 @@ body{ background-image:url('https://drive.google.com/thumbnail?id=1rfN5LJOjjx0t-
     if(!temuan){ _toast('Pilih temuan dulu.'); return; }
     var btn=document.getElementById('btnSimpanEditTemuanGardu');
     btn.disabled=true; btn.textContent='Menyimpan…';
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(res){
         btn.disabled=false; btn.textContent='Simpan Perubahan';
         if(res&&res.ok){
           tutupEditTemuanGardu();
           _sukses('Temuan telah diperbarui.');
-          if(_idu.dtg){ document.getElementById('dtgBody').innerHTML='<div class="idu-empty">Memuat…</div>'; google.script.run.withSuccessHandler(_renderDetailTemuanGardu).getTemuanGardu(_idu.dtg.kodeHeader,_idu.dtg.nomorGardu); }
+          if(_idu.dtg){ document.getElementById('dtgBody').innerHTML='<div class="idu-empty">Memuat…</div>'; SisiRun.withSuccessHandler(_renderDetailTemuanGardu).getTemuanGardu(_idu.dtg.kodeHeader,_idu.dtg.nomorGardu); }
         } else { _toast('Gagal: '+((res&&(res.message||res.error))||'tidak diketahui'),'error'); }
       })
       .withFailureHandler(function(err){ btn.disabled=false; btn.textContent='Simpan Perubahan'; _toast('Error: '+(err&&err.message?err.message:err)); })
@@ -957,7 +957,7 @@ body{ background-image:url('https://drive.google.com/thumbnail?id=1rfN5LJOjjx0t-
     if(!_idu.erg||!_idu.erg.kodePekerjaan){ _toast('Kode pekerjaan tidak ada.'); return; }
     var btn=document.getElementById('btnSimpanEditRealisasiGardu');
     btn.disabled=true; btn.textContent='Menyimpan…';
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(res){
         btn.disabled=false; btn.textContent='Simpan';
         if(res&&res.ok){ tutupEditRealisasiGardu(); _sukses('Data realisasi telah diperbarui.'); if(_idu.drgHeader) bukaDetailRealisasiGardu(_idu.drgHeader.kodeHeader); }
@@ -1013,7 +1013,7 @@ body{ background-image:url('https://drive.google.com/thumbnail?id=1rfN5LJOjjx0t-
                  tglSampai:document.getElementById('lph_tglSampai').value||'' };
     if(_idu.role==='Super User') params.ulp=document.getElementById('lph_ulp').value||'';
     else params.ulp=_idu.ulp;
-    google.script.run
+    SisiRun
       .withSuccessHandler(_renderHeaderGardu)
       .withFailureHandler(function(err){ if(tbl) tbl.innerHTML='<div class="idu-empty">Gagal memuat: '+_esc(err&&err.message?err.message:err)+'</div>'; })
       .getDataHeaderInsGardu(params);
@@ -1059,7 +1059,7 @@ body{ background-image:url('https://drive.google.com/thumbnail?id=1rfN5LJOjjx0t-
   window.updateLapHarianGardu=function(kode){
     var btn=document.getElementById('iduUpdBtn-'+kode);
     if(btn){ btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-rotate fa-spin"></i> Memperbarui…'; }
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(res){
         if(btn){ btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-rotate"></i> Update Data'; }
         if(res&&res.ok){
@@ -1076,8 +1076,8 @@ body{ background-image:url('https://drive.google.com/thumbnail?id=1rfN5LJOjjx0t-
   function _bootInsDu(){
     var s = window.__SISI_SESI__;
     if(s && s.role){ _initSession(s); return; }
-    if(typeof getSessionUser==='undefined' && google.script.run.getSessionUser==null){ _initSession(s||{}); return; }
-    google.script.run
+    if(typeof getSessionUser==='undefined' && SisiRun.getSessionUser==null){ _initSession(s||{}); return; }
+    SisiRun
       .withSuccessHandler(function(sesi){ _initSession((sesi&&sesi.role)?sesi:(window.__SISI_SESI__||sesi||{})); })
       .withFailureHandler(function(){ _initSession((window.__SISI_SESI__)||{}); })
       .getSessionUser();

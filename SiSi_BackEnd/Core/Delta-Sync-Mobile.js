@@ -303,6 +303,16 @@ function _deltaManifest_(token, force) {
   return result;
 }
 function _deltaFetch_(token, name, offset, limit) {
+  /* OTENTIKASI + SKOP ULP (29 Agu 2026).
+     _deltaManifest_() memeriksa sesi, tetapi _deltaFetch_() tidak — padahal
+     justru _deltaFetch_ yang mengembalikan BARIS-nya. Akibatnya
+     ?action=getMasterGarduMobile&ulp=DELTA_SYNC:{"cmd":"fetch","dataset":"db_Users"}
+     mengembalikan email, username, role, ULP, bidang, tim, dan aksesMenu
+     seluruh pengguna tanpa login. Hanya kolom password yang dikosongkan.
+     Catatan: db_Users bersifat global (daftar akun lintas ULP), jadi tidak
+     disaring per ULP — yang penting pintunya sekarang terkunci. */
+  var g = guard_(arguments, { ulp: true, aksi: "deltaFetch" });
+
   var cfg = _deltaConfigs_()[name];
   if (!cfg)
     return { success: false, message: "Dataset tidak dikenal: " + name };

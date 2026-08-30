@@ -754,7 +754,7 @@
   // Load daftar petugas ke dropdown (backend getListPetugasYandal di Tek-Yandal.gs)
   function _tyLoadPetugas() {
     if (typeof google === "undefined") return;
-    google.script.run
+    SisiRun
       .withSuccessHandler(function (res) {
         var sel = _tyEl("ty_petugas");
         if (!sel) return;
@@ -795,7 +795,7 @@
       return;
     }
     // periode = kunci baris db_Yandal_Rank (YYYY-MM). Backend menyinkronkan sendiri bila periode belum ada.
-    google.script.run
+    SisiRun
       .withSuccessHandler(function (res) {
         _tyEl("tyLoading").style.display = "none";
         _tyRenderTabel(res, bulan);
@@ -954,7 +954,7 @@
     if (typeof google === "undefined") {
       return;
     }
-    google.script.run
+    SisiRun
       .withSuccessHandler(_tyRenderDetail)
       .withFailureHandler(function (err) {
         _tyEl("tyModalBody").innerHTML =

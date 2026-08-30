@@ -2,3 +2,7 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+
+# Local Apps Script test harness (SQLite). Never commit test databases.
+tests/.data/
+tests/node_modules/

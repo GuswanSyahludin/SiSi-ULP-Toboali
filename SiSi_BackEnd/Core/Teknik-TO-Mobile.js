@@ -16,15 +16,21 @@ function _toList_(token, mode) {
     var rows = sh
       .getRange(2, 1, sh.getLastRow() - 1, T.folderPath + 1)
       .getValues();
-    var role = _toNorm_(sesi.role).toLowerCase();
-    var superUser = role === "super user" || role === "admin";
+    /* Kebijakan 29 Agu 2026: hanya Super User yang bisa melihat temuan lintas
+       ULP. Admin DIBATASI ke ULP-nya sendiri — sebelumnya `role === "admin"`
+       ikut melewati filter ULP di bawah, padahal _assertSuperUser menolak
+       "admin". Lihat bolehLintasUlp_() di Guard.js. */
+    var lintasUlp =
+      typeof _normRole_ === "function"
+        ? _normRole_(sesi.role) === "SUPER"
+        : _toNorm_(sesi.role).toLowerCase() === "super user";
     var ulp = _toNorm_(sesi.ulp).toLowerCase(),
       out = [];
     for (var i = 0; i < rows.length; i++) {
       var r = rows[i],
         kode = _toNorm_(r[T.kodePekerjaan]);
       if (!kode) continue;
-      if (!superUser && _toNorm_(r[T.ulp]).toLowerCase() !== ulp) continue;
+      if (!lintasUlp && _toNorm_(r[T.ulp]).toLowerCase() !== ulp) continue;
       var status = _toNorm_(r[T.status]),
         tim = _toNorm_(r[T.timEksekusi]);
       if (mode === "assignment" && status !== "Penugasan Tim") continue;

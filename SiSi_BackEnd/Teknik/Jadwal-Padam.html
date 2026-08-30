@@ -661,7 +661,7 @@
       }
       function jpLoadMaster() {
         var filter = jpIsSuper() ? document.getElementById("jpUlp").value : "";
-        google.script.run
+        SisiRun
           .withSuccessHandler(jpPopulate)
           .withFailureHandler(function (e) {
             jpNotify((e && e.message) || e, "error");
@@ -809,7 +809,7 @@
           };
         document.getElementById("jpBody").innerHTML =
           '<tr><td colspan="21"><div class="loading-cell"><span class="table-spinner"></span><span>Mencari data...</span></div></td></tr>';
-        google.script.run
+        SisiRun
           .withSuccessHandler(function (res) {
             if (searchBtn) searchBtn.disabled = false;
             jpRender(res);
@@ -906,7 +906,7 @@
           b.disabled = true;
         });
         button.textContent = "Memproses...";
-        google.script.run
+        SisiRun
           .withSuccessHandler(function (res) {
             if (!res || !res.ok) {
               buttons.forEach(function (b) {
@@ -961,7 +961,7 @@
         popup.document.body.textContent = "Menyiapkan laporan WhatsApp...";
         btn.disabled = true;
         btn.textContent = "Menyiapkan...";
-        google.script.run
+        SisiRun
           .withSuccessHandler(function (res) {
             btn.textContent = "Kirim WA";
             jpSyncWaButton();
@@ -1008,7 +1008,7 @@
           };
         btn.disabled = true;
         btn.textContent = "Menyimpan...";
-        google.script.run
+        SisiRun
           .withSuccessHandler(function (res) {
             btn.disabled = false;
             btn.textContent = "Simpan";

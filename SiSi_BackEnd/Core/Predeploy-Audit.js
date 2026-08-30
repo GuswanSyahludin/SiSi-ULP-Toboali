@@ -4,10 +4,17 @@ function auditPredeployMobile_() {
     add = function (name, ok, detail) {
       checks.push({ name: name, ok: !!ok, detail: String(detail || "") });
     };
+  /* Diperbaiki 29 Agu 2026 (K14 — eval di web app publik).
+     Versi lama: eval("typeof " + name + ' === "function"').
+     Walaupun daftar namanya hardcoded sehingga tidak bisa disuntik dari luar,
+     menaruh eval() di proyek yang di-deploy sebagai access: ANYONE_ANONYMOUS
+     adalah primitif eksekusi kode yang tidak perlu. Pemeriksaan ketersediaan
+     fungsi cukup dengan globalThis. */
   function fn(name) {
     var ok = false;
     try {
-      ok = eval("typeof " + name + ' === "function"');
+      var g = typeof globalThis !== "undefined" ? globalThis : (function () { return this; })();
+      ok = !!g && typeof g[name] === "function";
     } catch (e) {}
     add("function " + name, ok, ok ? "tersedia" : "TIDAK DITEMUKAN");
     return ok;

@@ -915,11 +915,20 @@ function _recalcRealisasiByKodePeny(ss, kodePekerjaanPeny){
 
 /* ---------- Simpan Temuan (Fitur 1: dari Realisasi / Fitur 2: tab Temuan Inspeksi) ---------- */
 function simpanTemuanInsJar(data){
+  /* OTENTIKASI + SKOP ULP (29 Agu 2026).
+     Selain menulis baris temuan, fungsi ini MENGUNGGAH FOTO ke Drive — tanpa
+     pemeriksaan, siapa pun bisa memakai Drive pemilik script sebagai tempat
+     simpan berkas. Identitas pencatat juga dulu diambil dari data.username
+     yang dikirim klien. */
+  var gAks = guard_(arguments, { ulp: true, aksi: 'simpanTemuanInsJar' });
   try{
     data = data || {};
     var ss = _ssIns();
-    var username = String(data.username||'').trim();
-    var info = _userInfoIns(username);
+    var username = String(gAks.username||'').trim();
+    var info = _userInfoIns(username) || {};
+    /* ULP wajib mengikuti sesi; abaikan data.ulp dari klien kecuali Super User. */
+    info.ulp = ulpScope_(gAks, data.ulp) || String(gAks.ulp||'').trim();
+    if(!info.ulp) return { ok:false, message:'Akun belum terhubung ke ULP.' };
 
     var tgl  = _normTgl(data.tanggal || new Date());
     var hari = _hariIndoIns(tgl);
@@ -963,28 +972,30 @@ function simpanTemuanInsJar(data){
     var objek = String(data.objekInspeksi||'').trim();
     var isJar = objek.toLowerCase() === 'jaringan';
 
-    // Tulis B..AA (26 kolom; kolom A dibiarkan)
+    /* Teks bebas dari pengguna dilindungi sebelum masuk ke sheet. Kolom
+       deskripsi/penyulang/section/segmen ini ikut dirender ke WA dan PDF —
+       satu sel berisi =IMPORTRANGE(...) cukup untuk mengirim data keluar. */
     var arr = [
       kodeHeaderFinal,                             // B kodeHeader (Fitur 2: prefix PEG/INSJAR/INSDU)
-      String(data.kodePekerjaanPeny||''),          // C kodePekerjaanPeny (kosong utk Fitur 2)
+      safeCell_(String(data.kodePekerjaanPeny||'')),  // C kodePekerjaanPeny (kosong utk Fitur 2)
       kodePekerjaan,                               // D kodePekerjaan (auto)
       info.ulp,                                    // E ulp
       hari,                                        // F hari
       tgl,                                         // G tanggal
       info.tim,                                    // H tim inspeksi
       objek,                                       // I objek inspeksi
-      String(data.penyulang||''),                  // J penyulang
-      String(data.section||''),                    // K section
-      String(data.segmen||''),                     // L segmen
-      isJar ? String(data.nomorTiang||'') : '',    // M nomor tiang
-      !isJar ? String(data.nomorGardu||'') : '',   // N nomor gardu
-      String(data.tier||''),                       // O tier
-      String(data.temuan||''),                     // P temuan
+      safeCell_(String(data.penyulang||'')),       // J penyulang
+      safeCell_(String(data.section||'')),         // K section
+      safeCell_(String(data.segmen||'')),          // L segmen
+      isJar ? safeCell_(String(data.nomorTiang||'')) : '',    // M nomor tiang
+      !isJar ? safeCell_(String(data.nomorGardu||'')) : '',   // N nomor gardu
+      safeCell_(String(data.tier||'')),            // O tier
+      safeCell_(String(data.temuan||'')),          // P temuan
       (fT.nama ? folderPathStr + '/' + fT.nama : ''), // Q foto temuan (LOKASI path relatif utk AppSheet)
       fT.url,                                      // R foto temuan url
       (fG.nama ? folderPathStr + '/' + fG.nama : ''), // S foto tiang (LOKASI path relatif utk AppSheet)
       fG.url,                                      // T foto tiang url
-      String(data.deskripsi||''),                  // U deskripsi
+      safeCell_(String(data.deskripsi||'')),       // U deskripsi
       koord,                                       // V koordinat
       lat,                                         // W lat
       lng,                                         // X long
@@ -1010,6 +1021,8 @@ function simpanTemuanInsJar(data){
 
 /* ---------- Edit Temuan (ubah data dari modal Detail Temuan) ---------- */
 function editTemuanInsJar(data){
+  /* OTENTIKASI + PEMILIKAN (29 Agu 2026). */
+  var gAks = guard_(arguments, { ulp: true, aksi: 'editTemuanInsJar' });
   try{
     data = data || {};
     var kodePekerjaan = String(data.kodePekerjaan || '').trim();
@@ -1022,6 +1035,10 @@ function editTemuanInsJar(data){
     var T = COL_INS.TEMUAN;
     var sh = loc.sheet, row = loc.row;
     var rowVals = sh.getRange(row, 1, 1, sh.getLastColumn()).getValues()[0];
+    if(!barisUlpCocok_(gAks, rowVals[T.ulp])){
+      audit_(gAks.sesi, 'editTemuanInsJar', kodePekerjaan, 'TOLAK', 'temuan milik ULP lain');
+      return { ok:false, error:'Temuan bukan milik ULP Anda.' };
+    }
 
     var objek = (data.objekInspeksi != null && String(data.objekInspeksi).trim())
       ? String(data.objekInspeksi).trim()
@@ -1040,12 +1057,13 @@ function editTemuanInsJar(data){
       }
     }
 
-    if(data.temuan  != null) sh.getRange(row, T.temuan  + 1).setValue(String(data.temuan));
-    if(data.section != null) sh.getRange(row, T.section + 1).setValue(String(data.section));
-    if(data.segmen  != null) sh.getRange(row, T.segmen  + 1).setValue(String(data.segmen));
-    sh.getRange(row, T.objekInspeksi + 1).setValue(objek);
-    sh.getRange(row, T.nomorTiang + 1).setValue(isJar ? String(data.nomorTiang || '') : '');
-    sh.getRange(row, T.nomorGardu + 1).setValue(!isJar ? String(data.nomorGardu || '') : '');
+    /* Teks bebas dari pengguna -> lindungi dari formula injection. */
+    if(data.temuan  != null) sh.getRange(row, T.temuan  + 1).setValue(safeCell_(String(data.temuan)));
+    if(data.section != null) sh.getRange(row, T.section + 1).setValue(safeCell_(String(data.section)));
+    if(data.segmen  != null) sh.getRange(row, T.segmen  + 1).setValue(safeCell_(String(data.segmen)));
+    sh.getRange(row, T.objekInspeksi + 1).setValue(safeCell_(objek));
+    sh.getRange(row, T.nomorTiang + 1).setValue(isJar ? safeCell_(String(data.nomorTiang || '')) : '');
+    sh.getRange(row, T.nomorGardu + 1).setValue(!isJar ? safeCell_(String(data.nomorGardu || '')) : '');
     if(data.deskripsi != null) sh.getRange(row, T.deskripsi + 1).setValue(String(data.deskripsi));
     if(data.koordinat != null){
       sh.getRange(row, T.koordinat + 1).setValue(koord);

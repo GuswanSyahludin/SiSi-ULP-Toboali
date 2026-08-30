@@ -1432,9 +1432,14 @@ function _apprRememberPendingDecision_(kodeP0, keputusan) {
 }
 
 function getApprovalP0List(params) {
+  /* OTENTIKASI + SKOP ULP (29 Agu 2026).
+     Sebelumnya tanpa pemeriksaan: tanpa params.ulp, seluruh P0 dari semua ULP
+     dikembalikan lengkap dengan tiga URL foto, koordinat, dan catatan.
+     ULP yang diminta klien kini hanya dihormati untuk Super User. */
+  var g = guard_(arguments, { ulp: true, aksi: "getApprovalP0List" });
   try {
     params = params || {};
-    var ulpFilter = String(params.ulp || "").trim();
+    var ulpFilter = ulpScope_(g, params.ulp);
     var tglFilter = params.tanggal ? _normTgl(params.tanggal) : "";
     var statusFilter = String(params.status || "Menunggu").trim(); // default: hanya yang menunggu approval
     var sh = _shY_(SHEET_YANDAL.P0);
@@ -1530,12 +1535,21 @@ function getApprovalP0List(params) {
 // balas SEKETIKA — UI mobile tidak menunggu. Penulisan Status Approval + hitung Point dikerjakan backend
 // oleh drainAntreanApprovalP0 (tiap 1 menit). Web SIE-Teknik TIDAK terpengaruh (response tetap ok:true).
 function setApprovalP0(params) {
+  /* OTENTIKASI (29 Agu 2026) — celah paling berat di proyek ini.
+     Sebelumnya fungsi ini sama sekali tidak memeriksa siapa pemanggilnya,
+     dan `approver` diambil dari params.username / params.approvedBy yang
+     dikirim klien. Artinya siapa pun di internet bisa menyetujui atau
+     menolak P0 operasional PLN sambil menulis nama approver sesukanya.
+     Sekarang: wajib sesi, wajib punya ULP, dan identitas approver diambil
+     dari SESI — nilai dari klien diabaikan sepenuhnya. */
+  var g = guard_(arguments, { ulp: true, aksi: "setApprovalP0" });
   try {
     params = params || {};
     var kodeP0 = String(params.kodeP0 || "").trim();
     var keputusan = String(params.keputusan || "").trim();
-    var approver = String(params.username || params.approvedBy || "").trim();
-    var alasan = String(params.alasan || "").trim();
+    var approver = String(g.username || "").trim();
+    /* Alasan ditulis ke sheet — lindungi dari formula injection. */
+    var alasan = safeCell_(String(params.alasan || "").trim());
     if (!kodeP0) return { ok: false, error: "kodeP0 wajib diisi." };
     if (["Approved", "Rejected"].indexOf(keputusan) < 0)
       return { ok: false, error: "Keputusan harus Approved atau Rejected." };
@@ -1892,7 +1906,11 @@ function hapusApprovalDrainTriggerY() {
 
 // ====== EDIT NAMA PEKERJAAN P0 (modal Edit di SIE-Teknik tab "Approval P0", 12 Agu 2026) ======
 // Dropdown master = kolom "Nama Pekerjaan" di db_Yandal_List_P0 (sumber bobot poin).
-function getListPekerjaanP0() {
+function getListPekerjaanP0(params) {
+  /* OTENTIKASI (29 Agu 2026). Router memanggil ini tanpa argumen; sekarang
+     body/parameter diteruskan supaya token ikut terbawa. Tanpa pemeriksaan,
+     daftar master pekerjaan (sumber bobot poin) bisa dibaca siapa pun. */
+  guard_(arguments, { aksi: "getListPekerjaanP0" });
   try {
     var sh = _shY_(SHEET_YANDAL.LIST_P0);
     if (!sh || sh.getLastRow() <= 1) return { ok: true, list: [] };
@@ -1912,13 +1930,19 @@ function getListPekerjaanP0() {
 // Validasi: nama WAJIB ada di master db_Yandal_List_P0 (menjaga konsistensi bobot poin).
 // Bila P0 sudah Approved → Point dihitung ULANG mengikuti bobot pekerjaan baru.
 function updateNamaPekerjaanP0(params) {
+  /* OTENTIKASI + SKOP ULP (29 Agu 2026). Nama pekerjaan menentukan BOBOT POIN,
+     jadi mengubahnya tanpa izin = mengubah nilai kinerja petugas. Sebelumnya
+     tanpa pemeriksaan apa pun. `params.username` juga tidak lagi dipakai
+     sebagai identitas pencatat — diambil dari sesi. */
+  var g = guard_(arguments, { ulp: true, aksi: "updateNamaPekerjaanP0" });
   try {
     params = params || {};
     var kodeP0 = String(params.kodeP0 || "").trim();
     var namaBaru = String(params.namaPekerjaan || "").trim();
     if (!kodeP0) return { ok: false, error: "kodeP0 wajib diisi." };
     if (!namaBaru) return { ok: false, error: "Nama Pekerjaan wajib dipilih." };
-    var lst = getListPekerjaanP0();
+    /* Teruskan token: getListPekerjaanP0() sekarang wajib sesi. */
+    var lst = getListPekerjaanP0({ token: g.token });
     var cocok = false,
       arr = (lst && lst.list) || [];
     for (var i = 0; i < arr.length; i++)
@@ -1934,6 +1958,11 @@ function updateNamaPekerjaanP0(params) {
     var sh = _shY_(SHEET_YANDAL.P0);
     var f = _findRowY_(sh, COL_P0.kodeP0, kodeP0);
     if (!f) return { ok: false, error: "Baris P0 tidak ditemukan: " + kodeP0 };
+    /* PEMILIKAN: P0 harus milik ULP sesi (kecuali Super User). */
+    if (!barisUlpCocok_(g, f.row[COL_P0.ulp])) {
+      audit_(g.sesi, "updateNamaPekerjaanP0", kodeP0, "TOLAK", "P0 milik ULP lain");
+      return { ok: false, error: "P0 bukan milik ULP Anda." };
+    }
     var namaLama = String(f.row[COL_P0.namaPekerjaan] || "").trim();
     _setTextY_(sh, f.rowNum, COL_P0.namaPekerjaan, namaBaru);
     // Bila sudah Approved → point mengikuti bobot pekerjaan BARU.
@@ -2047,7 +2076,12 @@ function _sheetUkurGardu_(ssU) {
 //   • sheet switching hanya di-scan bila nama pekerjaan mengandung "Switching".
 // Pekerjaan biasa (ROW, dsb) → detail langsung balik tanpa menyentuh spreadsheet lain.
 function getLampiranPengecekanP0(params) {
+  /* OTENTIKASI + SKOP ULP (29 Agu 2026). Sebelumnya tanpa pemeriksaan:
+     kodeP0 dari klien langsung dipakai membuka P0 induk, switching, dan
+     spreadsheet pengukuran gardu — bebas lintas ULP (IDOR). */
+  var g = guard_(arguments, { ulp: true, aksi: "getLampiranPengecekanP0" });
   try {
+    params = params || {};
     var kodeP0 = String((params && params.kodeP0) || "").trim();
     if (!kodeP0) return { ok: false, error: "kodeP0 wajib diisi." };
 
@@ -2058,6 +2092,11 @@ function getLampiranPengecekanP0(params) {
     var fP = _findRowY_(shP0, COL_P0.kodeP0, kodeP0);
     if (!fP) return { ok: false, error: "Baris P0 tidak ditemukan: " + kodeP0 };
     var rp = fP.row;
+    /* PEMILIKAN: P0 harus milik ULP sesi (kecuali Super User). */
+    if (!barisUlpCocok_(g, rp[COL_P0.ulp])) {
+      audit_(g.sesi, "getLampiranPengecekanP0", kodeP0, "TOLAK", "P0 milik ULP lain");
+      return { ok: false, error: "Data P0 bukan milik ULP Anda." };
+    }
     var p0 = {
       kodeP0: kodeP0,
       namaPekerjaan:
@@ -2625,9 +2664,16 @@ function _rangeEndMsY_(v) {
 
 // Rekap poin per petugas dalam rentang tanggal. Return list terurut (poin terbesar dulu) + ringkasan.
 function getRekapPointPetugasY(params) {
+  /* OTENTIKASI + SKOP ULP (29 Agu 2026). Rekap poin = data kinerja per
+     petugas. Sebelumnya bisa ditarik tanpa login, dan params.ulp dipakai
+     mentah untuk memilih ULP mana pun.
+     Dipanggil dari dashboard (Tek-Dashboard.html) DAN internal oleh
+     getTabelPetugasYandal()/getDetailPerformaPetugasY() — pemanggil internal
+     wajib meneruskan token (sudah disesuaikan). */
+  var g = guard_(arguments, { ulp: true, aksi: "getRekapPointPetugasY" });
   try {
     params = params || {};
-    var ulpFilter = String(params.ulp || "").trim();
+    var ulpFilter = ulpScope_(g, params.ulp);
     var awalMs = _rangeStartMsY_(params.tglAwal);
     var akhirMs = _rangeEndMsY_(params.tglAkhir);
     // DUAL-READ (migrasi): rekap poin rentang tanggal melintasi batas H-2 — baca AKTIF + ARSIP.
@@ -2690,10 +2736,15 @@ function getRekapPointPetugasY(params) {
 // Kolom Petugas bisa berisi banyak nama (dipisah , ; / & atau baris baru) -> dipecah _splitPetugasY_.
 // Opsional params.ulp: bila diisi, hanya petugas yang pernah bertugas di ULP tsb (membatasi dropdown
 // non-Super User ke ULP-nya sendiri). Return { ok, list:[nama, ...] } terurut A-Z.
-function getListPetugasYandal(params) {
+/* POLA SPLIT (29 Agu 2026) — lihat penjelasan di getRankYandal().
+   _listPetugasYandalInt_() = implementasi, tanpa pemeriksaan sesi.
+   getListPetugasYandal()   = endpoint publik, wajib sesi + skop ULP.
+   Pemisahan perlu karena _semuaPetugasY_() dipanggil sinkronRankYandal(),
+   yaitu trigger terjadwal yang tidak punya token. */
+
+/* Implementasi internal. JANGAN dipanggil langsung dari klien. */
+function _listPetugasYandalInt_(ulpFilter) {
   try {
-    params = params || {};
-    var ulpFilter = String(params.ulp || "").trim();
     var set = {};
     // Sumber utama: db_Yandal_Shift (Petugas = kolom I / idx 8, ULP = kolom F / idx 5)
     var shShift = _shY_(SHEET_YANDAL.SHIFT);
@@ -2735,6 +2786,15 @@ function getListPetugasYandal(params) {
   } catch (e) {
     return { ok: false, error: e.message, list: [] };
   }
+}
+
+/* Endpoint publik — wajib sesi. Daftar nama petugas adalah data kepegawaian;
+   sebelumnya bisa ditarik tanpa login lewat dropdown Tek-Yandal.html, dan
+   params.ulp dipakai mentah untuk memilih ULP mana pun. */
+function getListPetugasYandal(params) {
+  var g = guard_(arguments, { ulp: true, aksi: "getListPetugasYandal" });
+  params = params || {};
+  return _listPetugasYandalInt_(ulpScope_(g, params.ulp));
 }
 
 // ====== TABEL PETUGAS + RANK (halaman Tim Yandal / Tek-Yandal) ======
@@ -2791,7 +2851,9 @@ function _rekapIndexY_(rekap) {
 function _rankIndexY_(periode, ulpFilter) {
   var idx = {};
   try {
-    var r = getRankYandal({ periode: periode, ulp: ulpFilter });
+    /* Pakai implementasi internal: helper ini dipakai jalur yang tidak punya
+       token (trigger). ULP sudah dibatasi oleh pemanggilnya. */
+    var r = _rankYandalInt_({ periode: periode, ulp: ulpFilter });
     var list = r && r.ok && r.list ? r.list : [];
     for (var i = 0; i < list.length; i++) {
       var it = list[i],
@@ -2882,9 +2944,12 @@ function _rankTahunIndexY_(tahun, ulpFilter) {
 //   • Bila periode belum pernah disinkron (belum ada barisnya), sinkron otomatis dijalankan sekali agar tabel tidak kosong.
 //   • sinkron:true → paksa hitung ulang periode tsb sebelum dibaca (dipakai tombol "Segarkan").
 function getTabelPetugasYandal(params) {
+  /* OTENTIKASI + SKOP ULP (29 Agu 2026). Tabel ini berisi ranking kinerja
+     seluruh petugas — sebelumnya bisa dibaca siapa pun tanpa login. */
+  var g = guard_(arguments, { ulp: true, aksi: "getTabelPetugasYandal" });
   try {
     params = params || {};
-    var ulpFilter = String(params.ulp || "").trim();
+    var ulpFilter = ulpScope_(g, params.ulp);
     var petugasFilter = String(params.petugas || "").trim();
 
     // Tentukan periode bulan acuan 'YYYY-MM'.
@@ -3129,11 +3194,15 @@ function _bulatY_(n, d) {
 }
 
 function getDetailPerformaPetugasY(params) {
+  /* OTENTIKASI + SKOP ULP (29 Agu 2026). Detail performa per orang
+     (shift, P0, poin, rank) — sebelumnya bisa dibaca siapa pun tanpa login
+     hanya dengan menebak nama petugas. */
+  var g = guard_(arguments, { ulp: true, aksi: "getDetailPerformaPetugasY" });
   try {
     params = params || {};
     var nama = String(params.petugas || "").trim();
     if (!nama) return { ok: false, error: "Nama petugas wajib diisi." };
-    var ulpFilter = String(params.ulp || "").trim();
+    var ulpFilter = ulpScope_(g, params.ulp);
 
     var acuanMs = _toMillisY_(params.acuan);
     var acuan = isNaN(acuanMs) ? _nowY_() : new Date(acuanMs);
@@ -3330,19 +3399,25 @@ function getDetailPerformaPetugasY(params) {
     for (var pp = 0; pp < pekerjaan.length; pp++)
       pekerjaan[pp].point = _bulatY_(pekerjaan[pp].point, 2);
 
+    /* Teruskan token: getRekapPointPetugasY() sekarang wajib sesi.
+       ULP sudah dibatasi oleh ulpScope_() di atas, jadi nilai yang sama
+       aman diteruskan ke pemanggilan internal. */
     var rB = getRekapPointPetugasY({
+      token: g.token,
       tglAwal: awalBulan,
       tglAkhir: akhirBulan,
       ulp: ulpFilter,
     });
     var rT = getRekapPointPetugasY({
+      token: g.token,
       tglAwal: th + "-01-01",
       tglAkhir: th + "-12-31",
       ulp: ulpFilter,
     });
     var iB = _rekapIndexY_(rB)[nama],
       iT = _rekapIndexY_(rT)[nama];
-    var rkD = _rankIndexY_(th + "-" + _padNY_(bl + 1), ulpFilter)[nama] || null; // nilai rank baru (db_Yandal_Rank)
+    var rkD =
+      _rankIndexY_(th + "-" + _padNY_(bl + 1), ulpFilter)[nama] || null; // nilai rank baru (db_Yandal_Rank)
 
     var jmlShiftBulan = shiftList.length,
       jmlShiftTahun = 0;
@@ -3702,7 +3777,9 @@ function _ensureSheetRankY_() {
 function _semuaPetugasY_(ulpFilter) {
   var out = {};
   try {
-    var r = getListPetugasYandal({ ulp: ulpFilter });
+    /* Pakai implementasi internal: helper ini dipanggil sinkronRankYandal(),
+       trigger terjadwal yang tidak punya token. */
+    var r = _listPetugasYandalInt_(ulpFilter);
     var arr = r && r.list ? r.list : r instanceof Array ? r : [];
     for (var i = 0; i < arr.length; i++) {
       var it = arr[i];
@@ -4095,7 +4172,16 @@ function sinkronRankYandal(opts) {
 }
 
 // Baca db_Yandal_Rank untuk ditampilkan di menu Tim Yandal. args.sinkron=true → hitung ulang dulu.
-function getRankYandal(args) {
+//
+// POLA SPLIT (29 Agu 2026): endpoint publik dan implementasi internal dipisah.
+//   getRankYandal()   = endpoint publik, WAJIB sesi + skop ULP.
+//   _rankYandalInt_() = implementasi, TANPA pemeriksaan sesi.
+// Pemisahan perlu karena _rankIndexY_() dipakai oleh jalur internal yang tidak
+// punya token (trigger sinkronRankYandal dipanggil terjadwal, bukan oleh user).
+// ULP yang diminta klien hanya dihormati untuk Super User.
+
+/* Implementasi internal. JANGAN dipanggil langsung dari klien. */
+function _rankYandalInt_(args) {
   try {
     args = args || {};
     var periode =
@@ -4143,6 +4229,17 @@ function getRankYandal(args) {
   }
 }
 
+/* Endpoint publik — wajib sesi. Ranking kinerja bulanan per petugas;
+   sebelumnya bisa dibaca siapa pun tanpa login. */
+function getRankYandal(args) {
+  var g = guard_(arguments, { ulp: true, aksi: "getRankYandal" });
+  args = args || {};
+  var a = {};
+  for (var k in args) a[k] = args[k];
+  a.ulp = ulpScope_(g, args.ulp);
+  return _rankYandalInt_(a);
+}
+
 // ====== INPUT PENCAPAIAN VCC (SIE-Teknik, tab "Input Pencapaian VCC Yandal") ======
 // HANYA 2 kolom yang boleh disentuh operator: Q (Persentase VCC) & R (Tanggal Capai 100% VCC).
 // Kolom lain (termasuk S Shift, T Hari Tempuh, U Skor Tempuh, V Rank Tercepat, W % Nilai VCC,
@@ -4151,11 +4248,16 @@ function getRankYandal(args) {
 // Daftar baris VCC 1 periode. args: { periode:'YYYY-MM', ulp?, sinkron? }
 // Baris belum ada (sheet kosong) → otomatis disinkronkan dulu supaya operator langsung dapat mengisi.
 function getVccYandalList(args) {
+  /* OTENTIKASI + SKOP ULP (29 Agu 2026). Daftar ini berisi nilai kinerja
+     per petugas (Nilai Total, Rank Bulanan) — sebelumnya bisa dibaca siapa
+     pun tanpa login, dan args.ulp dipakai mentah untuk memilih ULP. */
+  var g = guard_(arguments, { ulp: true, aksi: "getVccYandalList" });
   try {
     args = args || {};
     var periode =
       String(args.periode || "").trim() || _fmtY_(_nowY_(), "yyyy-MM");
-    var ulpFilter = String(args.ulp || "").trim();
+    /* ULP yang diminta klien hanya dihormati untuk Super User. */
+    var ulpFilter = ulpScope_(g, args.ulp);
     var sh = _ensureSheetRankY_(),
       R = COL_RANK_Y;
 
@@ -4219,6 +4321,11 @@ function getVccYandalList(args) {
 // Setelah tersimpan, periode terkait langsung disinkronkan agar Shift, Hari Tempuh, Skor Tempuh,
 // Rank Tercepat, % Nilai VCC, Nilai Total, dan Rank Bulanan ikut diperbarui.
 function setVccYandal(args) {
+  /* OTENTIKASI + SKOP ULP (29 Agu 2026).
+     Nilai VCC ikut menentukan Nilai Total dan Rank Bulanan petugas, jadi
+     menyimpannya tanpa izin = memanipulasi peringkat kinerja. Sebelumnya
+     tanpa pemeriksaan apa pun, dan args.username dipakai sebagai pencatat. */
+  var g = guard_(arguments, { ulp: true, aksi: "setVccYandal" });
   try {
     args = args || {};
     var kodeRank = String(args.kodeRank || "").trim();
@@ -4243,6 +4350,13 @@ function setVccYandal(args) {
     var f = _findRowY_(sh, R.kodeRank, kodeRank);
     if (!f)
       return { ok: false, error: "Baris rank tidak ditemukan: " + kodeRank };
+    /* PEMILIKAN: baris rank harus milik ULP sesi (kecuali Super User).
+       Kalau kolom ULP tidak ada di sheet rank, barisUlpCocok_ mengembalikan
+       true (kompatibel mundur) — jadi tidak ada data yang tiba-tiba hilang. */
+    if (!barisUlpCocok_(g, f.row[R.ulp])) {
+      audit_(g.sesi, "setVccYandal", kodeRank, "TOLAK", "baris rank milik ULP lain");
+      return { ok: false, error: "Baris rank bukan milik ULP Anda." };
+    }
     var periode = _periodeStrY_(f.row[R.periode]);
 
     // Tanggal wajib bila sudah 100% (dipakai menghitung Hari Tempuh & Rank Tercepat).

@@ -1011,7 +1011,7 @@ function _stBoot(){
   if(_sesiInj && _sesiInj.role){
     _stInitSession(_sesiInj);
   } else if(typeof google !== 'undefined'){
-    google.script.run.withSuccessHandler(_stInitSession).getSessionUser();
+    SisiRun.withSuccessHandler(_stInitSession).getSessionUser();
   }
   var today   = new Date();
   var tglAwal = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
@@ -1092,7 +1092,7 @@ function _stSwitchTab(tabId){
 
 // LIST ULP & PENYULANG
 function _stLoadListUlp(){
-  google.script.run.withSuccessHandler(function(data){
+  SisiRun.withSuccessHandler(function(data){
     ['st_ulp','stl_ulp','stap_ulp','stgs_ulp','stvcc_ulp'].forEach(function(id){
       var sel = _stEl(id); if(!sel) return;
       sel.innerHTML = '<option value="">Semua ULP</option>';
@@ -1102,7 +1102,7 @@ function _stLoadListUlp(){
 }
 function _stLoadListPenyulang(ulp){
   var ulpParam = _stIsSuperAdmin ? (ulp||'') : (_stSession.ulp||'');
-  google.script.run.withSuccessHandler(function(data){
+  SisiRun.withSuccessHandler(function(data){
     var sel = _stEl('st_penyulang'); if(!sel) return;
     sel.innerHTML = '<option value="">Semua Penyulang</option>';
     (data||[]).forEach(function(p){ sel.innerHTML += '<option value="'+p+'">'+p+'</option>'; });
@@ -1151,7 +1151,7 @@ function _stLoadPenugasan(){
     statusList: statusList
   };
   _stEl('stBodyPenugasan').innerHTML = _stLoadingRow(9);
-  google.script.run
+  SisiRun
     .withSuccessHandler(_stRenderPenugasan)
     .withFailureHandler(function(err){ _stShowError('stBodyPenugasan', 9, err); })
     .getMonitoringTlTemuan(params);
@@ -1226,7 +1226,7 @@ function _stC4aUlp(){
 function _stLoadC4aPenyulang(){
   var sel = _stEl('stl_c4a_peny'); if(!sel) return;
   sel.innerHTML = '<option value="">- Memuat... -</option>';
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       var list = (res && res.list) ? res.list : [];
       sel.innerHTML = '<option value="">- Pilih Penyulang -</option>'
@@ -1239,7 +1239,7 @@ function _stLoadC4aPenyulang(){
 function _stLoadC4aTim(){
   var sel = _stEl('stl_c4a_eksekusi'); if(!sel) return;
   sel.innerHTML = '<option value="">- Memuat... -</option>';
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(list){
       sel.innerHTML = '<option value="">- Pilih Tim -</option>';
       (list||[]).forEach(function(t){
@@ -1312,7 +1312,7 @@ function _stMuatGangguan(silent){
   var list = _stEl('stGgnList'), sum = _stEl('stGgnSum');
   if(sum) sum.innerHTML = '';
   if(list) list.innerHTML = '<div class="st-ggn-empty"><i class="fa-solid fa-spinner fa-spin"></i> Memuat gangguan...</div>';
-  google.script.run
+  SisiRun
     .withSuccessHandler(_stRenderGangguan)
     .withFailureHandler(function(err){
       if(list) list.innerHTML = '<div class="st-ggn-empty">Gagal memuat: ' + ((err && err.message) || err) + '</div>';
@@ -1399,7 +1399,7 @@ function _stBuatLaporanUP3(){
   if(resBox) resBox.style.display = 'block';
   if(_stEl('stUp3Text')) _stEl('stUp3Text').textContent = 'Menyimpan & membuat laporan...';
 
-  google.script.run
+  SisiRun
     .withSuccessHandler(_stRenderLaporanHarian)
     .withFailureHandler(function(err){
       if(_stEl('stUp3Text')) _stEl('stUp3Text').textContent = '';
@@ -1491,7 +1491,7 @@ function _stBuatLaporanWilayah(){
   if(foot) foot.style.display = 'none';
   if(resBox) resBox.style.display = 'block';
   if(_stEl('stWilText')) _stEl('stWilText').textContent = 'Menyimpan & membuat laporan...';
-  google.script.run
+  SisiRun
     .withSuccessHandler(_stRenderLaporanHarian)
     .withFailureHandler(function(err){
       if(_stEl('stWilText')) _stEl('stWilText').textContent = '';
@@ -1557,7 +1557,7 @@ function _stLoadLaporanHarianRow(){
   var tgl = _stEl('stl_tanggal') ? _stEl('stl_tanggal').value : '';
   if(!tgl) return;
   var ulp = _stIsSuperAdmin ? (_stEl('stl_ulp') ? _stEl('stl_ulp').value : '') : (_stSession.ulp || '');
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       if(!res || !res.ok) return;
       _stLapEditable = !!res.editable;
@@ -1625,7 +1625,7 @@ function _stLoadApprovalP0(){
   var status = _stEl('stap_status') ? _stEl('stap_status').value : '';
   var body = _stEl('stApBody');
   if(body) body.innerHTML = _stLoadingRow(11);
-  google.script.run
+  SisiRun
     .withSuccessHandler(_stRenderApprovalP0)
     .withFailureHandler(function(err){ _stShowError('stApBody', 11, err); })
     .getApprovalP0List({ tanggal: tgl, ulp: ulp, status: status });
@@ -1706,7 +1706,7 @@ function _stApBukaLampiran(kodeP0){
   var body = _stEl('stApLampiranBody');
   if(body) body.innerHTML = '<div class="ti-det-loading"><i class="fa-solid fa-spinner fa-spin"></i> Memuat lampiran...</div>';
   m.classList.add('show');
-  google.script.run
+  SisiRun
     .withSuccessHandler(_stApRenderLampiran)
     .withFailureHandler(function(err){
       if(body) body.innerHTML = '<div class="ti-det-err">Gagal memuat lampiran: ' + ((err && err.message) || err) + '</div>';
@@ -1816,7 +1816,7 @@ function _stApRenderLampiran(res){
   body.innerHTML = html;
 }
 // ===== SPINNER + KUNCI TOMBOL saat proses Approve/Reject (12 Agu 2026) =====
-// Selama google.script.run berjalan: tombol yang diklik berganti spinner "Memproses..."
+// Selama SisiRun berjalan: tombol yang diklik berganti spinner "Memproses..."
 // dan SEMUA tombol di modal detail & modal reject ikut ter-disable (anti double-klik).
 var _stApBusyBtn = null;
 function _stApBusyStart(btn){
@@ -1888,7 +1888,7 @@ function _stApSet(kodeP0, keputusan, alasan, btn){
   if(!kodeP0) return;
   if(_stApBusyBtn) return;   // sedang ada proses approve/reject lain — abaikan klik ganda
   _stApBusyStart(btn);
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       _stApBusyEnd();
       if(!res || !res.ok){ _stToast((res && res.error) || 'Gagal menyimpan keputusan.', 'error'); return; }
@@ -1928,7 +1928,7 @@ function _stApBukaEdit(kodeP0){
     sel.innerHTML = html;
   };
   if(_stApListPekerjaan){ isi(_stApListPekerjaan); return; }
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       if(res && res.ok){ _stApListPekerjaan = res.list || []; isi(_stApListPekerjaan); }
       else if(sel) sel.innerHTML = '<option value="">Gagal memuat daftar</option>';
@@ -1949,7 +1949,7 @@ function _stApSubmitEdit(btn){
   var kodeP0 = m.dataset.kodeP0 || '';
   if(_stApBusyBtn) return;   // sedang ada proses lain — abaikan klik ganda
   _stApBusyStart(btn);
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       _stApBusyEnd();
       if(!res || !res.ok){ _stToast((res && res.error) || 'Gagal menyimpan perubahan.', 'error'); return; }
@@ -2046,7 +2046,7 @@ function _stBukaDetail(kodePekerjaan){
     _stEl('stInputCatatanSpv').value = r.catatanSpv || '';
     var sel = _stEl('stSelectTim');
     sel.innerHTML = '<option value="">-- Pilih Tim --</option>';
-    google.script.run.withSuccessHandler(function(data){
+    SisiRun.withSuccessHandler(function(data){
       (data||[]).forEach(function(t){ sel.innerHTML += '<option value="'+t.namaTim+'">'+t.namaTim+'</option>'; });
     }).getListTimByUlp(_stIsSuperAdmin ? (r.ulp||'') : (_stSession.ulp||''));
   }
@@ -2120,7 +2120,7 @@ function _stSimpanPilihTim(){
   var btn = _stEl('stBtnSimpanTim');
   btn.disabled  = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(){
       _stTutupDetail();
       btn.disabled  = false;
@@ -2163,7 +2163,7 @@ function _stLoadGaspol(){
   var ulp  = _stGsUlp();
   _stGsSetCariLoading(true);
   body.innerHTML = '<tr><td colspan="38"><div class="loading-wrap"><i class="fa-solid fa-spinner fa-spin"></i> Memuat data...</div></td></tr>';
-  google.script.run
+  SisiRun
     .withSuccessHandler(_stRenderGaspol)
     .withFailureHandler(function(err){ _stGsSetCariLoading(false); _stShowError('stGsBody', 38, err); })
     .getGaspolRekap({ tglDari: dari, tglSampai: sd, ulp: ulp });
@@ -2225,7 +2225,7 @@ function _stSimpanGaspol(){
   if(dari > sd){ _stToast('Tgl Dari tidak boleh melebihi Tgl Sampai.', 'error'); return; }
   var btn = document.querySelector('#stGsModal .ins-btn-simpan');
   if(btn){ btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim...'; }
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       if(btn){ btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Kirim ke GASPOL'; }
       if(!res || !res.ok){ _stToast((res && res.error) || 'Gagal mengirim ke GASPOL.', 'error'); return; }
@@ -2254,7 +2254,7 @@ function _stLoadVcc(sinkron){
   }
   var periode = _stEl('stvcc_periode') ? _stEl('stvcc_periode').value : '';
   body.innerHTML = _stLoadingRow(7);
-  google.script.run
+  SisiRun
     .withSuccessHandler(_stRenderVcc)
     .withFailureHandler(function(err){ _stShowError('stVccBody', 7, err); })
     .getVccYandalList({ periode: periode, ulp: _stVccUlp(), sinkron: (sinkron === true) });
@@ -2312,7 +2312,7 @@ function _stVccSimpan(){
   if(p >= 100 && !tanggal){ _stToast('Persentase 100% wajib disertai tanggal pencapaian.', 'error'); return; }
   var btn = _stEl('stVccBtnSimpan');
   btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Simpan';
       if(!res || !res.ok){ _stToast((res && res.error) || 'Gagal menyimpan pencapaian VCC.', 'error'); return; }
@@ -2432,7 +2432,7 @@ function _stShowError(bodyId, cols, err){
   }
 
   function tiLoadUlp(){
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(list){
         var sel = _el('tiUlp');
         sel.innerHTML = '<option value="">Semua ULP</option>';
@@ -2449,7 +2449,7 @@ function _stShowError(bodyId, cols, err){
     if(!sel) return;
     sel.disabled = true;
     sel.innerHTML = '<option value="">Memuat penyulang...</option>';
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(res){
         var list = (res && res.list) ? res.list : [];
         sel.innerHTML = '<option value="">Semua Penyulang</option>'
@@ -2478,7 +2478,7 @@ function _stShowError(bodyId, cols, err){
     if(!tglDari && !tglSampai){ _toast('Atur rentang tanggal dulu.', 'error'); return; }
     if(tglDari && tglSampai && tglDari > tglSampai){ _toast('Tgl Dari tidak boleh melebihi Tgl Sampai.', 'error'); return; }
     box.innerHTML = '<div class="ti-loading"><i class="fa-solid fa-spinner fa-spin"></i> Memuat temuan...</div>';
-    google.script.run
+    SisiRun
       .withSuccessHandler(tiRender)
       .withFailureHandler(function(err){
         box.innerHTML = '<div class="ti-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>' + _esc((err && err.message) || err) + '</p></div>';
@@ -2641,7 +2641,7 @@ function _stShowError(bodyId, cols, err){
     }
     wrap.style.display = 'block';
     wrap.innerHTML = '<div class="ti-det-loading"><i class="fa-solid fa-spinner fa-spin"></i> Memuat detail...</div>';
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(res){
         if(!res || !res.ok){ wrap.innerHTML = '<div class="ti-det-err">' + _esc((res && res.error) || 'Gagal memuat detail') + '</div>'; return; }
         wrap.innerHTML = _tiBuildFull(res.data);
@@ -2711,7 +2711,7 @@ function _stShowError(bodyId, cols, err){
     var ulp = TI.isSuper ? (_el('tiUlp').value || '') : TI.ulp;
     var sel = _el('tifPenyulang');
     sel.innerHTML = '<option value="">- Memuat... -</option>';
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(res){
         TI.penyCache = (res && res.list) ? res.list : [];
         sel.innerHTML = '<option value="">- Pilih Penyulang -</option>';
@@ -2729,7 +2729,7 @@ function _stShowError(bodyId, cols, err){
     var found = TI.penyCache.filter(function(p){ return p.nama === nama; })[0];
     var def = found ? (found.section || '') : '';
     sel.innerHTML = '<option value="">- Memuat... -</option>';
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(res){
         var list = (res && res.list) ? res.list.slice() : [];
         if(def && list.indexOf(def) === -1) list.unshift(def);
@@ -2749,7 +2749,7 @@ function _stShowError(bodyId, cols, err){
     var sel = _el('tifTemuan');
     if(!objek){ sel.innerHTML = '<option value="">- Pilih Objek Inspeksi dulu -</option>'; return; }
     sel.innerHTML = '<option value="">- Memuat... -</option>';
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(res){
         sel.innerHTML = '<option value="">- Pilih Temuan -</option>';
         ((res && res.list) ? res.list : []).forEach(function(n){ sel.innerHTML += '<option value="' + _attr(n) + '">' + _esc(n) + '</option>'; });
@@ -2827,7 +2827,7 @@ function _stShowError(bodyId, cols, err){
           fotoTemuanB64: foTem ? foTem.b64 : '', fotoTemuanMime: foTem ? foTem.mime : '',
           fotoTiangB64:  foTia ? foTia.b64 : '', fotoTiangMime:  foTia ? foTia.mime : ''
         };
-        google.script.run
+        SisiRun
           .withSuccessHandler(function(res){
             btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Simpan Temuan';
             if(res && res.ok){
@@ -2857,7 +2857,7 @@ function _stShowError(bodyId, cols, err){
     var sel = _el('tiFwdTim');
     sel.innerHTML = '<option value="">- Memuat... -</option>';
     var ulp = TI.isSuper ? (_el('tiUlp').value || '') : TI.ulp;
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(list){
         sel.innerHTML = '<option value="">- Pilih Tim -</option>';
         (list || []).forEach(function(t){
@@ -2877,7 +2877,7 @@ function _stShowError(bodyId, cols, err){
     var btn = _el('tiFwdBtn');
     btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
     var s = _sesi();
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(){
         btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Teruskan';
         tiTutupForward();
@@ -2992,17 +2992,17 @@ function _stShowError(bodyId, cols, err){
 function _stJpIsSuper(){ return String((_stSession&&_stSession.role)||'').trim()==='Super User'; }
 function _stJpLoad(){
   var p={tglDari:_stEl('stjp_dari').value,tglSampai:_stEl('stjp_sampai').value,ulp:_stJpIsSuper()?(_stEl('stjp_ulp').value):(_stSession.ulp||''),penyulang:_stEl('stjp_peny').value,section:_stEl('stjp_section').value};
-  google.script.run.withSuccessHandler(function(r){var b=_stEl('stJpBody');if(!r||!r.ok){b.innerHTML='<tr><td colspan="19">Gagal memuat jadwal padam.</td></tr>';return;}var a=r.rows||[];b.innerHTML=a.length?a.map(function(x){return '<tr><td>'+_stEsc(x.no)+'</td><td><code>'+_stEsc(x.kode)+'</code></td><td>'+_stEsc(x.ulp)+'</td><td>'+_stEsc(x.up3)+'</td><td>'+_stEsc(x.gi)+'</td><td>'+_stEsc(x.penyulang)+'</td><td>'+_stEsc(x.section)+'</td><td>'+_stEsc(x.jenis)+'</td><td>'+_stEsc(x.tanggal)+'</td><td>'+_stEsc(x.jamPadam)+'</td><td>'+_stEsc(x.jamNyala)+'</td><td>'+_stEsc(x.durasi)+'</td><td>'+_stEsc(x.bebanMw)+'</td><td>'+_stEsc(x.arus)+'</td><td>'+_stEsc(x.jumlahGardu)+'</td><td>'+_stEsc(x.jumlahPelanggan)+'</td><td>'+_stEsc(x.daerah)+'</td><td>'+_stEsc(x.vip)+'</td><td>'+_stEsc(x.status)+'</td></tr>';}).join(''):'<tr><td colspan="19"><div class="empty-state">Tidak ada jadwal padam.</div></td></tr>';}).getJadwalPadamList(p);}
+  SisiRun.withSuccessHandler(function(r){var b=_stEl('stJpBody');if(!r||!r.ok){b.innerHTML='<tr><td colspan="19">Gagal memuat jadwal padam.</td></tr>';return;}var a=r.rows||[];b.innerHTML=a.length?a.map(function(x){return '<tr><td>'+_stEsc(x.no)+'</td><td><code>'+_stEsc(x.kode)+'</code></td><td>'+_stEsc(x.ulp)+'</td><td>'+_stEsc(x.up3)+'</td><td>'+_stEsc(x.gi)+'</td><td>'+_stEsc(x.penyulang)+'</td><td>'+_stEsc(x.section)+'</td><td>'+_stEsc(x.jenis)+'</td><td>'+_stEsc(x.tanggal)+'</td><td>'+_stEsc(x.jamPadam)+'</td><td>'+_stEsc(x.jamNyala)+'</td><td>'+_stEsc(x.durasi)+'</td><td>'+_stEsc(x.bebanMw)+'</td><td>'+_stEsc(x.arus)+'</td><td>'+_stEsc(x.jumlahGardu)+'</td><td>'+_stEsc(x.jumlahPelanggan)+'</td><td>'+_stEsc(x.daerah)+'</td><td>'+_stEsc(x.vip)+'</td><td>'+_stEsc(x.status)+'</td></tr>';}).join(''):'<tr><td colspan="19"><div class="empty-state">Tidak ada jadwal padam.</div></td></tr>';}).getJadwalPadamList(p);}
 function _stJpReset(){['stjp_dari','stjp_sampai'].forEach(function(id){_stEl(id).value='';});['stjp_ulp','stjp_peny','stjp_section'].forEach(function(id){_stEl(id).selectedIndex=0;});_stJpLoad();}
 function _stJpInit(){
   var now=new Date(),iso=now.toISOString().slice(0,10),first=new Date(now.getFullYear(),now.getMonth(),1).toISOString().slice(0,10);
   _stEl('stjp_dari').value=first;_stEl('stjp_sampai').value=iso;
   _stEl('stjpWrapUlp').style.display=_stJpIsSuper()?'flex':'none';
-  google.script.run.withSuccessHandler(function(r){var ps={},ss={};(r.rows||[]).forEach(function(x){var pk=x.penyulang;ps[pk]=1;(ss[pk]||(ss[pk]=[])).push(x.section);});var p=_stEl('stjp_peny');Object.keys(ps).sort().forEach(function(x){p.innerHTML+='<option value="'+_stEsc(x)+'">'+_stEsc(x)+'</option>';});p.onchange=function(){var q=_stEl('stjp_section');q.innerHTML='<option value="">Semua Section</option>';(ss[p.value]||[]).filter(function(x,i,a){return a.indexOf(x)===i;}).forEach(function(x){q.innerHTML+='<option value="'+_stEsc(x)+'">'+_stEsc(x)+'</option>';});};}).getJadwalPadamMaster({ulp:_stJpIsSuper()?'':(_stSession.ulp||'')});
+  SisiRun.withSuccessHandler(function(r){var ps={},ss={};(r.rows||[]).forEach(function(x){var pk=x.penyulang;ps[pk]=1;(ss[pk]||(ss[pk]=[])).push(x.section);});var p=_stEl('stjp_peny');Object.keys(ps).sort().forEach(function(x){p.innerHTML+='<option value="'+_stEsc(x)+'">'+_stEsc(x)+'</option>';});p.onchange=function(){var q=_stEl('stjp_section');q.innerHTML='<option value="">Semua Section</option>';(ss[p.value]||[]).filter(function(x,i,a){return a.indexOf(x)===i;}).forEach(function(x){q.innerHTML+='<option value="'+_stEsc(x)+'">'+_stEsc(x)+'</option>';});};}).getJadwalPadamMaster({ulp:_stJpIsSuper()?'':(_stSession.ulp||'')});
   if(_stJpIsSuper()) _stLoadListUlpJp();
   _stJpLoad();
 }
-function _stLoadListUlpJp(){google.script.run.withSuccessHandler(function(a){var s=_stEl('stjp_ulp');(a||[]).forEach(function(x){s.innerHTML+='<option value="'+_stEsc(x)+'">'+_stEsc(x)+'</option>';});}).getListUlpIns();}
+function _stLoadListUlpJp(){SisiRun.withSuccessHandler(function(a){var s=_stEl('stjp_ulp');(a||[]).forEach(function(x){s.innerHTML+='<option value="'+_stEsc(x)+'">'+_stEsc(x)+'</option>';});}).getListUlpIns();}
 function _stEsc(x){return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 </script>
 

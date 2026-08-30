@@ -742,7 +742,7 @@
       if(wrap) wrap.style.display = 'flex';
       var hiWrap = _el('hiUlpWrap');
       if(hiWrap) hiWrap.style.display = 'flex';
-      google.script.run
+      SisiRun
         .withSuccessHandler(function(res){
           if(!res || !res.ok) return;
           (res.list||[]).forEach(function(u){
@@ -762,7 +762,7 @@
     var modal = _el('pgrModal');
     if(modal){ modal.addEventListener('click', function(e){ if(e.target===modal) window.pgrCloseEdit(); }); }
     // Isi dropdown Penyulang (Update HI) + peta Section per Penyulang dari db_Penyulang.
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(res){
         if(!res || !res.ok) return;
         window._hiSectionMap = res.sectionByPenyulang || {};
@@ -784,7 +784,7 @@
     var hasil = _el('pgrHasil');
     hasil.innerHTML = '<div class="pgr-state"><i class="fa-solid fa-spinner fa-spin"></i>Mencari data…</div>';
     var info = _el('pgrInfo'); if(info) info.style.display='none';
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(res){
         if(!res || !res.ok){ hasil.innerHTML='<div class="pgr-state" style="color:var(--danger)"><i class="fa-solid fa-circle-exclamation"></i>'+_esc((res&&res.message)||'Gagal mencari data')+'</div>'; return; }
         _renderPgr(res);
@@ -844,7 +844,7 @@
     var body=_el('hiBody'); if(body) body.style.display='none';
     var ab0=_el('hiActionbar'); if(ab0) ab0.style.display='none';
     _hiOverlay(true, 'Mencari data…');
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(res){
         _hiOverlay(false);
         if(!res || !res.ok){ _hiErr(_hiEsc((res&&res.message)||'Gagal mencari data')); var pa=_el('hiPlaceholder'); if(pa) pa.style.display=''; return; }
@@ -1029,7 +1029,7 @@
     if(!Object.keys(mg).length && !Object.keys(sf).length && !Object.keys(it).length){ _hiToast('Tidak ada field untuk disimpan','warning'); return; }
     _hiErr('');
     _hiOverlay(true, 'Menyimpan data…');
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(res){
         _hiOverlay(false);
         if(!res || !res.ok){ _hiToast((res&&res.message)||'Gagal menyimpan','error'); _hiErr(_hiEsc((res&&res.message)||'Gagal menyimpan')); return; }
@@ -1092,7 +1092,7 @@
     };
     var btn=_el('pgrEdSave');
     if(btn){ btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan…'; }
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(res){
         if(btn){ btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-floppy-disk"></i> Simpan'; }
         if(!res || !res.ok){ _toast((res&&res.message)||'Gagal menyimpan data','error'); return; }

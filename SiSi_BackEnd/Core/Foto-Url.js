@@ -60,18 +60,17 @@ function urlFotoUkuran_(nilai, lebar) {
   return baku + "&sz=w" + Math.round(w);
 }
 
-/** Pastikan file bisa dibaca mobile/web app tanpa login Google. */
-function publikasikanFoto_(fileOrId) {
-  try {
-    var file =
-      typeof fileOrId === "string" ? DriveApp.getFileById(fileOrId) : fileOrId;
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    return true;
-  } catch (e) {
-    Logger.log("publikasikanFoto_ gagal: " + e.message);
-    return false;
-  }
-}
+/* Dihapus 29 Agu 2026: publikasikanFoto_().
+   Fungsi itu menerima File ID dari klien lalu setSharing(ANYONE_WITH_LINK) atas
+   nama owner (executeAs: USER_DEPLOYING). Karena web app memakai
+   access: ANYONE_ANONYMOUS, siapa pun di internet bisa memakainya untuk
+   mempublikasikan berkas APA PUN di Drive owner — bukan hanya foto yang
+   memang sengaja dibagikan. Tidak memiliki satu pun pemanggil di JS, HTML,
+   maupun Flutter, jadi dihapus, bukan diperbaiki.
+   Berbagi foto yang disengaja tidak berubah: tetap ANYONE_WITH_LINK di
+   Code.js (foto eksekusi), Tek-Temuan-Code.js (foto temuan), Tek-ROW-Code.js
+   (thumbnail), dan Tek-Yandal-Code.js (watermark) — dibutuhkan AppSheet
+   untuk merender gambar. */
 
 /**
  * Normalisasi bertahap kolom URL ROW (S/U/W).

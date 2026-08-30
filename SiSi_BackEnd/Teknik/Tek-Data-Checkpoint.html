@@ -323,7 +323,7 @@
   function dpgBoot(){
     var s=_sesi();
     if((!s || !s.role) && typeof google!=='undefined'){
-      google.script.run.withSuccessHandler(function(u){ DPG.sesi=u||{}; _dpgAfterSesi(); }).withFailureHandler(_dpgAfterSesi).getSessionUser();
+      SisiRun.withSuccessHandler(function(u){ DPG.sesi=u||{}; _dpgAfterSesi(); }).withFailureHandler(_dpgAfterSesi).getSessionUser();
     } else { DPG.sesi=s; _dpgAfterSesi(); }
   }
   function _dpgAfterSesi(){
@@ -340,7 +340,7 @@
     var sel=_el('dpgPenyulang'); if(!sel) return;
     sel.disabled=true; sel.innerHTML='<option value="">Memuat penyulang...</option>';
     if(typeof google==='undefined'){ sel.innerHTML='<option value="">Semua Penyulang</option>'; sel.disabled=false; return; }
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(res){
         var list=(res&&res.list)?res.list:[];
         sel.innerHTML='<option value="">Semua Penyulang</option>'+list.map(function(p){ var nm=(p&&p.nama!=null)?p.nama:p; return '<option value="'+nm+'">'+nm+'</option>'; }).join('');
@@ -354,7 +354,7 @@
     var sel=_el('dpgSection'); if(!sel) return;
     if(typeof google==='undefined'){ sel.innerHTML='<option value="">Semua Section</option>'; return; }
     var cur=sel.value;
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(res){
         var list=(res&&res.list)?res.list:[];
         sel.innerHTML='<option value="">Semua Section</option>'+list.map(function(s){ return '<option value="'+_esc(s)+'">'+_esc(s)+'</option>'; }).join('');
@@ -397,7 +397,7 @@
     var wrap=_el('dpgHarWrap');
     wrap.innerHTML='<div class="dpg-loading"><i class="fa-solid fa-spinner fa-spin"></i><p>Memuat rekap...</p></div>';
     if(typeof google==='undefined'){ dpgRenderHar({ ok:true, tahun:tahun, data:{}, totalPerKriteria:{} }); return; }
-    google.script.run
+    SisiRun
       .withSuccessHandler(dpgRenderHar)
       .withFailureHandler(function(err){ wrap.innerHTML='<div class="dpg-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>'+((err&&err.message)||err)+'</p></div>'; })
       .getDpgHarMatrix({ penyulang:penyulang, tahun:tahun, ulp:ulp, section:section });
@@ -442,7 +442,7 @@
     var wrap=_el('dpgCoverWrap');
     wrap.innerHTML='<div class="dpg-loading"><i class="fa-solid fa-spinner fa-spin"></i><p>Memuat Cover Gardu...</p></div>';
     if(typeof google==='undefined'){ dpgRenderCover({ ok:true, rows:[], total:0 }); return; }
-    google.script.run
+    SisiRun
       .withSuccessHandler(dpgRenderCover)
       .withFailureHandler(function(err){ wrap.innerHTML='<div class="dpg-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>'+((err&&err.message)||err)+'</p></div>'; })
       .getDpgCoverGardu({ penyulang:penyulang, tahun:tahun, ulp:ulp, section:section });
@@ -571,7 +571,7 @@
     var wrap=_el('dpgGgnWrap');
     wrap.innerHTML='<div class="dpg-loading"><i class="fa-solid fa-spinner fa-spin"></i><p>Memuat gangguan...</p></div>';
     if(typeof google==='undefined'){ dpgRenderGangguan({ ok:true, tahun:tahun, rows:[], total:0, pmt:0, section:0 }); return; }
-    google.script.run
+    SisiRun
       .withSuccessHandler(dpgRenderGangguan)
       .withFailureHandler(function(err){ wrap.innerHTML='<div class="dpg-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>'+((err&&err.message)||err)+'</p></div>'; })
       .getDpgGangguanPenyulang({ penyulang:penyulang, tahun:tahun, ulp:ulp });
@@ -633,7 +633,7 @@
   function dpgLoadGgnCharts(){
     if(typeof google==='undefined') return;
     var p=DPG._ggn||{};
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(res){ DPG._charts=res; _dpgEnsureCharts(dpgDrawCharts); })
       .withFailureHandler(function(){})
       .getDpgGangguanCharts({ penyulang:p.penyulang, tahun:p.tahun, ulp:p.ulp });
@@ -819,7 +819,7 @@
     var wrap=_el('dpgRekapWrap');
     wrap.innerHTML='<div class="dpg-loading"><i class="fa-solid fa-spinner fa-spin"></i><p>Memuat temuan...</p></div>';
     if(typeof google==='undefined'){ dpgRenderRekapTemuan({ ok:true, tahun:tahun, rows:[], total:0 }); return; }
-    google.script.run
+    SisiRun
       .withSuccessHandler(dpgRenderRekapTemuan)
       .withFailureHandler(function(err){ wrap.innerHTML='<div class="dpg-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>'+((err&&err.message)||err)+'</p></div>'; })
       .getDpgRekapTemuan({ penyulang:penyulang, tahun:tahun, ulp:ulp, section:section });
@@ -827,7 +827,7 @@
   function dpgLoadRekapTemuanList(){
     var sel=_el('dpgRekapTemuan');
     if(!sel || sel.getAttribute('data-loaded')==='1' || typeof google==='undefined') return;
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(res){
         var list=(res&&res.list)?res.list:[];
         var cur=sel.value;

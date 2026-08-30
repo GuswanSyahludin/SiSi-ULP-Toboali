@@ -115,9 +115,12 @@ function _devTerbitkanSesi_(dasar) {
   sesi.loginAt = new Date().toISOString();
   var ttl = _devTtl_();
   CacheService.getScriptCache().put("sesi_" + token, JSON.stringify(sesi), ttl);
-  try {
-    CacheService.getUserCache().put("userToken", token, ttl);
-  } catch (e) {}
+  /* DIHAPUS 29 Agu 2026 (K1 — session confusion):
+     CacheService.getUserCache().put("userToken", ...).
+     Di bawah executeAs: USER_DEPLOYING + access: ANYONE_ANONYMOUS, getUserCache
+     di-scope ke PEMILIK SCRIPT, bukan per pengguna — jadi dipakai bersama semua
+     pengunjung anonim dan bisa menyerahkan token pengguna lain.
+     Token dikembalikan ke klien dan dikirim balik eksplisit di setiap request. */
   return sesi;
 }
 function _devPangkas_(username) {
@@ -145,10 +148,15 @@ function loginPerangkat(username, password, perangkat) {
     password = String(password || "");
     if (!username || !password)
       return { success: false, message: "Username dan password wajib diisi" };
+    /* Verifikasi terpadu (29 Agu 2026): throttle + dual-read hash/plaintext +
+       upgrade hash otomatis, sama persis dengan jalur doLogin. Sebelumnya
+       `if (pw !== password)` — plaintext dan tanpa pembatasan percobaan. */
+    var v = verifikasiLogin_(username, password);
+    if (!v.boleh) return { success: false, message: v.pesan };
+
     var r = _devCariBaris_(username);
     if (!r) return { success: false, message: "Username tidak ditemukan" };
     var pw = String(r[COL_USERS.password] || "").trim();
-    if (pw !== password) return { success: false, message: "Password salah" };
 
     var deviceToken = Utilities.getUuid().replace(/-/g, "");
     var now = Date.now(),
@@ -236,7 +244,10 @@ function logoutPerangkat(deviceToken, token) {
 
 function daftarPerangkat(token) {
   try {
-    if (typeof _assertSuperUser === "function") _assertSuperUser(token);
+    /* FAIL-CLOSED. Pola lama `if (typeof _assertSuperUser === "function")` akan
+       melewatkan pemeriksaan bila Code.js gagal dimuat, padahal fungsi ini
+       mengembalikan deviceToken semua pengguna. */
+    _assertSuperUserKetat_(token);
     var semua = _devSemua_(),
       out = [];
     for (var i = 0; i < semua.length; i++)
@@ -262,7 +273,8 @@ function daftarPerangkat(token) {
 
 function cabutPerangkat(token, deviceToken, username) {
   try {
-    if (typeof _assertSuperUser === "function") _assertSuperUser(token);
+    /* FAIL-CLOSED — lihat catatan di daftarPerangkat(). */
+    _assertSuperUserKetat_(token);
     deviceToken = String(deviceToken || "").trim();
     username = String(username || "").trim();
     if (deviceToken) {

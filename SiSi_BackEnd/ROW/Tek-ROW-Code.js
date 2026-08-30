@@ -194,6 +194,12 @@ function getFotoROW(nomorBaris) {
 
 /* ═══ DATA ROW — SIMPAN (input langsung) ═══ */
 function simpanDataROW(payload) {
+  /* OTENTIKASI + SKOP ULP (29 Agu 2026).
+     Sebelumnya: token bersifat OPSIONAL, dan `payload.ulp` yang dikirim klien
+     SELALU mengalahkan ULP sesi (`var ulp = payload.ulp || ''` — tanpa token
+     pun proses tetap berjalan). Jadi siapa pun bisa menulis eksekusi ROW atas
+     nama ULP mana pun, bahkan tanpa login. */
+  var gAks = guard_(arguments, { ulp: true, aksi: 'simpanDataROW' });
   try {
     if (!payload) return { success: false, message: 'Payload kosong' };
 
@@ -201,11 +207,9 @@ function simpanDataROW(payload) {
     var sh = ss.getSheetByName('db_ROW_Eksekusi');
     if (!sh) return { success: false, message: 'Sheet db_ROW_Eksekusi tidak ditemukan' };
 
-    var ulp = payload.ulp || '';
-    if (!ulp && payload.token) {
-      var sesi = getSesiByToken(payload.token);
-      if (sesi) ulp = sesi.ulp || '';
-    }
+    /* ULP dari SESI. payload.ulp hanya dihormati untuk Super User. */
+    var ulp = ulpScope_(gAks, payload.ulp) || String(gAks.ulp || '').trim();
+    if (!ulp) return { success: false, message: 'Akun belum terhubung ke ULP.' };
 
     var now     = new Date();
     var tz      = Session.getScriptTimeZone();
@@ -264,13 +268,16 @@ function simpanDataROW(payload) {
     baris[COL_ROW.ulp]            = ulp;
     baris[COL_ROW.hari]           = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'][tanggal.getDay()];
     baris[COL_ROW.tanggal]        = tanggal;
-    baris[COL_ROW.tim]            = String(payload.tim || '');
-    baris[COL_ROW.penyulang]      = String(payload.penyulang || '');
-    baris[COL_ROW.section]        = String(payload.section || '');
-    baris[COL_ROW.nomorTiang]     = String(payload.nomorTiang || '');
+    /* Teks bebas dari pengguna -> lindungi dari formula injection.
+       Kolom-kolom ini tampil di rekap, WA, dan PDF ekspor. */
+    baris[COL_ROW.tim]            = safeCell_(String(payload.tim || ''));
+    baris[COL_ROW.penyulang]      = safeCell_(String(payload.penyulang || ''));
+    baris[COL_ROW.section]        = safeCell_(String(payload.section || ''));
+    baris[COL_ROW.nomorTiang]     = safeCell_(String(payload.nomorTiang || ''));
     baris[COL_ROW.diameter]       = Number(payload.diameter) || 0;
-    baris[COL_ROW.jenisPekerjaan] = String(payload.jenis || '');
-    baris[COL_ROW.inputOleh]      = String(payload.inputOleh || payload.tim || '');
+    baris[COL_ROW.jenisPekerjaan] = safeCell_(String(payload.jenis || ''));
+    /* Pencatat diambil dari SESI, bukan payload.inputOleh yang dikirim klien. */
+    baris[COL_ROW.inputOleh]      = String(gAks.username || '');
     baris[COL_ROW.timestamp]      = now;
     // Koordinat & foto tidak wajib pada input langsung (boleh diisi via AppSheet/tombol).
 
@@ -1315,6 +1322,11 @@ function _folderRowEksekusiPath(tanggal, kodePekerjaan){
 // payload: { kodePekerjaan, timPelaksana, catatanSpv, diameter, jenis, tglSelesai, username,
 //            fotoPekerjaanB64, fotoPekerjaanMime, fotoSesudahB64, fotoSesudahMime }
 function simpanTeruskanROW(payload){
+  /* OTENTIKASI + PEMILIKAN (29 Agu 2026).
+     Sebelumnya NOL pemeriksaan: kodePekerjaan diterima dari klien, lalu fungsi
+     ini menulis db_INS_Temuan, membuat baris db_ROW_Eksekusi, dan MENGUNGGAH
+     FOTO ke Drive — semua bisa dilakukan siapa pun tanpa login. */
+  var gAks = guard_(arguments, { ulp: true, aksi: 'simpanTeruskanROW' });
   try{
     payload = payload || {};
     var kodePekerjaan = String(payload.kodePekerjaan || '').trim();
@@ -1328,6 +1340,10 @@ function simpanTeruskanROW(payload){
     var loc = _findRowTemuan(kodePekerjaan);
     if(!loc) return { ok:false, message:'Temuan tidak ditemukan: ' + kodePekerjaan };
     var rowVals = loc.sheet.getRange(loc.row, 1, 1, loc.sheet.getLastColumn()).getValues()[0];
+    if(!barisUlpCocok_(gAks, rowVals[T.ulp])){
+      audit_(gAks.sesi, 'simpanTeruskanROW', kodePekerjaan, 'TOLAK', 'temuan milik ULP lain');
+      return { ok:false, message:'Temuan bukan milik ULP Anda.' };
+    }
 
     var ulp           = String(rowVals[T.ulp]           || '').trim();
     var penyulang     = String(rowVals[T.penyulang]     || '').trim();
@@ -1336,9 +1352,10 @@ function simpanTeruskanROW(payload){
     var fotoTemuanUrl = String(rowVals[T.fotoTemuanUrl] || '').trim();
 
     var diameter   = Number(payload.diameter) || 0;
-    var jenis      = String(payload.jenis || '').trim() || _jenisPekerjaan(diameter);
+    var jenis      = safeCell_(String(payload.jenis || '').trim() || _jenisPekerjaan(diameter));
     var tglSelesai = _normTgl(payload.tglSelesai || new Date());
-    var username   = String(payload.username || '').trim();
+    /* Pencatat dari SESI — bukan payload.username yang dikirim klien. */
+    var username   = String(gAks.username || '').trim();
     var now        = new Date();
 
     // Upload foto (pola foto temuan -> Drive, ANYONE_WITH_LINK)

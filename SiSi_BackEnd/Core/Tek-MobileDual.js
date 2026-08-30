@@ -18,6 +18,11 @@
    tanggal filter ≤ H-2 → dibaca dari ARSIP (helper sudah fallback AKTIF bila kosong).
    Tanggal > H-2 / tanpa tanggal → diteruskan ke fungsi asli apa adanya. */
 function getApprovalP0ListDual_(params) {
+  /* OTENTIKASI + SKOP ULP (29 Agu 2026).
+     Sebelumnya fungsi ini tidak memeriksa apa pun: params.ulp dipakai
+     mentah dari klien, dan tanpa params.ulp seluruh P0 semua ULP dikembalikan
+     lengkap dengan tiga URL foto, koordinat, dan catatan. */
+  var g = guard_(arguments, { ulp: true, aksi: "getApprovalP0ListDual_" });
   try {
     params = params || {};
     if (typeof getApprovalP0List !== "function")
@@ -36,7 +41,9 @@ function getApprovalP0ListDual_(params) {
 
     // Tanggal lama (≤ H-2): db_Yandal_P0 sudah dipindah → baca ARSIP (fallback AKTIF
     // otomatis di dalam helper). Badge counts tetap dihitung utk filter ulp+tanggal ini.
-    var ulpFilter = String(params.ulp || "").trim();
+    /* ULP yang diminta klien hanya dihormati untuk Super User; semua peran
+       lain, termasuk Admin, dipaksa ke ULP sesi. */
+    var ulpFilter = ulpScope_(g, params.ulp);
     var statusFilter = String(params.status || "Menunggu").trim(); // default: hanya yang menunggu approval
     var counts = { Menunggu: 0, Approved: 0, Rejected: 0 };
     var d = _mobileReadByTanggal_(
@@ -112,6 +119,11 @@ function getApprovalP0ListDual_(params) {
     });
     return { ok: true, list: out, counts: counts };
   } catch (e) {
+    /* JANGAN sembunyikan penolakan akses sebagai "error data" lalu jatuh ke
+       jalur asli — jalur itu bisa saja belum punya pemeriksaan yang sama. */
+    if (_guardErrorAkses_(e)) {
+      return { ok: false, error: e.message };
+    }
     Logger.log("getApprovalP0ListDual_ ERROR (fallback ke jalur asli): " + e);
     try {
       return getApprovalP0List(params);
@@ -126,7 +138,12 @@ function getApprovalP0ListDual_(params) {
    memakai Pola A (fallback): AKTIF → tidak ketemu → ARSIP. Spreadsheet pengukuran
    gardu adalah file TERPISAH yang TIDAK dimigrasi → blok gardu tetap jalur asli. */
 function getLampiranPengecekanP0Dual_(params) {
+  /* OTENTIKASI + SKOP ULP (29 Agu 2026). Sebelumnya tanpa pemeriksaan apa pun:
+     kodeP0 dari klien langsung dipakai untuk mengambil P0 induk, baris
+     switching, dan pengukuran gardu — lintas ULP bebas. */
+  var g = guard_(arguments, { ulp: true, aksi: "getLampiranPengecekanP0Dual_" });
   try {
+    params = params || {};
     var kodeP0 = String((params && params.kodeP0) || "").trim();
     if (!kodeP0) return { ok: false, error: "kodeP0 wajib diisi." };
     if (typeof _mobileReadDualByKey_ !== "function")
@@ -141,6 +158,13 @@ function getLampiranPengecekanP0Dual_(params) {
     );
     if (!rowsP.length)
       return { ok: false, error: "Baris P0 tidak ditemukan: " + kodeP0 };
+    /* PEMILIKAN: P0 harus milik ULP sesi (kecuali Super User). Tanpa ini
+       kodeP0 milik ULP lain tetap terbaca (IDOR). */
+    if (!barisUlpCocok_(g, rp[COL_P0.ulp])) {
+      audit_(g.sesi, "getLampiranPengecekanP0Dual_", kodeP0, "TOLAK",
+        "P0 milik ULP lain");
+      return { ok: false, error: "Data P0 bukan milik ULP Anda." };
+    }
     var rp = rowsP[0];
     var p0 = {
       kodeP0: kodeP0,
@@ -243,6 +267,10 @@ function getLampiranPengecekanP0Dual_(params) {
     }
     return { ok: true, p0: p0, switching: switching, gardu: gardu };
   } catch (e) {
+    /* JANGAN sembunyikan penolakan akses sebagai "error data". */
+    if (_guardErrorAkses_(e)) {
+      return { ok: false, error: e.message };
+    }
     Logger.log(
       "getLampiranPengecekanP0Dual_ ERROR (fallback ke jalur asli): " + e,
     );

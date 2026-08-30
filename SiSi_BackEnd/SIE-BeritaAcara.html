@@ -682,7 +682,7 @@ function baCari(){
     baEl('baBody').innerHTML='<tr><td colspan="10"><div class="ba-empty"><i class="fa-solid fa-inbox"></i>BA tidak ditemukan. Coba ubah kata kunci atau filter, lalu cari lagi.</div></td></tr>';
     if(typeof showToast==='function') showToast('BA tidak ditemukan — pencarian dihentikan.','warning');
   },20000);
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       if(_token!==_baSearchToken) return;
       if(_baSearchTimer){ clearTimeout(_baSearchTimer); _baSearchTimer=null; }
@@ -1035,7 +1035,7 @@ function baDetailMuatPenyulang(penyulang, section){
     baDetailIsiSection(penyulang, section);
   }
   if(_baEditPenyulangLoaded){ apply(); return; }
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       if(res&&res.ok){ _baEditPenyulangList=res.penyulangList||[]; _baEditPenyulangMap=res.sectionByPenyulang||{}; _baEditPenyulangLoaded=true; }
       apply();
@@ -1079,7 +1079,7 @@ function baDetailGeneratePdf(){
   var isSwitching=String(row.jenisPekerjaan||'').trim().toLowerCase().indexOf('switching')>=0;
   var btn=baEl('baDetailGenerate'), labelSemula=btn?btn.innerHTML:'';
   if(btn){ btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Membuat PDF'; }
-  var runnerBA=google.script.run
+  var runnerBA=SisiRun
     .withSuccessHandler(function(res){
       if(btn){ btn.disabled=false; btn.innerHTML=labelSemula; }
       if(!res||!res.ok){ if(typeof showToast==='function') showToast((res&&res.message)||'Gagal membuat PDF','error'); return; }
@@ -1137,7 +1137,7 @@ function baDetailUploadFotoEdit(slot,input){
       if(status){ status.className='ba-photo-status'; status.textContent='Mengunggah foto...'; }
       var reader=new FileReader();
       reader.onload=function(e){
-        google.script.run
+        SisiRun
           .withSuccessHandler(function(res){
             input.disabled=false;
             if(!res||!res.ok){ if(status){ status.className='ba-photo-status error'; status.textContent=(res&&res.message)||'Upload gagal.'; } return; }
@@ -1273,7 +1273,7 @@ function baDetailSimpanEdit(){
   }
   var btn=baEl('baDetailSimpanPerubahan'), labelSemula=btn?btn.innerHTML:'';
   if(btn){ btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan'; }
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       if(btn){ btn.disabled=false; btn.innerHTML=labelSemula; }
       if(!res||!res.ok){ if(typeof showToast==='function') showToast((res&&res.message)||'Gagal menyimpan perubahan','error'); return; }
@@ -1323,7 +1323,7 @@ function baDetailSimpanUpload(){
   if(st){ st.className='ba-photo-status'; st.textContent='Mengunggah berkas BA...'; }
   var reader=new FileReader();
   reader.onload=function(e){
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(res){
         if(sv) sv.innerHTML='<i class="fa-solid fa-floppy-disk"></i> Simpan';
         if(!res||!res.ok){ if(sv) sv.disabled=false; if(st){ st.className='ba-photo-status error'; st.textContent=(res&&res.message)||'Upload gagal'; } if(typeof showToast==='function') showToast((res&&res.message)||'Upload BA gagal','error'); return; }
@@ -1358,7 +1358,7 @@ function baDetailDownload(){
   }
   if(!fileId){ unduhLangsung('https://drive.google.com/uc?export=download&id='+baExtractDriveId(url), ''); return; }
   if(btn){ btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Mengunduh'; }
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       selesai();
       if(!res||!res.ok){
@@ -1415,7 +1415,7 @@ function baUpdateMasterGardu(index){
     _selesai=true; _pulih();
     if(typeof showToast==='function') showToast('Update Master Gardu memakan waktu terlalu lama dan dihentikan. Coba lagi; jika berulang, periksa ukuran/proteksi sheet Master Gardu.','warning');
   },90000);
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       if(_selesai) return;
       _selesai=true; clearTimeout(_timer); _pulih();
@@ -1449,7 +1449,7 @@ function baUploadBa(index){
     if(typeof showToast==='function') showToast('Mengunggah berkas BA...','info');
     var reader=new FileReader();
     reader.onload=function(e){
-      google.script.run
+      SisiRun
         .withSuccessHandler(function(res){
           if(input.parentNode) input.parentNode.removeChild(input);
           if(!res||!res.ok){ if(typeof showToast==='function') showToast((res&&res.message)||'Upload BA gagal','error'); return; }
@@ -1478,7 +1478,7 @@ function baKirimWa(index){
   // lalu diarahkan ke URL WhatsApp setelah teks selesai dibangun di backend.
   var win=window.open('', '_blank');
   if(typeof showToast==='function') showToast('Menyiapkan pesan WhatsApp...','info');
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       if(!res||!res.ok){
         if(win){ try{ win.close(); }catch(e){} }
@@ -1552,7 +1552,7 @@ function bagCariMaster(){
   btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Mencari';
 bagEl('bagMasterHasil').style.display='block';
   bagEl('bagMasterHasil').innerHTML='<div class="ba-empty"><i class="fa-solid fa-spinner fa-spin"></i>Mencari gardu...</div>';
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-magnifying-glass"></i> Cari Gardu';
       bagRenderMaster(res);
@@ -1590,7 +1590,7 @@ function bagVal(id,val){ var e=bagEl(id); if(!e) return; var v=(val==null?'':val
 function bagMuatPenyulang(callback){
   var sel=bagEl('bagPenyulang');
   if(!sel){ if(callback) callback(); return; }
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       if(res&&res.ok){
         _BAG.penyulangMap=res.sectionByPenyulang||{};
@@ -1634,7 +1634,7 @@ function bagIsiOwnerExternal(){
   if(!penyulang||!section){ if(ownerEl)ownerEl.value=''; if(refEl)refEl.value=''; return; }
   if(ownerEl) ownerEl.value='Mencari…';
   if(refEl) refEl.value='Mencari…';
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       if(res&&res.ok&&res.found){
         if(ownerEl) ownerEl.value=res.ownerId||'';
@@ -1694,7 +1694,7 @@ function bagUploadFoto(slot,input){
   if(status){ status.className='ba-photo-status'; status.textContent='Mengunggah foto...'; }
   var reader=new FileReader();
   reader.onload=function(e){
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(res){
         input.disabled=false;
         if(!res||!res.ok){ if(status){ status.className='ba-photo-status error'; status.textContent=(res&&res.message)||'Upload gagal.'; } return; }
@@ -1729,7 +1729,7 @@ function bagUploadFotoSaatSimpan(payload,done,failed){
     var slot=slots[index++], item=_BAG.foto[slot], reader=new FileReader();
     reader.onload=function(e){
       var argFoto={slot:slot,dataUrl:e.target.result,fileName:item.fileName,mimeType:item.mimeType,nomorTrafo:nomor,tanggalBA:tanggalBA,jenisPekerjaan:jenis};
-      var runnerFoto=google.script.run
+      var runnerFoto=SisiRun
         .withSuccessHandler(function(res){
           if(!res||!res.ok){ failed((res&&res.message)||'Upload foto gagal.'); return; }
           hasil[slot]={url:res.url,fileId:res.fileId,folderId:res.folderId,kolom:res.sheetColumn};
@@ -1850,7 +1850,7 @@ function bagIsiNomorGardu(){
   if(!kode){ target.value=''; return; }
   var prev=target.value;
   target.value='Mencari…';
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       if(res&&res.ok){
         target.value=res.nomorGardu;
@@ -1981,7 +1981,7 @@ function bagSimpan(){
   var btn=bagEl('bagBtnSimpan');
   btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan';
   bagUploadFotoSaatSimpan(payload,function(){
-  var runnerSimpan=google.script.run
+  var runnerSimpan=SisiRun
     .withSuccessHandler(function(res){
       btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-floppy-disk"></i> Simpan BA Gardu';
       if(!res||!res.ok){ if(typeof showToast==='function') showToast((res&&res.message)||'Gagal menyimpan','error'); return; }
@@ -2017,7 +2017,7 @@ function bagGeneratePdf(){
   if(!idBA){ if(typeof showToast==='function') showToast('Simpan BA terlebih dahulu','warning'); return; }
   var labelSemula=btn.innerHTML;
   btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Membuat PDF';
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       btn.disabled=false;
       if(!res||!res.ok){ btn.innerHTML=labelSemula; if(typeof showToast==='function') showToast((res&&res.message)||'Gagal membuat PDF','error'); return; }
@@ -2053,7 +2053,7 @@ function bagDownloadBa(){
   }
   if(!fileId){ unduhLangsung('https://drive.google.com/uc?export=download&id='+baExtractDriveId(url), ''); return; }
   if(dl){ dl.disabled=true; dl.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Mengunduh'; }
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       selesai();
       if(!res||!res.ok){
@@ -2093,7 +2093,7 @@ function swTerapkanJenis(){
 // Muat daftar Penyulang (db_Penyulang, dipakai bersama getPenyulangDanSection) untuk
 // dua dropdown: Penyulang Awal & Penyulang Sesudah.
 function swMuatPenyulang(){
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       if(res&&res.ok){
         _SW.penyulangMap=res.sectionByPenyulang||{};
@@ -2136,7 +2136,7 @@ function swUploadFotoSaatSimpan(payload,done,failed){
     if(i>=slots.length){ payload.foto=hasil; done(); return; }
     var slot=slots[i++], item=_SW.foto[slot], reader=new FileReader();
     reader.onload=function(e){
-      google.script.run
+      SisiRun
         .withSuccessHandler(function(res){
           if(!res||!res.ok){ failed((res&&res.message)||'Upload foto gagal.'); return; }
           hasil[slot]={url:res.url,fileId:res.fileId,kolom:res.sheetColumn};
@@ -2168,7 +2168,7 @@ function swSimpan(){
   var btn=swEl('swBtnSimpan');
   btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan';
   swUploadFotoSaatSimpan(payload,function(){
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(res){
         btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-floppy-disk"></i> Simpan BA Switching';
         if(!res||!res.ok){ if(typeof showToast==='function') showToast((res&&res.message)||'Gagal menyimpan','error'); return; }
@@ -2194,7 +2194,7 @@ function swGeneratePdf(){
   if(!idBA){ if(typeof showToast==='function') showToast('Simpan BA terlebih dahulu','warning'); return; }
   var labelSemula=btn.innerHTML;
   btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Membuat PDF';
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       btn.disabled=false;
       if(!res||!res.ok){ btn.innerHTML=labelSemula; if(typeof showToast==='function') showToast((res&&res.message)||'Gagal membuat PDF','error'); return; }
@@ -2222,7 +2222,7 @@ function swDownloadBa(){
   }
   if(!fileId){ unduhLangsung('https://drive.google.com/uc?export=download&id='+baExtractDriveId(url), ''); return; }
   if(dl){ dl.disabled=true; dl.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Mengunduh'; }
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       selesai();
       if(!res||!res.ok){ unduhLangsung('https://drive.google.com/uc?export=download&id='+fileId, ''); return; }

@@ -41,26 +41,25 @@ var _garduMasterMemo = null;
 // Gardu tidak memakai KM (dibiarkan kosong). Koordinat = koordinat
 // gardu awal & akhir kerja. WA Text menyusul (sementara kosong).
 function simpanHeaderInsGardu(data){
+  /* OTENTIKASI + SKOP ULP (29 Agu 2026).
+     Sebelumnya: identitas diambil dari data.username yang dikirim KLIEN, lalu
+     data.ulp dipakai mentah — siapa pun bisa menulis header atas nama ULP
+     atau user lain. Sekarang identitas berasal dari SESI. */
+  var g = guard_(arguments, { ulp: true, aksi: 'simpanHeaderInsGardu' });
   try{
     data = data || {};
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
 
-    // 1) Resolve ULP, Kode ULP dari db_Users by username
-    var users = ss.getSheetByName('db_Users').getDataRange().getValues();
-    var ulp = '', kodeUlp = '';
-    for(var i=1;i<users.length;i++){
-      if((users[i][COL_USERS.userName]||'').toString().trim() === data.username){
-        ulp     = (users[i][COL_USERS.ulp]    ||'').toString().trim(); // F
-        kodeUlp = (users[i][COL_USERS.kodeUlp]||'').toString().trim(); // G
-        break;
-      }
+    // 1) ULP diambil dari SESI. Hanya Super User yang boleh memilih ULP lain.
+    var ulp     = ulpScope_(g, data.ulp) || String(g.ulp || '').trim();
+    var kodeUlp = '';
+    if (String(data.ulp || '').trim() && bolehLintasUlp_(g) &&
+        String(data.ulp).trim().toLowerCase() !== String(g.ulp || '').trim().toLowerCase()) {
+      kodeUlp = _kodeUlpByUlp(ss, ulp);
+    } else {
+      kodeUlp = String(g.kodeUlp || '').trim();
     }
-    // Super User boleh memilih ULP lain via dropdown.
-    var ulpPilih = String(data.ulp || '').trim();
-    if(ulpPilih && ulpPilih.toLowerCase() !== ulp.toLowerCase()){
-      ulp     = ulpPilih;
-      kodeUlp = _kodeUlpByUlp(ss, ulpPilih);
-    }
+    if(!kodeUlp) kodeUlp = _kodeUlpByUlp(ss, ulp);
     if(!ulp)     return { ok:false, message:'ULP untuk user tidak ditemukan di db_Users.' };
     if(!kodeUlp) return { ok:false, message:'Kode ULP untuk ULP terpilih kosong di db_Users.' };
 
@@ -86,7 +85,7 @@ function simpanHeaderInsGardu(data){
       data.kendala || '',         // L Kendala
       '',                         // M WA Text (menyusul)
       now,                        // N Timestamp
-      data.username,              // O Input Oleh
+      String(g.username || ''),   // O Input Oleh — dari SESI, bukan klien
       now                         // P Timestamp Update
     ]]);
 
@@ -386,6 +385,11 @@ function _temuanGarduMap(ss, kodeHeader){
 
 /* ─── Simpan 1 gardu ke realisasi ─── */
 function simpanRealisasiInsGardu(data){
+  /* OTENTIKASI + PEMILIKAN (29 Agu 2026). Sebelumnya tanpa pemeriksaan:
+     kodeHeader dari klien dipakai begitu saja, jadi data bisa disisipkan ke
+     header milik ULP lain. `gAks` (bukan `g`) karena `g` sudah dipakai
+     untuk hasil _findGarduByNomor() di bawah. */
+  var gAks = guard_(arguments, { ulp: true, aksi: 'simpanRealisasiInsGardu' });
   try{
     data = data || {};
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -398,6 +402,10 @@ function simpanRealisasiInsGardu(data){
 
     var header = _getHeaderInsByKode(ss, kodeHeader);
     if(!header) return { ok:false, message:'Header tidak ditemukan: '+kodeHeader };
+    if(!barisUlpCocok_(gAks, header.ulp)){
+      audit_(gAks.sesi, 'simpanRealisasiInsGardu', kodeHeader, 'TOLAK', 'header milik ULP lain');
+      return { ok:false, message:'Header bukan milik ULP Anda.' };
+    }
 
     var g = _findGarduByNomor(nomorGardu);
     if(!g) return { ok:false, message:'Gardu '+nomorGardu+' tidak ada di master.' };
@@ -614,6 +622,11 @@ function _generateKodeTemuanGarduBerantai(ss, kodePekerjaanGardu){
 // Simpan 1 temuan untuk gardu tertentu. Koordinat diambil dari titik koordinat
 // gardu (master). Kode header + kode pekerjaan gardu dibawa dari db_InsDu_Realisasi.
 function simpanTemuanGardu(data){
+  /* OTENTIKASI + PEMILIKAN (29 Agu 2026). Selain menulis baris temuan,
+     fungsi ini juga MENGUNGGAH FOTO ke Drive — tanpa pemeriksaan, siapa pun
+     bisa memakai Drive pemilik script sebagai tempat simpan berkas.
+     `gAks` (bukan `g`) karena `g` sudah dipakai _findGarduByNomor(). */
+  var gAks = guard_(arguments, { ulp: true, aksi: 'simpanTemuanGardu' });
   try{
     data = data || {};
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -625,13 +638,21 @@ function simpanTemuanGardu(data){
     if(!temuan) return { ok:false, message:'Temuan wajib dipilih.' };
     var header = _getHeaderInsByKode(ss, kodeHeader);
     if(!header) return { ok:false, message:'Header tidak ditemukan: '+kodeHeader };
+    if(!barisUlpCocok_(gAks, header.ulp)){
+      audit_(gAks.sesi, 'simpanTemuanGardu', kodeHeader, 'TOLAK', 'header milik ULP lain');
+      return { ok:false, message:'Header bukan milik ULP Anda.' };
+    }
     var rg = _findRealisasiGardu(ss, kodeHeader, nomorGardu);
     if(!rg) return { ok:false, message:'Gardu '+nomorGardu+' belum ada di header ini.' };
     var g = _findGarduByNomor(nomorGardu) || {};
     var koord = String(g.lokasiTrafo||'').trim();
     var lat='', lng='';
     if(koord){ var sp=koord.split(','); if(sp.length>=2){ var _la=parseFloat(sp[0].trim()), _lo=parseFloat(sp[1].trim()); lat=isNaN(_la)?'':_la; lng=isNaN(_lo)?'':_lo; } }
-    var info = (typeof _userInfoIns==='function') ? _userInfoIns(data.username) : { ulp:header.ulp, kodeUlp:'', tim:'' };
+    /* Identitas dari SESI, bukan dari data.username yang dikirim klien. */
+    var info = (typeof _userInfoIns==='function')
+      ? _userInfoIns(gAks.username)
+      : { ulp:header.ulp, kodeUlp:'', tim:'' };
+    if(!info) info = { ulp:header.ulp, kodeUlp:'', tim:'' };
     var tgl = _normTgl(header.tanggal);
     var hari = header.hari || _hariFromTanggal(tgl);
     var kodePekerjaan = _generateKodeTemuanGarduBerantai(ss, rg.kodePekerjaanGardu);
@@ -645,8 +666,8 @@ function simpanTemuanGardu(data){
     var folderPathStr = _folderTemuanPathStr(tgl, kodePekerjaan);
     var arr = [ kodeHeader, rg.kodePekerjaanGardu, kodePekerjaan, header.ulp, hari, tgl, info.tim||'', 'Gardu',
       rg.penyulang||g.penyulang||'', rg.section||g.section||'', '', '', nomorGardu, rg.tier||'', temuan,
-      (fT.nama?folderPathStr+'/'+fT.nama:''), fT.url, (fG.nama?folderPathStr+'/'+fG.nama:''), fG.url, String(data.deskripsi||''), koord, lat, lng,
-      String(data.username||''), _tsNowIns(), STATUS_INS.PENUGASAN ];
+      (fT.nama?folderPathStr+'/'+fT.nama:''), fT.url, (fG.nama?folderPathStr+'/'+fG.nama:''), fG.url, safeCell_(String(data.deskripsi||'')), koord, lat, lng,
+      String(gAks.username||''), _tsNowIns(), STATUS_INS.PENUGASAN ];
     var shT = ss.getSheetByName(SHEET_INS.TEMUAN);
     var row = shT.getLastRow()+1;
     shT.getRange(row, 2, 1, arr.length).setValues([arr]);
@@ -688,6 +709,9 @@ function getTemuanGardu(kodeHeader, nomorGardu){
 
 // Edit data temuan gardu (nama temuan + deskripsi).
 function editTemuanGardu(data){
+  /* OTENTIKASI + PEMILIKAN (29 Agu 2026). Nama `gAks` dipakai karena `g`
+     sudah dipakai di fungsi-fungsi lain di berkas ini. */
+  var gAks = guard_(arguments, { ulp: true, aksi: 'editTemuanGardu' });
   try{
     data = data || {};
     var kodePekerjaan = String(data.kodePekerjaan||'').trim();
@@ -701,8 +725,12 @@ function editTemuanGardu(data){
       if(String(rows[i][T.kodePekerjaan]||'').trim()===kodePekerjaan){ rowIdx=i+1; kodeHeader=String(rows[i][T.kodeHeader]||'').trim(); break; }
     }
     if(rowIdx<0) return { ok:false, message:'Temuan tidak ditemukan: '+kodePekerjaan };
-    if(data.temuan!=null) sh.getRange(rowIdx, T.temuan+1).setValue(String(data.temuan));
-    if(data.deskripsi!=null) sh.getRange(rowIdx, T.deskripsi+1).setValue(String(data.deskripsi));
+    if(!barisUlpCocok_(gAks, rows[rowIdx-1][T.ulp])){
+      audit_(gAks.sesi, 'editTemuanGardu', kodePekerjaan, 'TOLAK', 'temuan milik ULP lain');
+      return { ok:false, message:'Temuan bukan milik ULP Anda.' };
+    }
+    if(data.temuan!=null) sh.getRange(rowIdx, T.temuan+1).setValue(safeCell_(String(data.temuan)));
+    if(data.deskripsi!=null) sh.getRange(rowIdx, T.deskripsi+1).setValue(safeCell_(String(data.deskripsi)));
     // EDIT TEMUAN GARDU = PEMICU BUILD WA (fungsi 2).
     if(kodeHeader){ try { recalcWaInsGarduByHeader(kodeHeader); } catch(e){} }
     return { ok:true, kodePekerjaan:kodePekerjaan };
@@ -711,6 +739,8 @@ function editTemuanGardu(data){
 
 // Edit realisasi gardu (Tier) by kode pekerjaan gardu.
 function editRealisasiGardu(data){
+  /* OTENTIKASI + PEMILIKAN (29 Agu 2026). */
+  var gAks = guard_(arguments, { ulp: true, aksi: 'editRealisasiGardu' });
   try{
     data = data || {};
     var kode = String(data.kodePekerjaan||'').trim();
@@ -722,9 +752,15 @@ function editRealisasiGardu(data){
     var sh = ss.getSheetByName(SHEET_INSDU_REALISASI);
     if(!sh) return { ok:false, message:'Sheet realisasi tidak ditemukan.' };
     var rows = sh.getDataRange().getValues();
+    var petaUlp = petaUlpHeader_();
     for(var i=1;i<rows.length;i++){
       if(String(rows[i][R.kodePekerjaanGardu]||'').trim()===kode){
-        sh.getRange(i+1, R.tier+1).setValue(tier);
+        var khR = String(rows[i][R.kodeHeader]||'').trim();
+        if(!barisUlpCocok_(gAks, khR ? petaUlp[khR] : '')){
+          audit_(gAks.sesi, 'editRealisasiGardu', kode, 'TOLAK', 'realisasi milik ULP lain');
+          return { ok:false, message:'Data realisasi bukan milik ULP Anda.' };
+        }
+        sh.getRange(i+1, R.tier+1).setValue(safeCell_(tier));
         var kh = String(rows[i][R.kodeHeader]||'').trim();
         if(kh){ try { _updateWaTextInsGardu(ss, kh); } catch(e){} }
         return { ok:true };
@@ -736,6 +772,9 @@ function editRealisasiGardu(data){
 
 /* ─── Edit header gardu (koordinat/KM/kendala) ─── */
 function editHeaderInsGardu(data){
+  /* OTENTIKASI + PEMILIKAN (29 Agu 2026). Menimpa koordinat/kendala header
+     milik ULP lain bisa merusak laporan harian ULP tersebut. */
+  var gAks = guard_(arguments, { ulp: true, aksi: 'editHeaderInsGardu' });
   try{
     data = data || {};
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -748,11 +787,16 @@ function editHeaderInsGardu(data){
       if(String(hdata[i][H.kodeHeader]||'').trim()===key){ rowIdx=i+1; break; }
     }
     if(rowIdx<0) return { ok:false, message:'Header tidak ditemukan.' };
-    hsh.getRange(rowIdx, H.koordinatAwal+1).setValue(data.koordinatAwal||'');
-    hsh.getRange(rowIdx, H.koordinatAkhir+1).setValue(data.koordinatAkhir||'');
-    hsh.getRange(rowIdx, H.kmAwal+1).setValue(data.kmAwal||'');
-    hsh.getRange(rowIdx, H.kmAkhir+1).setValue(data.kmAkhir||'');
-    hsh.getRange(rowIdx, H.kendala+1).setValue(data.kendala||'');
+    if(!barisUlpCocok_(gAks, hdata[rowIdx-1][H.ulp])){
+      audit_(gAks.sesi, 'editHeaderInsGardu', key, 'TOLAK', 'header milik ULP lain');
+      return { ok:false, message:'Header bukan milik ULP Anda.' };
+    }
+    /* Semua nilai ini teks bebas dari pengguna -> lindungi dari formula. */
+    hsh.getRange(rowIdx, H.koordinatAwal+1).setValue(safeCell_(data.koordinatAwal||''));
+    hsh.getRange(rowIdx, H.koordinatAkhir+1).setValue(safeCell_(data.koordinatAkhir||''));
+    hsh.getRange(rowIdx, H.kmAwal+1).setValue(safeCell_(data.kmAwal||''));
+    hsh.getRange(rowIdx, H.kmAkhir+1).setValue(safeCell_(data.kmAkhir||''));
+    hsh.getRange(rowIdx, H.kendala+1).setValue(safeCell_(data.kendala||''));
     _updateWaTextInsGardu(ss, key);
     return { ok:true };
   }catch(e){ return { ok:false, message:e.message }; }
@@ -760,6 +804,11 @@ function editHeaderInsGardu(data){
 
 /* ─── Hapus 1 gardu dari realisasi ─── */
 function hapusRealisasiGardu(data){
+  /* OTENTIKASI + PEMILIKAN (29 Agu 2026) — celah paling berat di modul ini.
+     Sebelumnya siapa pun di internet bisa memanggil ini dan menghapus baris
+     realisasi mana pun (sh.deleteRow) hanya dengan mengetahui kodePekerjaan.
+     Sekarang: wajib sesi, dan baris harus milik ULP sesi (Super User bebas). */
+  var g = guard_(arguments, { ulp: true, aksi: 'hapusRealisasiGardu' });
   try{
     data = data || {};
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -768,16 +817,25 @@ function hapusRealisasiGardu(data){
     if(!sh) return { ok:false, message:'Sheet realisasi tidak ditemukan.' };
     var rows = sh.getDataRange().getValues();
     var kode = String(data.kodePekerjaan||'').trim();
+    var petaUlp = petaUlpHeader_();
     for(var i=rows.length-1;i>=1;i--){
       if(String(rows[i][R.kodePekerjaanGardu]||'').trim()===kode){
         var kh = String(rows[i][R.kodeHeader]||'').trim();
+        /* Sheet realisasi tidak punya kolom ULP — telusuri lewat header induk. */
+        if(!barisUlpCocok_(g, kh ? petaUlp[kh] : '')){
+          audit_(g.sesi, 'hapusRealisasiGardu', kode, 'TOLAK', 'baris milik ULP lain');
+          return { ok:false, message:'Data realisasi bukan milik ULP Anda.' };
+        }
         sh.deleteRow(i+1);
         _updateWaTextInsGardu(ss, kh);
         return { ok:true };
       }
     }
     return { ok:false, message:'Data realisasi tidak ditemukan.' };
-  }catch(e){ return { ok:false, message:e.message }; }
+  }catch(e){
+    if(_guardErrorAkses_(e)) return { ok:false, message:e.message };
+    return { ok:false, message:e.message };
+  }
 }
 
 /* ─── Recalc jumlah temuan semua gardu pada satu header + refresh WA ─── */
@@ -1035,6 +1093,9 @@ function cariPengukuranGardu(params){
    payload: { nomorGardu, ulp(opsional), data:{ tglPengukuran(YYYY-MM-DD),
    teganganWbpRS..TN, bebanWbpR..N, persentaseBeban } } */
 function updatePengukuranGardu(payload){
+  /* OTENTIKASI + SKOP ULP (29 Agu 2026). Menulis balik ke Master_Gardu di
+     spreadsheet terpisah; payload.ulp kini hanya dihormati untuk Super User. */
+  var gAks = guard_(arguments, { ulp: true, aksi: 'updatePengukuranGardu' });
   try{
     payload = payload || {};
     var nomor = String(payload.nomorGardu||'').trim();
@@ -1539,7 +1600,10 @@ function _hiTulisNilai_(sh, row, data){
   Object.keys(data).forEach(function(letter){
     var idx = _hiColLetterToIndex_(letter);
     if(idx < 0) return;
-    sh.getRange(row, idx+1).setValue(data[letter]==null?'':data[letter]);
+    /* Nilai berasal dari klien -> lindungi dari formula injection.
+       Tiga spreadsheet target dibuka oleh banyak pihak, jadi satu sel
+       berisi =IMPORTRANGE(...) sudah cukup untuk mengirim data keluar. */
+    sh.getRange(row, idx+1).setValue(safeCell_(data[letter]==null?'':data[letter]));
     n++;
   });
   return n;
@@ -1552,8 +1616,16 @@ function _hiTulisNilai_(sh, row, data){
    GUARD: bila gardu ADA di Master_Gardu tapi BELUM ada di tab Suhu & Fisik target,
    baris baru otomatis disisipkan (pola sync BA) lalu diisi nilainya. */
 function updateHiUp3(payload){
+  /* OTENTIKASI + SKOP ULP (29 Agu 2026).
+     Fungsi ini menulis ke TIGA spreadsheet berbeda dan bisa menyisipkan
+     baris baru — sebelumnya bisa dipanggil siapa pun tanpa login.
+     Nilai payload.ulp hanya dihormati untuk Super User; peran lain dipaksa
+     ke ULP sesinya. (`updateMasterGarduMobile` sudah memeriksa hal yang sama,
+     tetapi fungsi ini juga bisa dipanggil langsung.) */
+  var gAks = guard_(arguments, { ulp: true, aksi: 'updateHiUp3' });
   try{
     payload = payload || {};
+    payload.ulp = ulpScope_(gAks, payload.ulp) || String(gAks.ulp || '').trim();
     var nomorGardu = String(payload.nomorGardu||'').trim();
     if(!nomorGardu) return { ok:false, message:'Nomor gardu wajib diisi.' };
     var mgData = payload.mg || {}, sfData = payload.sf || {}, itData = payload.it || {};

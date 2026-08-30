@@ -292,12 +292,19 @@ function _generateKodePekerjaanPenyulangIns(ss, kodeHeader){
 // Manual : kodeHeader, penyulang, totalTiang.
 // Auto   : kodePekerjaanPeny, section, jumlahTemuan, inputBy, timestamp.
 function simpanRealisasiInsJar(data){
+  /* OTENTIKASI + PEMILIKAN (29 Agu 2026). kodeHeader dulu dipakai mentah
+     dari klien — data bisa disisipkan ke header milik ULP lain. */
+  var gAks = guard_(arguments, { ulp: true, aksi: 'simpanRealisasiInsJar' });
   try{
     data = data || {};
     var kodeHeader = String(data.kodeHeader || '').trim();
     var penyulang  = String(data.penyulang  || '').trim();
     if(!kodeHeader) return { ok:false, message:'Kode Header wajib dipilih.' };
     if(!penyulang)  return { ok:false, message:'Penyulang wajib dipilih.' };
+    if(!barisUlpCocok_(gAks, ulpDariKodeHeader_(kodeHeader))){
+      audit_(gAks.sesi, 'simpanRealisasiInsJar', kodeHeader, 'TOLAK', 'header milik ULP lain');
+      return { ok:false, message:'Kode Header bukan milik ULP Anda.' };
+    }
 
     var ss  = SpreadsheetApp.openById(SPREADSHEET_ID);
     var shR = ss.getSheetByName(SHEET_INS.REALISASI);
@@ -408,6 +415,8 @@ function getDataRealisasiInsJar(params) {
 }
 
 function editHeaderInsJar(data){
+  /* OTENTIKASI + PEMILIKAN (29 Agu 2026). */
+  var gAks = guard_(arguments, { ulp: true, aksi: 'editHeaderInsJar' });
   data = data || {};
   var kode = String(data.kodeHeader || '').trim();
   if(!kode) return { ok:false, message:'Kode header tidak boleh kosong.' };
@@ -423,13 +432,18 @@ function editHeaderInsJar(data){
     if(String(values[i][H.kodeHeader] || '').trim() === kode){ rowIdx = i; break; }
   }
   if(rowIdx < 0) return { ok:false, message:'Data tidak ditemukan: ' + kode };
+  if(!barisUlpCocok_(gAks, values[rowIdx][H.ulp])){
+    audit_(gAks.sesi, 'editHeaderInsJar', kode, 'TOLAK', 'header milik ULP lain');
+    return { ok:false, message:'Header bukan milik ULP Anda.' };
+  }
 
   var rowNo = rowIdx + 1;
 
-  var koordinatAwal  = (data.koordinatAwal  != null) ? String(data.koordinatAwal)  : String(values[rowIdx][H.koordinatAwal]  || '');
-  var koordinatAkhir = (data.koordinatAkhir != null) ? String(data.koordinatAkhir) : String(values[rowIdx][H.koordinatAkhir] || '');
-  var kmAwal  = (data.kmAwal  != null) ? String(data.kmAwal)  : String(values[rowIdx][H.kmAwal]  || '');
-  var kmAkhir = (data.kmAkhir != null) ? String(data.kmAkhir) : String(values[rowIdx][H.kmAkhir] || '');
+  /* Teks bebas dari pengguna -> lindungi dari formula injection. */
+  var koordinatAwal  = safeCell_((data.koordinatAwal  != null) ? String(data.koordinatAwal)  : String(values[rowIdx][H.koordinatAwal]  || ''));
+  var koordinatAkhir = safeCell_((data.koordinatAkhir != null) ? String(data.koordinatAkhir) : String(values[rowIdx][H.koordinatAkhir] || ''));
+  var kmAwal  = safeCell_((data.kmAwal  != null) ? String(data.kmAwal)  : String(values[rowIdx][H.kmAwal]  || ''));
+  var kmAkhir = safeCell_((data.kmAkhir != null) ? String(data.kmAkhir) : String(values[rowIdx][H.kmAkhir] || ''));
 
   sh.getRange(rowNo, H.koordinatAwal  + 1).setValue(koordinatAwal);
   sh.getRange(rowNo, H.koordinatAkhir + 1).setValue(koordinatAkhir);
@@ -637,8 +651,15 @@ function getNotifikasiWOBelumDiteruskan(token){
     if(!sesi) return { ok:false, redirect:'login', count:0, list:[] };
     if(!_bolehAksesMenu(sesi, 'SIE-Teknik')) return { ok:true, count:0, list:[] };
 
-    var isSuper = String(sesi.role || '').trim() === 'Super User';
+    /* Hanya Super User yang lintas ULP; Admin terikat ULP sendiri
+       (kebijakan 29 Agu 2026). Normalisasi peran lewat _normRole_ supaya
+       variasi penulisan "Super User" / "superuser" tidak mengubah hasil. */
+    var isSuper = typeof _normRole_ === 'function'
+      ? _normRole_(sesi.role) === 'SUPER'
+      : String(sesi.role || '').trim() === 'Super User';
     var ulpUser = String(sesi.ulp || '').trim().toLowerCase();
+    if (!isSuper && !ulpUser)
+      return { ok:false, message:'Akun belum terhubung ke ULP.', count:0, list:[] };
 
     var T = COL_INS.TEMUAN;
     var rows = _readSheetIns(SHEET_INS.TEMUAN);
@@ -717,14 +738,34 @@ function getTemuanByKodePekerjaan(kodePekerjaan){
 }
 
 
-/* ═══ SESSION USER (untuk halaman konten) — helper sesi bersama ═══ */
-function getSessionUser() {
+/* ═══ SESSION USER (untuk halaman konten) — helper sesi bersama ═══
+   Diperbaiki 29 Agu 2026 (K1 — session confusion).
+   Versi lama membaca CacheService.getUserCache().get('userToken'). Karena
+   web app memakai executeAs: USER_DEPLOYING + access: ANYONE_ANONYMOUS,
+   "user" untuk seluruh pengunjung anonim adalah PEMILIK SCRIPT, sehingga
+   cache itu dipakai bersama oleh semua orang: getSessionUser() bisa
+   mengembalikan sesi pengguna lain, termasuk Super User.
+   Sekarang token WAJIB dikirim klien. Tanpa token -> {} (aman), bukan
+   menebak-nebak milik siapa. */
+function getSessionUser(token) {
   try {
-    var token = CacheService.getUserCache().get('userToken');
-    if (!token) return {};
-    CacheService.getUserCache().put('userToken', token, SESSION_TTL_SEC);
-    var sesi = getSesiByToken(token);
-    return sesi || {};
+    var t = String(token || "").trim();
+    if (!t) return {};
+    var sesi = getSesiByToken(t);
+    if (!sesi) return {};
+    /* Jangan pernah mengembalikan password ke klien. */
+    return {
+      token: t,
+      username: sesi.username || "",
+      email: sesi.email || "",
+      role: sesi.role || "",
+      ulp: sesi.ulp || "",
+      kodeUlp: sesi.kodeUlp || "",
+      bidang: sesi.bidang || "",
+      tim: sesi.tim || "",
+      subTim: sesi.subTim || "",
+      aksesMenu: sesi.aksesMenu || "",
+    };
   } catch(e) {
     return {};
   }
@@ -733,27 +774,26 @@ function getSessionUser() {
 
 /* ═══ INSPEKSI JARINGAN — SIMPAN HEADER (Tambah Data Laporan Harian) ═══ */
 function simpanHeaderInsJar(data){
+  /* OTENTIKASI + SKOP ULP (29 Agu 2026).
+     Sebelumnya identitas diambil dari data.username yang dikirim KLIEN, dan
+     data.ulp dipakai mentah — siapa pun bisa membuat header atas nama ULP
+     atau user lain. Sekarang ULP dan Tim berasal dari SESI; hanya Super User
+     yang boleh memilih ULP lain. */
+  var gAks = guard_(arguments, { ulp: true, aksi: 'simpanHeaderInsJar' });
   try{
+    data = data || {};
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
 
-    // 1) Resolve ULP, Kode ULP, Tim dari db_Users by username
-    var users = ss.getSheetByName('db_Users').getDataRange().getValues();
-    var ulp = '', kodeUlp = '', tim = '';
-    for(var i=1;i<users.length;i++){
-      if((users[i][COL_USERS.userName]||'').toString().trim() === data.username){
-        ulp     = (users[i][COL_USERS.ulp]    ||'').toString().trim(); // F
-        kodeUlp = (users[i][COL_USERS.kodeUlp]||'').toString().trim(); // G
-        tim     = (users[i][COL_USERS.tim]    ||'').toString().trim(); // I (Tim)
-        break;
-      }
-    }
-    // Super User boleh memilih ULP lain via dropdown. Bila data.ulp dikirim &
-    // berbeda dari ULP user, gunakan ULP pilihan + resolve Kode ULP-nya dari db_Users.
-    var ulpPilih = String(data.ulp || '').trim();
-    if(ulpPilih && ulpPilih.toLowerCase() !== ulp.toLowerCase()){
-      ulp     = ulpPilih;
+    // 1) ULP & Tim dari SESI. Hanya Super User yang boleh memilih ULP lain.
+    var ulp     = String(gAks.ulp || '').trim();
+    var kodeUlp = String(gAks.kodeUlp || '').trim();
+    var tim     = String(gAks.tim || '').trim();
+    var ulpPilih = ulpScope_(gAks, data.ulp) || ulp;
+    if(String(ulpPilih).toLowerCase() !== ulp.toLowerCase()){
+      ulp     = String(ulpPilih).trim();
       kodeUlp = _kodeUlpByUlp(ss, ulpPilih);
     }
+    if(!kodeUlp) kodeUlp = _kodeUlpByUlp(ss, ulp);
     if(!ulp)     return { ok:false, message:'ULP untuk user tidak ditemukan di db_Users.' };
     if(!kodeUlp) return { ok:false, message:'Kode ULP untuk ULP terpilih kosong di db_Users.' };
 
@@ -761,11 +801,18 @@ function simpanHeaderInsJar(data){
     var kodeHeader = _generateKodeHeaderIns(ss, kodeUlp, data.tanggal);
     var hari       = _hariFromTanggal(data.tanggal);
     var now        = new Date();
+    /* Nilai teks bebas dari pengguna dilindungi sebelum masuk ke sheet,
+       karena kolom-kolom ini ikut dirender ke teks WA dan PDF. */
+    var koordAwal  = safeCell_(data.koordinatAwal  || '');
+    var koordAkhir = safeCell_(data.koordinatAkhir || '');
+    var kmAwal     = safeCell_(data.kmAwal         || '');
+    var kmAkhir    = safeCell_(data.kmAkhir        || '');
+    var kendala    = safeCell_(data.kendala        || '');
     var waText     = _buildWaTextIns(ss, kodeHeader, {
-      koordinatAwal:  data.koordinatAwal,
-      koordinatAkhir: data.koordinatAkhir,
-      kmAwal:         data.kmAwal,
-      kmAkhir:        data.kmAkhir
+      koordinatAwal:  koordAwal,
+      koordinatAkhir: koordAkhir,
+      kmAwal:         kmAwal,
+      kmAkhir:        kmAkhir
     });
 
     // 3) Tulis baris baru — B..P (kolom A formula dilewati) ke db_Global_Header
@@ -778,14 +825,14 @@ function simpanHeaderInsJar(data){
       data.tanggal,               // E Tanggal
       'Inspeksi',                 // F Tim (pembeda Inspeksi/ROW)
       tim,                        // G Sub-Tim
-      data.koordinatAwal || '',   // H Koordinat Awal (Tier dipindah ke realisasi)
-      data.koordinatAkhir || '',  // I Koordinat Akhir
-      data.kmAwal || '',          // J KM Awal
-      data.kmAkhir || '',         // K KM Akhir
-      data.kendala || '',         // L Kendala
+      koordAwal,                  // H Koordinat Awal (Tier dipindah ke realisasi)
+      koordAkhir,                 // I Koordinat Akhir
+      kmAwal,                     // J KM Awal
+      kmAkhir,                    // K KM Akhir
+      kendala,                    // L Kendala
       waText,                     // M WA Text
       now,                        // N Timestamp
-      data.username,              // O Input Oleh
+      String(gAks.username||''),  // O Input Oleh — dari SESI, bukan klien
       now                         // P Timestamp Update
     ]]);
 
@@ -1129,6 +1176,10 @@ function refreshWaInsJarHarian(){
 // Update SATU header secara on-demand (dipakai tombol "Update Data" di Laporan Harian)
 // Hitung ulang Total Tiang + waText untuk 1 kodeHeader, tanpa menunggu trigger berkala.
 function updateHeaderInsLangsung(kodeHeader){
+  /* OTENTIKASI + PEMILIKAN (29 Agu 2026). Argumen ini string, bukan object —
+     SisiRun akan menyisipkan token di depan, jadi _tokenDariArgs_ menemukannya
+     lewat pola UUID. */
+  var gAks = guard_(arguments, { ulp: true, aksi: 'updateHeaderInsLangsung' });
   try{
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     var sh = ss.getSheetByName(SHEET_INS.HEADER);
@@ -1136,6 +1187,10 @@ function updateHeaderInsLangsung(kodeHeader){
     var H = COL_INS.HEADER, now = new Date();
     for(var i=1;i<data.length;i++){
       if(String(data[i][H.kodeHeader]||'').trim() !== String(kodeHeader).trim()) continue;
+      if(!barisUlpCocok_(gAks, data[i][H.ulp])){
+        audit_(gAks.sesi, 'updateHeaderInsLangsung', String(kodeHeader), 'TOLAK', 'header milik ULP lain');
+        return { ok:false, message:'Header bukan milik ULP Anda.' };
+      }
       var r = data[i];
       var kode = String(r[H.kodeHeader]||'').trim();
       var totalBaru = _hitungTotalTiangIns(ss, kode);
@@ -1214,6 +1269,9 @@ function getDetailRealisasiByHeader(kodeHeader){
    Section di-input via titik Awal/Akhir lalu dirangkai _sectionRange.
    Bila penyulang sudah punya temuan (>0), Section dikunci (otomatis dari temuan). */
 function editRealisasiInsJar(data){
+  /* OTENTIKASI + PEMILIKAN (29 Agu 2026). Sheet realisasi tidak punya kolom
+     ULP, jadi kepemilikan ditelusuri lewat kodeHeader induknya. */
+  var gAks = guard_(arguments, { ulp: true, aksi: 'editRealisasiInsJar' });
   try{
     data = data || {};
     var kodePeny = String(data.kodePekerjaanPenyulang || data.kodePekerjaanPeny || '').trim();
@@ -1234,6 +1292,10 @@ function editRealisasiInsJar(data){
     var rowNo      = rowIdx + 1;
     var kodeHeader = String(vals[rowIdx][R.kodeHeader] || '').trim();
     var penyulang  = String(vals[rowIdx][R.penyulang] || '').trim();
+    if(!barisUlpCocok_(gAks, ulpDariKodeHeader_(kodeHeader))){
+      audit_(gAks.sesi, 'editRealisasiInsJar', kodePeny, 'TOLAK', 'realisasi milik ULP lain');
+      return { ok:false, message:'Realisasi bukan milik ULP Anda.' };
+    }
 
     // Jumlah temuan aktual menentukan apakah Section boleh diubah.
     var n = Number(vals[rowIdx][R.jumlahTemuan]) || 0;

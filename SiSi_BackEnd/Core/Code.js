@@ -311,6 +311,22 @@ function doGet(e) {
   // Filter opsional: &tglDari=YYYY-MM-DD&tglSampai=YYYY-MM-DD&tim=...&penyulang=...&ulp=...
   // Implementasi unduhPdfROW ada di Tek-ROW.gs (ruang lingkup global, tanpa import).
   if (e && e.parameter && e.parameter.pdf) {
+    /* WAJIB TOKEN (29 Agu 2026).
+       Rute ini dieksekusi SEBELUM pemeriksaan token di bawah, jadi siapa pun
+       di internet bisa meng-generate PDF tanpa login: membakar kuota, dan
+       menyaring data lewat parameter tim / penyulang / tglDari / ulp untuk
+       memetakan isi database. Hasil PDF-nya sendiri tetap ANYONE_WITH_LINK
+       (keputusan terpisah), tetapi Pembuatannya sekarang harus terotentikasi. */
+    var tokenPdf = String((e && e.parameter && e.parameter.token) || "").trim();
+    if (!tokenPdf || !getSesiByToken(tokenPdf)) {
+      audit_(null, "PDF", String(e.parameter.pdf), "TOLAK", "tanpa token sah");
+      return ContentService.createTextOutput(
+        JSON.stringify({
+          ok: false,
+          message: "Sesi habis atau tidak valid. Silakan login ulang.",
+        }),
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
     // Inspeksi Gardu (?pdf=gardu) -> unduhPdfInsGardu (Tek-InsDu.gs). Lainnya -> unduhPdfROW.
     if (String(e.parameter.pdf).trim().toLowerCase() === "gardu")
       return unduhPdfInsGardu(e);
@@ -343,11 +359,13 @@ function doGet(e) {
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
   }
 
-  // Isi ulang userToken di userCache agar getSessionUser() tetap bekerja
-  // setelah refresh / buka URL langsung (bukan hanya tepat setelah doLogin).
-  try {
-    CacheService.getUserCache().put("userToken", token, SESSION_TTL_SEC);
-  } catch (e) {}
+  /* DIHAPUS 29 Agu 2026 (K1 — session confusion):
+     CacheService.getUserCache().put("userToken", ...)
+     getUserCache() di-scope ke effective user. Karena web app memakai
+     executeAs: USER_DEPLOYING + access: ANYONE_ANONYMOUS, effective user
+     untuk seluruh pengunjung anonim adalah PEMILIK SCRIPT — cache itu jadi
+     dipakai bersama semua orang dan bisa menyerahkan token pengguna lain.
+     Token sekarang dikirim eksplisit ke halaman lewat getPageContent(). */
 
   return HtmlService.createTemplateFromFile(PAGE_FILE_ALIASES["Main"])
     .evaluate()
@@ -358,7 +376,12 @@ function doGet(e) {
 var WEBHOOK_SECRET = "P@ssw0rd`123"; // secret asli — disamakan dgn versi arsip & yang ter-deploy. Repo GitHub sengaja berisi placeholder (keamanan); jangan commit nilai ini ke repo publik.
 
 function doPost(e) {
-  // MOBILE API LAYER: rute semua request POST Flutter (?mobile=1) ke apiRouter_, balikan JSON murni.
+  /* PEMISAHAN JALUR YANG TEGAS (29 Agu 2026).
+     Dulu `?mobile=1` dialihkan ke apiRouter_ SEBELUM pemeriksaan secret, jadi
+     seluruh API mobile bisa dipanggil tanpa autentikasi apa pun. Sekarang:
+       • ada ?mobile=...  -> HANYA apiRouter_ (otentikasi pakai token sesi)
+       • tanpa ?mobile=   -> HANYA webhook AppSheet (otentikasi pakai secret)
+     Tidak ada jalur ketiga yang lolos tanpa salah satu. */
   if (e && e.parameter && e.parameter.mobile) {
     var bodyMobile = {};
     try {
@@ -369,6 +392,10 @@ function doPost(e) {
 
   var out = { ok: false };
   try {
+    /* Secret HANYA dibaca dari body POST. Baris lama
+         if ((!body || body.token == null) && e && e.parameter) body = e.parameter;
+       dihapus karena memungkinkan secret dikirim sebagai query string
+       (?secret=...), yang ikut tercatat di access log / histori browser. */
     var body = {};
     if (e && e.postData && e.postData.contents) {
       try {
@@ -377,17 +404,17 @@ function doPost(e) {
         body = {};
       }
     }
-    // Fallback bila AppSheet mengirim sbg form/parameter, bukan JSON.
-    if ((!body || body.token == null) && e && e.parameter) body = e.parameter;
 
-    if (String(body.token || body.secret || "") !== WEBHOOK_SECRET) {
-      out.message = "Token webhook tidak valid";
+    var ver = webhookVerifikasi_(body);
+    if (!ver.ok) {
+      out.message = ver.message;
+      out.kode = ver.kode;
       return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(
         ContentService.MimeType.JSON,
       );
     }
 
-    var action = String(body.action || "recalcRow").trim();
+    var action = ver.action || String(body.action || "recalcRow").trim();
     var cache = CacheService.getScriptCache();
 
     if (action === "recalcRow") {
@@ -1076,8 +1103,14 @@ function doLogin(username, password) {
       var aksesMenu = String(r[COL_USERS.aksesMenu] || "").trim();
 
       if (uNm.toLowerCase() !== username.toLowerCase()) continue;
-      if (uPw !== password)
-        return { success: false, message: "Password salah" };
+
+      /* Verifikasi terpadu (29 Agu 2026): throttle + dual-read hash/plaintext +
+         upgrade hash otomatis. Sebelumnya `if (uPw !== password)` — membandingkan
+         password tersimpan apa adanya (plaintext) dan tanpa pembatasan percobaan,
+         sehingga kredensial yang bocor bisa diuji berulang tanpa henti. */
+      var v = verifikasiLogin_(uNm, password);
+      if (!v.boleh)
+        return { success: false, message: v.pesan };
 
       var token = Utilities.getUuid();
       var sesi = {
@@ -1099,7 +1132,7 @@ function doLogin(username, password) {
         JSON.stringify(sesi),
         SESSION_TTL_SEC,
       );
-      CacheService.getUserCache().put("userToken", token, SESSION_TTL_SEC);
+      /* Tanpa getUserCache(). Lihat catatan K1 di doGet(). */
 
       return {
         success: true,
@@ -1150,6 +1183,10 @@ function getPageContent(token, pageName) {
       success: true,
       html: html,
       sesi: {
+        /* token ikut dikirim supaya halaman bisa mengirimnya balik ke setiap
+           panggilan server. Dulu halaman memakai getSessionUser() yang membaca
+           getUserCache() bersama — lihat catatan K1 di doGet(). */
+        token: token,
         username: sesi.username,
         email: sesi.email,
         role: sesi.role,
@@ -1215,7 +1252,11 @@ function _saranAksesMenu(role, bidang, tim) {
   role = String(role || "").trim();
   bidang = String(bidang || "").trim();
   tim = String(tim || "").trim();
-  if (role === "Super User" || role === "Admin")
+  /* Normalisasi 29 Agu 2026: "Super User" / "super user" / "superuser" setara.
+     Ini hanya SARAN isian kolom Akses Menu saat akun dibuat/diedit — bukan
+     penegakan akses. Penegakan ada di _bolehAksesMenu() dan guard_(). */
+  var roleN = typeof _normRole_ === "function" ? _normRole_(role) : role;
+  if (roleN === "SUPER" || roleN === "ADMIN")
     return FULL_ACCESS_PAGES.concat(PP_PAGES, TE_PAGES, K3_PAGES);
   if (TIM_PAGE_MAP[tim]) return [TIM_PAGE_MAP[tim]];
   if (role === "Team Leader" || role === "Staff" || role === "Admin ES")
@@ -1240,11 +1281,30 @@ function _akunSheet() {
   return sh;
 }
 
+/* Diperbaiki 29 Agu 2026 (K13): peran dibandingkan lewat _normRole_ supaya
+   "Super User", "super user", dan "superuser" setara. Sebelumnya perbandingan
+   exact-match, sehingga variasi penulisan di db_Users bisa membuat Super User
+   gagal masuk atau — lebih buruk — membuat modul lain menerima "admin" sebagai
+   Super User. Daftar peran yang berhak ada di PERAN_SUPER_USER (Guard.js). */
 function _assertSuperUser(token) {
   var sesi = getSesiByToken(token);
   if (!sesi) throw new Error("Sesi habis, silakan login ulang.");
-  if (String(sesi.role || "").trim() !== "Super User")
-    throw new Error("Akses ditolak: menu ini khusus Super User.");
+
+  var roleAsli = String(sesi.role || "").trim();
+  var role = typeof _normRole_ === "function" ? _normRole_(roleAsli) : roleAsli;
+
+  var boleh = false;
+  var daftar =
+    typeof PERAN_SUPER_USER !== "undefined" && PERAN_SUPER_USER.length
+      ? PERAN_SUPER_USER
+      : ["SUPER"];
+  for (var i = 0; i < daftar.length; i++) {
+    if (_normRole_(daftar[i]) === role) {
+      boleh = true;
+      break;
+    }
+  }
+  if (!boleh) throw new Error("Akses ditolak: menu ini khusus Super User.");
   return sesi;
 }
 
@@ -1325,7 +1385,13 @@ function tambahAkun(token, data) {
   baris[COL_USERS.no] = sh.getLastRow();
   baris[COL_USERS.email] = String(data.email || "").trim();
   baris[COL_USERS.userName] = uname;
-  baris[COL_USERS.password] = String(data.password || "").trim();
+  /* Disimpan sebagai hash, bukan plaintext. Kolom tetap sama — hanya isinya.
+     Kalau Guard.js belum terpasang, jatuh ke plaintext (masa transisi) agar
+     akun tetap bisa dibuat; login akan meng-hash-nya saat pertama dipakai. */
+  baris[COL_USERS.password] =
+    typeof _hashPw_ === "function"
+      ? _hashPw_(String(data.password || "").trim(), _saltBaru_())
+      : String(data.password || "").trim();
   baris[COL_USERS.role] = String(data.role || "").trim();
   baris[COL_USERS.ulp] = String(data.ulp || "").trim();
   baris[COL_USERS.kodeUlp] = String(data.kodeUlp || "").trim();
@@ -1380,7 +1446,9 @@ function updateAkun(token, data) {
     );
   if (data.password != null && String(data.password).trim())
     sh.getRange(row, COL_USERS.password + 1).setValue(
-      String(data.password).trim(),
+      typeof _hashPw_ === "function"
+        ? _hashPw_(String(data.password).trim(), _saltBaru_())
+        : String(data.password).trim(),
     );
   SpreadsheetApp.flush();
   _bustUsersCache_(); // perubahan akun langsung terlihat login
@@ -1417,10 +1485,16 @@ function resetPasswordAkun(token, username, passwordBaru) {
   if (row === -1) return { ok: false, message: "Akun tidak ditemukan." };
   if (!String(passwordBaru || "").trim())
     return { ok: false, message: "Password baru wajib diisi." };
+  var pwBaru = String(passwordBaru).trim();
   sh.getRange(row, COL_USERS.password + 1).setValue(
-    String(passwordBaru).trim(),
+    typeof _hashPw_ === "function"
+      ? _hashPw_(pwBaru, _saltBaru_())
+      : pwBaru,
   );
   SpreadsheetApp.flush();
+  /* Buka kunci throttle: password sudah diganti, percobaan gagal yang lalu
+     bukan lagi indikasi serangan terhadap kredensial yang sekarang. */
+  if (typeof loginThrottleReset_ === "function") loginThrottleReset_(username);
   _bustUsersCache_(); // perubahan akun langsung terlihat login
   return { ok: true };
 }
@@ -1450,10 +1524,16 @@ function gantiPassword(token, passwordLama, passwordBaru) {
     var pwTersimpan = String(
       sh.getRange(row, COL_USERS.password + 1).getValue() || "",
     ).trim();
-    if (pwTersimpan !== pwLama)
-      return { ok: false, message: "Password lama salah." };
+    /* Dual-read: nilai bisa berupa hash (sisi1$...) atau plaintext lawas. */
+    var cocok =
+      typeof _verifyPw_ === "function"
+        ? _verifyPw_(pwTersimpan, pwLama)
+        : pwTersimpan === pwLama;
+    if (!cocok) return { ok: false, message: "Password lama salah." };
 
-    sh.getRange(row, COL_USERS.password + 1).setValue(pwBaru);
+    sh.getRange(row, COL_USERS.password + 1).setValue(
+      typeof _hashPw_ === "function" ? _hashPw_(pwBaru, _saltBaru_()) : pwBaru,
+    );
     SpreadsheetApp.flush();
     _bustUsersCache_(); // perubahan akun langsung terlihat login
     return { ok: true, message: "Password berhasil diganti." };
@@ -1465,9 +1545,11 @@ function gantiPassword(token, passwordLama, passwordBaru) {
 /* ═══ LAPORAN HARIAN (db_Global_Header) ═══ */
 function getMobileLaporanHarian(token, subTim, tim, tanggal, limit) {
   try {
-    var sesi = getSesiByToken(token);
-    if (!sesi)
-      return { success: false, message: "Sesi habis, silakan login ulang." };
+    /* Skop ULP (29 Agu 2026). Sebelumnya tidak ada filter ULP sama sekali:
+       siapa pun yang login menerima seluruh header dari SEMUA ULP, lengkap
+       dengan kendala, waText, koordinat awal/akhir, dan inputBy — padahal
+       kolom ULP (r[2]) tersedia untuk menyaringnya. */
+    var g = guard_(arguments, { ulp: true, aksi: "getMobileLaporanHarian" });
 
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     // Cari sheet db_Global_Header secara fleksibel (case-insensitive & trim)
@@ -1524,6 +1606,9 @@ function getMobileLaporanHarian(token, subTim, tim, tanggal, limit) {
       if (!rKodeHeader) continue;
 
       var rUlp = String(r[2] || "").trim();
+      /* Hanya Super User yang melihat ULP lain. Admin terikat ULP sendiri. */
+      if (!barisUlpCocok_(g, rUlp)) continue;
+
       var rHari = String(r[3] || "").trim();
       var rTanggal = _normTgl(r[4]);
       var rTim = String(r[5] || "").trim();
@@ -1693,9 +1778,10 @@ function getMobileDropdownRow(token) {
  */
 function getMobileEksekusiRow(token, subTim, tim, tanggal, limit) {
   try {
-    var sesi = getSesiByToken(token);
-    if (!sesi)
-      return { success: false, message: "Sesi habis, silakan login ulang." };
+    /* Skop ULP (29 Agu 2026). Sebelumnya tidak ada filter ULP sama sekali —
+       pengguna ULP mana pun menerima seluruh baris db_ROW_Eksekusi dari semua
+       ULP, termasuk koordinat tiang dan seluruh URL foto. */
+    var g = guard_(arguments, { ulp: true, aksi: "getMobileEksekusiRow" });
 
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     var sh = ss.getSheetByName("db_ROW_Eksekusi");
@@ -1721,6 +1807,9 @@ function getMobileEksekusiRow(token, subTim, tim, tanggal, limit) {
       var kodeEksekusi = String(r[3] || "").trim();
       var noTiang = String(r[10] || "").trim();
       if (!kodeEksekusi && !noTiang) continue;
+
+      /* r[4] = kolom ULP. Hanya Super User yang melihat ULP lain. */
+      if (!barisUlpCocok_(g, r[4])) continue;
 
       var rTanggal = _normTgl(r[6]);
       var rTim = String(r[7] || "").trim(); // Kolom Tim / Sub-Tim
@@ -2091,9 +2180,11 @@ function simpanMobileEksekusiRow(payload) {
 function updateMobileEksekusiRow(payload) {
   try {
     payload = payload || {};
-    var sesi = getSesiByToken(String(payload.token || "").trim());
-    if (!sesi)
-      return { success: false, message: "Sesi habis, silakan login ulang." };
+    /* Otentikasi + skop ULP (29 Agu 2026).
+       Sebelumnya kodeEksekusi diterima begitu saja dari klien: siapa pun yang
+       login (bahkan dari ULP lain) bisa menimpa foto pada baris eksekusi
+       mana pun asalkan tahu kodenya — IDOR, plus upload file ke Drive. */
+    var g = guard_(arguments, { ulp: true, aksi: "updateMobileEksekusiRow" });
 
     var kodeEksekusi = String(payload.kodeEksekusi || "").trim();
     if (!kodeEksekusi)
@@ -2130,6 +2221,18 @@ function updateMobileEksekusiRow(payload) {
         success: false,
         message: "Kode Eksekusi tidak ditemukan: " + kodeEksekusi,
       };
+
+    // 1b) PEMILIKAN: baris harus milik ULP sesi (kecuali Super User).
+    //     Tanpa ini, kodeEksekusi ULP lain bisa difoto ulang dari luar.
+    var ulpBaris = String(sh.getRange(rowIdx, 5).getValue() || "").trim(); // E: ULP
+    if (!barisUlpCocok_(g, ulpBaris)) {
+      audit_(g.sesi, "updateMobileEksekusiRow", kodeEksekusi, "TOLAK",
+        "baris milik ULP lain: " + ulpBaris);
+      return {
+        success: false,
+        message: "Kode Eksekusi bukan milik ULP Anda.",
+      };
+    }
 
     // 2) Konteks baris utk membangun ulang folder upload (hierarki sama dgn
     //    simpanMobileEksekusiRow: .../Eksekusi ROW/{Tahun}/{Bln}/{Tgl}/{Tim}/{Kode}).
@@ -2434,9 +2537,10 @@ function apiRouter_(e, body) {
         break;
 
       case "getListPekerjaanP0":
+        /* Teruskan body/parameter: getListPekerjaanP0() sekarang wajib sesi. */
         result =
           typeof getListPekerjaanP0 === "function"
-            ? getListPekerjaanP0()
+            ? getListPekerjaanP0(body || p)
             : {
                 ok: false,
                 error:

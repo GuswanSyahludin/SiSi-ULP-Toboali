@@ -176,7 +176,7 @@
 
   function htkLoadUlp(){
     if(typeof google==='undefined') return;
-    google.script.run.withSuccessHandler(function(list){
+    SisiRun.withSuccessHandler(function(list){
       var sel=_el('htkUlp'); if(!sel) return;
       sel.innerHTML='<option value="">Semua ULP</option>';
       (list||[]).forEach(function(u){ sel.innerHTML += '<option value="'+u+'">'+u+'</option>'; });
@@ -188,7 +188,7 @@
     var ulp = HTK.isSuper ? (_el('htkUlp')?_el('htkUlp').value:'') : HTK.ulp;
     sel.disabled=true; sel.innerHTML='<option value="">Memuat penyulang...</option>';
     if(typeof google==='undefined'){ sel.innerHTML='<option value="">Semua Penyulang</option>'; sel.disabled=false; return; }
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(res){
         var list=(res&&res.list)?res.list:[];
         sel.innerHTML='<option value="">Semua Penyulang</option>' + list.map(function(p){ var nm=(p&&p.nama!=null)?p.nama:p; return '<option value="'+nm+'">'+nm+'</option>'; }).join('');
@@ -205,7 +205,7 @@
     var ulp = HTK.isSuper ? (_el('htkUlp')?_el('htkUlp').value:'') : HTK.ulp;
     wrap.innerHTML='<div class="htk-loading"><i class="fa-solid fa-spinner fa-spin"></i><p>Memuat rekap...</p></div>';
     if(typeof google==='undefined'){ htkRender({ ok:true, tahun:tahun, data:{}, totalPerKriteria:{} }); return; }
-    google.script.run
+    SisiRun
       .withSuccessHandler(htkRender)
       .withFailureHandler(function(err){ wrap.innerHTML='<div class="htk-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>'+((err&&err.message)||err)+'</p></div>'; })
       .getHartekRekapMatrix({ penyulang:penyulang, tahun:tahun, ulp:ulp });
@@ -271,7 +271,7 @@
     var periode = (bIdx==null) ? ('Total '+tahun) : (BULAN_SHORT[bIdx]+' '+tahun+' · Minggu ke-'+wIdx);
     htkModalOpen(label, periode);
     if(typeof google==='undefined'){ htkModalBody({ ok:true, rows:[], total:0 }); return; }
-    google.script.run
+    SisiRun
       .withSuccessHandler(htkModalBody)
       .withFailureHandler(function(err){ htkModalBody({ ok:false, message:(err&&err.message)||String(err) }); })
       .getHartekRekapDetail({ penyulang:penyulang, tahun:tahun, ulp:ulp, kriteria:kriteria, bulan:bIdx, minggu:wIdx });

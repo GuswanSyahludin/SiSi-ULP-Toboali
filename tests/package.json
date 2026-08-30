@@ -1,0 +1,16 @@
+{
+  "name": "sisi-test-harness",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Local SQLite-backed test harness that emulates the Google Apps Script runtime for SiSi_BackEnd. No dependencies - uses node:sqlite built into Node 22.5+.",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "serve": "node server.js --serve",
+    "load": "node server.js load",
+    "seed": "node server.js seed",
+    "reset": "node server.js reset"
+  }
+}

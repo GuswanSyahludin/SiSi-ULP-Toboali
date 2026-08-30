@@ -13,11 +13,35 @@ function _woRowSesi_(token) {
   if (!sesi) throw new Error("Sesi habis.");
   return sesi;
 }
+/* Hanya Super User yang boleh menjangkau data lintas ULP.
+   Kebijakan 29 Agu 2026: Admin DIBATASI ke ULP-nya sendiri. Sebelumnya
+   "admin" dipakai sebagai bypass di sini, bertentangan dengan _assertSuperUser
+   yang menolak "admin" — lihat bolehLintasUlp_() di Guard.js. */
+function _woRowLintasUlp_(sesi) {
+  if (typeof _normRole_ === "function")
+    return _normRole_(sesi.role) === "SUPER";
+  return _woRowNorm_(sesi.role).toLowerCase() === "super user";
+}
+
+/* Admin boleh mengerjakan WO tim mana pun DI DALAM ULP-nya sendiri, tetapi
+   tidak boleh menyentuh WO milik ULP lain. */
 function _woRowBoleh_(sesi, tim) {
   var role = _woRowNorm_(sesi.role).toLowerCase();
-  if (role === "super user" || role === "admin") return true;
+  if (_woRowLintasUlp_(sesi)) return true;
+  if (role === "admin") return true;
   var target = _woRowNorm_(sesi.subTim || sesi.tim).toLowerCase();
   return !!target && target === _woRowNorm_(tim).toLowerCase();
+}
+
+/* Pemeriksaan ULP yang hilang sama sekali sebelum 29 Agu 2026: kode WO
+   diterima dari klien tanpa pernah dibandingkan dengan ULP sesi, sehingga WO
+   milik ULP lain bisa dimulai / difoto asalkan kodenya diketahui (IDOR). */
+function _woRowUlpOk_(sesi, ulpBaris) {
+  if (_woRowLintasUlp_(sesi)) return true;
+  var punya = _woRowNorm_(sesi.ulp).toLowerCase();
+  var baris = _woRowNorm_(ulpBaris).toLowerCase();
+  if (!punya || !baris) return false; // fail-closed
+  return punya === baris;
 }
 function _woRowEnsureSchema_(sh) {
   if (!sh) throw new Error("db_ROW_Eksekusi tidak ditemukan.");
@@ -83,6 +107,8 @@ function _woRowMulai_(token, payload) {
     };
   if (!_woRowBoleh_(sesi, tim))
     return { success: false, message: "WO bukan milik tim yang sedang login." };
+  if (!_woRowUlpOk_(sesi, wo[T.ulp]))
+    return { success: false, message: "WO bukan milik ULP Anda." };
   var ss = SpreadsheetApp.openById(SPREADSHEET_ID),
     sh = ss.getSheetByName("db_ROW_Eksekusi");
   if (!sh)
@@ -147,6 +173,8 @@ function _woRowUpdate_(token, payload) {
   var tim = _woRowNorm_(wo[T.timEksekusi]);
   if (!_woRowBoleh_(sesi, tim))
     return { success: false, message: "WO bukan milik tim yang sedang login." };
+  if (!_woRowUlpOk_(sesi, wo[T.ulp]))
+    return { success: false, message: "WO bukan milik ULP Anda." };
   if (_woRowNorm_(wo[T.status]) !== STATUS_INS.PROGRESS)
     return { success: false, message: "WO tidak lagi aktif." };
   var ss = SpreadsheetApp.openById(SPREADSHEET_ID),

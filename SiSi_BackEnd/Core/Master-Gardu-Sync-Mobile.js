@@ -4,14 +4,17 @@ function updateMasterGarduMobile(token, payload) {
     var sesi = getSesiByToken(String(token || "").trim());
     if (!sesi)
       return { success: false, message: "Sesi habis, buka aplikasi ulang." };
-    var role = String(sesi.role || "")
-      .trim()
-      .toLowerCase();
-    var sub = String(sesi.subTim || "")
-      .trim()
-      .toLowerCase();
-    var boleh =
-      role === "super user" || role === "admin" || sub === "inspeksi gardu";
+    /* Kebijakan 29 Agu 2026: "admin" TIDAK lagi menjadi jalur istimewa.
+       Admin boleh mengedit Gardu (peran operasional), tetapi terikat ke ULP
+       sendiri seperti staf lain. Hanya Super User yang bebas memilih ULP.
+       Sebelumnya: `role === "super user" || role === "admin"`. */
+    var adalahSuper =
+      typeof _normRole_ === "function"
+        ? _normRole_(sesi.role) === "SUPER"
+        : String(sesi.role || "").trim().toLowerCase() === "super user";
+    var role = String(sesi.role || "").trim().toLowerCase();
+    var sub = String(sesi.subTim || "").trim().toLowerCase();
+    var boleh = adalahSuper || role === "admin" || sub === "inspeksi gardu";
     if (!boleh) return { success: false, message: "Akses edit Gardu ditolak." };
 
     payload = payload || {};
@@ -20,13 +23,13 @@ function updateMasterGarduMobile(token, payload) {
 
     var ulpSesi = String(sesi.ulp || "").trim();
     var ulpPayload = String(payload.ulp || "").trim();
-    var targetUlp = role === "super user" ? ulpPayload || ulpSesi : ulpSesi;
-    if (
-      role !== "super user" &&
-      ulpPayload &&
-      ulpPayload.toLowerCase() !== ulpSesi.toLowerCase()
-    )
+    /* ULP yang diminta klien hanya dihormati untuk Super User. Semua peran
+       lain, termasuk Admin, dipaksa ke ULP sesi. */
+    var targetUlp = adalahSuper ? ulpPayload || ulpSesi : ulpSesi;
+    if (!adalahSuper && ulpPayload && ulpPayload.toLowerCase() !== ulpSesi.toLowerCase())
       return { success: false, message: "ULP payload tidak sesuai sesi." };
+    if (!adalahSuper && !ulpSesi)
+      return { success: false, message: "Akun belum terhubung ke ULP." };
 
     var d = payload.data || {};
     var map = {

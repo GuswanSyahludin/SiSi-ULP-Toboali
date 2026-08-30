@@ -1705,7 +1705,7 @@
             '<div class="notif-loading"><i class="fa-solid fa-spinner fa-spin"></i> Memuat…</div>';
         }
         var token = _state.token || _getToken();
-        google.script.run
+        SisiRun
           .withSuccessHandler(function (res) {
             if (!res || !res.ok) {
               if (!silent) _renderNotif([]);
@@ -1904,9 +1904,145 @@
       function _getToken() {
         var sesi = _getSesiStorage();
         if (sesi && sesi.token) return sesi.token;
+        /* getPageContent() kini mengirim token di dalam objek sesi. */
+        if (window.__SISI_SESI__ && window.__SISI_SESI__.token)
+          return window.__SISI_SESI__.token;
         var m = window.location.search.match(/[?&]token=([^&]+)/);
         return m ? m[1] : "";
       }
+      /* ══════════════════════════════════════════════════════════════
+         SisiRun — pembungkus google.script.run yang MENYISIPKAN TOKEN
+         Dibuat 29 Agu 2026 (dipasang otomatis oleh tests/tools/suntik-token-html.js)
+         ──────────────────────────────────────────────────────────────
+         LATAR BELAKANG
+         Web app di-deploy dengan access: ANYONE_ANONYMOUS, sehingga setiap
+         fungsi backend bisa dipanggil siapa pun. Backend kini menuntut token
+         sesi, tetapi panggilan di HTML tidak pernah mengirimnya.
+
+         CARA KERJA
+         Hanya fungsi yang tercantum di SISI_BUTUH_TOKEN yang disisipkan
+         tokennya. Fungsi di luar daftar diteruskan persis seperti sebelumnya,
+         sehingga perubahan ini AMAN DIPASANG LEBIH DULU sebelum backend
+         selesai di-guard.
+
+         PENYISIPAN (dua bentuk, keduanya dikenali _tokenDariArgs_ di Guard.js)
+         • argumen pertama berupa object -> diberi kunci `token`
+         • selain itu (string/angka/kosong) -> token disisipkan di DEPAN
+
+         PENGECUALIAN
+         SISI_TANPA_TOKEN berisi fungsi yang memang belum punya token.
+         ══════════════════════════════════════════════════════════════ */
+      var SISI_BUTUH_TOKEN = [
+              "getSessionUser",
+              "getPageContent",
+              "getMenuOptions",
+              "getDaftarAkun",
+              "tambahAkun",
+              "updateAkun",
+              "hapusAkun",
+              "resetPasswordAkun",
+              "gantiPassword",
+              "doLogout",
+              "getMobileLaporanHarian",
+              "getMobileDropdownRow",
+              "getMobileEksekusiRow",
+              "simpanMobileEksekusiRow",
+              "updateMobileEksekusiRow",
+              "getMasterGarduMobile",
+              "updateMasterGarduMobile",
+              "simpanHeaderInsGardu",
+              "simpanRealisasiInsGardu",
+              "simpanTemuanGardu",
+              "editHeaderInsGardu",
+              "editRealisasiGardu",
+              "editTemuanGardu",
+              "hapusRealisasiGardu",
+              "updatePengukuranGardu",
+              "simpanHeaderInsJar",
+              "simpanRealisasiInsJar",
+              "simpanTemuanInsJar",
+              "editHeaderInsJar",
+              "editRealisasiInsJar",
+              "editTemuanInsJar",
+              "updateHeaderInsLangsung",
+              "simpanDataROW",
+              "simpanTeruskanROW",
+              "simpanJadwalPadam",
+              "updateJadwalPadam",
+              "updateStatusJadwalPadam",
+              "getJadwalPadamList",
+              "getListPekerjaanP0",
+              "updateNamaPekerjaanP0",
+              "getRekapPointPetugasY",
+              "getTabelPetugasYandal",
+              "getDetailPerformaPetugasY",
+              "getVccYandalList",
+              "setVccYandal",
+              "getListPetugasYandal"
+      ];
+      var SISI_TANPA_TOKEN = ["doLogin", "loginPerangkat", "cekPerangkat"];
+
+      /* PENTING: blok ini memakai alias GSR, BUKAN menulis google.script.run
+         berulang kali. Kalau ditulis langsung, penggantian teks massal
+         (google.script.run -> SisiRun) akan mengubahnya menjadi SisiRun di
+         dalam definisi SisiRun sendiri -> rekursi tak berhenti. Alias GSR
+         kebal terhadap penggantian semacam itu. */
+      var SisiRun = (function () {
+        var GSR = google.script.run;
+
+        function perluToken(nama) {
+          if (SISI_TANPA_TOKEN.indexOf(nama) >= 0) return false;
+          return SISI_BUTUH_TOKEN.indexOf(nama) >= 0;
+        }
+
+        function sisipkan(nama, args) {
+          if (!perluToken(nama)) return args;
+          var t = _getToken();
+          if (!t) return args; /* tanpa token, biarkan backend yang menolak */
+          var a = Array.prototype.slice.call(args);
+          if (a.length && a[0] && typeof a[0] === "object" && !Array.isArray(a[0])) {
+            var salin = {};
+            for (var k in a[0]) salin[k] = a[0][k];
+            salin.token = t;
+            a[0] = salin;
+          } else {
+            a.unshift(t);
+          }
+          return a;
+        }
+
+        function bungkus(nama) {
+          return function () {
+            return GSR[nama].apply(GSR, sisipkan(nama, arguments));
+          };
+        }
+
+        var api = {
+          withSuccessHandler: function (fn) {
+            GSR.withSuccessHandler(fn);
+            return api;
+          },
+          withFailureHandler: function (fn) {
+            GSR.withFailureHandler(fn);
+            return api;
+          },
+          withUserObject: function (o) {
+            GSR.withUserObject(o);
+            return api;
+          },
+        };
+
+        var cache = {};
+        return new Proxy(api, {
+          get: function (target, nama) {
+            if (typeof nama !== "string") return target[nama];
+            if (nama in target) return target[nama];
+            if (!cache[nama]) cache[nama] = bungkus(nama);
+            return cache[nama];
+          },
+        });
+      })();
+
 
       /* ════════════════════
       AKSES MENU (filter)
@@ -2051,7 +2187,7 @@
         }
         if (err) err.style.display = "none";
 
-        google.script.run
+        SisiRun
           .withSuccessHandler(function (res) {
             if (btn) {
               btn.disabled = false;
@@ -2419,7 +2555,7 @@
 
         var token = _state.token || _getToken();
 
-        google.script.run
+        SisiRun
           .withSuccessHandler(function (res) {
             if (!res || !res.success) {
               if (res && res.redirect === "login") {
@@ -2499,7 +2635,7 @@
           body.innerHTML =
             '<div class="akses-loading"><i class="fa-solid fa-spinner fa-spin"></i> Memuat…</div>';
         var token = _state.token || _getToken();
-        google.script.run
+        SisiRun
           .withSuccessHandler(function (opts) {
             _aksesMenuOptions = opts || [];
             _aksesLoadList();
@@ -2525,7 +2661,7 @@
           body.innerHTML =
             '<div class="akses-loading"><i class="fa-solid fa-spinner fa-spin"></i> Memuat daftar akun…</div>';
         var token = _state.token || _getToken();
-        google.script.run
+        SisiRun
           .withSuccessHandler(function (res) {
             if (!res || !res.ok) {
               if (body)
@@ -3013,12 +3149,12 @@
         };
         if (isEdit) {
           data.targetUsername = _el("afTarget").value.trim();
-          google.script.run
+          SisiRun
             .withSuccessHandler(handler)
             .withFailureHandler(fail)
             .updateAkun(token, data);
         } else {
-          google.script.run
+          SisiRun
             .withSuccessHandler(handler)
             .withFailureHandler(fail)
             .tambahAkun(token, data);
@@ -3029,7 +3165,7 @@
         if (!confirm('Hapus akun "' + username + '"? Tindakan ini permanen.'))
           return;
         var token = _state.token || _getToken();
-        google.script.run
+        SisiRun
           .withSuccessHandler(function (res) {
             if (res && res.ok) {
               showToast("Akun dihapus", "success");
@@ -3089,7 +3225,7 @@
         btn.disabled = true;
         btn.innerHTML =
           '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
-        google.script.run
+        SisiRun
           .withSuccessHandler(function (res) {
             btn.disabled = false;
             btn.innerHTML = lbl;
@@ -3239,7 +3375,7 @@
         btn.innerHTML =
           '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
         var token = _state.token || _getToken();
-        google.script.run
+        SisiRun
           .withSuccessHandler(function (res) {
             btn.disabled = false;
             btn.innerHTML = lbl;
@@ -3662,7 +3798,7 @@
         _state.token = "";
         _state.sesi = {};
         try {
-          google.script.run.doLogout(token);
+          SisiRun.doLogout(token);
         } catch (e) {}
         setTimeout(function () {
           _selesaiLogout(scriptUrl);

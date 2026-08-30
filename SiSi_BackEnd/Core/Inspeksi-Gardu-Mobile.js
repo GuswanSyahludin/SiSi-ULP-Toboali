@@ -18,21 +18,31 @@ function _insLocalPut_(id, kode, jenis) {
     JSON.stringify({ kode: kode, jenis: jenis, at: new Date().toISOString() }),
   );
 }
+/* Siapa yang boleh mengirim paket Inspeksi Gardu. Admin termasuk, tetapi
+   tetap terikat ULP sendiri — lihat _insLintasUlp_(). */
 function _insBoleh_(sesi) {
-  var role = String((sesi && sesi.role) || "")
-    .trim()
-    .toLowerCase();
+  var role = _insRole_(sesi);
   var sub = String((sesi && sesi.subTim) || "")
     .trim()
     .toLowerCase();
-  return role === "super user" || role === "admin" || sub === "inspeksi gardu";
+  return role === "SUPER" || role === "ADMIN" || sub === "inspeksi gardu";
 }
+
+/* Normalisasi peran: "Super User" / "super user" / "superuser" setara
+   (29 Agu 2026, K13). Sebelumnya exact-match sehingga variasi penulisan di
+   db_Users bisa mengubah hasil pemeriksaan. */
+function _insRole_(sesi) {
+  var mentah = String((sesi && sesi.role) || "").trim();
+  return typeof _normRole_ === "function" ? _normRole_(mentah) : mentah.toLowerCase();
+}
+
+/* HANYA Super User yang bebas memilih ULP. Admin dibatasi ke ULP-nya sendiri
+   (kebijakan 29 Agu 2026) — lihat bolehLintasUlp_() di Guard.js. */
 function _insSuper_(sesi) {
-  return (
-    String((sesi && sesi.role) || "")
-      .trim()
-      .toLowerCase() === "super user"
-  );
+  return _insRole_(sesi) === "SUPER";
+}
+function _insLintasUlp_(sesi) {
+  return _insSuper_(sesi);
 }
 
 function getListTemuanMobile_(token) {

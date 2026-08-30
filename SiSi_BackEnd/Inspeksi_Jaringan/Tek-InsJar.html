@@ -611,7 +611,7 @@ function _bootTekIns(){
   if(_sesiInject && (_sesiInject.role || _sesiInject.username || _sesiInject.ulp)){
     initSession(_sesiInject);
   } else if(typeof google !== 'undefined'){
-    google.script.run
+    SisiRun
       .withSuccessHandler(initSession)
       .withFailureHandler(function(){ initSession({}); })
       .getSessionUser();
@@ -689,7 +689,7 @@ function _switchInsTab(tabId){
 
 // ══════════ LIST ULP & PENYULANG ══════════
 function _loadListUlp(){
-  google.script.run.withSuccessHandler(function(data){
+  SisiRun.withSuccessHandler(function(data){
     ['rls_ulp','lph_ulp','dft_ulp','rkp_ulp'].forEach(function(id){
       var sel = _el(id); if(!sel) return;
       sel.innerHTML = '<option value="">Semua ULP</option>';
@@ -699,7 +699,7 @@ function _loadListUlp(){
 }
 function _loadListPenyulang(ulp){
   var ulpParam = _isSuperAdmin ? (ulp||'') : (_session.ulp||'');
-  google.script.run.withSuccessHandler(function(data){
+  SisiRun.withSuccessHandler(function(data){
     ['dft_penyulang','rkp_penyulang'].forEach(function(id){
       var sel = _el(id); if(!sel) return;
       sel.innerHTML = '<option value="">Semua Penyulang</option>';
@@ -730,7 +730,7 @@ function loadRealisasiInsJar(){
     ulp       : _isSuperAdmin ? _el('rls_ulp').value : (_session.ulp||'')
   };
   tbody.innerHTML = _loadingRow(8);
-  google.script.run
+  SisiRun
     .withSuccessHandler(renderRealisasi)
     .withFailureHandler(function(err){ _showError('bodyRealisasi', 8, err); })
     .getDataLapHarianInsJar(params);
@@ -796,7 +796,7 @@ function loadLapHarianInsJar(){
   cont.innerHTML =
     '<div class="loading-wrap"><i class="fa-solid fa-spinner fa-spin"></i> Memuat data...</div>';
 
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(rows){
       _lapHarianData = rows || [];
       renderLapHarian(_lapHarianData);
@@ -849,7 +849,7 @@ function _insEditSubmit(){
   var err = document.getElementById('iehErr');
   btn.disabled = true; btn.textContent = 'Menyimpan...'; err.style.display = 'none';
 
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       btn.disabled = false; btn.textContent = 'Simpan';
       if(res && res.ok){
@@ -1020,7 +1020,7 @@ function _lphKirimWa(kode){
 }
 function _lphUpdate(kode){
   if(typeof _toastIns === 'function') _toastIns('Memperbarui data...', 'success');
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       if(typeof _toastIns === 'function') _toastIns('Data berhasil diperbarui.', 'success');
       loadLapHarianInsJar();
@@ -1074,7 +1074,7 @@ function _copyFallback(text){
 function updateLapHarian(kodeHeader){
   var btn = _el('updBtn-'+kodeHeader);
   if(btn){ btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memperbarui...'; }
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       if(btn){ btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-arrows-rotate"></i> Update Data'; }
       if(res && res.ok){
@@ -1124,7 +1124,7 @@ function loadRekapTemuan(){
   _el('bodyRekap').innerHTML = _loadingRow(7);
   ['cardTotalTemuan','cardBelumTim','cardBelumKerjakan','cardSelesaiTL']
     .forEach(function(id){ if(_el(id)) _el(id).textContent = '-'; });
-  google.script.run
+  SisiRun
     .withSuccessHandler(renderRekapTemuan)
     .withFailureHandler(function(err){ _showError('bodyRekap', 7, err); })
     .getDataRekapTemuan(params);
@@ -1152,7 +1152,7 @@ function bukaDetailPekerjaanRekap(kodePekerjaan){
   var body = _el('dtpBody');
   if(body) body.innerHTML = '<div class="loading-wrap"><i class="fa-solid fa-spinner fa-spin"></i> Memuat detail...</div>';
   _el('modalDetailPekerjaan').classList.add('show');
-  google.script.run
+  SisiRun
     .withSuccessHandler(renderDetailPekerjaanRekap)
     .withFailureHandler(function(err){
       if(body) body.innerHTML = '<div class="empty-state" style="color:var(--danger)">'
@@ -1266,7 +1266,7 @@ function _isiUlpTambahHeader(){
   if(_isSuperAdmin){
     sel.disabled = false;
     sel.innerHTML = '<option value="">- Pilih ULP -</option>';
-    google.script.run.withSuccessHandler(function(data){
+    SisiRun.withSuccessHandler(function(data){
       sel.innerHTML = '';
       (data||[]).forEach(function(u){
         sel.innerHTML += '<option value="'+ u +'"'+ (u===ulpSendiri?' selected':'') +'>'+ u +'</option>';
@@ -1317,7 +1317,7 @@ function simpanTambahHeader(){
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
 
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       btn.disabled = false;
       btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Simpan';
@@ -1430,7 +1430,7 @@ function bukaRealisasiRow(kodeHeader, ulp){
   if(_el('trSegmen')) _el('trSegmen').value = '';
 
   // Penyulang UNIK dari master db_Penyulang
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(list){
       var sel = _el('trPenyulang');
       (list||[]).forEach(function(p){ sel.innerHTML += '<option value="'+p+'">'+p+'</option>'; });
@@ -1447,7 +1447,7 @@ function bukaDetailRealisasi(kodeHeader){
   var body = _el('detailRealisasiBody');
   body.innerHTML = '<div class="loading-wrap"><i class="fa-solid fa-spinner fa-spin"></i> Memuat detail...</div>';
   _el('modalDetailRealisasi').classList.add('show');
-  google.script.run
+  SisiRun
     .withSuccessHandler(renderDetailRealisasi)
     .withFailureHandler(function(err){
       body.innerHTML = '<div class="empty-state" style="color:var(--danger)">'
@@ -1541,7 +1541,7 @@ function simpanTambahRealisasi(){
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
 
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       btn.disabled = false;
       btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Simpan';
@@ -1582,7 +1582,7 @@ function _trLoadTitik(){
   }
   selA.innerHTML = '<option value="">- Memuat... -</option>';
   selB.innerHTML = '<option value="">- Memuat... -</option>';
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       var list = (res && res.list) ? res.list : [];
       selA.innerHTML = '<option value="">- Pilih Titik Awal -</option>';
@@ -1625,7 +1625,7 @@ function bukaEditRealisasi(idx){
 
   selA.innerHTML = '<option value="">- Memuat... -</option>';
   selB.innerHTML = '<option value="">- Memuat... -</option>';
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       var list = (res && res.list) ? res.list.slice() : [];
       if(awal  && list.indexOf(awal)  === -1) list.push(awal);
@@ -1659,7 +1659,7 @@ function simpanEditRealisasi(){
     payload.sectionAwal  = _el('erlSectionAwal').value;
     payload.sectionAkhir = _el('erlSectionAkhir').value;
   }
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Simpan Perubahan';
       if(res && res.ok){
@@ -1738,7 +1738,7 @@ function bukaDetailTemuanIdx(idx){
   _dtmReloadKodePeny = r.kodePekerjaanPeny || '';
   _el('dtmListWrap').innerHTML = '<div class="loading-wrap"><i class="fa-solid fa-spinner fa-spin"></i> Memuat temuan...</div>';
   _el('modalDetailTemuan').classList.add('show');
-  google.script.run
+  SisiRun
     .withSuccessHandler(renderDetailTemuanList)
     .withFailureHandler(function(err){
       _el('dtmListWrap').innerHTML = '<div class="empty-state" style="color:var(--danger)">'
@@ -1850,7 +1850,7 @@ function _loadEtmTemuan(objek, selected){
   var sel = _el('etmTemuan');
   if(!sel) return;
   sel.innerHTML = '<option value="">- Memuat temuan... -</option>';
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       sel.innerHTML = '<option value="">- Pilih Temuan -</option>';
       var list = (res && res.list) ? res.list.slice() : [];
@@ -1870,7 +1870,7 @@ function _loadEtmSection(penyulang, selected){
   var sel = _el('etmSection');
   if(!sel) return;
   sel.innerHTML = '<option value="">- Memuat section... -</option>';
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       sel.innerHTML = '<option value="">- Pilih Section -</option>';
       var list = (res && res.list) ? res.list.slice() : [];
@@ -1896,7 +1896,7 @@ function simpanEditTemuan(){
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
 
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       btn.disabled = false;
       btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Simpan Perubahan';
@@ -1905,7 +1905,7 @@ function simpanEditTemuan(){
         sisiSukses('Perubahan temuan telah disimpan.');
         if(_dtmReloadKodePeny){
           _el('dtmListWrap').innerHTML = '<div class="loading-wrap"><i class="fa-solid fa-spinner fa-spin"></i> Memuat temuan...</div>';
-          google.script.run.withSuccessHandler(renderDetailTemuanList).getTemuanByKodePekerjaanPeny(_dtmReloadKodePeny);
+          SisiRun.withSuccessHandler(renderDetailTemuanList).getTemuanByKodePekerjaanPeny(_dtmReloadKodePeny);
         }
         if(_detailCtx && _detailCtx.kodeHeader) bukaDetailRealisasi(_detailCtx.kodeHeader);
       }else{
@@ -1942,7 +1942,7 @@ function loadSectionByPenyulang(penyulang, selected){
   var sel = _el('ttmSection');
   if(!sel) return;
   sel.innerHTML = '<option value="">- Memuat section... -</option>';
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       sel.innerHTML = '<option value="">- Pilih Section -</option>';
       var list = (res && res.list) ? res.list : [];
@@ -1967,7 +1967,7 @@ function loadTemuanByObjek(objek){
   var sel = _el('ttmObjek');
   if(!sel) return;
   sel.innerHTML = '<option value="">- Memuat temuan... -</option>';
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       sel.innerHTML = '<option value="">- Pilih Temuan -</option>';
       var list = (res && res.list) ? res.list : [];
@@ -2054,7 +2054,7 @@ function simpanTambahTemuan(){
         fotoTiangB64:      fotoTiang  ? fotoTiang.b64   : '',
         fotoTiangMime:     fotoTiang  ? fotoTiang.mime  : ''
       };
-      google.script.run
+      SisiRun
         .withSuccessHandler(function(res){
           btn.disabled = false;
           btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Simpan Temuan';

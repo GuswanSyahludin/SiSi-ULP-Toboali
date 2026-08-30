@@ -1063,7 +1063,7 @@ function _loadData(){
   if(info) info.textContent = '';
   if(pag)  pag.innerHTML   = '';
 
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       _ROW.isLoading  = false;
       _ROW.dataLoaded = true;
@@ -1308,7 +1308,7 @@ function _autoLoadFoto(){
   /* Satu panggilan getFotoROW per baris (bukan per kolom) */
   Object.keys(rowMap).forEach(function(noRow){
     (function(nr, map){                         /* closure agar nr tidak berubah */
-      google.script.run
+      SisiRun
         .withSuccessHandler(function(res){
           var urls = {
             sbl: res && res.fotoSbl,
@@ -1391,7 +1391,7 @@ function _loadSemuaLaporan(){
     }
   }
 
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       _restoreBtn();
       _LAP.allData = (res && res.rows) || [];
@@ -1530,7 +1530,7 @@ function _tutupRekapDetail(){
 
 /* ── Nama Pejabat (Manager / TL / Koordinator) untuk Cetak PDF ── */
 function _loadPejabatRekap(){
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(p){
       p = p || {};
       if(_el('pjbManager'))     _el('pjbManager').value     = p.manager     || '';
@@ -1551,7 +1551,7 @@ function _simpanPejabatRekap(){
   };
   if(btn){ btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan…'; }
   if(stat){ stat.style.color='#64748b'; stat.textContent='Menyimpan…'; }
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       if(btn){ btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-floppy-disk"></i> Simpan Nama'; }
       if(res && res.success){
@@ -1647,7 +1647,7 @@ function _loadLaporanHarian(){
     '<div class="row-empty">'
     +'<i class="fa-solid fa-spinner fa-spin"></i> Memuat laporan…</div>';
 
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       if(!res || !res.success || !res.rows || res.rows.length === 0){
         _el('lapHarianKonten').innerHTML =
@@ -1806,7 +1806,7 @@ function _renderKartuLaporan(row){
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses…';
 
-    google.script.run
+    SisiRun
       .withSuccessHandler(function(res){
         btn.disabled = false;
         btn.innerHTML = '<i class="fa-solid fa-rotate"></i> Refresh Laporan';
@@ -1870,7 +1870,7 @@ function _refreshLaporanManual(tim, tanggal, reloadAfter){
   var btnR = _el('btnRefreshLaporan');
   if(btnR){ btnR.disabled=true; btnR.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Memproses…'; }
 
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       if(btnR){ btnR.disabled=false; btnR.innerHTML='<i class="fa-solid fa-rotate"></i> Refresh Manual'; }
       if(res && res.success){
@@ -1894,7 +1894,7 @@ function _refreshLaporanManual(tim, tanggal, reloadAfter){
 ═════════════════════════ */
 function _loadDropdown(){
   if(_ROW.dropLoaded) return;
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       _ROW.dropLoaded = true;
       _ROW.timByUlp   = (res && res.timByUlp) || {};
@@ -2012,7 +2012,7 @@ function _submitForm(){
   if(btn){ btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan…'; }
   var tim  = (document.getElementById('hdnTim')||{}).value||'';
   var user = (document.getElementById('displayUsername')||{}).textContent||'';
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       _ROW.isSubmit = false;
       if(btn){ btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-floppy-disk"></i> Simpan'; }
@@ -2216,7 +2216,7 @@ function _bukaBatchModal(){
 
   /* Muat daftar header */
   _el('batchTotalCount').textContent = '⏳';
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       if(!res || !res.success){
         _el('batchTotalCount').textContent = '!';
@@ -2348,7 +2348,7 @@ function _prosesItemBerikutnya(){
 
   _batchLog('['+(idx+1)+'/'+tot+'] Proses: '+item.tim+' / '+item.tanggal+'…');
 
-  google.script.run
+  SisiRun
     .withSuccessHandler(function(res){
       if(res && res.success){
         _batchLog('✅ OK: '+item.tim+' / '+item.tanggal, 'ok');
@@ -2409,7 +2409,7 @@ function troTodayStr(){ var d=new Date(); return d.getFullYear()+'-'+('0'+(d.get
 
 function troInit(){
   troBindEvents();
-  google.script.run.withSuccessHandler(function(sesi){ tro.sesi=sesi||{}; troSetupUlp(); troLoadData(); })
+  SisiRun.withSuccessHandler(function(sesi){ tro.sesi=sesi||{}; troSetupUlp(); troLoadData(); })
     .withFailureHandler(function(){ tro.sesi={}; troSetupUlp(); troLoadData(); })
     .getSessionUser();
 }
@@ -2421,7 +2421,7 @@ function troSetupUlp(){
   if(!sel) return;
   if(troIsSuperAdmin()){
     if(wrap) wrap.style.display='';
-    google.script.run.withSuccessHandler(function(list){
+    SisiRun.withSuccessHandler(function(list){
       list=list||[];
       sel.innerHTML='<option value="">— Semua ULP —</option>'+list.map(function(u){return '<option value="'+troEsc(u)+'">'+troEsc(u)+'</option>';}).join('');
     }).getListUlpIns();
@@ -2438,7 +2438,7 @@ function troLoadData(){
   var body=troEl('troTableBody');
   if(body) body.innerHTML='<tr><td colspan="9" class="row-empty">Memuat data…</td></tr>';
   var params={ status:'Progress Pekerjaan' }; var ulp=troCurrentUlp(); if(ulp) params.ulp=ulp;
-  google.script.run.withSuccessHandler(function(rows){ tro.data=rows||[]; troApplyFilter(); })
+  SisiRun.withSuccessHandler(function(rows){ tro.data=rows||[]; troApplyFilter(); })
     .withFailureHandler(function(e){ if(body) body.innerHTML='<tr><td colspan="9" class="row-empty" style="color:#dc2626">Gagal memuat: '+troEsc(e&&e.message)+'</td></tr>'; })
     .getDataDaftarTemuan(params);
 }
@@ -2546,7 +2546,7 @@ function troSimpan(){
     fotoSesudahB64: tro._fotoSsd?tro._fotoSsd.b64:'',
     fotoSesudahMime: tro._fotoSsd?tro._fotoSsd.mime:''
   };
-  google.script.run.withSuccessHandler(function(res){
+  SisiRun.withSuccessHandler(function(res){
     btn.disabled=false; btn.textContent='Teruskan & Simpan';
     if(res&&res.ok){ troTutupDetail(); troLoadData(); if(window.sisiSukses) sisiSukses('Temuan selesai & data eksekusi ROW telah disimpan.'); else if(typeof showToast==='function') showToast('Berhasil! Temuan ditandai Selesai & data eksekusi ROW tersimpan.','success'); else alert('Berhasil!'); }
     else { alert('Gagal: '+((res&&res.message)||'tidak diketahui')); }

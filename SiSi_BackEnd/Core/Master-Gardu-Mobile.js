@@ -6,6 +6,16 @@ var MASTER_GARDU_MOBILE = {
 };
 function getMasterGarduMobile(token, ulpDiminta) {
   try {
+    /* GERBANG OTENTIKASI (29 Agu 2026) — sebelum dispatch.
+       Sebelumnya tidak ada pemeriksaan di sini: tujuh percabangan ke sub-modul
+       dijalankan lebih dulu dan masing-masing diharapkan memeriksa token
+       sendiri. Satu yang lupa — _deltaFetch_ — membuat seluruh isi sheet,
+       termasuk db_Users (email, role, aksesMenu seluruh pengguna), bisa ditarik
+       tanpa login lewat ?ulp=DELTA_SYNC:{...}. Sekarang otentikasi terjadi di
+       gerbang, jadi kelalaian di sub-modul tidak langsung terekspos. */
+    var g = guard_(arguments, { aksi: "getMasterGarduMobile" });
+    token = g.token;
+
     var raw = String(ulpDiminta || "");
     if (raw === "LIST_TEMUAN") return getListTemuanMobile_(token);
     if (raw.indexOf("DELTA_SYNC:") === 0) {
@@ -113,12 +123,20 @@ function getMasterGarduMobile(token, ulpDiminta) {
     }
     var sesi = getSesiByToken(String(token || ""));
     if (!sesi) return { success: false, message: "Sesi habis." };
-    var superUser = String(sesi.role || "").toLowerCase() === "super user";
+    /* Hanya Super User yang boleh meminta ULP lain. Admin DIBATASI ke ULP
+       sendiri (kebijakan 29 Agu 2026). Normalisasi peran lewat _normRole_
+       supaya variasi penulisan di db_Users tidak mengubah hasil. */
+    var peran =
+      typeof _normRole_ === "function"
+        ? _normRole_(sesi.role)
+        : String(sesi.role || "").trim().toLowerCase();
+    var superUser = peran === "SUPER";
+    var ulpSesi = String(sesi.ulp || "").trim().toLowerCase();
     var filter = superUser
       ? raw.trim().toLowerCase()
-      : String(sesi.ulp || "")
-          .trim()
-          .toLowerCase();
+      : ulpSesi;
+    if (!superUser && !ulpSesi)
+      return { success: false, message: "Akun belum terhubung ke ULP." };
     var sh = SpreadsheetApp.openById(
         MASTER_GARDU_MOBILE.spreadsheetId,
       ).getSheetByName(MASTER_GARDU_MOBILE.tab),
