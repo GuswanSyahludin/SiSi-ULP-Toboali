@@ -2575,7 +2575,7 @@
 
         var token = _state.token || _getToken();
 
-        SisiRun
+        google.script.run
           .withSuccessHandler(function (res) {
             if (!res || !res.success) {
               if (res && res.redirect === "login") {
