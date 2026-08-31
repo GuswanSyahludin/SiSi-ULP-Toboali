@@ -163,12 +163,12 @@ function getMonitoringTemuanDetailIns(kodePekerjaan) {
 function getTitikPetaTemuanIns(filter){
   try{
     filter = filter || {};
-    var fUlp    = String(filter.ulp || '').trim();
+    var fUlp    = String(filter.ulp || '').trim().toLowerCase();
     var fDari   = String(filter.tglDari || '').trim();
     var fSmp    = String(filter.tglSampai || '').trim();
-    var fPeny   = String(filter.penyulang || '').trim();
-    var fTemuan = String(filter.temuan || '').trim();
-    var fStat   = String(filter.status || '').trim();
+    var fPeny   = String(filter.penyulang || '').trim().toLowerCase();
+    var fTemuan = String(filter.temuan || '').trim().toLowerCase();
+    var fStat   = String(filter.status || '').trim().toLowerCase();
 
     var ck = 'ins_peta_' + [fUlp,fDari,fSmp,fPeny,fTemuan,fStat].join('|');
     var cache = CacheService.getScriptCache();
@@ -191,10 +191,10 @@ function getTitikPetaTemuanIns(filter){
       var kode = String(r[C.kodePekerjaan] || '').trim();
       if(!kode) continue;
 
-      var rUlp = String(r[C.ulp] || '').trim();
+      var rUlp = String(r[C.ulp] || '').trim().toLowerCase();
       var rTgl = _normTgl(r[C.tanggal]);
-      var rPny = String(r[C.penyulang] || '').trim();
-      var rTem = String(r[C.temuan] || '').trim();
+      var rPny = String(r[C.penyulang] || '').trim().toLowerCase();
+      var rTem = String(r[C.temuan] || '').trim().toLowerCase();
       var rSta = _statusTemuanIns(r[C.status]);
 
       if(fUlp   && rUlp !== fUlp) continue;
@@ -208,7 +208,7 @@ function getTitikPetaTemuanIns(filter){
       else if(rSta === 'Belum Ada Tim') sumBelum++;
       else sumProses++;
 
-      if(fStat && rSta !== fStat) continue;
+      if(fStat && rSta.toLowerCase() !== fStat) continue;
 
       // Lat (W) / Long (X) tersimpan sebagai angka; fallback parse Koordinat (V).
       var lat = parseFloat(r[C.lat]), lng = parseFloat(r[C.long]);

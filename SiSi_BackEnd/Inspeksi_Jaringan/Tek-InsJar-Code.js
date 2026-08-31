@@ -522,14 +522,17 @@ function getDataLapHarianInsJar(params) {
 function getDataDaftarTemuan(params) {
   params = params || {};
   const T = COL_INS.TEMUAN;
-  const dari = params.tglDari || '', sampai = params.tglSampai || '', fUlp = params.ulp || '',
-        fStatus = params.status || '', fPeny = params.penyulang || '', fTier = params.tier || '';
+  const dari = params.tglDari || '', sampai = params.tglSampai || '',
+        fUlp = String(params.ulp || '').trim().toLowerCase(),
+        fStatus = String(params.status || '').trim().toLowerCase(),
+        fPeny = String(params.penyulang || '').trim().toLowerCase(),
+        fTier = String(params.tier || '').trim().toLowerCase();
   return _readSheetIns(SHEET_INS.TEMUAN)
     .filter(function (t) {
-      const ulp    = String(t[T.ulp] || '').trim();
-      const status = String(t[T.status] || '').trim();
-      const peny   = String(t[T.penyulang] || '').trim();
-      const tier   = String(t[T.tier] || '').trim();
+      const ulp    = String(t[T.ulp] || '').trim().toLowerCase();
+      const status = String(t[T.status] || '').trim().toLowerCase();
+      const peny   = String(t[T.penyulang] || '').trim().toLowerCase();
+      const tier   = String(t[T.tier] || '').trim().toLowerCase();
       if (fUlp    && ulp    !== fUlp)    return false;
       if (fStatus && status !== fStatus) return false;
       if (fPeny   && peny   !== fPeny)   return false;
@@ -566,11 +569,12 @@ function getDataRekapTemuan(params) {
   params = params || {};
   const T = COL_INS.TEMUAN;
   const dari = params.tglDari || '', sampai = params.tglSampai || '',
-        fUlp = params.ulp || '', fPeny = params.penyulang || '';
+        fUlp = String(params.ulp || '').trim().toLowerCase(),
+        fPeny = String(params.penyulang || '').trim().toLowerCase();
   const rekap = { total: 0, belumTim: 0, proses: 0, selesai: 0, rows: [] };
   _readSheetIns(SHEET_INS.TEMUAN).forEach(function (t) {
-    const ulp    = String(t[T.ulp] || '').trim();
-    const peny   = String(t[T.penyulang] || '').trim();
+    const ulp    = String(t[T.ulp] || '').trim().toLowerCase();
+    const peny   = String(t[T.penyulang] || '').trim().toLowerCase();
     const status = String(t[T.status] || '').trim();
     if (fUlp  && ulp  !== fUlp)  return;
     if (fPeny && peny !== fPeny) return;

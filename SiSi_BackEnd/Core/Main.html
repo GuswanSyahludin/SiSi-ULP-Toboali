@@ -1978,7 +1978,46 @@
               "getDetailPerformaPetugasY",
               "getVccYandalList",
               "setVccYandal",
-              "getListPetugasYandal"
+              "getListPetugasYandal",
+              "getDataROW",
+              "getDataHeaderInsGardu",
+              "cariPengukuranGardu",
+              "getDataLapHarianInsJar",
+              "getDataDaftarTemuan",
+              "getDataRekapTemuan",
+              "getHartekRekapMatrix",
+              "getMonitoringTlTemuan",
+              "getTitikPetaTemuanIns",
+              "getDpgHarMatrix",
+              "getDpgCoverGardu",
+              "getDpgGangguanPenyulang",
+              "getDpgRekapTemuan",
+              "getDpgGangguanCharts",
+              "getListUlpUsers",
+              "getListUlpIns",
+              "getListPenyulangIns",
+              "getDataPenyulangByUlp",
+              "getListTemuanTerpakaiIns",
+              "getListTemuanByObjek",
+              "getRekapInsGarduRows",
+              "getGisJaringanLines",
+              "getHiUp3",
+              "getPenyulangDanSection",
+              "getTemuanGardu",
+              "getTemuanByKodePekerjaan",
+              "getTemuanByKodePekerjaanPeny",
+              "getExecUrlInsGardu",
+              "getPejabatRekapInsGardu",
+              "getListTimByUlp",
+              "getJadwalPadamMaster",
+              "getLaporanUp3Uiw",
+              "getLaporanWilayah",
+              "simpanPejabatRekapInsGardu",
+              "editHeaderInsGarduLangsung",
+              "updateHeaderInsGarduLangsung",
+              "simpanMobileLaporanC4A",
+              "getMobileLaporanUp3Uiw",
+              "deltaFetch"
       ];
       var SISI_TANPA_TOKEN = ["doLogin", "loginPerangkat", "cekPerangkat"];
 
@@ -2029,7 +2068,16 @@
           if (hasUserObject) runner = runner.withUserObject(userObject);
           var finalArgs = sisipkan(nama, args);
           resetHandlers();
-          return runner[nama].apply(runner, finalArgs);
+          var fn = runner[nama];
+          switch (finalArgs.length) {
+            case 0: return fn.call(runner);
+            case 1: return fn.call(runner, finalArgs[0]);
+            case 2: return fn.call(runner, finalArgs[0], finalArgs[1]);
+            case 3: return fn.call(runner, finalArgs[0], finalArgs[1], finalArgs[2]);
+            case 4: return fn.call(runner, finalArgs[0], finalArgs[1], finalArgs[2], finalArgs[3]);
+            case 5: return fn.call(runner, finalArgs[0], finalArgs[1], finalArgs[2], finalArgs[3], finalArgs[4]);
+            default: return fn.apply(runner, finalArgs);
+          }
         }
 
         var api = {

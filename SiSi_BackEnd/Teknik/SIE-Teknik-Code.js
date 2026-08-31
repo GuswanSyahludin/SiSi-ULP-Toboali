@@ -758,16 +758,17 @@ function getMonitoringTlTemuan(params) {
     // 1) Verifikasi username → role & ULP dari db_Users.
     var ver = _verifikasiUserDb_(params.username);
     if (!ver.ok) return { ok: false, error: ver.error, list: [] };
-    var isSuper = ver.role === "Super User" || ver.role === "Admin";
+    var roleNorm = String(ver.role || "").trim().toLowerCase();
+    var isSuper = roleNorm === "super user" || roleNorm === "admin";
     // 2) Scope ULP: Super User/Admin → bebas (params.ulp, kosong = semua); selain itu → PAKSA ULP db_Users.
-    var ulpScope = isSuper ? String(params.ulp || "").trim() : ver.ulp;
+    var ulpScope = isSuper ? String(params.ulp || "").trim().toLowerCase() : String(ver.ulp || "").trim().toLowerCase();
     var dari = _normTgl(params.tglDari),
       sampai = _normTgl(params.tglSampai);
     var statusList =
       params.statusList instanceof Array ? params.statusList : [];
     var statusOk = {};
     statusList.forEach(function (s) {
-      statusOk[String(s || "").trim()] = true;
+      statusOk[String(s || "").trim().toLowerCase()] = true;
     });
     var pakaiStatus = statusList.length > 0;
 
@@ -781,12 +782,12 @@ function getMonitoringTlTemuan(params) {
     for (var i = 1; i < d.length; i++) {
       var kode = String(d[i][T.kodePekerjaan] || "").trim();
       if (!kode) continue;
-      if (ulpScope && String(d[i][T.ulp] || "").trim() !== ulpScope) continue;
+      if (ulpScope && String(d[i][T.ulp] || "").trim().toLowerCase() !== ulpScope) continue;
       var tgl = _normTgl(d[i][T.tanggal]);
       if (dari && tgl < dari) continue;
       if (sampai && tgl > sampai) continue;
       var status = String(d[i][T.status] || "").trim() || "Penugasan Tim";
-      if (pakaiStatus && !statusOk[status]) continue;
+      if (pakaiStatus && !statusOk[status.toLowerCase()]) continue;
       out.push({
         kodePekerjaan: kode,
         ulp: String(d[i][T.ulp] || "").trim(),

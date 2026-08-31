@@ -585,8 +585,8 @@ body{ background-image:url('https://drive.google.com/thumbnail?id=1rfN5LJOjjx0t-
     }
     TI.list=res.list||[];
     if(TI.temuanSel && TI.temuanSel.length){
-      var _setT={}; TI.temuanSel.forEach(function(x){ _setT[String(x)]=1; });
-      TI.list=TI.list.filter(function(t){ return _setT[String(t.m==null?'':t.m)]; });
+      var _setT={}; TI.temuanSel.forEach(function(x){ _setT[String(x).toLowerCase()]=1; });
+      TI.list=TI.list.filter(function(t){ return _setT[String(t.m==null?'':t.m).toLowerCase()]; });
     }
     if(TI.tierSel && TI.tierSel.length){
       var _setTier={}; TI.tierSel.forEach(function(x){ _setTier[String(x)]=1; });
