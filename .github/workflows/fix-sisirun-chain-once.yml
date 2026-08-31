@@ -1,0 +1,35 @@
+name: Fix SisiRun chain once
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/fix_sisirun_chain.py
+      - .github/workflows/fix-sisirun-chain-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Patch SisiRun chain
+        run: python scripts/fix_sisirun_chain.py
+      - name: Verify
+        run: |
+          grep -q 'var proxy;' SiSi_BackEnd/Core/Main.html
+          grep -q 'return proxy;' SiSi_BackEnd/Core/Main.html
+          grep -q 'proxy = new Proxy' SiSi_BackEnd/Core/Main.html
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add SiSi_BackEnd/Core/Main.html
+          git commit -m "fix(web): preserve SisiRun proxy across handler chains" || exit 0
+          git push origin main
