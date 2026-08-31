@@ -1,0 +1,39 @@
+name: Fix page loader direct once
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/fix_page_loader_direct.py
+      - .github/workflows/fix-page-loader-direct-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Patch page loader
+        run: python scripts/fix_page_loader_direct.py
+      - name: Verify
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          t = Path('SiSi_BackEnd/Core/Main.html').read_text(encoding='utf-8')
+          p = t[t.index('function _loadPage(pageName)'):t.index('function loadPage(p)')]
+          assert 'google.script.run' in p
+          assert '.getPageContent(token, pageName)' in p
+          PY
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add SiSi_BackEnd/Core/Main.html
+          git commit -m "fix(web): call page loader directly" || exit 0
+          git push origin main
