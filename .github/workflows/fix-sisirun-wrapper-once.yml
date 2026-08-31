@@ -48,16 +48,14 @@ jobs:
           var a = Array.prototype.slice.call(args);
           if (!perluToken(nama)) return a;
           var t = _getToken();
-          if (!t) return a; /* tanpa token, biarkan backend yang menolak */
+          if (!t) return a;
 
           if (a.length && a[0] && typeof a[0] === "object" && !Array.isArray(a[0])) {
-            /* Hindari mutasi object milik pemanggil dan jangan timpa token eksplisit. */
             var salin = {};
             for (var k in a[0]) salin[k] = a[0][k];
             if (!salin.token) salin.token = t;
             a[0] = salin;
           } else if (!a.length || String(a[0]) !== String(t)) {
-            /* Panggilan lama sering sudah mengirim token. Jangan sisipkan dua kali. */
             a.unshift(t);
           }
           return a;
@@ -71,9 +69,6 @@ jobs:
         }
 
         function jalankan(nama, args) {
-          /* google.script.run bersifat immutable: setiap with* mengembalikan
-             runner baru. Runner itu wajib ditampung, bukan diabaikan, agar
-             callback benar-benar terpasang dan spinner halaman bisa selesai. */
           var runner = GSR;
           if (successHandler) runner = runner.withSuccessHandler(successHandler);
           if (failureHandler) runner = runner.withFailureHandler(failureHandler);
@@ -130,3 +125,5 @@ jobs:
           git add SiSi_BackEnd/Core/Main.html
           git commit -m "fix(web): restore backend callbacks in SisiRun" || exit 0
           git push origin main
+
+# Triggered after confirming all backend pages were stuck on their loading state.
