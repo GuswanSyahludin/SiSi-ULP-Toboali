@@ -2118,24 +2118,25 @@
           }
         }
 
+        var proxy;
         var api = {
           withSuccessHandler: function (fn) {
             successHandler = fn;
-            return api;
+            return proxy;
           },
           withFailureHandler: function (fn) {
             failureHandler = fn;
-            return api;
+            return proxy;
           },
           withUserObject: function (o) {
             userObject = o;
             hasUserObject = true;
-            return api;
+            return proxy;
           },
         };
 
         var cache = {};
-        return new Proxy(api, {
+        proxy = new Proxy(api, {
           get: function (target, nama) {
             if (typeof nama !== "string") return target[nama];
             if (nama in target) return target[nama];
@@ -2147,6 +2148,7 @@
             return cache[nama];
           },
         });
+        return proxy;
       })();
 
 
