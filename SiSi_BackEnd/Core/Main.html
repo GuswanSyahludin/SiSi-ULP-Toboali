@@ -1989,6 +1989,10 @@
          kebal terhadap penggantian semacam itu. */
       var SisiRun = (function () {
         var GSR = google.script.run;
+        var successHandler = null;
+        var failureHandler = null;
+        var userObject;
+        var hasUserObject = false;
 
         function perluToken(nama) {
           if (SISI_TANPA_TOKEN.indexOf(nama) >= 0) return false;
@@ -1996,38 +2000,50 @@
         }
 
         function sisipkan(nama, args) {
-          if (!perluToken(nama)) return args;
-          var t = _getToken();
-          if (!t) return args; /* tanpa token, biarkan backend yang menolak */
           var a = Array.prototype.slice.call(args);
+          if (!perluToken(nama)) return a;
+          var t = _getToken();
+          if (!t) return a;
           if (a.length && a[0] && typeof a[0] === "object" && !Array.isArray(a[0])) {
             var salin = {};
             for (var k in a[0]) salin[k] = a[0][k];
-            salin.token = t;
+            if (!salin.token) salin.token = t;
             a[0] = salin;
-          } else {
+          } else if (!a.length || String(a[0]) !== String(t)) {
             a.unshift(t);
           }
           return a;
         }
 
-        function bungkus(nama) {
-          return function () {
-            return GSR[nama].apply(GSR, sisipkan(nama, arguments));
-          };
+        function resetHandlers() {
+          successHandler = null;
+          failureHandler = null;
+          userObject = undefined;
+          hasUserObject = false;
+        }
+
+        function jalankan(nama, args) {
+          var runner = GSR;
+          if (successHandler) runner = runner.withSuccessHandler(successHandler);
+          if (failureHandler) runner = runner.withFailureHandler(failureHandler);
+          if (hasUserObject) runner = runner.withUserObject(userObject);
+          var finalArgs = sisipkan(nama, args);
+          resetHandlers();
+          return runner[nama].apply(runner, finalArgs);
         }
 
         var api = {
           withSuccessHandler: function (fn) {
-            GSR.withSuccessHandler(fn);
+            successHandler = fn;
             return api;
           },
           withFailureHandler: function (fn) {
-            GSR.withFailureHandler(fn);
+            failureHandler = fn;
             return api;
           },
           withUserObject: function (o) {
-            GSR.withUserObject(o);
+            userObject = o;
+            hasUserObject = true;
             return api;
           },
         };
@@ -2037,7 +2053,11 @@
           get: function (target, nama) {
             if (typeof nama !== "string") return target[nama];
             if (nama in target) return target[nama];
-            if (!cache[nama]) cache[nama] = bungkus(nama);
+            if (!cache[nama]) {
+              cache[nama] = function () {
+                return jalankan(nama, arguments);
+              };
+            }
             return cache[nama];
           },
         });
