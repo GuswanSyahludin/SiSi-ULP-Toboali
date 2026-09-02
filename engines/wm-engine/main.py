@@ -189,7 +189,7 @@ def _extract_watermark_fields(data):
 
 
 def _render_watermark(data, raw=None):
-    """Render SiSi Watermark (40% Lebar x 30% Tinggi) dengan Spasi Lega."""
+    """Render SiSi Watermark (40% Lebar x 30% Tinggi) menggunakan asset logo PLN dan logo SiSi resmi."""
     raw = raw or _decode_source(data)
     base = Image.open(io.BytesIO(raw)).convert("RGB")
 
@@ -215,9 +215,8 @@ def _render_watermark(data, raw=None):
     draw = ImageDraw.Draw(panel)
     probe = ImageDraw.Draw(canvas)
 
-    # Skala font berdasarkan tinggi panel yang lega
+    # Skala font berdasarkan tinggi panel
     scale_factor = wm_h / 240.0
-    f_logo = _font(18 * scale_factor)
     f_kode = _font(15 * scale_factor)
     f_ulp = _font(11 * scale_factor)
     f_time = _font(28 * scale_factor)
@@ -226,21 +225,18 @@ def _render_watermark(data, raw=None):
     f_item = _font(10.5 * scale_factor)
     f_coord = _font(9.5 * scale_factor)
 
-    # 1. Header (Logo PLN + Kode + ULP)
-    logo_size = int(34 * scale_factor)
-    logo_rect = [pad_x, pad_y, pad_x + logo_size, pad_y + logo_size]
-    draw.rounded_rectangle(logo_rect, radius=max(4, int(5 * scale_factor)), fill=PLN_YELLOW)
-    
-    # Simbol petir
-    bolt_bbox = draw.textbbox((0, 0), "⚡", font=f_logo)
-    bolt_w = bolt_bbox[2] - bolt_bbox[0]
-    bolt_h = bolt_bbox[3] - bolt_bbox[1]
-    draw.text(
-        (pad_x + (logo_size - bolt_w) / 2, pad_y + (logo_size - bolt_h) / 2 - bolt_bbox[1]),
-        "⚡",
-        font=f_logo,
-        fill=PLN_RED,
-    )
+    # 1. Header (Logo PLN Resmi yang Disediakan + Kode + ULP)
+    logo_size = int(36 * scale_factor)
+    pln_logo_path = _asset("logo_pln.png")
+    if pln_logo_path:
+        try:
+            pln_img = Image.open(pln_logo_path).convert("RGBA")
+            pln_img = pln_img.resize((logo_size, logo_size), Image.Resampling.LANCZOS)
+            panel.alpha_composite(pln_img, (pad_x, pad_y))
+        except Exception:
+            draw.rounded_rectangle([pad_x, pad_y, pad_x + logo_size, pad_y + logo_size], radius=max(4, int(5 * scale_factor)), fill=PLN_YELLOW)
+    else:
+        draw.rounded_rectangle([pad_x, pad_y, pad_x + logo_size, pad_y + logo_size], radius=max(4, int(5 * scale_factor)), fill=PLN_YELLOW)
 
     header_text_x = pad_x + logo_size + int(10 * scale_factor)
     max_h_w = wm_w - header_text_x - pad_x
@@ -251,7 +247,7 @@ def _render_watermark(data, raw=None):
         fill=WHITE,
     )
     draw.text(
-        (header_text_x, pad_y + int(17 * scale_factor)),
+        (header_text_x, pad_y + int(18 * scale_factor)),
         _fit_text(probe, fields["ulp_line"], f_ulp, max_h_w),
         font=f_ulp,
         fill=MUTED,
@@ -301,19 +297,27 @@ def _render_watermark(data, raw=None):
     canvas.alpha_composite(panel, (margin_x, height - wm_h - margin_y))
 
     # =========================================================
-    # Logo SiSi di Kanan Bawah (Minimap dilewatkan)
+    # Logo SiSi Resmi yang Disediakan di Kanan Bawah
     # =========================================================
-    sisi_w = max(60, int(width * 0.08))
-    sisi_h = max(32, int(sisi_w * 0.48))
-    sisi_panel = _rounded((sisi_w, sisi_h), max(6, int(8 * scale_factor)), (255, 255, 255, 245))
-    sisi_draw = ImageDraw.Draw(sisi_panel)
-    
-    f_sisi_main = _font(12 * scale_factor)
-    f_sisi_sub = _font(7 * scale_factor)
-    sisi_draw.text((int(8 * scale_factor), int(3 * scale_factor)), "SiSi", font=f_sisi_main, fill=DARK_BG)
-    sisi_draw.text((int(8 * scale_factor), int(16 * scale_factor)), "ULP TOBOALI", font=f_sisi_sub, fill=(100, 116, 139, 255))
-    
-    canvas.alpha_composite(sisi_panel, (width - sisi_w - margin_x, height - sisi_h - margin_y))
+    sisi_logo_path = _asset("logo_sisi.png")
+    if sisi_logo_path:
+        try:
+            sisi_img = Image.open(sisi_logo_path).convert("RGBA")
+            sisi_target_w = max(70, int(width * 0.085))
+            aspect = sisi_img.height / float(sisi_img.width)
+            sisi_target_h = int(sisi_target_w * aspect)
+            sisi_img = sisi_img.resize((sisi_target_w, sisi_target_h), Image.Resampling.LANCZOS)
+            
+            # Buat container background putih rounded bersih
+            pad_badge = max(4, int(6 * scale_factor))
+            badge_w = sisi_target_w + pad_badge * 2
+            badge_h = sisi_target_h + pad_badge * 2
+            sisi_badge = _rounded((badge_w, badge_h), max(6, int(8 * scale_factor)), (255, 255, 255, 245))
+            sisi_badge.alpha_composite(sisi_img, (pad_badge, pad_badge))
+            
+            canvas.alpha_composite(sisi_badge, (width - badge_w - margin_x, height - badge_h - margin_y))
+        except Exception:
+            pass
 
     output = io.BytesIO()
     canvas.convert("RGB").save(output, format="JPEG", quality=85, optimize=True)
