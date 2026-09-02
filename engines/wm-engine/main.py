@@ -28,11 +28,10 @@ PUBLIC_LINKS_DEFAULT = os.environ.get("WM_PUBLIC_LINKS", "false").lower() in (
 BASE_DIR = os.path.dirname(__file__)
 
 # Palette
-PANEL_BG = (15, 22, 32, 224)
+PANEL_BG = (15, 22, 32, 225)
 LIME_BRIGHT = (163, 230, 53, 255)
 PLN_YELLOW = (250, 204, 21, 255)
 PLN_RED = (239, 68, 68, 255)
-PLN_BLUE = (2, 132, 199, 255)
 WHITE = (255, 255, 255, 255)
 MUTED = (203, 213, 225, 255)
 DARK_BG = (15, 23, 42, 255)
@@ -96,31 +95,37 @@ def _decode_source(data):
 
 
 def _extract_watermark_fields(data):
-    """Mengekstrak dan menyesuaikan bidang kode dinamis per jenis pekerjaan."""
+    """Mengekstrak bidang data dinamis dengan fallback parsing cerdas dari filename/deskripsi."""
+    file_name = _safe_text(data.get("fileName") or data.get("outName"))
     tim = _safe_text(data.get("tim")).upper()
     jenis_pekerjaan = _safe_text(data.get("jenisPekerjaan") or data.get("pekerjaan")).lower()
 
-    # 1. Kode Dinamis
+    # 1. Parsing Kode Utama
     kode = ""
-    if data.get("kodeP0"):
+    # Coba dari payload eksplisit dulu
+    if data.get("kodeSwitching"):
+        kode = _safe_text(data.get("kodeSwitching"))
+    elif data.get("kodePengukuranGardu"):
+        kode = _safe_text(data.get("kodePengukuranGardu"))
+    elif data.get("kodeHarGrounding"):
+        kode = _safe_text(data.get("kodeHarGrounding"))
+    elif data.get("kodeHarPemerataan") or data.get("kodeHarPemerataanGardu"):
+        kode = _safe_text(data.get("kodeHarPemerataan") or data.get("kodeHarPemerataanGardu"))
+    elif data.get("kodeTemuan"):
+        kode = _safe_text(data.get("kodeTemuan"))
+    elif data.get("kodeP0"):
         kode = _safe_text(data.get("kodeP0"))
-    elif data.get("kodeSwitching") or "switching" in jenis_pekerjaan:
-        kode = _safe_text(data.get("kodeSwitching") or data.get("kodePekerjaan"))
-    elif data.get("kodePengukuranGardu") or "pengukuran gardu" in jenis_pekerjaan or "ukur gardu" in jenis_pekerjaan:
-        kode = _safe_text(data.get("kodePengukuranGardu") or data.get("kodePekerjaan"))
-    elif data.get("kodeHarGrounding") or "grounding" in jenis_pekerjaan:
-        kode = _safe_text(data.get("kodeHarGrounding") or data.get("kodePekerjaan"))
-    elif data.get("kodeHarPemerataan") or data.get("kodeHarPemerataanGardu") or "pemerataan" in jenis_pekerjaan:
-        kode = _safe_text(data.get("kodeHarPemerataan") or data.get("kodeHarPemerataanGardu") or data.get("kodePekerjaan"))
-    elif data.get("kodeTemuan") or "inspeksi" in tim.lower() or "inspeksi" in jenis_pekerjaan:
-        kode = _safe_text(data.get("kodeTemuan") or data.get("kodePekerjaan"))
     else:
-        kode = _safe_text(
-            data.get("kodePekerjaan")
-            or data.get("kodeEksekusi")
-            or data.get("kodeP0")
-            or data.get("kode")
-        )
+        raw_code = _safe_text(data.get("kodePekerjaan") or data.get("kodeEksekusi") or data.get("kode"))
+        if raw_code and raw_code != "-":
+            kode = raw_code
+
+    # Fallback jika kode masih kosong: ekstrak dari fileName (contoh: WM_Y17-16130260902002-SHF2.001-P0.003-SWC.001.Foto Arus...)
+    if not kode and file_name:
+        clean_fn = file_name.replace("WM_", "").replace(".jpg", "").replace(".png", "")
+        parts = clean_fn.split(".")
+        if len(parts) > 0 and len(parts[0]) > 4:
+            kode = parts[0]
 
     # 2. ULP & Tim
     ulp = _safe_text(data.get("ulp"))
@@ -134,40 +139,49 @@ def _extract_watermark_fields(data):
     hari = _safe_text(data.get("hari"))
     tanggal = _safe_text(data.get("tanggal"))
     
-    # 4. Penyulang (Wajib untuk semua tim)
+    # 4. Penyulang
     penyulang = _safe_text(data.get("penyulang"))
+    if not penyulang or penyulang == "-":
+        # Jangan tampilkan strip kosong jika data penyulang belum dikirim
+        penyulang_line = None
+    else:
+        penyulang_line = f"Penyulang : {penyulang}"
 
-    # 5. Detail spesifik pekerjaan (Petugas / Daerah / Deskripsi)
+    # 5. Detail Spesifik Tim / Pekerjaan
     petugas = _safe_text(data.get("petugas"))
     daerah = _safe_text(data.get("daerah") or data.get("daerahPekerjaan"))
-    
     custom_detail = ""
-    if "yandal" in tim.lower() or data.get("kodeP0"):
-        detail_parts = []
-        if petugas:
-            detail_parts.append(f"Petugas : {petugas}")
-        if daerah:
-            detail_parts.append(f"Dsk : {daerah}")
-        custom_detail = " | ".join(detail_parts) if detail_parts else _safe_text(data.get("jenisPekerjaan"))
-    elif "switching" in jenis_pekerjaan:
+
+    if "swc" in kode.lower() or "switching" in jenis_pekerjaan or "switching" in file_name.lower():
         sw_name = _safe_text(data.get("namaSwitching") or data.get("switching"))
-        custom_detail = f"Switching : {sw_name}" if sw_name else "Pengecekan Switching"
-    elif "pengukuran gardu" in jenis_pekerjaan:
+        custom_detail = f"Pengecekan Switching : {sw_name}" if sw_name else "Pengecekan Switching"
+    elif "ukur" in jenis_pekerjaan or "pengukuran" in jenis_pekerjaan:
         gdu = _safe_text(data.get("noGardu") or data.get("gardu"))
         jur = _safe_text(data.get("jurusan"))
         custom_detail = f"Gardu : {gdu} ({jur})" if gdu else "Pengukuran Beban Gardu"
     elif "grounding" in jenis_pekerjaan:
         obj = _safe_text(data.get("objekGrounding") or data.get("gardu"))
-        custom_detail = f"Grounding : {obj}" if obj else "Har Grounding"
+        custom_detail = f"Har Grounding : {obj}" if obj else "Har Grounding"
     elif "pemerataan" in jenis_pekerjaan:
         gdu = _safe_text(data.get("noGardu") or data.get("gardu"))
         custom_detail = f"Pemerataan Gardu : {gdu}" if gdu else "Har Pemerataan Beban"
-    elif "inspeksi" in tim.lower() or "inspeksi" in jenis_pekerjaan:
+    elif "ijr" in kode.lower() or "igd" in kode.lower() or "inspeksi" in jenis_pekerjaan:
         obj = _safe_text(data.get("noGardu") or data.get("sectionTiang") or data.get("objek"))
         tier = _safe_text(data.get("tier") or data.get("temuan"))
-        custom_detail = f"Temuan : {obj} ({tier})" if obj else _safe_text(data.get("jenisPekerjaan"))
+        custom_detail = f"Temuan : {obj} ({tier})" if obj else "Inspeksi Temuan"
+    elif "yandal" in tim.lower() or "p0" in kode.lower():
+        detail_parts = []
+        if petugas:
+            detail_parts.append(f"Petugas : {petugas}")
+        if daerah:
+            detail_parts.append(f"Dsk : {daerah}")
+        custom_detail = " | ".join(detail_parts) if detail_parts else _safe_text(data.get("jenisPekerjaan") or data.get("pekerjaan"))
     else:
         custom_detail = _safe_text(data.get("jenisPekerjaan") or data.get("pekerjaan"))
+
+    # Bersihkan detail jika hanya strip
+    if custom_detail in ("-", "None", ""):
+        custom_detail = None
 
     # 6. Koordinat
     lat = _safe_text(data.get("lat"))
@@ -176,20 +190,27 @@ def _extract_watermark_fields(data):
     if not koordinat and lat and lng:
         koordinat = f"{lat}, {lng}"
 
+    # Susun list baris konten dinamis (hanya tampilkan yang ada datanya agar tidak ada strip kosong)
+    content_lines = []
+    if penyulang_line:
+        content_lines.append(("penyulang", penyulang_line))
+    if custom_detail:
+        content_lines.append(("detail", custom_detail))
+    if koordinat and koordinat != "-":
+        content_lines.append(("coord", f"Koordinat : {koordinat}"))
+
     return {
-        "kode": kode or "-",
+        "kode": kode or "DOKUMENTASI PEKERJAAN",
         "ulp_line": ulp_line,
         "jam": jam or "09:00",
         "hari": hari or "Senin",
         "tanggal": tanggal or "-",
-        "penyulang": penyulang or "-",
-        "custom_detail": custom_detail or "-",
-        "koordinat": koordinat or "-",
+        "lines": content_lines,
     }
 
 
 def _render_watermark(data, raw=None):
-    """Render SiSi Watermark (40% Lebar x 30% Tinggi) menggunakan asset logo PLN dan logo SiSi resmi."""
+    """Render SiSi Watermark (40% Lebar x 30% Tinggi) dengan layout presisi, spasi proporsional & anti-tumpang-tindih."""
     raw = raw or _decode_source(data)
     base = Image.open(io.BytesIO(raw)).convert("RGB")
 
@@ -202,31 +223,31 @@ def _render_watermark(data, raw=None):
 
     fields = _extract_watermark_fields(data)
 
-    # Proporsi Watermark Box: 40% Lebar dan 30% Tinggi
+    # Dimensi Panel Watermark: 40% Lebar x 30% Tinggi
     wm_w = int(width * 0.40)
     wm_h = int(height * 0.30)
-    margin_x = max(12, int(width * 0.022))
-    margin_y = max(12, int(height * 0.028))
+    margin_x = max(14, int(width * 0.024))
+    margin_y = max(14, int(height * 0.028))
 
-    pad_x = max(12, int(wm_w * 0.05))
-    pad_y = max(12, int(wm_h * 0.06))
+    pad_x = max(14, int(wm_w * 0.055))
+    pad_y = max(14, int(wm_h * 0.065))
 
     panel = _rounded((wm_w, wm_h), max(10, int(14 * (width / 1024.0))), PANEL_BG)
     draw = ImageDraw.Draw(panel)
     probe = ImageDraw.Draw(canvas)
 
-    # Skala font berdasarkan tinggi panel
-    scale_factor = wm_h / 240.0
-    f_kode = _font(15 * scale_factor)
-    f_ulp = _font(11 * scale_factor)
-    f_time = _font(28 * scale_factor)
-    f_day = _font(11 * scale_factor)
-    f_date = _font(10 * scale_factor)
-    f_item = _font(10.5 * scale_factor)
-    f_coord = _font(9.5 * scale_factor)
+    # Skala ukuran font proporsional
+    sf = wm_h / 360.0
+    f_kode = _font(19 * sf)
+    f_ulp = _font(13 * sf)
+    f_time = _font(38 * sf)
+    f_day = _font(14 * sf)
+    f_date = _font(13 * sf)
+    f_item = _font(13 * sf)
+    f_coord = _font(12 * sf)
 
-    # 1. Header (Logo PLN Resmi yang Disediakan + Kode + ULP)
-    logo_size = int(36 * scale_factor)
+    # 1. Header (Logo PLN + Kode Pekerjaan + ULP)
+    logo_size = int(44 * sf)
     pln_logo_path = _asset("logo_pln.png")
     if pln_logo_path:
         try:
@@ -234,85 +255,88 @@ def _render_watermark(data, raw=None):
             pln_img = pln_img.resize((logo_size, logo_size), Image.Resampling.LANCZOS)
             panel.alpha_composite(pln_img, (pad_x, pad_y))
         except Exception:
-            draw.rounded_rectangle([pad_x, pad_y, pad_x + logo_size, pad_y + logo_size], radius=max(4, int(5 * scale_factor)), fill=PLN_YELLOW)
+            draw.rounded_rectangle([pad_x, pad_y, pad_x + logo_size, pad_y + logo_size], radius=max(4, int(6 * sf)), fill=PLN_YELLOW)
     else:
-        draw.rounded_rectangle([pad_x, pad_y, pad_x + logo_size, pad_y + logo_size], radius=max(4, int(5 * scale_factor)), fill=PLN_YELLOW)
+        draw.rounded_rectangle([pad_x, pad_y, pad_x + logo_size, pad_y + logo_size], radius=max(4, int(6 * sf)), fill=PLN_YELLOW)
 
-    header_text_x = pad_x + logo_size + int(10 * scale_factor)
+    header_text_x = pad_x + logo_size + int(12 * sf)
     max_h_w = wm_w - header_text_x - pad_x
     draw.text(
-        (header_text_x, pad_y),
+        (header_text_x, pad_y + int(2 * sf)),
         _fit_text(probe, fields["kode"], f_kode, max_h_w),
         font=f_kode,
         fill=WHITE,
     )
     draw.text(
-        (header_text_x, pad_y + int(18 * scale_factor)),
+        (header_text_x, pad_y + int(24 * sf)),
         _fit_text(probe, fields["ulp_line"], f_ulp, max_h_w),
         font=f_ulp,
         fill=MUTED,
     )
 
-    # 2. Dua Garis Hijau Neon
-    line1_y = pad_y + logo_size + int(8 * scale_factor)
-    line2_y = line1_y + int(4 * scale_factor)
-    line_w = max(2, int(2.5 * scale_factor))
+    # 2. Dua Garis Hijau Neon (Diberi margin yang cukup agar tidak bertumpuk)
+    line1_y = pad_y + logo_size + int(12 * sf)
+    line2_y = line1_y + int(5 * sf)
+    line_w = max(2, int(2.5 * sf))
     draw.rectangle([pad_x, line1_y, wm_w - pad_x, line1_y + line_w], fill=LIME_BRIGHT)
     draw.rectangle([pad_x, line2_y, wm_w - pad_x, line2_y + line_w], fill=LIME_BRIGHT)
 
-    # 3. Waktu, Hari & Tanggal (Sejajar 1 Baris)
-    time_y = line2_y + int(10 * scale_factor)
+    # 3. Waktu, Hari & Tanggal (Sejajar 1 Baris dengan padding lega)
+    time_y = line2_y + int(14 * sf)
     time_str = fields["jam"]
     draw.text((pad_x, time_y), time_str, font=f_time, fill=LIME_BRIGHT)
     
     time_w = draw.textlength(time_str, font=f_time)
-    daydate_x = pad_x + int(time_w) + int(10 * scale_factor)
-    draw.text((daydate_x, time_y + int(2 * scale_factor)), fields["hari"], font=f_day, fill=WHITE)
-    draw.text((daydate_x, time_y + int(14 * scale_factor)), fields["tanggal"], font=f_date, fill=MUTED)
+    daydate_x = pad_x + int(time_w) + int(14 * sf)
+    
+    # Penempatan Hari & Tanggal yang teratur vertikal di samping jam
+    draw.text((daydate_x, time_y + int(3 * sf)), fields["hari"], font=f_day, fill=WHITE)
+    draw.text((daydate_x, time_y + int(20 * sf)), fields["tanggal"], font=f_date, fill=MUTED)
 
-    # 4, 5, 6. Info Spesifik (Penyulang, Detail Khusus, Koordinat)
-    info_start_y = time_y + int(32 * scale_factor)
-    row_gap = int(17 * scale_factor)
-    max_info_w = wm_w - pad_x * 2 - int(12 * scale_factor)
+    # 4. Baris-baris Detail Informasi (Spasi renggang & teratur)
+    info_start_y = time_y + int(48 * sf)
+    row_gap = int(24 * sf)
+    bullet_size = max(4, int(5.5 * sf))
+    max_info_w = wm_w - pad_x * 2 - int(16 * sf)
 
-    # Bullet & Penyulang
-    bullet_size = max(3, int(4.5 * scale_factor))
     curr_y = info_start_y
-    draw.rectangle([pad_x, curr_y + int(3 * scale_factor), pad_x + bullet_size, curr_y + int(3 * scale_factor) + bullet_size], fill=LIME_BRIGHT)
-    penyulang_text = f"Penyulang : {fields['penyulang']}"
-    draw.text((pad_x + bullet_size + int(6 * scale_factor), curr_y), _fit_text(probe, penyulang_text, f_item, max_info_w), font=f_item, fill=WHITE)
-
-    # Bullet & Detail Khusus
-    curr_y += row_gap
-    draw.rectangle([pad_x, curr_y + int(3 * scale_factor), pad_x + bullet_size, curr_y + int(3 * scale_factor) + bullet_size], fill=LIME_BRIGHT)
-    draw.text((pad_x + bullet_size + int(6 * scale_factor), curr_y), _fit_text(probe, fields["custom_detail"], f_item, max_info_w), font=f_item, fill=WHITE)
-
-    # Bullet & Koordinat
-    curr_y += row_gap
-    draw.rectangle([pad_x, curr_y + int(3 * scale_factor), pad_x + bullet_size, curr_y + int(3 * scale_factor) + bullet_size], fill=LIME_BRIGHT)
-    coord_text = f"Koordinat : {fields['koordinat']}"
-    draw.text((pad_x + bullet_size + int(6 * scale_factor), curr_y), _fit_text(probe, coord_text, f_coord, max_info_w), font=f_coord, fill=MUTED)
+    for line_type, line_text in fields["lines"]:
+        font_to_use = f_coord if line_type == "coord" else f_item
+        text_color = MUTED if line_type == "coord" else WHITE
+        
+        # Bullet neon
+        draw.rectangle(
+            [pad_x, curr_y + int(4 * sf), pad_x + bullet_size, curr_y + int(4 * sf) + bullet_size],
+            fill=LIME_BRIGHT
+        )
+        # Teks
+        draw.text(
+            (pad_x + bullet_size + int(8 * sf), curr_y),
+            _fit_text(probe, line_text, font_to_use, max_info_w),
+            font=font_to_use,
+            fill=text_color,
+        )
+        curr_y += row_gap
 
     # Tempel Panel WM ke Kiri Bawah
     canvas.alpha_composite(panel, (margin_x, height - wm_h - margin_y))
 
     # =========================================================
-    # Logo SiSi Resmi yang Disediakan di Kanan Bawah
+    # Logo SiSi di Kanan Bawah
     # =========================================================
     sisi_logo_path = _asset("logo_sisi.png")
     if sisi_logo_path:
         try:
             sisi_img = Image.open(sisi_logo_path).convert("RGBA")
-            sisi_target_w = max(70, int(width * 0.085))
+            sisi_target_w = max(72, int(width * 0.088))
             aspect = sisi_img.height / float(sisi_img.width)
             sisi_target_h = int(sisi_target_w * aspect)
             sisi_img = sisi_img.resize((sisi_target_w, sisi_target_h), Image.Resampling.LANCZOS)
             
-            # Buat container background putih rounded bersih
-            pad_badge = max(4, int(6 * scale_factor))
+            pad_badge = max(5, int(7 * sf))
             badge_w = sisi_target_w + pad_badge * 2
             badge_h = sisi_target_h + pad_badge * 2
-            sisi_badge = _rounded((badge_w, badge_h), max(6, int(8 * scale_factor)), (255, 255, 255, 245))
+            sisi_badge = _rounded((badge_w, badge_h), max(6, int(10 * sf)), (255, 255, 255, 245))
             sisi_badge.alpha_composite(sisi_img, (pad_badge, pad_badge))
             
             canvas.alpha_composite(sisi_badge, (width - badge_w - margin_x, height - badge_h - margin_y))
@@ -480,7 +504,7 @@ def _file_response(file_data, wm_key, cached=False, public=False):
         "thumbnailUrl": f"https://drive.google.com/thumbnail?id={file_id}",
         "wmKey": wm_key,
         "public": public,
-        "design": "dynamic-team-v1",
+        "design": "dynamic-team-v2-clean",
     }
 
 
@@ -523,7 +547,7 @@ def watermark_to_drive():
                     "appProperties": {
                         "wmKey": wm_key,
                         "source": "sisi-wm",
-                        "design": "dynamic-team-v1",
+                        "design": "dynamic-team-v2-clean",
                     },
                 },
                 media_body=MediaIoBaseUpload(
@@ -560,7 +584,7 @@ def health():
         {
             "ok": True,
             "service": "sisi-wm-engine",
-            "design": "dynamic-team-v1",
+            "design": "dynamic-team-v2-clean",
             "dimensions": "40%x30%",
             "directDrive": True,
             "driveRootConfigured": bool(DRIVE_ROOT_FOLDER_ID),
