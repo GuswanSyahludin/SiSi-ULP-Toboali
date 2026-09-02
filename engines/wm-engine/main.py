@@ -27,13 +27,15 @@ PUBLIC_LINKS_DEFAULT = os.environ.get("WM_PUBLIC_LINKS", "false").lower() in (
 )
 BASE_DIR = os.path.dirname(__file__)
 
-# Compact V4 palette.
-PANEL = (17, 24, 35, 218)
-NAVY = (30, 58, 138, 255)
-CYAN = (28, 160, 219, 255)
-LIME = (138, 209, 0, 255)
-WHITE = (250, 252, 255, 255)
-MUTED = (197, 205, 218, 255)
+# Palette
+PANEL_BG = (15, 22, 32, 224)
+LIME_BRIGHT = (163, 230, 53, 255)
+PLN_YELLOW = (250, 204, 21, 255)
+PLN_RED = (239, 68, 68, 255)
+PLN_BLUE = (2, 132, 199, 255)
+WHITE = (255, 255, 255, 255)
+MUTED = (203, 213, 225, 255)
+DARK_BG = (15, 23, 42, 255)
 
 
 def _asset(name):
@@ -51,8 +53,8 @@ def _font(size):
 
 def _enhance(image):
     image = ImageOps.autocontrast(image, cutoff=1)
-    image = ImageEnhance.Brightness(image).enhance(1.08)
-    return ImageEnhance.Sharpness(image).enhance(1.3)
+    image = ImageEnhance.Brightness(image).enhance(1.06)
+    return ImageEnhance.Sharpness(image).enhance(1.25)
 
 
 def _rounded(size, radius, fill):
@@ -77,20 +79,6 @@ def _fit_text(draw, text, font, max_width):
     return text + suffix if text else ""
 
 
-def _format_accuracy(value):
-    text = _safe_text(value)
-    if not text:
-        return ""
-    # Payload baru idealnya sudah berupa ±4.2 m. Fallback menerima angka mentah.
-    if "m" in text.lower() or "±" in text:
-        return text
-    try:
-        number = float(text.replace(",", "."))
-        return "±%s m" % ("%.1f" % number).rstrip("0").rstrip(".")
-    except Exception:
-        return text
-
-
 def _require_secret(data):
     supplied = str(data.get("secret") or "")
     if not SECRET or not hmac.compare_digest(supplied, SECRET):
@@ -107,13 +95,101 @@ def _decode_source(data):
         raise ValueError("Format image base64 tidak valid.") from error
 
 
-def _render_watermark(data, raw=None):
-    """Render SiSi Watermark Compact V4.
+def _extract_watermark_fields(data):
+    """Mengekstrak dan menyesuaikan bidang kode dinamis per jenis pekerjaan."""
+    tim = _safe_text(data.get("tim")).upper()
+    jenis_pekerjaan = _safe_text(data.get("jenisPekerjaan") or data.get("pekerjaan")).lower()
 
-    Panel hanya di kiri bawah dan hanya berisi:
-    Kode Pekerjaan, Tanggal, Koordinat Pekerjaan, Akurasi, Tim,
-    dan Jenis Pekerjaan. Akurasi tidak memakai label kualitas.
-    """
+    # 1. Kode Dinamis
+    kode = ""
+    if data.get("kodeP0"):
+        kode = _safe_text(data.get("kodeP0"))
+    elif data.get("kodeSwitching") or "switching" in jenis_pekerjaan:
+        kode = _safe_text(data.get("kodeSwitching") or data.get("kodePekerjaan"))
+    elif data.get("kodePengukuranGardu") or "pengukuran gardu" in jenis_pekerjaan or "ukur gardu" in jenis_pekerjaan:
+        kode = _safe_text(data.get("kodePengukuranGardu") or data.get("kodePekerjaan"))
+    elif data.get("kodeHarGrounding") or "grounding" in jenis_pekerjaan:
+        kode = _safe_text(data.get("kodeHarGrounding") or data.get("kodePekerjaan"))
+    elif data.get("kodeHarPemerataan") or data.get("kodeHarPemerataanGardu") or "pemerataan" in jenis_pekerjaan:
+        kode = _safe_text(data.get("kodeHarPemerataan") or data.get("kodeHarPemerataanGardu") or data.get("kodePekerjaan"))
+    elif data.get("kodeTemuan") or "inspeksi" in tim.lower() or "inspeksi" in jenis_pekerjaan:
+        kode = _safe_text(data.get("kodeTemuan") or data.get("kodePekerjaan"))
+    else:
+        kode = _safe_text(
+            data.get("kodePekerjaan")
+            or data.get("kodeEksekusi")
+            or data.get("kodeP0")
+            or data.get("kode")
+        )
+
+    # 2. ULP & Tim
+    ulp = _safe_text(data.get("ulp"))
+    if ulp and not ulp.upper().startswith("ULP"):
+        ulp = "ULP " + ulp
+    tim_str = _safe_text(data.get("tim"))
+    ulp_line = " · ".join(p for p in (ulp, tim_str) if p) or "ULP Toboali"
+
+    # 3. Waktu, Hari & Tanggal
+    jam = _safe_text(data.get("jam") or data.get("waktu"))
+    hari = _safe_text(data.get("hari"))
+    tanggal = _safe_text(data.get("tanggal"))
+    
+    # 4. Penyulang (Wajib untuk semua tim)
+    penyulang = _safe_text(data.get("penyulang"))
+
+    # 5. Detail spesifik pekerjaan (Petugas / Daerah / Deskripsi)
+    petugas = _safe_text(data.get("petugas"))
+    daerah = _safe_text(data.get("daerah") or data.get("daerahPekerjaan"))
+    
+    custom_detail = ""
+    if "yandal" in tim.lower() or data.get("kodeP0"):
+        detail_parts = []
+        if petugas:
+            detail_parts.append(f"Petugas : {petugas}")
+        if daerah:
+            detail_parts.append(f"Dsk : {daerah}")
+        custom_detail = " | ".join(detail_parts) if detail_parts else _safe_text(data.get("jenisPekerjaan"))
+    elif "switching" in jenis_pekerjaan:
+        sw_name = _safe_text(data.get("namaSwitching") or data.get("switching"))
+        custom_detail = f"Switching : {sw_name}" if sw_name else "Pengecekan Switching"
+    elif "pengukuran gardu" in jenis_pekerjaan:
+        gdu = _safe_text(data.get("noGardu") or data.get("gardu"))
+        jur = _safe_text(data.get("jurusan"))
+        custom_detail = f"Gardu : {gdu} ({jur})" if gdu else "Pengukuran Beban Gardu"
+    elif "grounding" in jenis_pekerjaan:
+        obj = _safe_text(data.get("objekGrounding") or data.get("gardu"))
+        custom_detail = f"Grounding : {obj}" if obj else "Har Grounding"
+    elif "pemerataan" in jenis_pekerjaan:
+        gdu = _safe_text(data.get("noGardu") or data.get("gardu"))
+        custom_detail = f"Pemerataan Gardu : {gdu}" if gdu else "Har Pemerataan Beban"
+    elif "inspeksi" in tim.lower() or "inspeksi" in jenis_pekerjaan:
+        obj = _safe_text(data.get("noGardu") or data.get("sectionTiang") or data.get("objek"))
+        tier = _safe_text(data.get("tier") or data.get("temuan"))
+        custom_detail = f"Temuan : {obj} ({tier})" if obj else _safe_text(data.get("jenisPekerjaan"))
+    else:
+        custom_detail = _safe_text(data.get("jenisPekerjaan") or data.get("pekerjaan"))
+
+    # 6. Koordinat
+    lat = _safe_text(data.get("lat"))
+    lng = _safe_text(data.get("long"))
+    koordinat = _safe_text(data.get("koordinatPekerjaan") or data.get("koordinat"))
+    if not koordinat and lat and lng:
+        koordinat = f"{lat}, {lng}"
+
+    return {
+        "kode": kode or "-",
+        "ulp_line": ulp_line,
+        "jam": jam or "09:00",
+        "hari": hari or "Senin",
+        "tanggal": tanggal or "-",
+        "penyulang": penyulang or "-",
+        "custom_detail": custom_detail or "-",
+        "koordinat": koordinat or "-",
+    }
+
+
+def _render_watermark(data, raw=None):
+    """Render SiSi Watermark (40% Lebar x 30% Tinggi) dengan Spasi Lega."""
     raw = raw or _decode_source(data)
     base = Image.open(io.BytesIO(raw)).convert("RGB")
 
@@ -123,153 +199,121 @@ def _render_watermark(data, raw=None):
 
     canvas = _enhance(base).convert("RGBA")
     width, height = canvas.size
-    scale = max(0.55, width / 1024.0)
-    margin = max(10, int(18 * scale))
-    pad_x = max(10, int(13 * scale))
-    pad_y = max(9, int(11 * scale))
 
-    landscape = width >= height
-    panel_width = int(width * (0.34 if landscape else 0.56))
-    panel_width = min(panel_width, width - margin * 2)
+    fields = _extract_watermark_fields(data)
 
-    kode = _safe_text(
-        data.get("kodePekerjaan")
-        or data.get("kodeEksekusi")
-        or data.get("kodeP0")
-        or data.get("kode")
-    ) or "-"
-    tanggal = _safe_text(data.get("tanggal"))
-    hari = _safe_text(data.get("hari"))
-    jam = _safe_text(data.get("jam"))
-    tanggal_parts = []
-    if hari:
-        tanggal_parts.append(hari)
-    if tanggal:
-        tanggal_parts.append(tanggal)
-    tanggal_display = ", ".join(tanggal_parts)
-    if jam:
-        tanggal_display += (" · " if tanggal_display else "") + jam
+    # Proporsi Watermark Box: 40% Lebar dan 30% Tinggi
+    wm_w = int(width * 0.40)
+    wm_h = int(height * 0.30)
+    margin_x = max(12, int(width * 0.022))
+    margin_y = max(12, int(height * 0.028))
 
-    lat = _safe_text(data.get("lat"))
-    lng = _safe_text(data.get("long"))
-    koordinat = _safe_text(
-        data.get("koordinatPekerjaan") or data.get("koordinat")
-    )
-    if not koordinat and lat and lng:
-        koordinat = lat + ", " + lng
+    pad_x = max(12, int(wm_w * 0.05))
+    pad_y = max(12, int(wm_h * 0.06))
 
-    akurasi = _format_accuracy(data.get("akurasi") or data.get("accuracy"))
-    tim = _safe_text(data.get("tim"))
-    ulp = _safe_text(data.get("ulp"))
-    if ulp and not ulp.upper().startswith("ULP"):
-        ulp = "ULP " + ulp
-    tim_display = " · ".join(part for part in (tim, ulp) if part)
-    pekerjaan = _safe_text(
-        data.get("jenisPekerjaan") or data.get("pekerjaan")
-    )
-    tahap = _safe_text(data.get("tahap") or data.get("jenisFoto")).upper()
-
-    font_label = _font(14 * scale)
-    font_value = _font(15 * scale)
-    font_code_label = _font(11 * scale)
-    font_code = _font(17 * scale)
-    font_stage = _font(11 * scale)
-    font_logo = _font(21 * scale)
-
-    probe = ImageDraw.Draw(canvas)
-    label_width = int(77 * scale)
-    logo_size = int(31 * scale)
-    header_height = int(42 * scale)
-    row_height = int(25 * scale)
-    rows = [
-        ("Tanggal", tanggal_display or "-"),
-        ("Koordinat", koordinat or "-"),
-        ("Akurasi", akurasi or "-"),
-        ("Tim", tim_display or "-"),
-        ("Pekerjaan", pekerjaan or "-"),
-    ]
-    panel_height = pad_y * 2 + header_height + int(8 * scale) + len(rows) * row_height
-
-    panel = _rounded(
-        (panel_width, panel_height), max(10, int(14 * scale)), PANEL
-    )
+    panel = _rounded((wm_w, wm_h), max(10, int(14 * (width / 1024.0))), PANEL_BG)
     draw = ImageDraw.Draw(panel)
+    probe = ImageDraw.Draw(canvas)
 
-    # Header: monogram SiSi, kode, dan tahap foto opsional.
-    logo_y = pad_y
-    draw.rounded_rectangle(
-        [pad_x, logo_y, pad_x + logo_size, logo_y + logo_size],
-        radius=max(5, int(8 * scale)),
-        fill=NAVY,
-        outline=CYAN,
-        width=max(1, int(1.5 * scale)),
-    )
-    logo_text = "S"
-    logo_bbox = draw.textbbox((0, 0), logo_text, font=font_logo)
+    # Skala font berdasarkan tinggi panel yang lega
+    scale_factor = wm_h / 240.0
+    f_logo = _font(18 * scale_factor)
+    f_kode = _font(15 * scale_factor)
+    f_ulp = _font(11 * scale_factor)
+    f_time = _font(28 * scale_factor)
+    f_day = _font(11 * scale_factor)
+    f_date = _font(10 * scale_factor)
+    f_item = _font(10.5 * scale_factor)
+    f_coord = _font(9.5 * scale_factor)
+
+    # 1. Header (Logo PLN + Kode + ULP)
+    logo_size = int(34 * scale_factor)
+    logo_rect = [pad_x, pad_y, pad_x + logo_size, pad_y + logo_size]
+    draw.rounded_rectangle(logo_rect, radius=max(4, int(5 * scale_factor)), fill=PLN_YELLOW)
+    
+    # Simbol petir
+    bolt_bbox = draw.textbbox((0, 0), "⚡", font=f_logo)
+    bolt_w = bolt_bbox[2] - bolt_bbox[0]
+    bolt_h = bolt_bbox[3] - bolt_bbox[1]
     draw.text(
-        (
-            pad_x + (logo_size - (logo_bbox[2] - logo_bbox[0])) / 2,
-            logo_y + (logo_size - (logo_bbox[3] - logo_bbox[1])) / 2 - logo_bbox[1],
-        ),
-        logo_text,
-        font=font_logo,
+        (pad_x + (logo_size - bolt_w) / 2, pad_y + (logo_size - bolt_h) / 2 - bolt_bbox[1]),
+        "⚡",
+        font=f_logo,
+        fill=PLN_RED,
+    )
+
+    header_text_x = pad_x + logo_size + int(10 * scale_factor)
+    max_h_w = wm_w - header_text_x - pad_x
+    draw.text(
+        (header_text_x, pad_y),
+        _fit_text(probe, fields["kode"], f_kode, max_h_w),
+        font=f_kode,
         fill=WHITE,
     )
-
-    code_x = pad_x + logo_size + int(9 * scale)
-    right_reserved = int(62 * scale) if tahap else 0
-    code_width = panel_width - code_x - pad_x - right_reserved
-    draw.text((code_x, logo_y), "KODE PEKERJAAN", font=font_code_label, fill=MUTED)
     draw.text(
-        (code_x, logo_y + int(15 * scale)),
-        _fit_text(probe, kode, font_code, code_width),
-        font=font_code,
-        fill=WHITE,
+        (header_text_x, pad_y + int(17 * scale_factor)),
+        _fit_text(probe, fields["ulp_line"], f_ulp, max_h_w),
+        font=f_ulp,
+        fill=MUTED,
     )
 
-    if tahap:
-        stage_text = _fit_text(probe, tahap, font_stage, int(53 * scale))
-        stage_w = int(draw.textlength(stage_text, font=font_stage)) + int(13 * scale)
-        stage_h = int(21 * scale)
-        stage_x = panel_width - pad_x - stage_w
-        stage_y = logo_y + int(5 * scale)
-        draw.rounded_rectangle(
-            [stage_x, stage_y, stage_x + stage_w, stage_y + stage_h],
-            radius=max(4, int(6 * scale)),
-            fill=LIME,
-        )
-        stage_bbox = draw.textbbox((0, 0), stage_text, font=font_stage)
-        draw.text(
-            (
-                stage_x + (stage_w - (stage_bbox[2] - stage_bbox[0])) / 2,
-                stage_y + (stage_h - (stage_bbox[3] - stage_bbox[1])) / 2 - stage_bbox[1],
-            ),
-            stage_text,
-            font=font_stage,
-            fill=(31, 51, 20, 255),
-        )
+    # 2. Dua Garis Hijau Neon
+    line1_y = pad_y + logo_size + int(8 * scale_factor)
+    line2_y = line1_y + int(4 * scale_factor)
+    line_w = max(2, int(2.5 * scale_factor))
+    draw.rectangle([pad_x, line1_y, wm_w - pad_x, line1_y + line_w], fill=LIME_BRIGHT)
+    draw.rectangle([pad_x, line2_y, wm_w - pad_x, line2_y + line_w], fill=LIME_BRIGHT)
 
-    rule_y = pad_y + header_height
-    draw.rounded_rectangle(
-        [pad_x, rule_y, panel_width - pad_x, rule_y + max(2, int(2.5 * scale))],
-        radius=2,
-        fill=LIME,
-    )
+    # 3. Waktu, Hari & Tanggal (Sejajar 1 Baris)
+    time_y = line2_y + int(10 * scale_factor)
+    time_str = fields["jam"]
+    draw.text((pad_x, time_y), time_str, font=f_time, fill=LIME_BRIGHT)
+    
+    time_w = draw.textlength(time_str, font=f_time)
+    daydate_x = pad_x + int(time_w) + int(10 * scale_factor)
+    draw.text((daydate_x, time_y + int(2 * scale_factor)), fields["hari"], font=f_day, fill=WHITE)
+    draw.text((daydate_x, time_y + int(14 * scale_factor)), fields["tanggal"], font=f_date, fill=MUTED)
 
-    # Lima baris data, tanpa bullet, minimap, logo terpisah, atau klasifikasi akurasi.
-    y = rule_y + int(10 * scale)
-    max_value_width = panel_width - pad_x * 2 - label_width
-    for label, value in rows:
-        draw.text((pad_x, y), label, font=font_label, fill=MUTED)
-        draw.text(
-            (pad_x + label_width, y),
-            _fit_text(probe, value, font_value, max_value_width),
-            font=font_value,
-            fill=WHITE,
-        )
-        y += row_height
+    # 4, 5, 6. Info Spesifik (Penyulang, Detail Khusus, Koordinat)
+    info_start_y = time_y + int(32 * scale_factor)
+    row_gap = int(17 * scale_factor)
+    max_info_w = wm_w - pad_x * 2 - int(12 * scale_factor)
 
-    canvas.alpha_composite(panel, (margin, height - panel_height - margin))
+    # Bullet & Penyulang
+    bullet_size = max(3, int(4.5 * scale_factor))
+    curr_y = info_start_y
+    draw.rectangle([pad_x, curr_y + int(3 * scale_factor), pad_x + bullet_size, curr_y + int(3 * scale_factor) + bullet_size], fill=LIME_BRIGHT)
+    penyulang_text = f"Penyulang : {fields['penyulang']}"
+    draw.text((pad_x + bullet_size + int(6 * scale_factor), curr_y), _fit_text(probe, penyulang_text, f_item, max_info_w), font=f_item, fill=WHITE)
+
+    # Bullet & Detail Khusus
+    curr_y += row_gap
+    draw.rectangle([pad_x, curr_y + int(3 * scale_factor), pad_x + bullet_size, curr_y + int(3 * scale_factor) + bullet_size], fill=LIME_BRIGHT)
+    draw.text((pad_x + bullet_size + int(6 * scale_factor), curr_y), _fit_text(probe, fields["custom_detail"], f_item, max_info_w), font=f_item, fill=WHITE)
+
+    # Bullet & Koordinat
+    curr_y += row_gap
+    draw.rectangle([pad_x, curr_y + int(3 * scale_factor), pad_x + bullet_size, curr_y + int(3 * scale_factor) + bullet_size], fill=LIME_BRIGHT)
+    coord_text = f"Koordinat : {fields['koordinat']}"
+    draw.text((pad_x + bullet_size + int(6 * scale_factor), curr_y), _fit_text(probe, coord_text, f_coord, max_info_w), font=f_coord, fill=MUTED)
+
+    # Tempel Panel WM ke Kiri Bawah
+    canvas.alpha_composite(panel, (margin_x, height - wm_h - margin_y))
+
+    # =========================================================
+    # Logo SiSi di Kanan Bawah (Minimap dilewatkan)
+    # =========================================================
+    sisi_w = max(60, int(width * 0.08))
+    sisi_h = max(32, int(sisi_w * 0.48))
+    sisi_panel = _rounded((sisi_w, sisi_h), max(6, int(8 * scale_factor)), (255, 255, 255, 245))
+    sisi_draw = ImageDraw.Draw(sisi_panel)
+    
+    f_sisi_main = _font(12 * scale_factor)
+    f_sisi_sub = _font(7 * scale_factor)
+    sisi_draw.text((int(8 * scale_factor), int(3 * scale_factor)), "SiSi", font=f_sisi_main, fill=DARK_BG)
+    sisi_draw.text((int(8 * scale_factor), int(16 * scale_factor)), "ULP TOBOALI", font=f_sisi_sub, fill=(100, 116, 139, 255))
+    
+    canvas.alpha_composite(sisi_panel, (width - sisi_w - margin_x, height - sisi_h - margin_y))
 
     output = io.BytesIO()
     canvas.convert("RGB").save(output, format="JPEG", quality=85, optimize=True)
@@ -361,18 +405,23 @@ def _watermark_key(data, raw):
         "kodePekerjaan",
         "kodeEksekusi",
         "kodeP0",
+        "kodeSwitching",
+        "kodePengukuranGardu",
+        "kodeHarGrounding",
+        "kodeHarPemerataan",
+        "kodeTemuan",
         "tanggal",
         "hari",
         "jam",
+        "penyulang",
+        "petugas",
+        "daerah",
         "koordinat",
         "koordinatPekerjaan",
-        "akurasi",
-        "accuracy",
         "tim",
         "ulp",
         "jenisPekerjaan",
         "pekerjaan",
-        "tahap",
     ]
     metadata = {key: data.get(key, "") for key in metadata_keys}
     digest = hashlib.sha256()
@@ -427,7 +476,7 @@ def _file_response(file_data, wm_key, cached=False, public=False):
         "thumbnailUrl": f"https://drive.google.com/thumbnail?id={file_id}",
         "wmKey": wm_key,
         "public": public,
-        "design": "compact-v4",
+        "design": "dynamic-team-v1",
     }
 
 
@@ -470,7 +519,7 @@ def watermark_to_drive():
                     "appProperties": {
                         "wmKey": wm_key,
                         "source": "sisi-wm",
-                        "design": "compact-v4",
+                        "design": "dynamic-team-v1",
                     },
                 },
                 media_body=MediaIoBaseUpload(
@@ -507,7 +556,8 @@ def health():
         {
             "ok": True,
             "service": "sisi-wm-engine",
-            "design": "compact-v4",
+            "design": "dynamic-team-v1",
+            "dimensions": "40%x30%",
             "directDrive": True,
             "driveRootConfigured": bool(DRIVE_ROOT_FOLDER_ID),
             "secretConfigured": bool(SECRET),
