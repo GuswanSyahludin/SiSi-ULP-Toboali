@@ -1,0 +1,97 @@
+<style>
+  /* Tabel fixed: isi panjang tidak lagi memperlebar/meninggikan kolom. */
+  .ba-table{table-layout:fixed!important;width:100%!important}
+  .ba-table tbody tr{height:54px}
+  .ba-table td{height:54px;max-height:54px;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;vertical-align:middle!important}
+  .ba-table td:nth-child(9),.ba-table td:nth-child(10){overflow:visible!important;text-overflow:clip!important}
+  .ba-table td .ba-jenis-badge,.ba-table td .ba-status-badge{max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
+</style>
+<script>
+(function(){
+  function namaAman(value){
+    var name=String(value||'BeritaAcara.pdf').replace(/[\\/:*?"<>|\r\n]+/g,'-').trim();
+    return name||'BeritaAcara.pdf';
+  }
+  function base64KeBlob(base64,mimeType){
+    var binary=atob(String(base64||''));
+    var chunks=[];
+    for(var offset=0;offset<binary.length;offset+=32768){
+      var end=Math.min(offset+32768,binary.length), bytes=new Uint8Array(end-offset);
+      for(var i=offset;i<end;i++) bytes[i-offset]=binary.charCodeAt(i);
+      chunks.push(bytes);
+    }
+    return new Blob(chunks,{type:mimeType||'application/pdf'});
+  }
+  function simpanBlob(blob,fileName){
+    var objectUrl=URL.createObjectURL(blob), a=document.createElement('a');
+    a.href=objectUrl;
+    a.download=namaAman(fileName);
+    a.style.display='none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function(){
+      URL.revokeObjectURL(objectUrl);
+      if(a.parentNode)a.parentNode.removeChild(a);
+    },3000);
+  }
+  function driveId(url){
+    if(typeof baExtractDriveId==='function') return baExtractDriveId(url);
+    var m=String(url||'').match(/\/d\/([a-zA-Z0-9_-]+)/)||String(url||'').match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    return m?m[1]:'';
+  }
+  function fallbackDrive(id){
+    if(!id)return;
+    var a=document.createElement('a');
+    a.href='https://drive.usercontent.google.com/download?id='+encodeURIComponent(id)+'&export=download&confirm=t';
+    a.target='_blank';a.rel='noopener';a.style.display='none';
+    document.body.appendChild(a);a.click();
+    setTimeout(function(){if(a.parentNode)a.parentNode.removeChild(a);},2000);
+  }
+
+  // Override tombol Download pada modal detail. Blob URL membuat browser
+  // benar-benar mengunduh file, bukan membuka preview/data URL.
+  window.baDetailDownload=function(){
+    var row=window._baDetailRow;if(!row)return;
+    var id=row._pdfId||driveId(row._pdfUrl||'');
+    if(!id){if(typeof showToast==='function')showToast('File PDF belum tersedia.','warning');return;}
+    var btn=document.getElementById('baDetailDownload');
+    var old=btn?btn.innerHTML:'';
+    if(btn){btn.disabled=true;btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Mengunduh';}
+    function done(){if(btn){btn.disabled=false;btn.innerHTML=old;}}
+    SisiRun.withSuccessHandler(function(res){
+      done();
+      if(!res||!res.ok){
+        fallbackDrive(id);
+        if(typeof showToast==='function')showToast((res&&res.message)||'Menggunakan unduhan Google Drive.','warning');
+        return;
+      }
+      try{
+        simpanBlob(base64KeBlob(res.base64,res.mimeType),res.fileName||'BeritaAcara.pdf');
+        if(typeof showToast==='function')showToast('File Berita Acara mulai diunduh.','success');
+      }catch(error){
+        fallbackDrive(id);
+        if(typeof showToast==='function')showToast('Browser memakai unduhan Google Drive.','warning');
+      }
+    }).withFailureHandler(function(err){
+      done();fallbackDrive(id);
+      if(typeof showToast==='function')showToast('Unduh server gagal, memakai Google Drive.','warning');
+    }).unduhFileBa(id);
+  };
+
+  function rapikanTabel(){
+    var rows=document.querySelectorAll('.ba-table tbody tr');
+    Array.prototype.forEach.call(rows,function(tr){
+      Array.prototype.forEach.call(tr.cells||[],function(td,index){
+        if(index===8||index===9)return;
+        var text=String(td.innerText||'').replace(/\s+/g,' ').trim();
+        if(text)td.title=text;
+      });
+    });
+  }
+  if(typeof window.baRender==='function'){
+    var renderAsli=window.baRender;
+    window.baRender=function(){var hasil=renderAsli.apply(this,arguments);rapikanTabel();return hasil;};
+  }
+  rapikanTabel();
+})();
+</script>

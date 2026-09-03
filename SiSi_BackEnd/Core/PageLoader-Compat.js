@@ -7,8 +7,6 @@
  */
 function getPageContent(token, pageName, injectedPageName) {
   try {
-    // Normal call: (token, pageName)
-    // Compatibility call: (token, injectedToken, pageName)
     if (arguments.length >= 3 && injectedPageName) {
       pageName = injectedPageName;
     }
@@ -40,6 +38,13 @@ function getPageContent(token, pageName, injectedPageName) {
 
     var fileName = PAGE_FILE_ALIASES[pageName] || pageName;
     var html = HtmlService.createHtmlOutputFromFile(fileName).getContent();
+    // Patch UI dipisah dari halaman BA utama yang sangat besar. Konten tetap
+    // dikirim dalam satu respons dan script patch dieksekusi paling akhir.
+    if (pageName === "SIE-BeritaAcara") {
+      html += HtmlService.createHtmlOutputFromFile(
+        "Core/SIE-BeritaAcara-WebFix",
+      ).getContent();
+    }
     return {
       success: true,
       html: html,
@@ -63,11 +68,7 @@ function getPageContent(token, pageName, injectedPageName) {
 
 /*
  * Download BA compatibility fix.
- *
- * SisiRun calls unduhFileBa(token, fileId). The legacy backend accepted only
- * unduhFileBa(fileId), so it tried to open the session token as a Drive file
- * and every website download failed. Keep the method authenticated and accept
- * the legacy one-argument form only for internal/editor compatibility.
+ * SisiRun calls unduhFileBa(token, fileId); legacy code accepted only fileId.
  */
 function unduhFileBa(token, fileId) {
   try {
@@ -84,7 +85,6 @@ function unduhFileBa(token, fileId) {
       }
       id = String(fileId || "").trim();
     } else {
-      // Dipertahankan agar pengujian internal dari editor Apps Script tetap bisa.
       id = String(token || "").trim();
     }
 
@@ -94,8 +94,6 @@ function unduhFileBa(token, fileId) {
     var blob = file.getBlob();
     var bytes = blob.getBytes();
 
-    // Base64 menambah ukuran sekitar 33%. Tolak secara jelas sebelum respons
-    // menjadi terlalu besar dan gagal diam-diam di browser/Apps Script.
     if (bytes.length > 12 * 1024 * 1024) {
       return {
         ok: false,
