@@ -3,14 +3,17 @@
   .ba-table{table-layout:fixed!important;width:100%!important}
   .ba-table tbody tr{height:54px}
   .ba-table td{height:54px;max-height:54px;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;vertical-align:middle!important}
-  .ba-table td:nth-child(9),.ba-table td:nth-child(10){overflow:visible!important;text-overflow:clip!important}
+  .ba-table td:nth-child(8),.ba-table td:nth-child(9),.ba-table td:nth-child(10){overflow:visible!important;text-overflow:clip!important}
   .ba-table td .ba-jenis-badge,.ba-table td .ba-status-badge{max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
+  .ba-btn-download-link{cursor:pointer;color:var(--primary);text-decoration:underline;font-weight:600;display:inline-flex;align-items:center;gap:5px;background:none;border:none;padding:0;font-size:inherit;font-family:inherit}
+  .ba-btn-download-link:hover{color:var(--primary-2,#1d4ed8);text-decoration:none}
 </style>
 <script>
 (function(){
   function namaAman(value){
     var name=String(value||'BeritaAcara.pdf').replace(/[\\/:*?"<>|\r\n]+/g,'-').trim();
-    return name||'BeritaAcara.pdf';
+    if(!/\.pdf$/i.test(name)) name+='.pdf';
+    return name;
   }
   function base64KeBlob(base64,mimeType){
     var binary=atob(String(base64||''));
@@ -48,8 +51,45 @@
     setTimeout(function(){if(a.parentNode)a.parentNode.removeChild(a);},2000);
   }
 
-  // Override tombol Download pada modal detail. Blob URL membuat browser
-  // benar-benar mengunduh file, bukan membuka preview/data URL.
+  // Unduh langsung berkas BA TTD (PDF 2 lembar / gambar asli) via backend / Drive
+  window.baUnduhBaTtd=function(index, el){
+    var row=(_BA.rows||[])[index];
+    if(!row||!row.baTtd){
+      if(typeof showToast==='function') showToast('Berkas BA TTD belum tersedia.','warning');
+      return;
+    }
+    var id=driveId(row.baTtd);
+    var fileName='BA-'+(row.namaPeralatan||row.idBA||'TTD')+'.pdf';
+    var oldText=el?el.innerHTML:'';
+    if(el){ el.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Mengunduh'; }
+    function pulih(){ if(el){ el.innerHTML=oldText; } }
+
+    if(!id){
+      pulih();
+      window.open(row.baTtd,'_blank');
+      return;
+    }
+
+    SisiRun.withSuccessHandler(function(res){
+      pulih();
+      if(!res||!res.ok){
+        fallbackDrive(id);
+        if(typeof showToast==='function') showToast((res&&res.message)||'Mengunduh dari Google Drive.','info');
+        return;
+      }
+      try{
+        simpanBlob(base64KeBlob(res.base64,res.mimeType),res.fileName||fileName);
+        if(typeof showToast==='function') showToast('Berkas BA TTD mulai diunduh.','success');
+      }catch(err){
+        fallbackDrive(id);
+      }
+    }).withFailureHandler(function(){
+      pulih();
+      fallbackDrive(id);
+    }).unduhFileBa(id);
+  };
+
+  // Override tombol Download pada modal detail
   window.baDetailDownload=function(){
     var row=window._baDetailRow;if(!row)return;
     var id=row._pdfId||driveId(row._pdfUrl||'');
@@ -78,20 +118,44 @@
     }).unduhFileBa(id);
   };
 
-  function rapikanTabel(){
+  function perbaikiTautanTabel(){
     var rows=document.querySelectorAll('.ba-table tbody tr');
-    Array.prototype.forEach.call(rows,function(tr){
+    Array.prototype.forEach.call(rows,function(tr,rIdx){
+      var tdTtd=tr.cells&&tr.cells[7];
+      if(tdTtd){
+        var link=tdTtd.querySelector('a');
+        if(link && !link.dataset.downloadFixed){
+          link.dataset.downloadFixed='1';
+          var btn=document.createElement('button');
+          btn.type='button';
+          btn.className='ba-btn-download-link';
+          btn.title='Download berkas BA TTD';
+          btn.innerHTML='<i class="fa-solid fa-download"></i> Download BA';
+          btn.onclick=function(e){
+            e.preventDefault();
+            e.stopPropagation();
+            window.baUnduhBaTtd(rIdx, btn);
+          };
+          tdTtd.innerHTML='';
+          tdTtd.appendChild(btn);
+        }
+      }
       Array.prototype.forEach.call(tr.cells||[],function(td,index){
-        if(index===8||index===9)return;
+        if(index>=7)return;
         var text=String(td.innerText||'').replace(/\s+/g,' ').trim();
         if(text)td.title=text;
       });
     });
   }
+
   if(typeof window.baRender==='function'){
     var renderAsli=window.baRender;
-    window.baRender=function(){var hasil=renderAsli.apply(this,arguments);rapikanTabel();return hasil;};
+    window.baRender=function(){
+      var hasil=renderAsli.apply(this,arguments);
+      perbaikiTautanTabel();
+      return hasil;
+    };
   }
-  rapikanTabel();
+  perbaikiTautanTabel();
 })();
 </script>
