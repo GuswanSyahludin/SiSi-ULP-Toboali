@@ -1,8 +1,9 @@
 """Adaptive, borderless layout for Berita Acara definition blocks.
 
-Values are never truncated. Labels, colons, and values keep fixed alignment;
-long values wrap through the full remaining width of their own column while
-compact typography keeps the complete first page visible.
+Values are never truncated. Labels, colons, and values keep clean alignment.
+When text overflows or spans across, values can take up to the full printable width
+(right margin of the paper) while maintaining clean line wrapping and typography
+so the entire first page remains visible.
 """
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.lib.colors import black
@@ -12,19 +13,21 @@ def apply(main):
     def _safe(value):
         return "" if value is None else str(value).strip()
 
-    def _metrics(clean_pairs, width, requested_size):
-        """Choose label/value geometry and font size that fits page one."""
+    def _metrics(clean_pairs, width, requested_size, full_width=None):
+        """Choose label/value geometry and font size that fits page one.
+        If full_width is provided, long values can expand up to full_width."""
         label_size = min(8.5, requested_size)
         max_label = max(
             (stringWidth(label, main.FONT_BOLD, label_size) for label, _ in clean_pairs),
             default=0,
         )
-        # Colon sits immediately after the widest label. Keep this narrow so
-        # values receive as much horizontal room as possible.
-        label_w = min(max_label + 5, width * 0.45)
+        # Colon sits neatly after widest label
+        label_w = min(max_label + 4, width * 0.45)
         colon_w = 8
         value_x = label_w + colon_w
-        value_w = max(28, width - value_x)
+        # Available width for value to the right margin of paper
+        avail_w = (full_width - value_x) if full_width else (width - value_x)
+        value_w = max(28, avail_w)
 
         choices = (
             (min(8.5, requested_size), 11.6),
@@ -44,10 +47,14 @@ def apply(main):
                 break
         return label_size, label_w, value_x, value_w, selected[0], selected[1]
 
-    def draw_defs(pdf, x, y, width, pairs, line_h=15, size=8.5):
+    def draw_defs(pdf, x, y, width, pairs, line_h=15, size=8.5, max_x=None):
         clean_pairs = [(_safe(label), _safe(value)) for label, value in pairs]
+        # Batas kanan kertas (right margin)
+        paper_right = max_x if max_x is not None else (main.PAGE_W - main.MARGIN_RIGHT)
+        full_avail_w = paper_right - x
+
         label_size, label_w, value_x, value_w, value_size, row_h = _metrics(
-            clean_pairs, width, size
+            clean_pairs, width, size, full_width=full_avail_w
         )
 
         pdf.setFillColor(black)
@@ -55,14 +62,13 @@ def apply(main):
             lines = main._wrap(value or "-", main.FONT_REG, value_size, value_w)
             baseline = y - row_h + 3.0
 
-            # Borderless document style: Label  :  Value
+            # Format tanpa border: Label  :  Nilai
             pdf.setFont(main.FONT_BOLD, label_size)
             pdf.drawString(x, baseline, label)
             pdf.setFont(main.FONT_REG, value_size)
             pdf.drawString(x + label_w, baseline, ":")
 
-            # Continuation lines stay aligned with the value, and can run to
-            # the physical end of this column. Nothing is sliced or ellipsized.
+            # Teks nilai dapat memanjang ke kanan hingga batas margin kertas
             for index, line in enumerate(lines):
                 pdf.drawString(
                     x + value_x,
