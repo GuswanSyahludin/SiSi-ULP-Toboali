@@ -32,8 +32,6 @@ function getPenyulangDanSection(token) {
       };
     }
 
-    // Gunakan filter ULP yang sama dengan sesi aktif agar BA tidak menampilkan
-    // Penyulang milik ULP lain. Super User tetap mengikuti ULP akun bila ada.
     var ulp = sesi ? String(sesi.ulp || "").trim() : "";
     var master = getJadwalPadamMaster({ ulp: ulp });
     if (!master || !master.ok) {
@@ -106,6 +104,85 @@ function getPenyulangDanSection(token) {
       penyulangList: [],
       sectionByPenyulang: {},
       message: "Gagal memuat Penyulang dan Section: " + error.message,
+    };
+  }
+}
+
+/*
+ * Perbaikan nomor gardu berikutnya.
+ *
+ * SisiRun menyisipkan token di depan argumen string, sehingga pemanggilan web
+ * menjadi getNomorGarduBerikutnya(token, kodeGardu). Implementasi lama hanya
+ * menerima satu argumen dan salah membaca token sebagai kode gardu.
+ */
+function getNomorGarduBerikutnya(tokenOrKode, kodeGardu) {
+  try {
+    var kode;
+
+    if (arguments.length >= 2) {
+      var token = String(tokenOrKode || "").trim();
+      if (!token || !getSesiByToken(token)) {
+        return {
+          ok: false,
+          message: "Sesi habis atau tidak valid. Silakan login ulang.",
+        };
+      }
+      kode = String(kodeGardu || "").trim().toUpperCase();
+    } else {
+      // Kompatibilitas pengujian internal/editor: satu argumen tetap dianggap kode.
+      kode = String(tokenOrKode || "").trim().toUpperCase();
+    }
+
+    var daftarKode =
+      typeof BA_KODE_GARDU !== "undefined" && BA_KODE_GARDU.length
+        ? BA_KODE_GARDU
+        : ["TB", "PY", "TL", "PG"];
+
+    if (!kode) {
+      return {
+        ok: false,
+        message: "Kode gardu wajib dipilih (" + daftarKode.join(" / ") + ").",
+      };
+    }
+    if (daftarKode.indexOf(kode) === -1) {
+      return {
+        ok: false,
+        message: 'Kode gardu "' + kode + '" tidak dikenal. Pilih: ' + daftarKode.join(", ") + ".",
+      };
+    }
+
+    var maxMaster = _baMaxNomorGardu_(
+      BA_MASTER_GARDU.spreadsheetId,
+      BA_MASTER_GARDU.sheetName,
+      kode,
+    );
+    var maxRekap = _baMaxNomorGardu_(
+      BA_SOURCE.spreadsheetId,
+      BA_SOURCE.sheetName,
+      kode,
+    );
+
+    var terakhir = Math.max(maxMaster, maxRekap);
+    var sumber =
+      maxRekap > maxMaster
+        ? "Rekap Gardu"
+        : maxMaster >= 0
+          ? "Master Gardu"
+          : "Baru";
+    var nextNum = (terakhir < 0 ? 0 : terakhir) + 1;
+
+    return {
+      ok: true,
+      kodeGardu: kode,
+      nomorGardu: _baFormatNomorGardu_(kode, nextNum),
+      nomorGarduTerakhir:
+        terakhir < 0 ? "" : _baFormatNomorGardu_(kode, terakhir),
+      sumber: sumber,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: "Gagal mengambil nomor gardu berikutnya: " + error.message,
     };
   }
 }
