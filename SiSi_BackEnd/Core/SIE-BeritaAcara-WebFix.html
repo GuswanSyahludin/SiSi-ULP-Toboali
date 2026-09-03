@@ -89,10 +89,10 @@
     }).unduhFileBa(id);
   };
 
-  // Override tombol Download pada modal detail
+  // Override tombol Download pada modal detail: periksa row._pdfId, row._pdfUrl, row.filePdfUrl, atau row.baTtd
   window.baDetailDownload=function(){
     var row=window._baDetailRow;if(!row)return;
-    var id=row._pdfId||driveId(row._pdfUrl||'');
+    var id=row._pdfId||driveId(row._pdfUrl||row.filePdfUrl||row.baTtd||'');
     if(!id){if(typeof showToast==='function')showToast('File PDF belum tersedia.','warning');return;}
     var btn=document.getElementById('baDetailDownload');
     var old=btn?btn.innerHTML:'';
@@ -116,6 +116,32 @@
       done();fallbackDrive(id);
       if(typeof showToast==='function')showToast('Unduh server gagal, memakai Google Drive.','warning');
     }).unduhFileBa(id);
+  };
+
+  // Override tombol Generate Ulang PDF pada modal detail agar deteksi jenis Switching akurat
+  window.baDetailGeneratePdf=function(){
+    var row=window._baDetailRow; if(!row) return;
+    var idBA=row.idBA||'';
+    if(!idBA){ if(typeof showToast==='function') showToast('idBA tidak ditemukan. Pastikan BA sudah tersimpan.','warning'); return; }
+    var isSwitching=(String(row.peralatan||'').toLowerCase()==='switching') || (String(row.jenisPekerjaan||'').toLowerCase().indexOf('switching')>=0);
+    var btn=document.getElementById('baDetailGenerate'), labelSemula=btn?btn.innerHTML:'';
+    if(btn){ btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Membuat PDF'; }
+    var runnerBA=SisiRun
+      .withSuccessHandler(function(res){
+        if(btn){ btn.disabled=false; btn.innerHTML=labelSemula; }
+        if(!res||!res.ok){ if(typeof showToast==='function') showToast((res&&res.message)||'Gagal membuat PDF','error'); return; }
+        row._pdfUrl=res.url||row._pdfUrl; row._pdfId=res.fileId||row._pdfId;
+        row.filePdfUrl=res.url||row.filePdfUrl;
+        if(row.detail){ if(res.url) row.detail['File PDF Non-TTD']=res.url; if(res.fileId) row.detail['File ID']=res.fileId; }
+        var dl=document.getElementById('baDetailDownload'); if(dl) dl.style.display='inline-flex';
+        if(window.sisiSukses) sisiSukses('PDF Berita Acara berhasil dibuat ulang.'); else if(typeof showToast==='function') showToast('PDF berhasil dibuat ulang. Klik Download untuk mengunduh.','success');
+      })
+      .withFailureHandler(function(err){
+        if(btn){ btn.disabled=false; btn.innerHTML=labelSemula; }
+        if(typeof showToast==='function') showToast('Error: '+((err&&err.message)||err),'error');
+      });
+    if(isSwitching) runnerBA.generatePdfBaSwitching(idBA);
+    else runnerBA.generatePdfBaPengoperasian(idBA);
   };
 
   function perbaikiTautanTabel(){
