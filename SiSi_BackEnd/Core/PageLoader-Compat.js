@@ -1,14 +1,9 @@
 /*
- * Compatibility shim for the token-aware SisiRun client wrapper.
+ * Compatibility shim for token-aware web calls.
  *
- * getPageContent is called explicitly as (token, pageName) from Main.html.
- * If a generated/client wrapper injects a token again, Apps Script receives
- * (token, token, pageName), which makes the page name become the token and
- * leaves the web UI stuck on its loading state. This implementation accepts
- * both forms while preserving the existing access checks and response shape.
- *
- * Keep the public function name so the shim is used by the Apps Script global
- * runtime after this file is pushed. No URL or deployment settings change.
+ * Main.html injects the active session token into methods listed in
+ * SISI_BUTUH_TOKEN. These public shims accept that token explicitly while
+ * preserving the response shape expected by existing pages.
  */
 function getPageContent(token, pageName, injectedPageName) {
   try {
@@ -63,5 +58,62 @@ function getPageContent(token, pageName, injectedPageName) {
     };
   } catch (e) {
     return { success: false, message: "Halaman tidak ditemukan: " + e.message };
+  }
+}
+
+/*
+ * Download BA compatibility fix.
+ *
+ * SisiRun calls unduhFileBa(token, fileId). The legacy backend accepted only
+ * unduhFileBa(fileId), so it tried to open the session token as a Drive file
+ * and every website download failed. Keep the method authenticated and accept
+ * the legacy one-argument form only for internal/editor compatibility.
+ */
+function unduhFileBa(token, fileId) {
+  try {
+    var id = "";
+
+    if (arguments.length >= 2) {
+      var sesi = getSesiByToken(String(token || "").trim());
+      if (!sesi) {
+        return {
+          ok: false,
+          code: "SESSION_EXPIRED",
+          message: "Sesi habis atau tidak valid. Silakan login ulang.",
+        };
+      }
+      id = String(fileId || "").trim();
+    } else {
+      // Dipertahankan agar pengujian internal dari editor Apps Script tetap bisa.
+      id = String(token || "").trim();
+    }
+
+    if (!id) return { ok: false, message: "File ID kosong." };
+
+    var file = DriveApp.getFileById(id);
+    var blob = file.getBlob();
+    var bytes = blob.getBytes();
+
+    // Base64 menambah ukuran sekitar 33%. Tolak secara jelas sebelum respons
+    // menjadi terlalu besar dan gagal diam-diam di browser/Apps Script.
+    if (bytes.length > 12 * 1024 * 1024) {
+      return {
+        ok: false,
+        code: "FILE_TOO_LARGE",
+        message: "File terlalu besar untuk diunduh melalui website (maksimal 12 MB). Gunakan tautan Google Drive.",
+      };
+    }
+
+    return {
+      ok: true,
+      base64: Utilities.base64Encode(bytes),
+      mimeType: blob.getContentType() || "application/pdf",
+      fileName: file.getName() || "BeritaAcara.pdf",
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: "Gagal mengunduh file: " + error.message,
+    };
   }
 }
