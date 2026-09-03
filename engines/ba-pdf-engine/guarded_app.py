@@ -7,7 +7,13 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from werkzeug.wrappers import Response
-from main import app as flask_app
+import main as _pdf_main
+from ba_layout_fix import apply as _apply_layout_fix
+
+# Apply before exposing the Flask app so every BA PDF route uses the adaptive
+# wrapped-text renderer, including pengoperasian, penggantian, pemeriksaan, and switching.
+_apply_layout_fix(_pdf_main)
+flask_app = _pdf_main.app
 
 class CostGuardMiddleware:
     def __init__(self, wrapped, service_name):
@@ -52,7 +58,7 @@ class CostGuardMiddleware:
         count=self._increment(); ratio=count/self.daily_budget
         level=95 if ratio>=.95 else 85 if ratio>=.85 else 70 if ratio>=.70 else 0
         if level and level not in self.warned:
-            logging.warning("COST_GUARD service=%s level=%s daily_count=%s budget=%s local_counter=true",self.service_name,level,count,self.daily_budget); self.warned.add(level)
+            logging.warning("COST_GUARD service=%s level=%s daily_count=%s budget=%s local_counter=true",self.service_name,level,count); self.warned.add(level)
         headers={"X-SiSi-Cost-Guard":str(level or "OK"),"X-SiSi-Daily-Usage":f"{min(ratio,9.99):.4f}","X-SiSi-Counter-Scope":"instance"}
         if ratio>=.95: return self._reply(environ,start_response,503,"DAILY_GUARD_95","Batas harian lokal tercapai. Coba kembali besok.",{**headers,"Retry-After":"3600"})
         if ratio>=.85:
