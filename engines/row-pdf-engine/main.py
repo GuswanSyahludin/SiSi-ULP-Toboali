@@ -30,6 +30,9 @@ app = Flask(__name__)
 
 PDF_SECRET = os.environ.get("PDF_SECRET", "")
 SPREADSHEET_ID = os.environ.get("SPREADSHEET_ID", "")
+SPREADSHEET_ID_ARSIP = os.environ.get(
+    "SPREADSHEET_ID_ARSIP", "11HzsthxFOA_7BN_fDT7LHAqrjGP9SSzHrtFv24F7P14"
+)
 SHEET_ROW_EKSEKUSI = os.environ.get(
     "SHEET_ROW_EKSEKUSI", "db_ROW_Eksekusi"
 )
@@ -81,8 +84,6 @@ COL_EKS = {
     "koordinat": 14,
     "diameter": 23,
     "jenisPekerjaan": 24,
-    # URL foto yang dipakai oleh db_ROW_Eksekusi.
-    # S/U/W adalah URL; R/T/V hanya nama/path foto.
     "fotoSebelumUrl": 18,      # S
     "fotoPekerjaanUrl": 20,    # U
     "fotoSesudahUrl": 22,      # W
@@ -153,8 +154,6 @@ def _parse_date(value):
 
 
 def _normalize_date(value):
-    # Google Sheets API dengan SERIAL_NUMBER mengirim tanggal sebagai serial
-    # (hari sejak 1899-12-30). Ini menghindari salah baca 01/07 sebagai 7 Januari.
     if isinstance(value, (int, float)) and not isinstance(value, bool):
         if 20000 <= value <= 100000:
             base = datetime.datetime(1899, 12, 30)
@@ -270,9 +269,6 @@ def _make_meta(filter_):
         "tim": filter_.get("tim", ""),
         "penyulang": filter_.get("penyulang", ""),
         "dibuat": _today_id(),
-        # Nama pejabat penanda tangan dikirim dari frontend (card "Nama Pejabat"
-        # yang disimpan via simpanPejabatRekapROW). Bila parameter kosong, pakai
-        # nama default lama agar blok tanda tangan PDF tetap terisi.
         "manager": _safe_str(request.args.get("manager")) or "MARSHEL P.L TOBING",
         "teamLeader": _safe_str(request.args.get("teamLeader")) or "ANDRYE FAHREZA",
         "koordinator": _safe_str(request.args.get("koordinator")) or "APRIANTO",
@@ -300,29 +296,47 @@ def _sheets_service():
     )
 
 
-def _read_sheet_rows(sheet_range):
+def _read_sheet_rows_dual(sheet_range, key_col=None):
     if not SPREADSHEET_ID:
         raise RuntimeError(
             "SPREADSHEET_ID belum diset di environment variable Cloud Run."
         )
 
-    result = (
-        _sheets_service()
-        .spreadsheets()
-        .values()
-        .get(
-            spreadsheetId=SPREADSHEET_ID,
-            range=sheet_range,
-            # Jangan memakai FORMATTED_VALUE: format lokal tanggal di Sheet
-            # dapat ambigu (mis. 7/1/2026). Serial number selalu konsisten.
-            valueRenderOption="UNFORMATTED_VALUE",
-            dateTimeRenderOption="SERIAL_NUMBER",
-        )
-        .execute()
-    )
+    service = _sheets_service()
+    ss_ids = [SPREADSHEET_ID]
+    if SPREADSHEET_ID_ARSIP and SPREADSHEET_ID_ARSIP != SPREADSHEET_ID:
+        ss_ids.append(SPREADSHEET_ID_ARSIP)
 
-    values = result.get("values", [])
-    return values[1:] if values else []
+    combined = []
+    seen = set()
+
+    for ss_id in ss_ids:
+        try:
+            result = (
+                service.spreadsheets()
+                .values()
+                .get(
+                    spreadsheetId=ss_id,
+                    range=sheet_range,
+                    valueRenderOption="UNFORMATTED_VALUE",
+                    dateTimeRenderOption="SERIAL_NUMBER",
+                )
+                .execute()
+            )
+            values = result.get("values", [])
+            rows = values[1:] if values else []
+            for r in rows:
+                if key_col is not None and key_col < len(r):
+                    k = _safe_str(r[key_col])
+                    if k:
+                        if k in seen:
+                            continue
+                        seen.add(k)
+                combined.append(r)
+        except Exception as e:
+            app.logger.warning(f"Gagal membaca sheet {sheet_range} dari {ss_id}: {e}")
+
+    return combined
 
 
 def _query_lampiran_rows(filter_):
@@ -333,7 +347,7 @@ def _query_lampiran_rows(filter_):
     penyulang_filter = filter_.get("penyulang", "").lower()
     output = []
 
-    for source_row in _read_sheet_rows(SHEET_RANGE_EKS):
+    for source_row in _read_sheet_rows_dual(SHEET_RANGE_EKS, COL_EKS["kodeEksekusi"]):
         date_iso = _normalize_date(_get_cell(source_row, COL_EKS["tanggal"]))
         row_date = _parse_date(date_iso)
         if not row_date or row_date < date_from or row_date > date_to:
@@ -352,8 +366,6 @@ def _query_lampiran_rows(filter_):
 
         kode = _safe_str(_get_cell(source_row, COL_EKS["kodeEksekusi"]))
         nomor_tiang = _safe_str(_get_cell(source_row, 10))
-        # Selaras dengan Tek-ROW.gs: data eksekusi tetap sah bila Kode
-        # Eksekusi belum terbentuk tetapi Nomor Tiang sudah ada.
         if not kode and not nomor_tiang:
             continue
 
@@ -393,7 +405,7 @@ def _query_rekap_rows(filter_):
     penyulang_filter = filter_.get("penyulang", "").lower()
     output = []
 
-    for source_row in _read_sheet_rows(SHEET_RANGE_RLZ):
+    for source_row in _read_sheet_rows_dual(SHEET_RANGE_RLZ, COL_RLZ["kodePekerjaan"]):
         date_iso = _normalize_date(_get_cell(source_row, COL_RLZ["tanggal"]))
         row_date = _parse_date(date_iso)
         if not row_date or row_date < date_from or row_date > date_to:
@@ -409,8 +421,6 @@ def _query_rekap_rows(filter_):
 
         kode_header = _safe_str(_get_cell(source_row, COL_RLZ["kodeHeader"]))
         kode = _safe_str(_get_cell(source_row, COL_RLZ["kodePekerjaan"]))
-        # Selaras dengan getSemuaLaporan(): header atau kode pekerjaan cukup
-        # sebagai penanda bahwa baris realisasi valid.
         if not kode and not kode_header:
             continue
 
@@ -462,23 +472,6 @@ def _download_drive_thumb(file_id):
         return _IMAGE_CACHE[file_id]
 
     urls = [
-        f"https://drive.google.com/thumbnail?id={file_id}&sz=w160",
-        f"https://drive.usercontent.google.com/download?id={file_id}&export=download",
-    ]
-
-    # URL final. Assignment ini menimpa daftar lama agar request tidak
-    # membawa karakter kurung kurawal di depan protokol HTTPS.
-    urls = [
-        f"https://drive.google.com/thumbnail?id={file_id}&sz=w160",
-        f"https://drive.usercontent.google.com/download?id={file_id}&export=download",
-    ]
-
-    urls = [
-        f"https://drive.google.com/thumbnail?id={file_id}&sz=w160",
-        f"https://drive.usercontent.google.com/download?id={file_id}&export=download",
-    ]
-
-    urls = [
         "https://drive.google.com/thumbnail?id=" + file_id + "&sz=w160",
         "https://drive.usercontent.google.com/download?id=" + file_id + "&export=download",
     ]
@@ -511,11 +504,6 @@ def _download_drive_thumb(file_id):
 
 
 def _photo_candidate_urls(photo_url):
-    """Kandidat URL foto dari kolom S/U/W db_ROW_Eksekusi.
-
-    URL AppSheet getimageurl yang sudah memiliki signature harus diunduh
-    langsung. URL Drive tetap didukung untuk kompatibilitas data lama.
-    """
     source = _safe_str(photo_url).replace("&amp;", "&")
     if not source:
         return []
@@ -537,8 +525,6 @@ def _photo_candidate_urls(photo_url):
                 + "&export=download",
             ]
 
-    # AppSheet: gunakan URL lengkap apa adanya. Jangan mengambil signature
-    # AppSheet sebagai Drive file ID.
     return [source]
 
 
@@ -593,13 +579,6 @@ def _download_photo_thumb(photo_url):
 
 
 def _prefetch_lampiran_photos(rows):
-    """Unduh seluruh foto unik secara paralel sebelum menggambar PDF.
-
-    Sebelumnya setiap baris melakukan tiga request secara berurutan. Untuk
-    ratusan baris hal itu memicu upstream request timeout. Prefetch paralel
-    membuat proses gambar dibatasi oleh batch request, bukan jumlah foto ×
-    timeout per request.
-    """
     urls = []
     seen = set()
 
@@ -930,8 +909,6 @@ def _draw_lampiran_footer(pdf, page_number):
 
 
 def build_lampiran_pdf(rows, meta):
-    # Cache dibangun sekali per file. Semua foto diunduh paralel terlebih
-    # dahulu agar proses gambar tabel tidak melakukan request berurutan.
     _IMAGE_CACHE.clear()
     _prefetch_lampiran_photos(rows)
 
@@ -950,7 +927,6 @@ def build_lampiran_pdf(rows, meta):
     row_index = 0
     page_number = 1
 
-    # Halaman pertama: kop + header + data sesuai ruang yang tersedia.
     _draw_double_border(
         pdf,
         LAMP_MARGIN_X,
@@ -979,7 +955,6 @@ def build_lampiran_pdf(rows, meta):
     pdf.showPage()
     page_number += 1
 
-    # Halaman berikutnya: 1 header + maksimal 50 baris data.
     while row_index < len(rows):
         _draw_double_border(
             pdf,
@@ -1019,8 +994,6 @@ def build_lampiran_pdf(rows, meta):
 
 
 def _rekap_col_widths(table_width):
-    # Lebar tiga kolom pekerjaan diperkecil dari 9% menjadi 7%.
-    # Tambahan 6% dialihkan ke Keterangan agar "DATA TERLAMPIR" tampil penuh.
     percentages = [4, 10, 6, 12, 30, 7, 7, 7, 17]
     return [table_width * value / 100 for value in percentages]
 
@@ -1220,8 +1193,6 @@ def build_rekap_pdf(rows, meta):
             REKAP_PAGE_W - 2 * REKAP_MARGIN_X,
             REKAP_PAGE_H - 2 * REKAP_MARGIN_Y,
         )
-        # Kop lengkap hanya ditampilkan pada halaman pertama. Halaman kedua
-        # dan seterusnya dimulai dari header tabel agar ruang data maksimal.
         if page_number == 1:
             table_top = _draw_rekap_kop(
                 pdf, meta, REKAP_PAGE_H - REKAP_MARGIN_Y - 8
@@ -1242,9 +1213,6 @@ def build_rekap_pdf(rows, meta):
             1, int((y - last_bottom_with_enter) // row_height) - 1
         )
 
-        # Prioritaskan satu baris kosong setelah jabatan TL agar tidak
-        # terlalu dekat dengan border bawah. Jika ruang tambahan tersebut
-        # akan membuat halaman baru, gunakan kapasitas lama tanpa enter.
         if remaining <= last_capacity_with_enter:
             is_last_page = True
             capacity = last_capacity_with_enter
