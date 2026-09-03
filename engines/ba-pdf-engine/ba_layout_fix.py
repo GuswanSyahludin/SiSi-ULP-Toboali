@@ -1,56 +1,77 @@
-"""Adaptive PDF layout patch for long Berita Acara values.
+"""Adaptive, borderless layout for Berita Acara definition blocks.
 
-The original renderer used only the first wrapped line for every value. This
-patch keeps every word, wraps values inside their column, and compresses the
-row typography/spacing so page 1 remains a complete single page.
+Values are never truncated. Labels, colons, and values keep fixed alignment;
+long values wrap through the full remaining width of their own column while
+compact typography keeps the complete first page visible.
 """
 from reportlab.pdfbase.pdfmetrics import stringWidth
-from reportlab.lib.colors import black, HexColor
+from reportlab.lib.colors import black
 
 
 def apply(main):
-    def draw_defs(pdf, x, y, width, pairs, line_h=15, size=8.5):
-        # Keep the two-column geometry, but let each value use every wrapped
-        # line. Compact typography is intentional: page 1 must remain intact.
-        clean_pairs = [(_safe(main, label), _safe(main, value)) for label, value in pairs]
+    def _safe(value):
+        return "" if value is None else str(value).strip()
+
+    def _metrics(clean_pairs, width, requested_size):
+        """Choose label/value geometry and font size that fits page one."""
+        label_size = min(8.5, requested_size)
         max_label = max(
-            (stringWidth(label, main.FONT_BOLD, 8.0) for label, _ in clean_pairs),
+            (stringWidth(label, main.FONT_BOLD, label_size) for label, _ in clean_pairs),
             default=0,
         )
-        label_w = min(max_label + 18, width * 0.43)
-        value_w = max(24, width - label_w - 9)
+        # Colon sits immediately after the widest label. Keep this narrow so
+        # values receive as much horizontal room as possible.
+        label_w = min(max_label + 5, width * 0.45)
+        colon_w = 8
+        value_x = label_w + colon_w
+        value_w = max(28, width - value_x)
 
-        # Estimate the densest column and choose a readable compact size.
-        chosen = 8.0
-        chosen_h = 11.3
-        for candidate, row_h in ((8.0, 11.3), (7.5, 10.6), (7.0, 9.9), (6.6, 9.4)):
-            total = 0
-            for label, value in clean_pairs:
+        choices = (
+            (min(8.5, requested_size), 11.6),
+            (8.0, 11.0),
+            (7.5, 10.4),
+            (7.0, 9.8),
+            (6.6, 9.2),
+        )
+        selected = choices[-1]
+        for candidate, row_h in choices:
+            total_h = 0
+            for _label, value in clean_pairs:
                 lines = main._wrap(value or "-", main.FONT_REG, candidate, value_w)
-                total += max(1, len(lines)) * row_h
-            if total <= 275:
-                chosen, chosen_h = candidate, row_h
+                total_h += max(1, len(lines)) * row_h
+            if total_h <= 275:
+                selected = (candidate, row_h)
                 break
+        return label_size, label_w, value_x, value_w, selected[0], selected[1]
 
+    def draw_defs(pdf, x, y, width, pairs, line_h=15, size=8.5):
+        clean_pairs = [(_safe(label), _safe(value)) for label, value in pairs]
+        label_size, label_w, value_x, value_w, value_size, row_h = _metrics(
+            clean_pairs, width, size
+        )
+
+        pdf.setFillColor(black)
         for label, value in clean_pairs:
-            lines = main._wrap(value or "-", main.FONT_REG, chosen, value_w)
-            pdf.setStrokeColor(HexColor("#CCCCCC"))
-            pdf.setLineWidth(0.4)
-            row_height = max(chosen_h, len(lines) * chosen_h)
-            pdf.rect(x, y - row_height, label_w, row_height, stroke=1, fill=0)
-            pdf.rect(x + label_w, y - row_height, width - label_w, row_height, stroke=1, fill=0)
+            lines = main._wrap(value or "-", main.FONT_REG, value_size, value_w)
+            baseline = y - row_h + 3.0
 
-            pdf.setFillColor(black)
-            pdf.setFont(main.FONT_BOLD, 8.0)
-            pdf.drawString(x + 5, y - 10.0, label)
-            pdf.setFont(main.FONT_REG, chosen)
+            # Borderless document style: Label  :  Value
+            pdf.setFont(main.FONT_BOLD, label_size)
+            pdf.drawString(x, baseline, label)
+            pdf.setFont(main.FONT_REG, value_size)
+            pdf.drawString(x + label_w, baseline, ":")
+
+            # Continuation lines stay aligned with the value, and can run to
+            # the physical end of this column. Nothing is sliced or ellipsized.
             for index, line in enumerate(lines):
-                pdf.drawString(x + label_w + 5, y - 10.0 - index * chosen_h, line)
-            y -= row_height
+                pdf.drawString(
+                    x + value_x,
+                    baseline - index * row_h,
+                    line,
+                )
+            y -= max(1, len(lines)) * row_h
+
         pdf.setFillColor(black)
         return y
-
-    def _safe(mod, value):
-        return "" if value is None else str(value).strip()
 
     main._draw_defs = draw_defs
