@@ -41,16 +41,11 @@ var _garduMasterMemo = null;
 // Gardu tidak memakai KM (dibiarkan kosong). Koordinat = koordinat
 // gardu awal & akhir kerja. WA Text menyusul (sementara kosong).
 function simpanHeaderInsGardu(data){
-  /* OTENTIKASI + SKOP ULP (29 Agu 2026).
-     Sebelumnya: identitas diambil dari data.username yang dikirim KLIEN, lalu
-     data.ulp dipakai mentah — siapa pun bisa menulis header atas nama ULP
-     atau user lain. Sekarang identitas berasal dari SESI. */
   var g = guard_(arguments, { ulp: true, aksi: 'simpanHeaderInsGardu' });
   try{
     data = data || {};
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
 
-    // 1) ULP diambil dari SESI. Hanya Super User yang boleh memilih ULP lain.
     var ulp     = ulpScope_(g, data.ulp) || String(g.ulp || '').trim();
     var kodeUlp = '';
     if (String(data.ulp || '').trim() && bolehLintasUlp_(g) &&
@@ -63,30 +58,28 @@ function simpanHeaderInsGardu(data){
     if(!ulp)     return { ok:false, message:'ULP untuk user tidak ditemukan di db_Users.' };
     if(!kodeUlp) return { ok:false, message:'Kode ULP untuk ULP terpilih kosong di db_Users.' };
 
-    // 2) Field otomatis
     var kodeHeader = _generateKodeHeaderInsGardu(ss, kodeUlp, data.tanggal);
     var hari       = _hariFromTanggal(data.tanggal);
     var now        = new Date();
 
-    // 3) Tulis baris baru — B..Q (kolom A formula dilewati) ke db_Global_Header
     var sh  = ss.getSheetByName(SHEET_INS.HEADER);
     var row = sh.getLastRow() + 1;
     sh.getRange(row, 2, 1, 15).setValues([[
-      kodeHeader,                 // B Kode Header
-      ulp,                        // C ULP
-      hari,                       // D Hari
-      data.tanggal,               // E Tanggal
-      'Inspeksi',                 // F Tim (pembeda Inspeksi/ROW)
-      'Inspeksi Gardu',           // G Sub-Tim
-      data.koordinatAwal || '',   // H Koordinat Gardu Awal (Tier dipindah ke db_InsDu_Realisasi)
-      data.koordinatAkhir || '',  // I Koordinat Gardu Akhir
-      data.kmAwal || '',          // J KM Awal
-      data.kmAkhir || '',         // K KM Akhir
-      data.kendala || '',         // L Kendala
-      '',                         // M WA Text (menyusul)
-      now,                        // N Timestamp
-      String(g.username || ''),   // O Input Oleh — dari SESI, bukan klien
-      now                         // P Timestamp Update
+      kodeHeader,
+      ulp,
+      hari,
+      data.tanggal,
+      'Inspeksi',
+      'Inspeksi Gardu',
+      data.koordinatAwal || '',
+      data.koordinatAkhir || '',
+      data.kmAwal || '',
+      data.kmAkhir || '',
+      data.kendala || '',
+      '',
+      now,
+      String(g.username || ''),
+      now
     ]]);
 
     return { ok:true, kodeHeader:kodeHeader };
@@ -95,9 +88,8 @@ function simpanHeaderInsGardu(data){
   }
 }
 
-// Format: IGD-<KodeULP><YYMMDD><Urut 3 digit> (urut harian per-ULP). KAKEK rantai gardu.
 function _generateKodeHeaderInsGardu(ss, kodeUlp, tanggal){
-  var tgl    = _normTgl(tanggal).replace(/-/g,'').slice(2);    // YYMMDD
+  var tgl    = _normTgl(tanggal).replace(/-/g,'').slice(2);
   var prefix = 'IGD-' + (kodeUlp||'').toString().trim() + tgl;
   var data   = ss.getSheetByName(SHEET_INS.HEADER).getDataRange().getValues();
   var n = 0;
@@ -107,14 +99,17 @@ function _generateKodeHeaderInsGardu(ss, kodeUlp, tanggal){
   return prefix + ('00'+(n+1)).slice(-3);
 }
 
-// Daftar header gardu (Sub-Tim 'Inspeksi Gardu') untuk halaman Tek-InsDu.
-// filter: { ulp, tglDari, tglSampai }
+// Daftar header gardu (Sub-Tim 'Inspeksi Gardu') untuk halaman Tek-InsDu. DUAL-READ (AKTIF + ARSIP).
 function getDataHeaderInsGardu(params){
   params = params || {};
   var H = COL_INS.HEADER;
   var norm = function(v){ return String(v==null?'':v).trim().toLowerCase(); };
   var dari = params.tglDari || '', sampai = params.tglSampai || '', fUlp = norm(params.ulp);
-  return _readSheetIns(SHEET_INS.HEADER)
+  var headers = (typeof _readSheetDual_ === 'function')
+    ? _readSheetDual_(SHEET_INS.HEADER, H.kodeHeader, H.statusTextWa + 1)
+    : _readSheetIns(SHEET_INS.HEADER);
+
+  return headers
     .filter(function(h){
       if(norm(h[H.tim]) !== 'inspeksi') return false;
       if(norm(h[H.subTim]) !== 'inspeksi gardu') return false;
@@ -144,10 +139,8 @@ function getDataHeaderInsGardu(params){
 
 /* ═════════════════════════════════════
    INSPEKSI GARDU — REALISASI (per Gardu) + Builder WA
-   Detail teknis gardu diambil LIVE dari master gardu (GARDU_MASTER).
-═════════════════════════════════════ */
+═════════════════════════ */
 
-/* ─── Pembaca master gardu (memo per-eksekusi) ─── */
 function _garduMasterRows(){
   if(_garduMasterMemo) return _garduMasterMemo;
   var ss = GARDU_MASTER.spreadsheetId
@@ -217,7 +210,6 @@ function _garduObj(r){
   };
 }
 
-// Normalisasi tanggal apa pun → 'YYYY-MM-DD' (dukung objek Date & teks).
 function _tglKeyGardu(v){
   if(Object.prototype.toString.call(v)==='[object Date]' && !isNaN(v.getTime())){
     return Utilities.formatDate(v, Session.getScriptTimeZone(), 'yyyy-MM-dd');
@@ -231,7 +223,6 @@ function _tglKeyGardu(v){
   return s;
 }
 
-// 'YYYY-MM-DD' → '03 Juni 2026'
 function _tglIndoGardu(s){
   var BLN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
   var k = _tglKeyGardu(s);
@@ -240,7 +231,6 @@ function _tglIndoGardu(s){
   return m[3]+' '+BLN[parseInt(m[2],10)-1]+' '+m[1];
 }
 
-/* ─── Dropdown: daftar penyulang gardu per ULP ─── */
 function getListPenyulangGardu(ulp){
   try{
     var f = String(ulp||'').trim().toLowerCase();
@@ -256,8 +246,6 @@ function getListPenyulangGardu(ulp){
   }catch(e){ return { ok:false, message:e.message, list:[] }; }
 }
 
-/* ─── Dropdown: daftar gardu pada satu penyulang ───
-   Tiap gardu diberi flag updated = (tgl pengukuran kolom U == tanggal header). */
 function getListGarduByPenyulang(params){
   try{
     params = params || {};
@@ -295,12 +283,13 @@ function _findGarduByNomor(nomor){
   return null;
 }
 
-/* ─── Header inspeksi by kode ─── */
 function _getHeaderInsByKode(ss, kodeHeader){
   var H = COL_INS.HEADER;
-  var data = ss.getSheetByName(SHEET_INS.HEADER).getDataRange().getValues();
+  var data = (typeof _readSheetDual_ === 'function')
+    ? _readSheetDual_(SHEET_INS.HEADER, H.kodeHeader, H.statusTextWa + 1)
+    : ss.getSheetByName(SHEET_INS.HEADER).getDataRange().getValues();
   var key = String(kodeHeader||'').trim();
-  for(var i=1;i<data.length;i++){
+  for(var i=0;i<data.length;i++){
     if(String(data[i][H.kodeHeader]||'').trim()===key){
       return {
         rowIndex:       i+1,
@@ -319,7 +308,6 @@ function _getHeaderInsByKode(ss, kodeHeader){
   return null;
 }
 
-// INDUK rantai gardu: <KodeHeader>-GDU.<nnn> ; nnn di-reset per Kode Header.
 function _generateKodePekerjaanGardu(ss, kodeHeader){
   var key = String(kodeHeader||'').trim();
   if(!key) return '';
@@ -339,20 +327,17 @@ function _generateKodePekerjaanGardu(ss, kodeHeader){
   return prefix + ('00'+(maks+1)).slice(-3);
 }
 
-// Hitung jumlah temuan gardu (db_INS_Temuan) by kodeHeader + nomorGardu.
 function _hitungTemuanGardu(ss, kodeHeader, nomorGardu){
   var T = COL_INS.TEMUAN;
-  var sh = ss.getSheetByName(SHEET_INS.TEMUAN);
-  if(!sh) return 0;
-  var data = sh.getDataRange().getValues();
+  var data = (typeof _readSheetDual_ === 'function')
+    ? _readSheetDual_(SHEET_INS.TEMUAN, T.kodePekerjaan, T.folderPath + 1)
+    : (ss.getSheetByName(SHEET_INS.TEMUAN) ? ss.getSheetByName(SHEET_INS.TEMUAN).getDataRange().getValues() : []);
   var kh = String(kodeHeader||'').trim();
   var ng = String(nomorGardu||'').trim().toLowerCase();
   var n = 0;
-  for(var i=1;i<data.length;i++){
+  for(var i=0;i<data.length;i++){
     if(String(data[i][T.kodeHeader]||'').trim()!==kh) continue;
     if(String(data[i][T.nomorGardu]||'').trim().toLowerCase()!==ng) continue;
-    // Realisasi sah HANYA bila URL foto sudah diupdate: kolom R (Foto Temuan URL)
-    // DAN kolom T (Foto Gardu URL) wajib terisi keduanya. Salah satu kosong -> tidak dihitung.
     if(!String(data[i][T.fotoTemuanUrl]||'').trim()) continue;
     if(!String(data[i][T.fotoTiangUrl]||'').trim()) continue;
     n++;
@@ -360,19 +345,17 @@ function _hitungTemuanGardu(ss, kodeHeader, nomorGardu){
   return n;
 }
 
-// Map temuan per gardu untuk WA: { nomorGarduLower: [teksTemuan,...] }
 function _temuanGarduMap(ss, kodeHeader){
   var T = COL_INS.TEMUAN;
   var map = {};
-  var sh = ss.getSheetByName(SHEET_INS.TEMUAN);
-  if(!sh) return map;
-  var data = sh.getDataRange().getValues();
+  var data = (typeof _readSheetDual_ === 'function')
+    ? _readSheetDual_(SHEET_INS.TEMUAN, T.kodePekerjaan, T.folderPath + 1)
+    : (ss.getSheetByName(SHEET_INS.TEMUAN) ? ss.getSheetByName(SHEET_INS.TEMUAN).getDataRange().getValues() : []);
   var kh = String(kodeHeader||'').trim();
-  for(var i=1;i<data.length;i++){
+  for(var i=0;i<data.length;i++){
     if(String(data[i][T.kodeHeader]||'').trim()!==kh) continue;
     var nomor = String(data[i][T.nomorGardu]||'').trim();
     if(!nomor) continue;
-    // Hanya temuan dgn URL foto lengkap (R Foto Temuan & T Foto Gardu) yang dianggap realisasi sah.
     if(!String(data[i][T.fotoTemuanUrl]||'').trim()) continue;
     if(!String(data[i][T.fotoTiangUrl]||'').trim()) continue;
     var key = nomor.toLowerCase();
@@ -383,12 +366,7 @@ function _temuanGarduMap(ss, kodeHeader){
   return map;
 }
 
-/* ─── Simpan 1 gardu ke realisasi ─── */
 function simpanRealisasiInsGardu(data){
-  /* OTENTIKASI + PEMILIKAN (29 Agu 2026). Sebelumnya tanpa pemeriksaan:
-     kodeHeader dari klien dipakai begitu saja, jadi data bisa disisipkan ke
-     header milik ULP lain. `gAks` (bukan `g`) karena `g` sudah dipakai
-     untuk hasil _findGarduByNomor() di bawah. */
   var gAks = guard_(arguments, { ulp: true, aksi: 'simpanRealisasiInsGardu' });
   try{
     data = data || {};
@@ -431,22 +409,20 @@ function simpanRealisasiInsGardu(data){
     var now            = new Date();
     var row            = sh.getLastRow() + 1;
     sh.getRange(row, 2, 1, 11).setValues([[
-      kodeHeader,            // B Kode Header
-      kodePekerjaan,         // C Kode Pekerjaan Gardu
-      hari,                  // D Hari
-      tgl,                   // E Tanggal
-      g.penyulang || '',     // F Penyulang
-      g.section || '',       // G Section
-      nomorGardu,            // H Nomor Gardu
-      tier,                  // I Tier Inspeksi
-      jumlahTemuan,          // J Jumlah Temuan
-      data.username || '',   // K Input Oleh
-      now                    // L Timestamp
+      kodeHeader,
+      kodePekerjaan,
+      hari,
+      tgl,
+      g.penyulang || '',
+      g.section || '',
+      nomorGardu,
+      tier,
+      jumlahTemuan,
+      data.username || '',
+      now
     ]]);
 
-    // CARRY-OVER: bawa temuan terbuka gardu ini dari siklus lama ke header baru.
     var migrasi = _migrasiTemuanTerbukaGardu(ss, kodeHeader, kodePekerjaan, nomorGardu, header);
-    // Recalc Jumlah Temuan + WA header baru (sudah memasukkan temuan yang dibawa).
     recalcRealisasiGarduByHeader(ss, kodeHeader);
     return { ok:true, kodePekerjaan:kodePekerjaan, temuanDibawa:migrasi };
   }catch(e){
@@ -454,15 +430,6 @@ function simpanRealisasiInsGardu(data){
   }
 }
 
-/* ═══ CARRY-OVER: migrasi temuan gardu BELUM SELESAI ke siklus baru ═══
-   Dipanggil saat realisasi gardu baru tersimpan (web app) & oleh trigger harian
-   (menangkap input AppSheet). Temuan Object='Gardu', Status != 'Selesai',
-   Nomor Gardu sama TAPI Kode Header berbeda (sisa siklus lama) → ditimpa ke
-   header/realisasi baru (Kode Header, Kode Pekerjaan, ULP, Hari, Tanggal) walau
-   petugas tidak mengedit. SYARAT SIKLUS BARU: tanggal inputan baru > 30 hari dari
-   tanggal temuan terakhir (kolom Tanggal) — mencegah penimpaan di siklus yang sama.
-   Header lama TIDAK disentuh. Idempoten: setelah dibawa, Tanggal temuan = tgl baru
-   sehingga selisih < 30 hari akan otomatis dilewati. TANPA kolom tambahan. */
 function _migrasiTemuanTerbukaGardu(ss, kodeHeaderBaru, kodePekerjaanBaru, nomorGardu, header){
   var T = COL_INS.TEMUAN;
   var shT = ss.getSheetByName(SHEET_INS.TEMUAN);
@@ -484,23 +451,21 @@ function _migrasiTemuanTerbukaGardu(ss, kodeHeaderBaru, kodePekerjaanBaru, nomor
     var r = data[i];
     if(String(r[T.objekInspeksi]||'').trim().toLowerCase()!=='gardu') continue;
     if(String(r[T.nomorGardu]||'').trim().toLowerCase()!==ng) continue;
-    if(String(r[T.status]||'').trim().toLowerCase()===selesai) continue; // sudah selesai → tidak dibawa
-    if(String(r[T.kodeHeader]||'').trim()===khBaru) continue;            // sudah di siklus ini
-    // SIKLUS BARU hanya bila tanggal inputan baru > 30 hari dari tanggal temuan terakhir.
+    if(String(r[T.status]||'').trim().toLowerCase()===selesai) continue;
+    if(String(r[T.kodeHeader]||'').trim()===khBaru) continue;
     var tglTemuan = _normTgl(r[T.tanggal]);
-    if(tglTemuan && _selisihHariIns(tgl, tglTemuan) <= 30) continue;     // masih ≤ 30 hari → bukan siklus baru
+    if(tglTemuan && _selisihHariIns(tgl, tglTemuan) <= 30) continue;
     var rowNum = i+1;
     shT.getRange(rowNum, T.kodeHeader+1).setValue(khBaru);
-    shT.getRange(rowNum, T.kodePekerjaanPeny+1).setValue(kpBaru); // kolom C = kode realisasi
+    shT.getRange(rowNum, T.kodePekerjaanPeny+1).setValue(kpBaru);
     if(ulp) shT.getRange(rowNum, T.ulp+1).setValue(ulp);
     shT.getRange(rowNum, T.hari+1).setValue(hari);
-    shT.getRange(rowNum, T.tanggal+1).setValue(tgl);             // Tanggal = tanggal inputan terakhir
+    shT.getRange(rowNum, T.tanggal+1).setValue(tgl);
     dibawa++;
   }
   return dibawa;
 }
 
-// Selisih hari (A - B), input 'yyyy-MM-dd'. Positif = A setelah B.
 function _selisihHariIns(tglA, tglB){
   var a = new Date(String(tglA||'')+'T00:00:00');
   var b = new Date(String(tglB||'')+'T00:00:00');
@@ -508,9 +473,6 @@ function _selisihHariIns(tglA, tglB){
   return Math.round((a.getTime()-b.getTime())/86400000);
 }
 
-/* TRIGGER TIME — menangkap realisasi gardu yang dibuat via AppSheet.
-   Scan realisasi gardu bertanggal hari ini / kemarin lalu bawa temuan terbuka
-   gardu tsb ke header realisasinya. Idempoten. Pasang trigger waktu ~10–15 menit. */
 function migrasiTemuanGarduHarian(){
   try{
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -543,18 +505,18 @@ function migrasiTemuanGarduHarian(){
   }catch(e){ return { ok:false, message:e.message }; }
 }
 
-/* ─── Daftar realisasi (Detail modal) ─── */
 function getDetailRealisasiGardu(kodeHeader){
   try{
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     var header = _getHeaderInsByKode(ss, kodeHeader);
     if(!header) return { ok:false, message:'Header tidak ditemukan.' };
     var R = COL_INSDU.REALISASI;
-    var sh = ss.getSheetByName(SHEET_INSDU_REALISASI);
-    var rows = sh ? sh.getDataRange().getValues() : [];
+    var rows = (typeof _readSheetDual_ === 'function')
+      ? _readSheetDual_(SHEET_INSDU_REALISASI, R.kodePekerjaanGardu, 12)
+      : (ss.getSheetByName(SHEET_INSDU_REALISASI) ? ss.getSheetByName(SHEET_INSDU_REALISASI).getDataRange().getValues() : []);
     var kh = String(kodeHeader||'').trim();
     var list = [];
-    for(var i=1;i<rows.length;i++){
+    for(var i=0;i<rows.length;i++){
       if(String(rows[i][R.kodeHeader]||'').trim()!==kh) continue;
       var nomor = String(rows[i][R.nomorGardu]||'').trim();
       var g = _findGarduByNomor(nomor) || {};
@@ -573,8 +535,6 @@ function getDetailRealisasiGardu(kodeHeader){
   }catch(e){ return { ok:false, message:e.message }; }
 }
 
-/* ─── Temuan per Gardu (db_INS_Temuan, objek 'Gardu') ─── */
-// Cari baris realisasi gardu by kodeHeader + nomorGardu.
 function _findRealisasiGardu(ss, kodeHeader, nomorGardu){
   var R = COL_INSDU.REALISASI;
   var sh = ss.getSheetByName(SHEET_INSDU_REALISASI);
@@ -596,9 +556,6 @@ function _findRealisasiGardu(ss, kodeHeader, nomorGardu){
   return null;
 }
 
-/* ---------- ANAK rantai gardu: Kode Temuan BERANTAI dari Kode Pekerjaan Gardu ----------
-   Format: <KodePekerjaanGardu>-TGD.<nnn> ; nnn di-reset per Kode Pekerjaan Gardu.
-   Menjaga rantai Header(IGD) -> Realisasi(GDU) -> Temuan(TGD). */
 function _generateKodeTemuanGarduBerantai(ss, kodePekerjaanGardu){
   var key = String(kodePekerjaanGardu||'').trim();
   if(!key) return '';
@@ -619,13 +576,7 @@ function _generateKodeTemuanGarduBerantai(ss, kodePekerjaanGardu){
   return prefix + ('00' + (maks+1)).slice(-3);
 }
 
-// Simpan 1 temuan untuk gardu tertentu. Koordinat diambil dari titik koordinat
-// gardu (master). Kode header + kode pekerjaan gardu dibawa dari db_InsDu_Realisasi.
 function simpanTemuanGardu(data){
-  /* OTENTIKASI + PEMILIKAN (29 Agu 2026). Selain menulis baris temuan,
-     fungsi ini juga MENGUNGGAH FOTO ke Drive — tanpa pemeriksaan, siapa pun
-     bisa memakai Drive pemilik script sebagai tempat simpan berkas.
-     `gAks` (bukan `g`) karena `g` sudah dipakai _findGarduByNomor(). */
   var gAks = guard_(arguments, { ulp: true, aksi: 'simpanTemuanGardu' });
   try{
     data = data || {};
@@ -648,7 +599,6 @@ function simpanTemuanGardu(data){
     var koord = String(g.lokasiTrafo||'').trim();
     var lat='', lng='';
     if(koord){ var sp=koord.split(','); if(sp.length>=2){ var _la=parseFloat(sp[0].trim()), _lo=parseFloat(sp[1].trim()); lat=isNaN(_la)?'':_la; lng=isNaN(_lo)?'':_lo; } }
-    /* Identitas dari SESI, bukan dari data.username yang dikirim klien. */
     var info = (typeof _userInfoIns==='function')
       ? _userInfoIns(gAks.username)
       : { ulp:header.ulp, kodeUlp:'', tim:'' };
@@ -662,7 +612,6 @@ function simpanTemuanGardu(data){
     var fT={ nama:'', url:'' }, fG={ nama:'', url:'' };
     if(data.fotoTemuanB64) fT=_uploadFotoTemuan(data.fotoTemuanB64, data.fotoTemuanMime, base+'_Foto Temuan', _f());
     if(data.fotoGarduB64) fG=_uploadFotoTemuan(data.fotoGarduB64, data.fotoGarduMime, base+'_Foto Gardu', _f());
-    // LOKASI foto = path relatif (Folder Path + '/' + nama file) supaya AppSheet bisa menampilkan foto.
     var folderPathStr = _folderTemuanPathStr(tgl, kodePekerjaan);
     var arr = [ kodeHeader, rg.kodePekerjaanGardu, kodePekerjaan, header.ulp, hari, tgl, info.tim||'', 'Gardu',
       rg.penyulang||g.penyulang||'', rg.section||g.section||'', '', '', nomorGardu, rg.tier||'', temuan,
@@ -671,25 +620,22 @@ function simpanTemuanGardu(data){
     var shT = ss.getSheetByName(SHEET_INS.TEMUAN);
     var row = shT.getLastRow()+1;
     shT.getRange(row, 2, 1, arr.length).setValues([arr]);
-    // Folder Path (kolom AR) — path penyimpanan foto temuan gardu.
     shT.getRange(row, COL_INS.TEMUAN.folderPath+1).setValue(folderPathStr);
-    // SIMPAN TEMUAN GARDU = PEMICU BUILD WA (fungsi 2).
     recalcWaInsGarduByHeader(kodeHeader);
     return { ok:true, kodePekerjaan:kodePekerjaan };
   }catch(e){ return { ok:false, message:e.message }; }
 }
 
-// Daftar temuan untuk satu gardu pada satu header.
 function getTemuanGardu(kodeHeader, nomorGardu){
   try{
     var T = COL_INS.TEMUAN;
-    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    var sh = ss.getSheetByName(SHEET_INS.TEMUAN);
-    var data = sh ? sh.getDataRange().getValues() : [];
+    var data = (typeof _readSheetDual_ === 'function')
+      ? _readSheetDual_(SHEET_INS.TEMUAN, T.kodePekerjaan, T.folderPath + 1)
+      : (SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_INS.TEMUAN).getDataRange().getValues());
     var kh = String(kodeHeader||'').trim();
     var ng = String(nomorGardu||'').trim().toLowerCase();
     var out = [];
-    for(var i=1;i<data.length;i++){
+    for(var i=0;i<data.length;i++){
       if(String(data[i][T.kodeHeader]||'').trim()!==kh) continue;
       if(String(data[i][T.nomorGardu]||'').trim().toLowerCase()!==ng) continue;
       out.push({ kodePekerjaan:String(data[i][T.kodePekerjaan]||'').trim(),
@@ -707,10 +653,7 @@ function getTemuanGardu(kodeHeader, nomorGardu){
   }catch(e){ return { ok:false, message:e.message, list:[] }; }
 }
 
-// Edit data temuan gardu (nama temuan + deskripsi).
 function editTemuanGardu(data){
-  /* OTENTIKASI + PEMILIKAN (29 Agu 2026). Nama `gAks` dipakai karena `g`
-     sudah dipakai di fungsi-fungsi lain di berkas ini. */
   var gAks = guard_(arguments, { ulp: true, aksi: 'editTemuanGardu' });
   try{
     data = data || {};
@@ -731,15 +674,12 @@ function editTemuanGardu(data){
     }
     if(data.temuan!=null) sh.getRange(rowIdx, T.temuan+1).setValue(safeCell_(String(data.temuan)));
     if(data.deskripsi!=null) sh.getRange(rowIdx, T.deskripsi+1).setValue(safeCell_(String(data.deskripsi)));
-    // EDIT TEMUAN GARDU = PEMICU BUILD WA (fungsi 2).
     if(kodeHeader){ try { recalcWaInsGarduByHeader(kodeHeader); } catch(e){} }
     return { ok:true, kodePekerjaan:kodePekerjaan };
   }catch(e){ return { ok:false, message:e.message }; }
 }
 
-// Edit realisasi gardu (Tier) by kode pekerjaan gardu.
 function editRealisasiGardu(data){
-  /* OTENTIKASI + PEMILIKAN (29 Agu 2026). */
   var gAks = guard_(arguments, { ulp: true, aksi: 'editRealisasiGardu' });
   try{
     data = data || {};
@@ -770,10 +710,7 @@ function editRealisasiGardu(data){
   }catch(e){ return { ok:false, message:e.message }; }
 }
 
-/* ─── Edit header gardu (koordinat/KM/kendala) ─── */
 function editHeaderInsGardu(data){
-  /* OTENTIKASI + PEMILIKAN (29 Agu 2026). Menimpa koordinat/kendala header
-     milik ULP lain bisa merusak laporan harian ULP tersebut. */
   var gAks = guard_(arguments, { ulp: true, aksi: 'editHeaderInsGardu' });
   try{
     data = data || {};
@@ -791,7 +728,6 @@ function editHeaderInsGardu(data){
       audit_(gAks.sesi, 'editHeaderInsGardu', key, 'TOLAK', 'header milik ULP lain');
       return { ok:false, message:'Header bukan milik ULP Anda.' };
     }
-    /* Semua nilai ini teks bebas dari pengguna -> lindungi dari formula. */
     hsh.getRange(rowIdx, H.koordinatAwal+1).setValue(safeCell_(data.koordinatAwal||''));
     hsh.getRange(rowIdx, H.koordinatAkhir+1).setValue(safeCell_(data.koordinatAkhir||''));
     hsh.getRange(rowIdx, H.kmAwal+1).setValue(safeCell_(data.kmAwal||''));
@@ -802,12 +738,7 @@ function editHeaderInsGardu(data){
   }catch(e){ return { ok:false, message:e.message }; }
 }
 
-/* ─── Hapus 1 gardu dari realisasi ─── */
 function hapusRealisasiGardu(data){
-  /* OTENTIKASI + PEMILIKAN (29 Agu 2026) — celah paling berat di modul ini.
-     Sebelumnya siapa pun di internet bisa memanggil ini dan menghapus baris
-     realisasi mana pun (sh.deleteRow) hanya dengan mengetahui kodePekerjaan.
-     Sekarang: wajib sesi, dan baris harus milik ULP sesi (Super User bebas). */
   var g = guard_(arguments, { ulp: true, aksi: 'hapusRealisasiGardu' });
   try{
     data = data || {};
@@ -821,7 +752,6 @@ function hapusRealisasiGardu(data){
     for(var i=rows.length-1;i>=1;i--){
       if(String(rows[i][R.kodePekerjaanGardu]||'').trim()===kode){
         var kh = String(rows[i][R.kodeHeader]||'').trim();
-        /* Sheet realisasi tidak punya kolom ULP — telusuri lewat header induk. */
         if(!barisUlpCocok_(g, kh ? petaUlp[kh] : '')){
           audit_(g.sesi, 'hapusRealisasiGardu', kode, 'TOLAK', 'baris milik ULP lain');
           return { ok:false, message:'Data realisasi bukan milik ULP Anda.' };
@@ -838,7 +768,6 @@ function hapusRealisasiGardu(data){
   }
 }
 
-/* ─── Recalc jumlah temuan semua gardu pada satu header + refresh WA ─── */
 function recalcRealisasiGarduByHeader(ss, kodeHeader){
   ss = ss || SpreadsheetApp.openById(SPREADSHEET_ID);
   var R = COL_INSDU.REALISASI;
@@ -858,17 +787,17 @@ function recalcRealisasiGarduByHeader(ss, kodeHeader){
   _updateWaTextInsGardu(ss, kh);
 }
 
-/* ─── Builder WA Inspeksi Gardu (grup per penyulang, Section rentang) ─── */
 function _buildWaTextInsGardu(ss, kodeHeader){
   var header = _getHeaderInsByKode(ss, kodeHeader);
   if(!header) return '';
   var R = COL_INSDU.REALISASI;
-  var rsh = ss.getSheetByName(SHEET_INSDU_REALISASI);
-  var rrows = rsh ? rsh.getDataRange().getValues() : [];
+  var rrows = (typeof _readSheetDual_ === 'function')
+    ? _readSheetDual_(SHEET_INSDU_REALISASI, R.kodePekerjaanGardu, 12)
+    : (ss.getSheetByName(SHEET_INSDU_REALISASI) ? ss.getSheetByName(SHEET_INSDU_REALISASI).getDataRange().getValues() : []);
   var kh = String(kodeHeader||'').trim();
 
   var items = [];
-  for(var i=1;i<rrows.length;i++){
+  for(var i=0;i<rrows.length;i++){
     if(String(rrows[i][R.kodeHeader]||'').trim()!==kh) continue;
     var nomor = String(rrows[i][R.nomorGardu]||'').trim();
     if(!nomor) continue;
@@ -950,7 +879,6 @@ function _updateWaTextInsGardu(ss, kodeHeader){
   hsh.getRange(rowIdx, H.timestampUpdate+1).setValue(new Date());
 }
 
-/* ─── Update Data (recompute jumlah temuan + WA) untuk 1 header ─── */
 function updateHeaderInsGarduLangsung(kodeHeader){
   try{
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -966,15 +894,6 @@ function updateHeaderInsGarduLangsung(kodeHeader){
   }catch(e){ return { ok:false, message:e.message }; }
 }
 
-
-/* ═══ BUILD WA INSPEKSI GARDU — 3 fungsi (recalc + build), simetris dgn jaringan ═══
-   1) refreshSemuaWaInsGardu()        : recalc+build SEMUA header gardu (WEB APP saja)
-   2) recalcWaInsGarduByHeader(kode)  : recalc+build 1 header (saat simpan/edit temuan gardu)
-   3) refreshWaInsGarduHarian()       : recalc+build header tgl hari ini & kemarin (TRIGGER time)
-   Inti recalc+build gardu = recalcRealisasiGarduByHeader (hitung ulang Jumlah Temuan
-   tiap gardu lalu panggil _updateWaTextInsGardu). */
-
-// Penanda baris header = Inspeksi Gardu (Tim 'Inspeksi' & Sub-Tim 'Inspeksi Gardu').
 function _isHeaderInsGardu(r){
   var H = COL_INS.HEADER;
   if(!r[H.kodeHeader]) return false;
@@ -982,8 +901,6 @@ function _isHeaderInsGardu(r){
   return String(r[H.subTim]||'').trim().toLowerCase() === 'inspeksi gardu';
 }
 
-// (1) WEB APP — recalc + build SEMUA header Inspeksi Gardu.
-// Operasi berat; pakai HANYA dari tombol manual web app, JANGAN jadi trigger berkala.
 function refreshSemuaWaInsGardu(){
   try{
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -999,8 +916,6 @@ function refreshSemuaWaInsGardu(){
   }catch(e){ return { ok:false, message:e.message }; }
 }
 
-// (2) WEB APP — recalc + build 1 header. Dipanggil saat simpan/edit temuan gardu,
-// supaya WA langsung sinkron tanpa menunggu trigger.
 function recalcWaInsGarduByHeader(kodeHeader){
   try{
     var key = String(kodeHeader||'').trim();
@@ -1017,8 +932,6 @@ function recalcWaInsGarduByHeader(kodeHeader){
   }catch(e){ return { ok:false, message:e.message }; }
 }
 
-// (3) TRIGGER TIME — recalc + build HANYA header gardu bertanggal hari ini atau
-// kemarin (hemat baca data). Cocok untuk menangkap input dari AppSheet.
 function refreshWaInsGarduHarian(){
   try{
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -1039,13 +952,6 @@ function refreshWaInsGarduHarian(){
   }catch(e){ return { ok:false, message:e.message }; }
 }
 
-
-/* ═════════════════════════════════════
-   PENGUKURAN GARDU — pencarian data master (kartu)
-   Dipakai halaman Tek-PengukuranGardu (sub-menu Tim Inspeksi).
-═════════════════════════════════════ */
-
-// Daftar ULP unik dari master gardu (untuk filter Super User).
 function getListUlpGardu(){
   try{
     var rows = _garduMasterRows();
@@ -1058,11 +964,6 @@ function getListUlpGardu(){
   }catch(e){ return { ok:false, message:e.message, list:[] }; }
 }
 
-// Cari data pengukuran gardu dari master gardu (LIVE).
-// params: { ulp, nomorGardu, limit }
-//  - nomorGardu : pencarian sebagian (case-insensitive).
-//  - ulp        : filter opsional (Super User memilih; user lain dikunci ke ULP-nya di klien).
-//  - limit      : batas hasil (default 120) untuk menjaga performa.
 function cariPengukuranGardu(params){
   try{
     params = params || {};
@@ -1089,12 +990,7 @@ function cariPengukuranGardu(params){
   }catch(e){ return { ok:false, message:e.message, list:[] }; }
 }
 
-/* ─── Edit data pengukuran gardu (tulis balik ke Master_Gardu) ───
-   payload: { nomorGardu, ulp(opsional), data:{ tglPengukuran(YYYY-MM-DD),
-   teganganWbpRS..TN, bebanWbpR..N, persentaseBeban } } */
 function updatePengukuranGardu(payload){
-  /* OTENTIKASI + SKOP ULP (29 Agu 2026). Menulis balik ke Master_Gardu di
-     spreadsheet terpisah; payload.ulp kini hanya dihormati untuk Super User. */
   var gAks = guard_(arguments, { ulp: true, aksi: 'updatePengukuranGardu' });
   try{
     payload = payload || {};
@@ -1166,20 +1062,6 @@ function updatePengukuranGardu(payload){
   }catch(e){ return { ok:false, message:'Gagal memperbarui: '+(e&&e.message?e.message:e) }; }
 }
 
-
-/* ═══════════════════════════════════════════════════════════
-   DOWNLOAD PDF INSPEKSI GARDU (link web via doGet, ?pdf=gardu)
-   Format mengikuti Rekap ROW (A4 portrait, kop PLN, border ganda,
-   header #FFC000, blok tanda tangan). Sumber: db_InsDu_Realisasi.
-   Kolom: NO · TANGGAL · TIM · PENYULANG · NO GARDU · SECTION ·
-          ITEM(TIER 1 / TIER 2) · FILE EXCEL.
-   Helper bersama (_pdfEsc, _pdfDateFilterLolos_, _pdfLogoPlnB64_,
-   getPejabatRekapROW, _getOrCreateFolderByPath) ada di Tek-ROW.gs /
-   Tek-Temuan.gs (global scope, tanpa import).
-   Dipasang di doGet (Code.gs): if(pdf=='gardu') return unduhPdfInsGardu(e). */
-/* ─── Pejabat penandatangan Rekap Inspeksi Gardu (blok tanda tangan PDF) ───
-   Disimpan via Script Properties, TERPISAH dari pejabat ROW agar nama bisa beda.
-   Default mengikuti pejabat ULP Toboali saat ini. */
 var PEJABAT_INSGARDU_PROP = 'PEJABAT_REKAP_INSGARDU';
 var PEJABAT_INSGARDU_DEFAULT = { manager:'MARSHEL P.L TOBING', teamLeader:'ANDRYE FAHREZA', koordinator:'APRIANTO' };
 
@@ -1201,7 +1083,6 @@ function simpanPejabatRekapInsGardu(payload){
   try{
     payload = payload || {};
     var cur = getPejabatRekapInsGardu();
-    // Field kosong -> pertahankan nilai lama (jangan menimpa dgn kosong agar PDF tak blank).
     var pick = function(v, fb){ v = (v==null) ? '' : String(v).trim(); return v || fb; };
     var data = {
       manager:     pick(payload.manager,     cur.manager),
@@ -1215,12 +1096,10 @@ function simpanPejabatRekapInsGardu(payload){
   }
 }
 
-// URL web app (/exec) untuk membangun tautan Unduh PDF dari frontend Tek-InsDu.
 function getExecUrlInsGardu(){
   try{ return ScriptApp.getService().getUrl() || ''; }catch(e){ return ''; }
 }
 
-/* Baca rekap realisasi gardu untuk preview tabel di frontend (struktur sama dgn PDF). */
 function getRekapInsGarduRows(params){
   try{
     params = params || {};
@@ -1276,18 +1155,19 @@ function unduhPdfInsGardu(e){
   }
 }
 
-/* Baca db_InsDu_Realisasi -> array objek (terfilter tanggal/penyulang & terurut). */
+/* DUAL-READ REKAP INSPEKSI GARDU (AKTIF + ARSIP) */
 function _pdfQueryRealisasiInsGardu(ss, f){
   var R = COL_INSDU.REALISASI;
-  var sh = ss.getSheetByName(SHEET_INSDU_REALISASI);
-  if(!sh || sh.getLastRow() < 2) return [];
-  var data = sh.getRange(2, 1, sh.getLastRow() - 1, 12).getValues();
+  var data = (typeof _readSheetDual_ === 'function')
+    ? _readSheetDual_(SHEET_INSDU_REALISASI, R.kodePekerjaanGardu, 12)
+    : (ss.getSheetByName(SHEET_INSDU_REALISASI) ? ss.getSheetByName(SHEET_INSDU_REALISASI).getRange(2, 1, ss.getSheetByName(SHEET_INSDU_REALISASI).getLastRow() - 1, 12).getValues() : []);
+  if(!data || !data.length) return [];
   var out = [];
   for(var i=0;i<data.length;i++){
     var r = data[i];
     var ng = String(r[R.nomorGardu] || '').trim();
     var kp = String(r[R.kodePekerjaanGardu] || '').trim();
-    if(!ng && !kp) continue;                         // lewati baris kosong
+    if(!ng && !kp) continue;
     var tgl  = _normTgl(r[R.tanggal]);
     var peny = String(r[R.penyulang] || '').trim();
     if(!_pdfDateFilterLolos_(tgl, f)) continue;
@@ -1306,7 +1186,6 @@ function _pdfQueryRealisasiInsGardu(ss, f){
   return out;
 }
 
-/* HTML PDF REKAP INSPEKSI GARDU (format Laporan Bulanan, A4 portrait, mirip Rekap ROW). */
 function _buildHtmlPdfRekapInsGardu(rows, f){
   var pjb = getPejabatRekapInsGardu();
   var bln = ['JANUARI','FEBRUARI','MARET','APRIL','MEI','JUNI','JULI','AGUSTUS','SEPTEMBER','OKTOBER','NOVEMBER','DESEMBER'];
@@ -1315,7 +1194,6 @@ function _buildHtmlPdfRekapInsGardu(rows, f){
     var p = s.split('-'); var m = parseInt(p[1],10)||1;
     return p[2] + ' ' + bln[m-1] + ' ' + p[0];
   }
-  // TIER pekerjaan -> 'ADA'/'TIDAK ADA' per kolom (Tier 1 / Tier 2).
   function _adaTier(tier, n){
     return String(tier||'').indexOf(String(n)) >= 0 ? 'ADA' : 'TIDAK ADA';
   }
@@ -1436,26 +1314,12 @@ function _buildHtmlPdfRekapInsGardu(rows, f){
   return h;
 }
 
-
-/* ══════════════════════════════════════════
-   UPDATE HI GARDU — sumber sheet INPUT TBL (gsheet 3 "Mater HI UP3")
-   Baca & tulis balik per KOLOM HURUF (A..FP) untuk form "Update HI Gardu"
-   di frontend Tek-PengukuranGardu. Baris dicocokkan via kolom C (GARDU)
-   + opsional kolom B (ULP). Generik: skalabel utk semua grup.
-════════════════════════════════════════════ */
-/* Sumber data HI: file Master Gardu (1TEC...), 2 tab:
-   - mg = Master_Gardu       : GARDU di kolom C, ULP di kolom B
-   - sf = Suhu & Fisik Trafo : GARDU di kolom B, tanpa kolom ULP
-   Frontend menandai tiap field dgn data-sheet="mg"/"sf" + huruf kolom tujuan. */
 var HI_SRC = {
-  // Sumber BACA utama (gsheet1) — dipakai getHiUp3 & _hiTabSheet_.
   spreadsheetId: '1TEC2iaxEcTCn0IXDZM1kHpAhKyBHuG90SMK48zEkeOw',
   tabs: {
     mg: { name:'Master_Gardu',       gid:null,       colGardu:2, colUlp:1  },
     sf: { name:'Suhu & Fisik Trafo', gid:1815443245, colGardu:1, colUlp:-1 }
   },
-  // TARGET TULIS mg/sf — gsheet1 & gsheet2 berstruktur IDENTIK (mg + sf).
-  //  gsheet2: "1. DATA TRAFO" ≡ Master_Gardu, "2. SUHU & FISIK TRAFO" ≡ Suhu & Fisik.
   writeTargets: [
     { label:'gsheet1', spreadsheetId:'1TEC2iaxEcTCn0IXDZM1kHpAhKyBHuG90SMK48zEkeOw',
       mg:{ name:'Master_Gardu',         gid:null,       colGardu:2, colUlp:1  },
@@ -1464,25 +1328,20 @@ var HI_SRC = {
       mg:{ name:'1. DATA TRAFO',          gid:2129497099, colGardu:2, colUlp:1  },
       sf:{ name:'2. SUHU & FISIK TRAFO',  gid:198498101,  colGardu:1, colUlp:-1 } }
   ],
-  // TARGET TULIS INPUT TBL (gsheet3) — layout LAMA gabungan (kolom huruf A..FP),
-  //  GARDU di kolom C, ULP di kolom B. Hanya field ber-data-col HURUF yg dikirim.
   inputTbl: { label:'gsheet3', spreadsheetId:'1A7SvIoVbLhnn7g1cNaZ2ed38cNDEFLeB3SMHWKY8vm4',
     name:'INPUT TBL', gid:1401502183, colGardu:2, colUlp:1 }
 };
 
-// Huruf kolom -> index 0-based (A=0). Mendukung multi-huruf (mis. "FP").
 function _hiColLetterToIndex_(letter){
   var s = String(letter||'').toUpperCase(); var r = 0;
   for(var i=0;i<s.length;i++){ r = r*26 + (s.charCodeAt(i)-64); }
   return r - 1;
 }
-// index 0-based -> huruf kolom.
 function _hiIndexToColLetter_(index){
   var n = Number(index) + 1; var s = '';
   while(n > 0){ var m = (n-1)%26; s = String.fromCharCode(65+m) + s; n = Math.floor((n-1)/26); }
   return s;
 }
-// Buka salah satu tab sumber HI (by gid, fallback nama).
 function _hiTabSheet_(tabKey){
   var cfg = HI_SRC.tabs[tabKey];
   if(!cfg) return null;
@@ -1493,7 +1352,6 @@ function _hiTabSheet_(tabKey){
   }
   return ss.getSheetByName(cfg.name);
 }
-// Cari baris (1-based): kolom GARDU = nomorGardu (+ ULP bila tab punya kolom ULP & ulp diisi).
 function _hiCariBarisTab_(sh, cfg, nomorGardu, ulp){
   var lastRow = sh.getLastRow();
   if(lastRow < 1) return -1;
@@ -1504,11 +1362,10 @@ function _hiCariBarisTab_(sh, cfg, nomorGardu, ulp){
   for(var r=0;r<lastRow;r++){
     if(String(colG[r][0]||'').trim().toLowerCase() !== keyG) continue;
     if(colU && String(colU[r][0]||'').trim().toLowerCase() !== keyU) continue;
-    return r+1; // 1-based
+    return r+1;
   }
   return -1;
 }
-// Baca 1 baris 1 tab -> { row, data:{ colLetter:value } } (display values); null bila tak ketemu.
 function _hiBacaTab_(tabKey, nomorGardu, ulp){
   var sh = _hiTabSheet_(tabKey);
   if(!sh) return null;
@@ -1522,9 +1379,6 @@ function _hiBacaTab_(tabKey, nomorGardu, ulp){
   return { row:row, data:data };
 }
 
-/* Baca data gardu dari KEDUA tab (Master_Gardu + Suhu & Fisik).
-   params:{ nomorGardu, ulp? }
-   return:{ ok, found, nomorGardu, mg:{row,data}|null, sf:{row,data}|null } */
 function getHiUp3(params){
   try{
     params = params || {};
@@ -1538,22 +1392,13 @@ function getHiUp3(params){
   }catch(e){ return { ok:false, message:'Gagal membaca data HI: '+(e&&e.message?e.message:e) }; }
 }
 
-/* GUARD Suhu & Fisik — sisipkan baris baru utk gardu yg ADA di Master_Gardu
-   tapi BELUM ada di Suhu & Fisik Trafo. MENIRU sync BA (_baTerapkanUpdateMaster_):
-   baris disisip FISIK per-prefix (di bawah GARDU terakhir berprefix sama, mis. TB;
-   bila prefix belum ada, di bawah baris data terakhir), lalu kolom BERFORMULA
-   (mis. NO kolom A) DISALIN dari baris acuan supaya formula ikut mengalir.
-   Identitas dasar (GARDU, Alamat, Merk, Kapasitas) disalin dari Master_Gardu;
-   kolom lain dibiarkan kosong lalu diisi nilai yg di-save.
-   Layout Suhu & Fisik: A NO, B GARDU, C Alamat, D Merk, E Kapasitas. */
 function _hiSisipBarisSf_(sh, cfg, nomorGardu, g){
   var lastRow = sh.getLastRow();
   var lastCol = sh.getLastColumn();
-  var colG = cfg.colGardu; // 0-based (Suhu & Fisik: B = 1)
+  var colG = cfg.colGardu;
   var nomorCol = sh.getRange(1, colG+1, Math.max(lastRow,1), 1).getValues();
   var prefixBaru = '';
   try { prefixBaru = (_baParseNomorGardu_(nomorGardu) || {}).prefix || ''; } catch(e){ prefixBaru = ''; }
-  // Baris acuan = GARDU terakhir berprefix sama; fallback baris data terakhir.
   var lastPrefixRow = -1, lastDataRow0 = 0;
   for(var r=0;r<nomorCol.length;r++){
     var nomorRr = String(nomorCol[r][0]||'').trim();
@@ -1563,27 +1408,24 @@ function _hiSisipBarisSf_(sh, cfg, nomorGardu, g){
     try { parsedRr = _baParseNomorGardu_(nomorRr); } catch(e){ parsedRr = null; }
     if(parsedRr && parsedRr.prefix === prefixBaru) lastPrefixRow = r;
   }
-  var sumberSheetRow = ((lastPrefixRow >= 0) ? lastPrefixRow : lastDataRow0) + 1; // 1-based acuan
-  sh.insertRowsAfter(sumberSheetRow, 1);        // sisip fisik -> baris di bawah bergeser turun
-  var row = sumberSheetRow + 1;                 // baris baru hasil sisip
-  // Salin kolom BERFORMULA dari baris acuan (mis. NO kolom A) ke baris baru.
+  var sumberSheetRow = ((lastPrefixRow >= 0) ? lastPrefixRow : lastDataRow0) + 1;
+  sh.insertRowsAfter(sumberSheetRow, 1);
+  var row = sumberSheetRow + 1;
   var formulaBaris = sh.getRange(sumberSheetRow, 1, 1, lastCol).getFormulas()[0];
   for(var ci=0; ci<formulaBaris.length; ci++){
     if(formulaBaris[ci]){
       sh.getRange(sumberSheetRow, ci+1).copyTo(sh.getRange(row, ci+1));
     }
   }
-  // Identitas dasar (setelah salin formula supaya nilai tak tertimpa).
-  sh.getRange(row, colG+1).setValue(nomorGardu); // B GARDU (kunci pencocokan)
+  sh.getRange(row, colG+1).setValue(nomorGardu);
   if(g){
-    sh.getRange(row, 3).setValue(g.alamat    || ''); // C Alamat
-    sh.getRange(row, 4).setValue(g.merkTrafo || ''); // D Merk
-    sh.getRange(row, 5).setValue(g.dayaKva   || ''); // E Kapasitas
+    sh.getRange(row, 3).setValue(g.alamat    || '');
+    sh.getRange(row, 4).setValue(g.merkTrafo || '');
+    sh.getRange(row, 5).setValue(g.dayaKva   || '');
   }
   return row;
 }
 
-/* Buka sheet dari spreadsheet+tab tertentu (by gid, fallback nama). Generik lintas-file. */
 function _hiOpenSheet_(spreadsheetId, tabCfg){
   if(!spreadsheetId || !tabCfg) return null;
   var ss = SpreadsheetApp.openById(spreadsheetId);
@@ -1594,34 +1436,18 @@ function _hiOpenSheet_(spreadsheetId, tabCfg){
   return ss.getSheetByName(tabCfg.name);
 }
 
-/* Tulis kumpulan nilai { colLetter:value } ke satu baris; kembalikan jumlah field tertulis. */
 function _hiTulisNilai_(sh, row, data){
   var n = 0;
   Object.keys(data).forEach(function(letter){
     var idx = _hiColLetterToIndex_(letter);
     if(idx < 0) return;
-    /* Nilai berasal dari klien -> lindungi dari formula injection.
-       Tiga spreadsheet target dibuka oleh banyak pihak, jadi satu sel
-       berisi =IMPORTRANGE(...) sudah cukup untuk mengirim data keluar. */
     sh.getRange(row, idx+1).setValue(safeCell_(data[letter]==null?'':data[letter]));
     n++;
   });
   return n;
 }
 
-/* Tulis balik ke 3 gsheet sekaligus:
-   - mg/sf  -> gsheet1 & gsheet2 (HI_SRC.writeTargets, struktur identik)
-   - it     -> gsheet3 INPUT TBL (layout lama gabungan, HI_SRC.inputTbl)
-   payload:{ nomorGardu, ulp?, mg:{colLetter:value}, sf:{colLetter:value}, it:{colLetter:value} }
-   GUARD: bila gardu ADA di Master_Gardu tapi BELUM ada di tab Suhu & Fisik target,
-   baris baru otomatis disisipkan (pola sync BA) lalu diisi nilainya. */
 function updateHiUp3(payload){
-  /* OTENTIKASI + SKOP ULP (29 Agu 2026).
-     Fungsi ini menulis ke TIGA spreadsheet berbeda dan bisa menyisipkan
-     baris baru — sebelumnya bisa dipanggil siapa pun tanpa login.
-     Nilai payload.ulp hanya dihormati untuk Super User; peran lain dipaksa
-     ke ULP sesinya. (`updateMasterGarduMobile` sudah memeriksa hal yang sama,
-     tetapi fungsi ini juga bisa dipanggil langsung.) */
   var gAks = guard_(arguments, { ulp: true, aksi: 'updateHiUp3' });
   try{
     payload = payload || {};
@@ -1632,11 +1458,9 @@ function updateHiUp3(payload){
     var adaMg = Object.keys(mgData).length>0, adaSf = Object.keys(sfData).length>0, adaIt = Object.keys(itData).length>0;
     var hasil = { mg:0, sf:0, it:0 }, pesan = [];
     var sfDisisipkan = false;
-    // Nama tampilan per target utk popup (sinkron pola LABEL sync BA).
     var HI_HASIL_NAME = { gsheet1:'Master Gardu', gsheet2:'1. DATA TRAFO', gsheet3:'INPUT TBL' };
     var hasilArr = [];
 
-    // 1) mg & sf -> semua target berstruktur identik (gsheet1 & gsheet2).
     (HI_SRC.writeTargets||[]).forEach(function(tgt){
       var errTgt = false, jmlTgt = 0;
       if(adaMg){
@@ -1665,7 +1489,6 @@ function updateHiUp3(payload){
       hasilArr.push({ sheetName:(HI_HASIL_NAME[tgt.label]||tgt.label), ok:!errTgt, action:(errTgt?'skip':'update'), jumlah:jmlTgt });
     });
 
-    // 2) INPUT TBL -> gsheet3 (layout lama gabungan; hanya kolom huruf).
     if(HI_SRC.inputTbl){
       var it = HI_SRC.inputTbl;
       var errIt = false, jmlIt = 0;
@@ -1681,7 +1504,7 @@ function updateHiUp3(payload){
       hasilArr.push({ sheetName:(HI_HASIL_NAME[it.label]||it.name), ok:!errIt, action:(errIt?'skip':'update'), jumlah:jmlIt });
     }
 
-    _garduMasterMemo = null; // Master_Gardu berubah -> reset cache pembaca master
+    _garduMasterMemo = null;
     SpreadsheetApp.flush();
     var total = hasil.mg + hasil.sf + hasil.it;
     if(!total && pesan.length) return { ok:false, message:pesan.join(' ') };
@@ -1692,9 +1515,6 @@ function updateHiUp3(payload){
   }catch(e){ return { ok:false, message:'Gagal menyimpan data HI: '+(e&&e.message?e.message:e) }; }
 }
 
-/* Dropdown Penyulang utk form Update HI — sumber sheet db_Penyulang (kolom "penyulang").
-   Baca header baris 1, cari kolom berjudul "penyulang" (case-insensitive; fallback kolom A),
-   kembalikan daftar unik terurut. */
 function getListPenyulangDb(){
   try{
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);

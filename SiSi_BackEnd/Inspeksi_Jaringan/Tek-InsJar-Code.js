@@ -13,14 +13,16 @@
 function getListUlpIns() {
   return _cacheIns('ins_ulp', 600, function () {
     const H = COL_INS.HEADER;
-    const rows = _readSheetIns(SHEET_INS.HEADER).filter(function (h) {
+    const rows = (typeof _readSheetDual_ === 'function')
+      ? _readSheetDual_(SHEET_INS.HEADER, H.kodeHeader, H.statusTextWa + 1)
+      : _readSheetIns(SHEET_INS.HEADER);
+    const filtered = rows.filter(function (h) {
       return String(h[H.tim] || '').trim() === 'Inspeksi';
     });
-    return _distinct(rows, H.ulp);
+    return _distinct(filtered, H.ulp);
   });
 }
 
-// Daftar ULP UNIK dari db_Users (kolom F) — untuk dropdown filter Temuan-Inspeksi.
 function getListUlpUsers() {
   return _cacheIns('ulp_users', 600, function () {
     var sh = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName('db_Users');
@@ -39,57 +41,46 @@ function getListUlpUsers() {
 function getListPenyulangIns(ulp) {
   return _cacheIns('ins_peny_' + (ulp || 'ALL'), 600, function () {
     const H = COL_INS.HEADER, R = COL_INS.REALISASI;
-    const headers = _readSheetIns(SHEET_INS.HEADER);
+    const headers = (typeof _readSheetDual_ === 'function')
+      ? _readSheetDual_(SHEET_INS.HEADER, H.kodeHeader, H.statusTextWa + 1)
+      : _readSheetIns(SHEET_INS.HEADER);
     const kodeSet = {};
     headers.forEach(function (h) {
       if (String(h[H.tim] || '').trim() !== 'Inspeksi') return;
       if (!ulp || String(h[H.ulp]).trim() === String(ulp).trim())
         kodeSet[String(h[H.kodeHeader]).trim()] = true;
     });
-    const rows = _readSheetIns(SHEET_INS.REALISASI)
-      .filter(function (r) { return kodeSet[String(r[R.kodeHeader]).trim()]; });
+    const realisasi = (typeof _readSheetDual_ === 'function')
+      ? _readSheetDual_(SHEET_INS.REALISASI, R.kodePekerjaanPeny, R.timestamp + 1)
+      : _readSheetIns(SHEET_INS.REALISASI);
+    const rows = realisasi.filter(function (r) { return kodeSet[String(r[R.kodeHeader]).trim()]; });
     return _distinct(rows, R.penyulang);
   });
 }
 
-// Daftar Penyulang UNIK dari master db_Penyulang (kolom C) untuk dropdown form Realisasi
 function getListPenyulangMaster(){
   return _cacheIns('ins_peny_master', 600, function(){
-    var rows = _readSheetIns(SHEET_INS.PENYULANG); // 'db_Penyulang' (otomatis skip 1 baris header)
-    return _distinct(rows, 2)                      // kolom C (index 2, 0-based) = nama Penyulang
+    var rows = _readSheetIns(SHEET_INS.PENYULANG);
+    return _distinct(rows, 2)
       .sort(function(a, b){ return a.localeCompare(b); });
   });
 }
 
-// frontend baca t.namaTim -> balikan array OBJECT
 function getListTimByUlp(ulp) {
   return _cacheIns('ins_tim_' + (ulp || 'ALL'), 600, function () {
     const rows = _readSheetIns(SHEET_INS.TIM).filter(function (r) {
-      if (!ulp) return true;                                // Super User: semua
-      return String(r[1]).trim() === String(ulp).trim();   // B = ULP
+      if (!ulp) return true;
+      return String(r[1]).trim() === String(ulp).trim();
     });
     return _distinct(rows, 3).map(function (nama) { return { namaTim: nama }; });
   });
 }
 
 
-/* ═══ GIS JARINGAN — Garis jaringan dari db_TiangMaster (spreadsheet EKSTERNAL) ═══
-   Versi TITIK TIANG (MST): garis dibangun MURNI dari koordinat tiang, bukan lagi
-   dari label KODE_HANTARAN (yang ambigu & menimbulkan garis kipas/silang).
-   Metode: Minimum Spanning Tree (algoritma Prim) per NAMA_PENYULANG — tiap tiang
-   dihubungkan ke tiang terdekatnya tanpa loop, hasilnya rapi mengikuti sebaran
-   tiang. Sisi lebih panjang dari GIS_MAX_SEGMEN_M dibuang agar klaster terpisah
-   tidak tersambung paksa.
-   Sumber : spreadsheet 1Xyu6L_SeVc4sck5NoNxOGwkMFfgWK52wWR_a0_j49vs, sheet
-            'db_TiangMaster' (koordinat LATITUDEY/LONGITUDEX).
-   Filter : penyulang (NAMA_PENYULANG). Kolom ULP tidak ada di master -> diabaikan.
-   Output : { ok, segmen:[{a,b,s,p,j,u,k,al,slo,sloD,d,pd}], total, diag }
-   Dipakai frontend Temuan-Inspeksi (toggle "GIS Jaringan", default nyala).
-   Pencocokan kolom via NAMA HEADER (uppercase) supaya tahan perubahan urutan kolom.
-   CATATAN: akun pemilik Apps Script wajib punya akses ke spreadsheet eksternal ini. */
+/* ═══ GIS JARINGAN ═══ */
 var GIS_TIANG_SPREADSHEET_ID = '1Xyu6L_SeVc4sck5NoNxOGwkMFfgWK52wWR_a0_j49vs';
 var GIS_TIANG_SHEET_NAME     = 'db_TiangMaster';
-var GIS_MAX_SEGMEN_M         = 600;   // buang sisi MST lebih panjang dari ini (atur sesuai kebutuhan)
+var GIS_MAX_SEGMEN_M         = 600;
 
 function getGisJaringanLines(params){
   params = params || {};
@@ -99,17 +90,14 @@ function getGisJaringanLines(params){
     if(!sh || sh.getLastRow() < 2) return { ok:true, segmen:[], total:0 };
 
     var data = sh.getDataRange().getValues();
-    // Normalisasi header: buang spasi/underscore/tanda baca + uppercase, supaya
-    // nama seperti 'SOT_NUMBER' / 'SOT NUMBER' tetap cocok dengan 'SOTNUMBER'.
     function _normH(s){ return String(s == null ? '' : s).toUpperCase().replace(/[^A-Z0-9]/g,''); }
     var head = data[0].map(function(h){ return String(h == null ? '' : h).trim().toUpperCase(); });
     var headNorm = head.map(_normH);
     function col(name){
-      var i = head.indexOf(name);        // cocok persis dulu
+      var i = head.indexOf(name);
       if(i >= 0) return i;
-      return headNorm.indexOf(_normH(name)); // fallback: cocok setelah dinormalkan
+      return headNorm.indexOf(_normH(name));
     }
-    // Coba beberapa kemungkinan nama header (mis. 'SSOTNUMBER' vs 'SOTNUMBER').
     function colAny(){ for(var a=0;a<arguments.length;a++){ var ci=col(arguments[a]); if(ci>=0) return ci; } return -1; }
     var cSot=colAny('SSOTNUMBER','SOTNUMBER'),
         cPenyNama=col('NAMA_PENYULANG'), cPeny=colAny('CXPENYULANG','PENYULANG'),
@@ -129,7 +117,6 @@ function getGisJaringanLines(params){
 
     var fPeny = String(params.penyulang || '').trim().toLowerCase();
 
-    // Haversine (meter).
     function distM(la1, lo1, la2, lo2){
       var R = 6371000, toR = Math.PI/180;
       var dLa = (la2-la1)*toR, dLo = (lo2-lo1)*toR;
@@ -137,7 +124,6 @@ function getGisJaringanLines(params){
       return 2*R*Math.asin(Math.min(1, Math.sqrt(h)));
     }
 
-    // ── 1) Kumpulkan tiang berkoordinat sah, kelompokkan per penyulang ──
     var grup = {}, urut = [], nBaris = 0, nKoord = 0, nDuplikat = 0;
     for(var i=1;i<data.length;i++){
       var r = data[i]; nBaris++;
@@ -154,16 +140,12 @@ function getGisJaringanLines(params){
         sloDt:(cSloDt >= 0 && r[cSloDt]) ? _normTgl(r[cSloDt]) : '', kh:get(r, cKodeH), peny:peny
       };
       if(!grup[peny]){ grup[peny] = { list:[], seen:{} }; urut.push(peny); }
-      // Dedup koordinat identik (titik bertumpuk -> segmen 0 m yang mengotori peta)
       var kLaLo = la.toFixed(6) + ',' + lo.toFixed(6);
       if(grup[peny].seen[kLaLo]){ nDuplikat++; continue; }
       grup[peny].seen[kLaLo] = 1;
       grup[peny].list.push(o);
     }
 
-    // ── 2) MST per penyulang (Prim O(n²) — aman untuk ribuan tiang) ──
-    // Tiap tiang dihubungkan ke tiang terdekatnya tanpa membentuk loop, sehingga
-    // garis rapi mengikuti sebaran tiang (tidak kipas / tidak saling silang).
     var seg = [], nPutus = 0, jmlJarak = 0;
     for(var g=0;g<urut.length;g++){
       var pts = grup[urut[g]].list, n = pts.length;
@@ -174,10 +156,9 @@ function getGisJaringanLines(params){
       minD[0] = 0;
 
       for(var it=0;it<n;it++){
-        // ambil simpul belum-terpilih dgn jarak minimum
         var v=-1, bv=Infinity;
         for(var a=0;a<n;a++){ if(!done[a] && minD[a]<bv){ bv=minD[a]; v=a; } }
-        if(v<0) break;                       // sisa tak terjangkau (seharusnya tidak terjadi)
+        if(v<0) break;
         done[v]=true;
 
         if(parent[v]>=0){
@@ -189,10 +170,9 @@ function getGisJaringanLines(params){
               j:c.jenis, u:c.ukuran, k:c.milik, al:c.alamat, slo:c.slo, sloD:c.sloDt,
               d:c.kh, pd:ind.sot });
           }else{
-            nPutus++;                        // klaster terpisah jauh -> tidak disambung
+            nPutus++;
           }
         }
-        // relaksasi tetangga
         var pv=pts[v];
         for(var b=0;b<n;b++){
           if(done[b]) continue;
@@ -202,7 +182,6 @@ function getGisJaringanLines(params){
       }
     }
 
-    // Diagnostik (tampil di Console bila segmen kosong).
     var diag = {
       baris: nBaris,
       metode: 'MST titik tiang (Prim, per penyulang)',
@@ -222,15 +201,13 @@ function getGisJaringanLines(params){
 }
 
 
-/* ═══ INSPEKSI JARINGAN — TAMBAH REALISASI ═══ */
+/* ═══ INSPEKSI JARINGAN — REALISASI & LAPORAN ═══ */
 
-// Daftar Kode Header untuk dropdown form Tambah Realisasi
 function getListHeaderInsJar(ulp){
-  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  var sh = ss.getSheetByName(SHEET_INS.HEADER);
-  if(!sh || sh.getLastRow() < 2) return [];
   var H = COL_INS.HEADER;
-  var data = sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues();
+  var data = (typeof _readSheetDual_ === 'function')
+    ? _readSheetDual_(SHEET_INS.HEADER, H.kodeHeader, H.statusTextWa + 1)
+    : _readSheetIns(SHEET_INS.HEADER);
   var out = [];
   for(var i=0;i<data.length;i++){
     var kode = String(data[i][H.kodeHeader] || '').trim();
@@ -244,30 +221,24 @@ function getListHeaderInsJar(ulp){
       tanggal:    _normTgl(data[i][H.tanggal])
     });
   }
-  out.reverse(); // header terbaru di atas
+  out.reverse();
   return out;
 }
 
-// Tag modul Inspeksi Jaringan (statis) — pembeda dari Inspeksi Gardu di db_Global_Header.
 var INSJAR_MODUL = 'IJR';
 
-// Tanggal (ISO yyyy-MM-dd) milik sebuah Kode Header dari db_Global_Header.
 function _tglHeaderIns(ss, kodeHeader){
   var H = COL_INS.HEADER, key = String(kodeHeader || '').trim();
   if(!key) return '';
-  var data = ss.getSheetByName(SHEET_INS.HEADER).getDataRange().getValues();
-  for(var i=1;i<data.length;i++){
+  var data = (typeof _readSheetDual_ === 'function')
+    ? _readSheetDual_(SHEET_INS.HEADER, H.kodeHeader, H.statusTextWa + 1)
+    : ss.getSheetByName(SHEET_INS.HEADER).getDataRange().getValues();
+  for(var i=0;i<data.length;i++){
     if(String(data[i][H.kodeHeader] || '').trim() === key) return _normTgl(data[i][H.tanggal]);
   }
   return '';
 }
 
-// Kode Pekerjaan Penyulang BERANTAI dari Kode Header: <KodeHeader>-PNY.<nnn>
-// (urut 3 digit reset per Kode Header). Selaras modul ROW (_generateKodePekerjaanRealisasi).
-// Disamakan dgn INITIAL VALUE AppSheet:
-//   [Kode Header] & "-PNY." & RIGHT("00" &
-//     (COUNT(SELECT(db_InsJar_Realisasi[Kode Pekerjaan Penyulang],
-//        [Kode Header] = [_THISROW].[Kode Header])) + 1), 3)
 function _generateKodePekerjaanPenyulangIns(ss, kodeHeader){
   var key = String(kodeHeader || '').trim();
   if(!key) return '';
@@ -288,12 +259,7 @@ function _generateKodePekerjaanPenyulangIns(ss, kodeHeader){
   return prefix + ('00' + (max + 1)).slice(-3);
 }
 
-// Simpan satu baris db_INS_Realisasi.
-// Manual : kodeHeader, penyulang, totalTiang.
-// Auto   : kodePekerjaanPeny, section, jumlahTemuan, inputBy, timestamp.
 function simpanRealisasiInsJar(data){
-  /* OTENTIKASI + PEMILIKAN (29 Agu 2026). kodeHeader dulu dipakai mentah
-     dari klien — data bisa disisipkan ke header milik ULP lain. */
   var gAks = guard_(arguments, { ulp: true, aksi: 'simpanRealisasiInsJar' });
   try{
     data = data || {};
@@ -308,10 +274,8 @@ function simpanRealisasiInsJar(data){
 
     var ss  = SpreadsheetApp.openById(SPREADSHEET_ID);
     var shR = ss.getSheetByName(SHEET_INS.REALISASI);
-    var shT = ss.getSheetByName(SHEET_INS.TEMUAN);
     if(!shR) return { ok:false, message:'Sheet db_INS_Realisasi tidak ditemukan.' };
 
-    // Tolak duplikat: penyulang + tier yang sama dalam 1 Kode Header.
     var R = COL_INS.REALISASI;
     var tierInput = String(data.tier || '').trim();
     if(shR.getLastRow() > 1){
@@ -325,9 +289,6 @@ function simpanRealisasiInsJar(data){
       }
     }
 
-    // Section AWAL dari input manual Titik Awal/Akhir (boleh kosong). Bila nanti
-    // ada temuan, _recalcRealisasiByKodePeny akan menimpanya berdasarkan temuan.
-    // Jumlah Temuan selalu diawali 0 lalu diisi oleh recalc.
     var sectionAwal  = String(data.sectionAwal  || '').trim();
     var sectionAkhir = String(data.sectionAkhir || '').trim();
     var _titik = [sectionAwal, sectionAkhir].filter(function(x){ return x; });
@@ -336,38 +297,29 @@ function simpanRealisasiInsJar(data){
       try { section = _sectionRange(penyulang, _titik); } catch(eS){ section = _titik.join(' - '); }
     }
 
-    // Kode Pekerjaan Penyulang BERANTAI dari Kode Header: <KodeHeader>-PNY.<nnn>
-    // (urut 3 digit reset per Kode Header). Selaras modul ROW.
     var kodePeny = _generateKodePekerjaanPenyulangIns(ss, kodeHeader);
-
     var ts = Utilities.formatDate(new Date(), 'Asia/Jakarta', 'dd/MM/yyyy HH:mm:ss');
 
-    // Tulis B..M (kolom A = No dikosongkan / formula). D,E = Hari & Tanggal dari header.
     var tglIsoReal = _tglHeaderIns(ss, kodeHeader) || _normTgl(new Date());
     var hariReal = _hariFromTanggal(tglIsoReal);
     var row = shR.getLastRow() + 1;
     shR.getRange(row, 2, 1, 12).setValues([[
-      kodeHeader,                    // B  Kode Header
-      kodePeny,                      // C  Kode Pekerjaan Penyulang
-      hariReal,                      // D  Hari
-      tglIsoReal,                    // E  Tanggal
-      penyulang,                     // F  Penyulang
-      section,                       // G  Section (manual via Awal/Akhir; ditimpa recalc bila ada temuan)
-      String(data.segmen || ''),     // H  Segmen (manual, display-only)
-      tierInput,                     // I  Tier (per-penyulang)
-      Number(data.totalTiang) || 0,  // J  Total Tiang Inspeksi (manual)
-      jumlahTemuan,                  // K  Jumlah Temuan (auto)
-      String(data.username || ''),   // L  Input Oleh
-      ts                             // M  TimeStamp
+      kodeHeader,
+      kodePeny,
+      hariReal,
+      tglIsoReal,
+      penyulang,
+      section,
+      String(data.segmen || ''),
+      tierInput,
+      Number(data.totalTiang) || 0,
+      jumlahTemuan,
+      String(data.username || ''),
+      ts
     ]]);
 
-    // Isi Section & Jumlah Temuan dari temuan yang benar-benar memakai kode ini (kalau ada)
-    // Isi Section (E) & Jumlah Temuan (G) HANYA dari temuan yang benar-benar terhubung ke
-    // Kode Pekerjaan Penyulang ini (kosong/0 bila belum ada temuan terhubung).
     var rk = { jumlahTemuan:0, section:'' };
     try { rk = _recalcRealisasiByKodePeny(ss, kodePeny); } catch(eR){}
-
-    // Sinkronkan Total Tiang + waText pada header terkait
     try { updateHeaderInsLangsung(kodeHeader); } catch(eH){}
 
     return { ok:true, kodePekerjaanPenyulang:kodePeny, section:rk.section, jumlahTemuan:rk.jumlahTemuan };
@@ -376,15 +328,21 @@ function simpanRealisasiInsJar(data){
   }
 }
 
-
+// DUAL-READ REKAP DATA REALISASI INSPEKSI JARINGAN
 function getDataRealisasiInsJar(params) {
   params = params || {};
   const H = COL_INS.HEADER, R = COL_INS.REALISASI, T = COL_INS.TEMUAN;
   const dari = params.tglDari || '', sampai = params.tglSampai || '', fUlp = params.ulp || '';
 
-  const headers   = _readSheetIns(SHEET_INS.HEADER);
-  const realisasi = _readSheetIns(SHEET_INS.REALISASI);
-  const temuan    = _readSheetIns(SHEET_INS.TEMUAN);
+  const headers = (typeof _readSheetDual_ === 'function')
+    ? _readSheetDual_(SHEET_INS.HEADER, H.kodeHeader, H.statusTextWa + 1)
+    : _readSheetIns(SHEET_INS.HEADER);
+  const realisasi = (typeof _readSheetDual_ === 'function')
+    ? _readSheetDual_(SHEET_INS.REALISASI, R.kodePekerjaanPeny, R.timestamp + 1)
+    : _readSheetIns(SHEET_INS.REALISASI);
+  const temuan = (typeof _readSheetDual_ === 'function')
+    ? _readSheetDual_(SHEET_INS.TEMUAN, T.kodePekerjaan, T.folderPath + 1)
+    : _readSheetIns(SHEET_INS.TEMUAN);
 
   const hdrByKode = {};
   headers.forEach(function (h) {
@@ -415,7 +373,6 @@ function getDataRealisasiInsJar(params) {
 }
 
 function editHeaderInsJar(data){
-  /* OTENTIKASI + PEMILIKAN (29 Agu 2026). */
   var gAks = guard_(arguments, { ulp: true, aksi: 'editHeaderInsJar' });
   data = data || {};
   var kode = String(data.kodeHeader || '').trim();
@@ -438,8 +395,6 @@ function editHeaderInsJar(data){
   }
 
   var rowNo = rowIdx + 1;
-
-  /* Teks bebas dari pengguna -> lindungi dari formula injection. */
   var koordinatAwal  = safeCell_((data.koordinatAwal  != null) ? String(data.koordinatAwal)  : String(values[rowIdx][H.koordinatAwal]  || ''));
   var koordinatAkhir = safeCell_((data.koordinatAkhir != null) ? String(data.koordinatAkhir) : String(values[rowIdx][H.koordinatAkhir] || ''));
   var kmAwal  = safeCell_((data.kmAwal  != null) ? String(data.kmAwal)  : String(values[rowIdx][H.kmAwal]  || ''));
@@ -466,6 +421,7 @@ function editHeaderInsJar(data){
   return { ok:true, kodeHeader:kode, waText:waText, totalTiang:total };
 }
 
+// DUAL-READ LAPORAN HARIAN / REKAP INSPEKSI JARINGAN
 function getDataLapHarianInsJar(params) {
   params = params || {};
   const ss = _ssIns();
@@ -474,8 +430,10 @@ function getDataLapHarianInsJar(params) {
   const dari = params.tglDari || '', sampai = params.tglSampai || '',
         fUlp = norm(params.ulp), fTier = norm(params.tier), fTim = norm(params.tim);
 
-  // Tier kini per-penyulang di db_InsJar_Realisasi -> index per kodeHeader.
-  const realByHeader = _indexBy(_readSheetIns(SHEET_INS.REALISASI), R.kodeHeader);
+  const realisasi = (typeof _readSheetDual_ === 'function')
+    ? _readSheetDual_(SHEET_INS.REALISASI, R.kodePekerjaanPeny, R.timestamp + 1)
+    : _readSheetIns(SHEET_INS.REALISASI);
+  const realByHeader = _indexBy(realisasi, R.kodeHeader);
   const tierHeader = function (kode) {
     const rows = realByHeader[String(kode || '').trim()] || [];
     const seen = {}, out = [];
@@ -486,15 +444,17 @@ function getDataLapHarianInsJar(params) {
     return out;
   };
 
-  return _readSheetIns(SHEET_INS.HEADER)
+  const headers = (typeof _readSheetDual_ === 'function')
+    ? _readSheetDual_(SHEET_INS.HEADER, H.kodeHeader, H.statusTextWa + 1)
+    : _readSheetIns(SHEET_INS.HEADER);
+
+  return headers
     .filter(function (h) {
-      // Pembanding trim + case-insensitive agar tak gagal hanya karena beda huruf/spasi
       if (norm(h[H.tim]) !== 'inspeksi') return false;
       const ulp  = norm(h[H.ulp]);
       const tim  = norm(h[H.subTim]);
       if (fUlp  && ulp  !== fUlp)  return false;
       if (fTim  && tim  !== fTim)  return false;
-      // Filter Tier: cocok bila salah satu penyulang header ini ber-tier tsb.
       if (fTier) {
         const tiers = tierHeader(h[H.kodeHeader]).map(norm);
         if (tiers.indexOf(fTier) === -1) return false;
@@ -527,7 +487,10 @@ function getDataDaftarTemuan(params) {
         fStatus = String(params.status || '').trim().toLowerCase(),
         fPeny = String(params.penyulang || '').trim().toLowerCase(),
         fTier = String(params.tier || '').trim().toLowerCase();
-  return _readSheetIns(SHEET_INS.TEMUAN)
+  const rows = (typeof _readSheetDual_ === 'function')
+    ? _readSheetDual_(SHEET_INS.TEMUAN, T.kodePekerjaan, T.folderPath + 1)
+    : _readSheetIns(SHEET_INS.TEMUAN);
+  return rows
     .filter(function (t) {
       const ulp    = String(t[T.ulp] || '').trim().toLowerCase();
       const status = String(t[T.status] || '').trim().toLowerCase();
@@ -572,7 +535,10 @@ function getDataRekapTemuan(params) {
         fUlp = String(params.ulp || '').trim().toLowerCase(),
         fPeny = String(params.penyulang || '').trim().toLowerCase();
   const rekap = { total: 0, belumTim: 0, proses: 0, selesai: 0, rows: [] };
-  _readSheetIns(SHEET_INS.TEMUAN).forEach(function (t) {
+  const rows = (typeof _readSheetDual_ === 'function')
+    ? _readSheetDual_(SHEET_INS.TEMUAN, T.kodePekerjaan, T.folderPath + 1)
+    : _readSheetIns(SHEET_INS.TEMUAN);
+  rows.forEach(function (t) {
     const ulp    = String(t[T.ulp] || '').trim().toLowerCase();
     const peny   = String(t[T.penyulang] || '').trim().toLowerCase();
     const status = String(t[T.status] || '').trim();
@@ -596,9 +562,6 @@ function getDataRekapTemuan(params) {
   return rekap;
 }
 
-
-/* ═══ INSPEKSI JARINGAN — ACTION ═══ */
-// frontend kirim {kodePekerjaan, timPelaksana, catatanSpv, username}
 function setPilihTimTemuan(params) {
   params = params || {};
   const T = COL_INS.TEMUAN;
@@ -613,20 +576,22 @@ function setPilihTimTemuan(params) {
   const loc = _findRowTemuan(kodePekerjaan);
   if (!loc) throw new Error('Temuan tidak ditemukan: ' + kodePekerjaan);
 
-  loc.sheet.getRange(loc.row, T.timEksekusi + 1).setValue(timEksekusi);         // AD
-  loc.sheet.getRange(loc.row, T.forwardBy   + 1).setValue(forwardBy);           // AB
-  loc.sheet.getRange(loc.row, T.tglForward  + 1).setValue(new Date());          // AC
-  loc.sheet.getRange(loc.row, T.status      + 1).setValue(STATUS_INS.PROGRESS); // AA
-  if (catatan) loc.sheet.getRange(loc.row, T.catatan + 1).setValue(catatan);    // AE Catatan
+  loc.sheet.getRange(loc.row, T.timEksekusi + 1).setValue(timEksekusi);
+  loc.sheet.getRange(loc.row, T.forwardBy   + 1).setValue(forwardBy);
+  loc.sheet.getRange(loc.row, T.tglForward  + 1).setValue(new Date());
+  loc.sheet.getRange(loc.row, T.status      + 1).setValue(STATUS_INS.PROGRESS);
+  if (catatan) loc.sheet.getRange(loc.row, T.catatan + 1).setValue(catatan);
 
   CacheService.getScriptCache().remove('ins_tim_' + (params.ulp || 'ALL'));
   return true;
 }
 
-// Monitoring WO (tidak dipanggil Tek-Ins.txt; disatukan agar tak duplikat)
 function getPenerusanWO(ulp) {
   const T = COL_INS.TEMUAN;
-  return _readSheetIns(SHEET_INS.TEMUAN)
+  const rows = (typeof _readSheetDual_ === 'function')
+    ? _readSheetDual_(SHEET_INS.TEMUAN, T.kodePekerjaan, T.folderPath + 1)
+    : _readSheetIns(SHEET_INS.TEMUAN);
+  return rows
     .filter(function (t) {
       if (ulp && String(t[T.ulp]).trim() !== String(ulp).trim()) return false;
       return String(t[T.status] || '').trim() === STATUS_INS.PENUGASAN;
@@ -644,20 +609,12 @@ function getPenerusanWO(ulp) {
     });
 }
 
-
-/* ═══ NOTIFIKASI WO BELUM DITERUSKAN (akun ber-akses menu SIE-Teknik) ═══ */
-// WO "belum diteruskan" = baris db_INS_Temuan berstatus 'Penugasan Tim'
-// (belum dipilih tim eksekusi). Super User -> semua ULP; selain Super User ->
-// hanya ULP-nya sendiri DAN harus punya akses menu SIE-Teknik.
 function getNotifikasiWOBelumDiteruskan(token){
   try{
     var sesi = getSesiByToken(token);
     if(!sesi) return { ok:false, redirect:'login', count:0, list:[] };
     if(!_bolehAksesMenu(sesi, 'SIE-Teknik')) return { ok:true, count:0, list:[] };
 
-    /* Hanya Super User yang lintas ULP; Admin terikat ULP sendiri
-       (kebijakan 29 Agu 2026). Normalisasi peran lewat _normRole_ supaya
-       variasi penulisan "Super User" / "superuser" tidak mengubah hasil. */
     var isSuper = typeof _normRole_ === 'function'
       ? _normRole_(sesi.role) === 'SUPER'
       : String(sesi.role || '').trim() === 'Super User';
@@ -666,7 +623,9 @@ function getNotifikasiWOBelumDiteruskan(token){
       return { ok:false, message:'Akun belum terhubung ke ULP.', count:0, list:[] };
 
     var T = COL_INS.TEMUAN;
-    var rows = _readSheetIns(SHEET_INS.TEMUAN);
+    var rows = (typeof _readSheetDual_ === 'function')
+      ? _readSheetDual_(SHEET_INS.TEMUAN, T.kodePekerjaan, T.folderPath + 1)
+      : _readSheetIns(SHEET_INS.TEMUAN);
     var list = [];
     for(var i=0;i<rows.length;i++){
       var r = rows[i];
@@ -691,14 +650,14 @@ function getNotifikasiWOBelumDiteruskan(token){
   }
 }
 
-
-/* ═══ DETAIL SATU TEMUAN by Kode Pekerjaan (untuk Tab Rekap Temuan) ═══ */
 function getTemuanByKodePekerjaan(kodePekerjaan){
   try{
     var key = String(kodePekerjaan || '').trim();
     if(!key) return { ok:false, error:'Kode pekerjaan kosong' };
     var T = COL_INS.TEMUAN;
-    var rows = _readSheetIns(SHEET_INS.TEMUAN);
+    var rows = (typeof _readSheetDual_ === 'function')
+      ? _readSheetDual_(SHEET_INS.TEMUAN, T.kodePekerjaan, T.folderPath + 1)
+      : _readSheetIns(SHEET_INS.TEMUAN);
     for(var i=0;i<rows.length;i++){
       var r = rows[i];
       if(String(r[T.kodePekerjaan] || '').trim() !== key) continue;
@@ -741,23 +700,12 @@ function getTemuanByKodePekerjaan(kodePekerjaan){
   }
 }
 
-
-/* ═══ SESSION USER (untuk halaman konten) — helper sesi bersama ═══
-   Diperbaiki 29 Agu 2026 (K1 — session confusion).
-   Versi lama membaca CacheService.getUserCache().get('userToken'). Karena
-   web app memakai executeAs: USER_DEPLOYING + access: ANYONE_ANONYMOUS,
-   "user" untuk seluruh pengunjung anonim adalah PEMILIK SCRIPT, sehingga
-   cache itu dipakai bersama oleh semua orang: getSessionUser() bisa
-   mengembalikan sesi pengguna lain, termasuk Super User.
-   Sekarang token WAJIB dikirim klien. Tanpa token -> {} (aman), bukan
-   menebak-nebak milik siapa. */
 function getSessionUser(token) {
   try {
     var t = String(token || "").trim();
     if (!t) return {};
     var sesi = getSesiByToken(t);
     if (!sesi) return {};
-    /* Jangan pernah mengembalikan password ke klien. */
     return {
       token: t,
       username: sesi.username || "",
@@ -775,20 +723,12 @@ function getSessionUser(token) {
   }
 }
 
-
-/* ═══ INSPEKSI JARINGAN — SIMPAN HEADER (Tambah Data Laporan Harian) ═══ */
 function simpanHeaderInsJar(data){
-  /* OTENTIKASI + SKOP ULP (29 Agu 2026).
-     Sebelumnya identitas diambil dari data.username yang dikirim KLIEN, dan
-     data.ulp dipakai mentah — siapa pun bisa membuat header atas nama ULP
-     atau user lain. Sekarang ULP dan Tim berasal dari SESI; hanya Super User
-     yang boleh memilih ULP lain. */
   var gAks = guard_(arguments, { ulp: true, aksi: 'simpanHeaderInsJar' });
   try{
     data = data || {};
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
 
-    // 1) ULP & Tim dari SESI. Hanya Super User yang boleh memilih ULP lain.
     var ulp     = String(gAks.ulp || '').trim();
     var kodeUlp = String(gAks.kodeUlp || '').trim();
     var tim     = String(gAks.tim || '').trim();
@@ -801,12 +741,9 @@ function simpanHeaderInsJar(data){
     if(!ulp)     return { ok:false, message:'ULP untuk user tidak ditemukan di db_Users.' };
     if(!kodeUlp) return { ok:false, message:'Kode ULP untuk ULP terpilih kosong di db_Users.' };
 
-    // 2) Field otomatis
     var kodeHeader = _generateKodeHeaderIns(ss, kodeUlp, data.tanggal);
     var hari       = _hariFromTanggal(data.tanggal);
     var now        = new Date();
-    /* Nilai teks bebas dari pengguna dilindungi sebelum masuk ke sheet,
-       karena kolom-kolom ini ikut dirender ke teks WA dan PDF. */
     var koordAwal  = safeCell_(data.koordinatAwal  || '');
     var koordAkhir = safeCell_(data.koordinatAkhir || '');
     var kmAwal     = safeCell_(data.kmAwal         || '');
@@ -819,25 +756,24 @@ function simpanHeaderInsJar(data){
       kmAkhir:        kmAkhir
     });
 
-    // 3) Tulis baris baru — B..P (kolom A formula dilewati) ke db_Global_Header
     var sh  = ss.getSheetByName(SHEET_INS.HEADER);
     var row = sh.getLastRow() + 1;
     sh.getRange(row, 2, 1, 15).setValues([[
-      kodeHeader,                 // B Kode Header
-      ulp,                        // C ULP
-      hari,                       // D Hari
-      data.tanggal,               // E Tanggal
-      'Inspeksi',                 // F Tim (pembeda Inspeksi/ROW)
-      tim,                        // G Sub-Tim
-      koordAwal,                  // H Koordinat Awal (Tier dipindah ke realisasi)
-      koordAkhir,                 // I Koordinat Akhir
-      kmAwal,                     // J KM Awal
-      kmAkhir,                    // K KM Akhir
-      kendala,                    // L Kendala
-      waText,                     // M WA Text
-      now,                        // N Timestamp
-      String(gAks.username||''),  // O Input Oleh — dari SESI, bukan klien
-      now                         // P Timestamp Update
+      kodeHeader,
+      ulp,
+      hari,
+      data.tanggal,
+      'Inspeksi',
+      tim,
+      koordAwal,
+      koordAkhir,
+      kmAwal,
+      kmAkhir,
+      kendala,
+      waText,
+      now,
+      String(gAks.username||''),
+      now
     ]]);
 
     return { ok:true, kodeHeader:kodeHeader };
@@ -851,17 +787,8 @@ function _hariFromTanggal(tgl){
   return h[new Date(_normTgl(tgl) + 'T00:00:00').getDay()];
 }
 
-// Kode Header Inspeksi Jaringan: IJR-<KodeULP><YYMMDD><Urut 3 digit> (urut harian per-ULP).
-// Tag statis "IJR" (Inspeksi JaRingan) — pembeda dari Inspeksi Gardu; selaras konvensi
-// berantai modul lain (ROW: R<SubTim>, Yandal: Y<SubTim>). Tahun 2 digit (YYMMDD).
-// Disamakan dgn INITIAL VALUE AppSheet (konteks Inspeksi Jaringan):
-//   "IJR-" & [Kode ULP] & RIGHT(YEAR([Tanggal]),2) & RIGHT("0"&MONTH([Tanggal]),2)
-//     & RIGHT("0"&DAY([Tanggal]),2)
-//     & RIGHT("00" & (COUNT(SELECT(db_Global_Header[Kode Header],
-//         AND(LEFT([Kode Header],4)="IJR-",
-//             [ULP]=[_THISROW].[ULP],[Tanggal]=[_THISROW].[Tanggal])))+1),3)
 function _generateKodeHeaderIns(ss, kodeUlp, tanggal){
-  var tgl    = _normTgl(tanggal).replace(/-/g,'').slice(2);    // YYMMDD (tahun 2 digit)
+  var tgl    = _normTgl(tanggal).replace(/-/g,'').slice(2);
   var prefix = INSJAR_MODUL + '-' + (kodeUlp||'').toString().trim() + tgl;
   var data   = ss.getSheetByName(SHEET_INS.HEADER).getDataRange().getValues();
   var n = 0;
@@ -871,7 +798,6 @@ function _generateKodeHeaderIns(ss, kodeUlp, tanggal){
   return prefix + ('00'+(n+1)).slice(-3);
 }
 
-// Map ULP (nama) -> Kode ULP via db_Users (F = ULP, G = Kode ULP)
 function _kodeUlpByUlp(ss, ulp){
   var u = String(ulp||'').trim().toLowerCase();
   if(!u) return '';
@@ -883,13 +809,15 @@ function _kodeUlpByUlp(ss, ulp){
   return '';
 }
 
-// Total tiang = Σ Total Tiang db_InsJar_Realisasi untuk SATU kodeHeader (model per-header)
 function _hitungTotalTiangIns(ss, kodeHeader){
   var key = String(kodeHeader || '').trim();
   if(!key) return 0;
-  var real = ss.getSheetByName(SHEET_INS.REALISASI).getDataRange().getValues();
-  var R = COL_INS.REALISASI, total = 0;
-  for(var j=1;j<real.length;j++){
+  var R = COL_INS.REALISASI;
+  var real = (typeof _readSheetDual_ === 'function')
+    ? _readSheetDual_(SHEET_INS.REALISASI, R.kodePekerjaanPeny, R.timestamp + 1)
+    : ss.getSheetByName(SHEET_INS.REALISASI).getDataRange().getValues();
+  var total = 0;
+  for(var j=0;j<real.length;j++){
     if((real[j][R.kodeHeader]||'').toString().trim() === key)
       total += Number(real[j][R.totalTiang]) || 0;
   }
@@ -905,31 +833,33 @@ function _tglIndo(tgl){
   return _NAMA_HARI[d.getDay()] + ', ' + d.getDate() + ' ' + _NAMA_BULAN[d.getMonth()] + ' ' + d.getFullYear();
 }
 
-// Builder waText (model per-header, DIKELOMPOKKAN PER TIER)
 function _buildWaTextIns(ss, kodeHeader, opt){
   opt = opt || {};
   var H = COL_INS.HEADER, R = COL_INS.REALISASI, T = COL_INS.TEMUAN;
   var key = String(kodeHeader || '').trim();
 
-  // Tanggal untuk judul diambil dari header
-  var head = ss.getSheetByName(SHEET_INS.HEADER).getDataRange().getValues();
+  var head = (typeof _readSheetDual_ === 'function')
+    ? _readSheetDual_(SHEET_INS.HEADER, H.kodeHeader, H.statusTextWa + 1)
+    : ss.getSheetByName(SHEET_INS.HEADER).getDataRange().getValues();
   var tglStr = '';
-  for(var i=1;i<head.length;i++){
+  for(var i=0;i<head.length;i++){
     if((head[i][H.kodeHeader]||'').toString().trim() === key){
       tglStr = _normTgl(head[i][H.tanggal]); break;
     }
   }
 
-  var real = ss.getSheetByName(SHEET_INS.REALISASI).getDataRange().getValues();
-  var temu = ss.getSheetByName(SHEET_INS.TEMUAN).getDataRange().getValues();
+  var real = (typeof _readSheetDual_ === 'function')
+    ? _readSheetDual_(SHEET_INS.REALISASI, R.kodePekerjaanPeny, R.timestamp + 1)
+    : ss.getSheetByName(SHEET_INS.REALISASI).getDataRange().getValues();
+  var temu = (typeof _readSheetDual_ === 'function')
+    ? _readSheetDual_(SHEET_INS.TEMUAN, T.kodePekerjaan, T.folderPath + 1)
+    : ss.getSheetByName(SHEET_INS.TEMUAN).getDataRange().getValues();
 
-  // Kumpulkan realisasi (penyulang) untuk header ini
   var realRows = [];
-  for(var j=1;j<real.length;j++){
+  for(var j=0;j<real.length;j++){
     if((real[j][R.kodeHeader]||'').toString().trim() === key) realRows.push(real[j]);
   }
 
-  // Kelompokkan penyulang per Tier (tier kosong -> '-'); tier tanpa realisasi tidak muncul
   var tierOrder = [], tierMap = {};
   for(var y=0;y<realRows.length;y++){
     var tKey = (realRows[y][R.tier]||'').toString().trim() || '-';
@@ -968,16 +898,11 @@ function _buildWaTextIns(ss, kodeHeader, opt){
       L.push((x+1) + '. Penyulang : *' + (rr[R.penyulang] || '-') + '*');
       L.push('Section : ' + (rr[R.section] || '-'));
 
-      // Segmen: manual dari realisasi (display-only). Baris di-skip bila kosong.
       var segmenRr = (rr[R.segmen]||'').toString().trim();
       if(segmenRr) L.push('Segmen : ' + segmenRr);
 
-      // temuan (digabung per nama + jumlah titik) untuk penyulang ini.
-      // Realisasi sah HANYA bila foto sudah diupdate: kolom R (Foto Temuan URL)
-      // DAN kolom T (Foto Tiang URL) wajib terisi keduanya — selaras filter di
-      // _recalcRealisasiByKodePeny. Salah satu kosong -> tidak ditampilkan/dihitung.
       var temuanOrder = [], temuanCount = {};
-      for(var k=1;k<temu.length;k++){
+      for(var k=0;k<temu.length;k++){
         if((temu[k][T.kodeHeader]||'').toString().trim()===key
            && (temu[k][T.kodePekerjaanPeny]||'').toString().trim()===kodePeny){
           var _urlT = (temu[k][T.fotoTemuanUrl]||'').toString().trim();
@@ -995,20 +920,16 @@ function _buildWaTextIns(ss, kodeHeader, opt){
       else { L.push('- Nihil'); }
       L.push('');
 
-      // Jumlah tiang PER-PENYULANG
       L.push('Jumlah Tiang yang di Inspeksi : *' + tiang + ' Tiang*');
       L.push('');
     }
 
-    // Subtotal PER-TIER
     var labelTier = (tier === '-') ? 'Total Tiang yang di Inspeksi'
                                    : ('Total Tiang yang di Inspeksi ' + tier);
     L.push(labelTier + ' : *' + tierTiang + ' Tiang*');
     L.push('');
   }
 
-  // Grand total + garis pemisah penutup HANYA bila lebih dari 1 tier.
-  // Bila cuma 1 tier, blok berakhir di subtotal tier-nya (tanpa garis penutup).
   if(tierOrder.length > 1){
     var labelGabung;
     if(tierOrder.length === 2){
@@ -1023,7 +944,6 @@ function _buildWaTextIns(ss, kodeHeader, opt){
   return L.join('\n').replace(/\n+$/, '');
 }
 
-// Pasang sebagai time-driven trigger (mis. tiap 10 menit) lewat menu Triggers Apps Script.
 function refreshHeaderInsBerkala(){
   var ss  = SpreadsheetApp.openById(SPREADSHEET_ID);
   var sh  = ss.getSheetByName(SHEET_INS.HEADER);
@@ -1036,16 +956,11 @@ function refreshHeaderInsBerkala(){
     if((r[H.tim]||'').toString().trim() !== 'Inspeksi') continue;
     var kode = (r[H.kodeHeader]||'').toString().trim();
 
-    // Jaring pengaman: isi TimeStamp input (kolom N) bila kosong — mis. baris
-    // dibuat via AppSheet yang tidak mengisi TimeStamp. Idealnya AppSheet set
-    // Initial value NOW(); kode ini hanya cadangan.
     var tsInput = r[H.timestamp];
     if(!tsInput || (tsInput instanceof Date && tsInput.getFullYear() < 2000)){
       sh.getRange(i+1, H.timestamp+1).setValue(now);
     }
 
-    // Pilih builder sesuai Sub-Tim: header Inspeksi Gardu pakai _buildWaTextInsGardu
-    // (baca db_InsDu_Realisasi); selain itu pakai builder Inspeksi Jaringan.
     var subTim = (r[H.subTim]||'').toString().trim().toLowerCase();
     var waBaru;
     if(subTim === 'inspeksi gardu'){
@@ -1058,22 +973,12 @@ function refreshHeaderInsBerkala(){
     }
 
     if((r[H.waText]||'') !== waBaru){
-      sh.getRange(i+1, H.waText+1).setValue(waBaru);            // M WA Text
-      sh.getRange(i+1, H.timestampUpdate+1).setValue(now);      // P Timestamp Update
+      sh.getRange(i+1, H.waText+1).setValue(waBaru);
+      sh.getRange(i+1, H.timestampUpdate+1).setValue(now);
     }
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   BUILD WA INSPEKSI JARINGAN — 3 fungsi (recalc + build) + worker bersama
-   1) refreshSemuaWaInsJar()       : recalc+build SEMUA header jaringan (WEB APP saja)
-   2) recalcWaInsJarByHeader(kode) : recalc+build 1 header (saat simpan/edit temuan web app)
-   3) refreshWaInsJarHarian()      : recalc+build header tgl hari ini & kemarin (TRIGGER time)
-   Catatan: recalc = perbarui Section & Jumlah Temuan tiap realisasi penyulang
-   (_recalcRealisasiByKodePeny di Tek-Temuan.gs) lalu bangun ulang WA Text.
-═══════════════════════════════════════════════════════════════ */
-
-// Penanda baris header = Inspeksi Jaringan (Tim 'Inspeksi' & BUKAN Sub-Tim gardu).
 function _isHeaderInsJar(r){
   var H = COL_INS.HEADER;
   if(!r[H.kodeHeader]) return false;
@@ -1081,7 +986,6 @@ function _isHeaderInsJar(r){
   return String(r[H.subTim]||'').trim().toLowerCase() !== 'inspeksi gardu';
 }
 
-// Worker A — recalc Section & Jumlah Temuan SEMUA penyulang milik 1 header.
 function _recalcRealisasiHeaderInsJar(ss, kodeHeader){
   var R = COL_INS.REALISASI;
   var shR = ss.getSheetByName(SHEET_INS.REALISASI);
@@ -1095,7 +999,6 @@ function _recalcRealisasiHeaderInsJar(ss, kodeHeader){
   }
 }
 
-// Worker B — bangun WA 1 header lalu tulis ke kolom M (+ P) HANYA bila berubah.
 function _tulisWaHeaderInsJar(ss, sh, rowIdx, rowValues){
   var H = COL_INS.HEADER;
   var kode = String(rowValues[H.kodeHeader]||'').trim();
@@ -1112,9 +1015,6 @@ function _tulisWaHeaderInsJar(ss, sh, rowIdx, rowValues){
   return wa;
 }
 
-// (1) WEB APP — recalc + build SEMUA header Inspeksi Jaringan.
-// Operasi berat (baca seluruh sheet). Pakai HANYA dari tombol manual web app,
-// JANGAN dipasang sebagai trigger berkala.
 function refreshSemuaWaInsJar(){
   try{
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -1124,16 +1024,14 @@ function refreshSemuaWaInsJar(){
     for(var i=1;i<data.length;i++){
       if(!_isHeaderInsJar(data[i])) continue;
       var kode = String(data[i][H.kodeHeader]).trim();
-      _recalcRealisasiHeaderInsJar(ss, kode);             // recalc kolom realisasi
-      _tulisWaHeaderInsJar(ss, sh, i+1, data[i]);         // build + tulis WA bila berubah
+      _recalcRealisasiHeaderInsJar(ss, kode);
+      _tulisWaHeaderInsJar(ss, sh, i+1, data[i]);
       n++;
     }
     return { ok:true, diproses:n };
   }catch(e){ return { ok:false, message:e.message }; }
 }
 
-// (2) WEB APP — recalc + build 1 header. Dipanggil saat simpan/edit temuan
-// (atau realisasi) via web app, supaya WA langsung sinkron tanpa menunggu trigger.
 function recalcWaInsJarByHeader(kodeHeader){
   try{
     var key = String(kodeHeader||'').trim();
@@ -1152,8 +1050,6 @@ function recalcWaInsJarByHeader(kodeHeader){
   }catch(e){ return { ok:false, message:e.message }; }
 }
 
-// (3) TRIGGER TIME — recalc + build HANYA header jaringan bertanggal hari ini
-// atau kemarin (hemat baca data). Cocok untuk menangkap input dari AppSheet.
 function refreshWaInsJarHarian(){
   try{
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -1176,13 +1072,7 @@ function refreshWaInsJarHarian(){
   }catch(e){ return { ok:false, message:e.message }; }
 }
 
-
-// Update SATU header secara on-demand (dipakai tombol "Update Data" di Laporan Harian)
-// Hitung ulang Total Tiang + waText untuk 1 kodeHeader, tanpa menunggu trigger berkala.
 function updateHeaderInsLangsung(kodeHeader){
-  /* OTENTIKASI + PEMILIKAN (29 Agu 2026). Argumen ini string, bukan object —
-     SisiRun akan menyisipkan token di depan, jadi _tokenDariArgs_ menemukannya
-     lewat pola UUID. */
   var gAks = guard_(arguments, { ulp: true, aksi: 'updateHeaderInsLangsung' });
   try{
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -1204,8 +1094,8 @@ function updateHeaderInsLangsung(kodeHeader){
         kmAwal:         r[H.kmAwal],
         kmAkhir:        r[H.kmAkhir]
       });
-      sh.getRange(i+1, H.waText+1).setValue(waBaru);            // M WA Text
-      sh.getRange(i+1, H.timestampUpdate+1).setValue(now);      // P Timestamp Update
+      sh.getRange(i+1, H.waText+1).setValue(waBaru);
+      sh.getRange(i+1, H.timestampUpdate+1).setValue(now);
       SpreadsheetApp.flush();
       return { ok:true, kodeHeader:kodeHeader, waText:waBaru, totalTiang:totalBaru };
     }
@@ -1215,14 +1105,16 @@ function updateHeaderInsLangsung(kodeHeader){
   }
 }
 
-// Detail seluruh realisasi (semua penyulang) untuk 1 Kode Header
 function getDetailRealisasiByHeader(kodeHeader){
   try{
     kodeHeader = String(kodeHeader || '').trim();
     if(!kodeHeader) return { ok:false, message:'Kode Header kosong.' };
 
     var R = COL_INS.REALISASI;
-    var rows = _readSheetIns(SHEET_INS.REALISASI).filter(function(r){
+    var realisasi = (typeof _readSheetDual_ === 'function')
+      ? _readSheetDual_(SHEET_INS.REALISASI, R.kodePekerjaanPeny, R.timestamp + 1)
+      : _readSheetIns(SHEET_INS.REALISASI);
+    var rows = realisasi.filter(function(r){
       return String(r[R.kodeHeader] || '').trim() === kodeHeader;
     }).map(function(r){
       return {
@@ -1233,20 +1125,20 @@ function getDetailRealisasiByHeader(kodeHeader){
         tier:              String(r[R.tier] || '').trim(),
         totalTiang:        Number(r[R.totalTiang]) || 0,
         jumlahTemuan:      Number(r[R.jumlahTemuan]) || 0,
-        inputBy:           String(r[R.inputBy] || '').trim(),     // I Input Oleh
-        timestamp:         String(r[R.timestamp] || '').trim()    // J TimeStamp
+        inputBy:           String(r[R.inputBy] || '').trim(),
+        timestamp:         String(r[R.timestamp] || '').trim()
       };
     });
 
-    // Tier header = gabungan tier distinct dari penyulang (tier kini per-realisasi)
     var _tierSeen = {}, _tierArr = [];
     rows.forEach(function(d){
       if(d.tier && !_tierSeen[d.tier]){ _tierSeen[d.tier] = true; _tierArr.push(d.tier); }
     });
 
-    // Info header
     var H = COL_INS.HEADER, hdr = null;
-    var heads = _readSheetIns(SHEET_INS.HEADER);
+    var heads = (typeof _readSheetDual_ === 'function')
+      ? _readSheetDual_(SHEET_INS.HEADER, H.kodeHeader, H.statusTextWa + 1)
+      : _readSheetIns(SHEET_INS.HEADER);
     for(var i=0;i<heads.length;i++){
       if(String(heads[i][H.kodeHeader] || '').trim() === kodeHeader){
         hdr = {
@@ -1269,12 +1161,7 @@ function getDetailRealisasiByHeader(kodeHeader){
   }
 }
 
-/* ═══ EDIT REALISASI — Segmen (kapan saja) & Section (hanya bila 0 temuan) ═══
-   Section di-input via titik Awal/Akhir lalu dirangkai _sectionRange.
-   Bila penyulang sudah punya temuan (>0), Section dikunci (otomatis dari temuan). */
 function editRealisasiInsJar(data){
-  /* OTENTIKASI + PEMILIKAN (29 Agu 2026). Sheet realisasi tidak punya kolom
-     ULP, jadi kepemilikan ditelusuri lewat kodeHeader induknya. */
   var gAks = guard_(arguments, { ulp: true, aksi: 'editRealisasiInsJar' });
   try{
     data = data || {};
@@ -1301,17 +1188,13 @@ function editRealisasiInsJar(data){
       return { ok:false, message:'Realisasi bukan milik ULP Anda.' };
     }
 
-    // Jumlah temuan aktual menentukan apakah Section boleh diubah.
     var n = Number(vals[rowIdx][R.jumlahTemuan]) || 0;
     try { n = (_recalcRealisasiByKodePeny(ss, kodePeny) || {}).jumlahTemuan || 0; } catch(eR){}
 
-    // Segmen — selalu boleh diedit.
     if(data.segmen != null){
       shR.getRange(rowNo, R.segmen + 1).setValue(String(data.segmen || '').trim());
     }
 
-    // Section — hanya bila belum ada temuan (n == 0). Bila >0, diabaikan
-    // (Section dikelola otomatis oleh _recalcRealisasiByKodePeny).
     if(n === 0 && (data.sectionAwal != null || data.sectionAkhir != null)){
       var awal  = String(data.sectionAwal  || '').trim();
       var akhir = String(data.sectionAkhir || '').trim();
