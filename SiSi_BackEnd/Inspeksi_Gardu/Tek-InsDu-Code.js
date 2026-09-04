@@ -1114,6 +1114,63 @@ function getRekapInsGarduRows(params){
   }catch(e){ return { ok:false, message:e.message, rows:[] }; }
 }
 
+function _pdfDateFilterLolos_(tgl, f){
+  if(!tgl) return false;
+  if(f.tglDari && tgl < f.tglDari) return false;
+  if(f.tglSampai && tgl > f.tglSampai) return false;
+  return true;
+}
+
+function _pdfEsc(str){
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function _pdfLogoPlnB64_(){
+  return '';
+}
+
+function generatePdfRekapInsGardu(params){
+  try{
+    params = params || {};
+    var f = {
+      tglDari:   _normTgl(params.tglDari   || '') || '',
+      tglSampai: _normTgl(params.tglSampai || '') || '',
+      penyulang: String(params.penyulang || '').trim(),
+      ulp:       String(params.ulp || '').trim()
+    };
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var rows = _pdfQueryRealisasiInsGardu(ss, f);
+    var html = _buildHtmlPdfRekapInsGardu(rows, f);
+
+    var suffix = (f.tglDari || f.tglSampai)
+      ? ('_' + (f.tglDari || 'awal') + '_sd_' + (f.tglSampai || f.tglDari || 'akhir'))
+      : ('_' + _normTgl(new Date()));
+    var namaFile = 'Rekap_Inspeksi_Gardu' + suffix + '.pdf';
+
+    var blob = Utilities.newBlob(html, 'text/html', 'tmp.html').getAs('application/pdf').setName(namaFile);
+    var bytes = blob.getBytes();
+    var b64 = Utilities.base64Encode(bytes);
+
+    return {
+      ok: true,
+      fileName: namaFile,
+      base64: b64,
+      mimeType: 'application/pdf',
+      rowCount: rows.length
+    };
+  }catch(err){
+    return {
+      ok: false,
+      message: err && err.message ? err.message : String(err)
+    };
+  }
+}
+
 function unduhPdfInsGardu(e){
   try{
     var p = (e && e.parameter) || {};
@@ -1131,21 +1188,54 @@ function unduhPdfInsGardu(e){
       : ('_' + _normTgl(new Date()));
     var namaFile = 'Rekap_Inspeksi_Gardu' + suffix + '.pdf';
 
-    var blob   = Utilities.newBlob(html, 'text/html', 'tmp.html').getAs('application/pdf').setName(namaFile);
-    var folder = _getOrCreateFolderByPath(['AppSheet SiSi - ULP Toboali', 'PDF Inspeksi Gardu']);
-    var file   = folder.createFile(blob);
-    try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch(eShare){}
-    var urlUnduh = 'https://drive.google.com/uc?export=download&id=' + file.getId();
+    var blob = Utilities.newBlob(html, 'text/html', 'tmp.html').getAs('application/pdf').setName(namaFile);
+    var b64  = Utilities.base64Encode(blob.getBytes());
 
     return HtmlService.createHtmlOutput(
       '<!DOCTYPE html><html><head><meta charset="utf-8">'
       + '<meta name="viewport" content="width=device-width, initial-scale=1">'
-      + '<title>Unduh PDF Inspeksi Gardu</title>'
-      + '<script>window.location.replace(' + JSON.stringify(urlUnduh) + ');<\/script>'
-      + '</head><body style="font-family:Segoe UI,Arial,sans-serif;text-align:center;padding:40px;color:#1e293b">'
-      + '<p>Menyiapkan unduhan <b>' + _pdfEsc(namaFile) + '</b>…</p>'
-      + '<p>Jika tidak otomatis terunduh, <a href="' + _pdfEsc(urlUnduh) + '">klik di sini</a>.</p>'
-      + '</body></html>'
+      + '<title>Unduh ' + _pdfEsc(namaFile) + '</title>'
+      + '<style>body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;text-align:center;padding:50px 20px;color:#0f172a;background:#f8fafc}'
+      + '.box{max-width:480px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:32px 24px;box-shadow:0 10px 25px rgba(0,0,0,0.05)}'
+      + '.btn{display:inline-block;background:#1e3a8a;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;margin-top:20px;font-size:14px}'
+      + '</style></head><body><div class="box">'
+      + '<h3>Mengunduh PDF...</h3>'
+      + '<p style="color:#64748b;font-size:13px">File <b>' + _pdfEsc(namaFile) + '</b> sedang diunduh ke perangkat Anda.</p>'
+      + '<a id="dlLink" class="btn" href="#">Klik Disini Jika Download Tidak Mulai</a>'
+      + '</div>'
+      + '<script>'
+      + 'var b64 = ' + JSON.stringify(b64) + ';'
+      + 'var fileName = ' + JSON.stringify(namaFile) + ';'
+      + 'function b64toBlob(b64Data, contentType) {'
+      + '  contentType = contentType || "";'
+      + '  var byteCharacters = atob(b64Data);'
+      + '  var byteArrays = [];'
+      + '  for (var offset = 0; offset < byteCharacters.length; offset += 512) {'
+      + '    var slice = byteCharacters.slice(offset, offset + 512);'
+      + '    var byteNumbers = new Array(slice.length);'
+      + '    for (var i = 0; i < slice.length; i++) {'
+      + '      byteNumbers[i] = slice.charCodeAt(i);'
+      + '    }'
+      + '    byteArrays.push(new Uint8Array(byteNumbers));'
+      + '  }'
+      + '  return new Blob(byteArrays, {type: contentType});'
+      + '}'
+      + 'try {'
+      + '  var blob = b64toBlob(b64, "application/pdf");'
+      + '  var url = URL.createObjectURL(blob);'
+      + '  var link = document.getElementById("dlLink");'
+      + '  link.href = url;'
+      + '  link.download = fileName;'
+      + '  var a = document.createElement("a");'
+      + '  a.href = url;'
+      + '  a.download = fileName;'
+      + '  document.body.appendChild(a);'
+      + '  a.click();'
+      + '  document.body.removeChild(a);'
+      + '} catch (err) {'
+      + '  console.error(err);'
+      + '}'
+      + '<\/script></body></html>'
     ).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
   }catch(err){
     return HtmlService.createHtmlOutput(
