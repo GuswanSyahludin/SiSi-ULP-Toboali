@@ -30,8 +30,9 @@ push tidak lagi menunggu userLock yang bisa dipegang drain WM saat sheet sibuk (
 trigger terpisah 15 menit (createSweepWmBacklogTriggerY); drainAntreanP0 kini hanya menyentuh sheet antrean kecil.
 + sweepDurasiJarakYandalP0 default 5 → 30 menit. Tujuan: mengurangi okupansi slot eksekusi simultan —
 penyebab request mobile antre slot (gejala: fungsi cepat tapi respons tetap timeout 30 dtk).
-+ Rev 04 Sep 2026: DUAL-READ PENUH ANALISA JAM EFEKTIF (db_Yandal_Rank, db_Yandal_Shift, db_Yandal_P0, db_List_Petugas_Yandal).
-  Memastikan data performa & shift lawas yang telah termigrasi ke spreadsheet ARSIP tetap terbaca utuh di web & backend. */
++ Rev 28 Agu 2026: Dual-read untuk db_Yandal_Rank & db_List_Petugas_Yandal via _allDualSheetY_.
++ Rev 04 Sep 2026: DUAL-READ LENGKAP ANALISA JAM EFEKTIF (Rank, Petugas, Shift, P0).
+  Memulihkan implementasi getTabelPetugasYandal, getDetailPerformaPetugasY, sinkronRankYandal, dll. */
 
 // ====== KONFIG ======
 var SHEET_YANDAL = {
@@ -278,7 +279,6 @@ function _allDualSheetY_(sheetName) {
       var rows = sh.getDataRange().getValues();
       for (var i = 0; i < rows.length; i++) {
         var row = rows[i];
-        // Kunci dedup spesifik per sheet bila ada kolom kode unik
         var uniqueKey = "";
         if (i > 0) {
           if (sheetName === SHEET_YANDAL.P0) uniqueKey = String(row[COL_P0.kodeP0] || "").trim();
