@@ -116,109 +116,140 @@
   }
   .cal-grid-days {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 4px;
+    grid-template-columns: repeat(7, calc((100% - 0px) / 7));
+    gap: 0;
     text-align: center;
-    margin-bottom: 6px;
+    margin-bottom: 0;
+    width: 100%;
+    table-layout: fixed;
   }
   .cal-day-name {
     font-size: 11px;
     font-weight: 700;
     color: var(--gray);
     text-transform: uppercase;
-    padding: 6px 0;
+    padding: 10px 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .cal-day-name.weekend {
     color: var(--danger);
   }
   .cal-grid-cells {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 6px;
+    grid-template-columns: repeat(7, calc((100% - 0px) / 7));
+    gap: 0;
+    width: 100%;
   }
   .cal-cell {
-    min-height: 85px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 6px;
-    background: var(--surface);
+    min-height: 108px;
+    height: 108px;
+    max-height: 108px;
+    border: 0;
+    border-right: 1px solid oklch(88.5% .016 252);
+    border-bottom: 1px solid oklch(88.5% .016 252);
+    border-radius: 0;
+    padding: 6px 8px;
+    background: oklch(99.2% .004 252);
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 3px;
     cursor: pointer;
-    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    transition: background 160ms cubic-bezier(.16,1,.3,1);
     position: relative;
+    overflow: hidden;
+    box-sizing: border-box;
+    width: 100%;
+  }
+  .cal-cell:nth-child(7n) {
+    border-right: 0;
   }
   .cal-cell:hover {
-    border-color: var(--primary);
-    background: var(--surface-3);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    background: oklch(97% .018 252);
+    box-shadow: none;
   }
   .cal-cell.other-month {
-    opacity: 0.4;
-    background: var(--surface-2);
+    background: oklch(97.2% .006 252);
+    opacity: 0.55;
     cursor: default;
   }
   .cal-cell.today {
-    border: 2px solid var(--primary);
-    background: var(--primary-lt);
+    border: 0;
+    border-right: 1px solid oklch(88.5% .016 252);
+    box-shadow: inset 0 0 0 2px oklch(43% .16 258);
+    background: oklch(93.5% .045 252);
   }
   .cal-cell.has-event {
-    border-color: rgba(37, 99, 235, 0.4);
+    border-color: oklch(88.5% .016 252);
   }
   .cal-cell-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-shrink: 0;
+    height: 27px;
   }
   .cal-num {
+    display: grid;
+    place-items: center;
+    width: 27px;
+    height: 27px;
+    border-radius: 50%;
     font-size: 12px;
     font-weight: 700;
     color: var(--text);
   }
   .cal-cell.today .cal-num {
-    color: var(--primary);
-    font-size: 13px;
+    background: oklch(43% .16 258);
+    color: oklch(98% .006 252);
+    font-size: 12px;
   }
   .cal-count-badge {
     font-size: 10px;
     font-weight: 700;
-    padding: 1px 5px;
-    border-radius: 999px;
-    background: var(--primary);
-    color: var(--on-primary);
+    padding: 0;
+    background: transparent;
+    color: oklch(53% .026 255);
   }
   .cal-events {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 2px;
     overflow: hidden;
+    flex: 1;
+    min-height: 0;
   }
   .cal-pill {
-    font-size: 10px;
-    padding: 2px 5px;
-    border-radius: 4px;
+    font-size: 10.5px;
+    padding: 3px 6px;
+    border: 0;
+    border-radius: 5px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     line-height: 1.25;
     font-weight: 600;
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
   }
   .cal-pill.padam {
-    background: rgba(220, 38, 38, 0.12);
-    color: #dc2626;
-    border: 1px solid rgba(220, 38, 38, 0.25);
+    background: oklch(94.5% .045 27);
+    color: oklch(53% .19 27);
+    border: 0;
   }
   .cal-pill.tanpa-padam {
-    background: rgba(22, 163, 74, 0.12);
-    color: #16a34a;
-    border: 1px solid rgba(22, 163, 74, 0.25);
+    background: oklch(94% .05 145);
+    color: oklch(48% .13 145);
+    border: 0;
   }
   .cal-pill-more {
-    font-size: 9px;
+    font-size: 9.5px;
     color: var(--gray);
-    font-weight: 600;
+    font-weight: 700;
     padding: 1px 2px;
+    white-space: nowrap;
   }
 
   /* Modal Detail Jadwal */
@@ -578,22 +609,6 @@
   .cal-grid-days { margin:0;background:oklch(95.8% .014 252);border-bottom:1px solid oklch(88.5% .016 252); }
   .cal-day-name { padding:10px 6px;letter-spacing:.08em; }
   .cal-grid-cells { gap:0;border-top:0; }
-  .cal-cell {
-    min-height:108px;border:0;border-right:1px solid oklch(88.5% .016 252);
-    border-bottom:1px solid oklch(88.5% .016 252);border-radius:0;padding:9px;
-    background:oklch(99.2% .004 252);transition:background 160ms cubic-bezier(.16,1,.3,1);
-  }
-  .cal-cell:nth-child(7n) { border-right:0; }
-  .cal-cell:hover { background:oklch(97% .018 252);box-shadow:none; }
-  .cal-cell.other-month { background:oklch(97.2% .006 252);opacity:.55; }
-  .cal-cell.today { border:0;border-right:1px solid oklch(88.5% .016 252);box-shadow:inset 0 0 0 2px oklch(43% .16 258);background:oklch(93.5% .045 252); }
-  .cal-cell.has-event { border-color:oklch(88.5% .016 252); }
-  .cal-num { display:grid;place-items:center;width:27px;height:27px;border-radius:50%; }
-  .cal-cell.today .cal-num { background:oklch(43% .16 258);color:oklch(98% .006 252);font-size:12px; }
-  .cal-count-badge { background:transparent;color:oklch(53% .026 255);padding:0; }
-  .cal-pill { padding:5px 7px;border:0;border-radius:6px;line-height:1.25; }
-  .cal-pill.padam { background:oklch(94.5% .045 27);color:oklch(53% .19 27);border:0; }
-  .cal-pill.tanpa-padam { background:oklch(94% .05 145);color:oklch(48% .13 145);border:0; }
   .cal-detail-pane { border-left:1px solid oklch(88.5% .016 252);background:oklch(98.2% .006 252);display:flex;flex-direction:column;min-width:0; }
   .cal-detail-head { padding:20px;border-bottom:1px solid oklch(88.5% .016 252); }
   .cal-detail-eyebrow { margin:0 0 5px!important;font-size:10px!important;font-weight:800;color:oklch(43% .16 258)!important;text-transform:uppercase;letter-spacing:.09em; }
