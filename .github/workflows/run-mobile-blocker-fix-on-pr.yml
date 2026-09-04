@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   apply:
-    if: github.head_ref == 'trigger-mobile-blocker-fix'
+    if: startsWith(github.head_ref, 'trigger-mobile-blocker-fix')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
