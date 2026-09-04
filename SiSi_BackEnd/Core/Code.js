@@ -2401,6 +2401,11 @@ function apiRouter_(e, body) {
     if (lewatAuth) return lewatAuth;
   }
 
+  if (typeof gangguanBerandaMobileRouter_ === "function") {
+    var lewatGangguan = gangguanBerandaMobileRouter_(e, body);
+    if (lewatGangguan) return ContentService.createTextOutput(JSON.stringify(lewatGangguan)).setMimeType(ContentService.MimeType.JSON);
+  }
+
   try {
     switch (action) {
       // 1. Autentikasi & Akun

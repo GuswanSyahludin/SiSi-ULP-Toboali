@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../services/jadwal_padam_service.dart';
 import '../theme/app_colors.dart';
+import 'gangguan_beranda_section.dart';
 
 class BerandaScreen extends StatefulWidget {
   final Map<String, dynamic> sesi;
@@ -132,6 +133,8 @@ class _BerandaScreenState extends State<BerandaScreen> {
           children: [
             _profile(name),
             const SizedBox(height: 26),
+            GangguanBerandaSection(sesi: widget.sesi),
+            const SizedBox(height: 30),
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
