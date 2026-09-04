@@ -56,7 +56,7 @@ class AppTheme {
       bodyLarge: TextStyle(fontSize: 16, height: 1.5, fontWeight: FontWeight.w400, color: AppColors.neutral900),
       bodyMedium: TextStyle(fontSize: 14, height: 1.5, fontWeight: FontWeight.w400, color: AppColors.neutral700),
       bodySmall: TextStyle(fontSize: 12, height: 1.45, fontWeight: FontWeight.w400, color: AppColors.neutral500),
-      labelLarge: TextStyle(fontSize: 14, height: 1.2, fontWeight: FontWeight.w750, color: AppColors.neutral900),
+      labelLarge: TextStyle(fontSize: 14, height: 1.2, fontWeight: FontWeight.w700, color: AppColors.neutral900),
       labelMedium: TextStyle(fontSize: 12, height: 1.2, fontWeight: FontWeight.w700, color: AppColors.neutral700),
       labelSmall: TextStyle(fontSize: 10, height: 1.2, fontWeight: FontWeight.w700, letterSpacing: .6, color: AppColors.neutral500),
     );
@@ -145,7 +145,7 @@ class AppTheme {
           foregroundColor: AppColors.brand700,
           side: const BorderSide(color: AppColors.neutral300),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w750),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -153,7 +153,7 @@ class AppTheme {
           minimumSize: const Size(44, 44),
           foregroundColor: AppColors.brand700,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w750),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
         ),
       ),
       iconButtonTheme: IconButtonThemeData(
