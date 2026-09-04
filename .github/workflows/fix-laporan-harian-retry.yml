@@ -1,0 +1,85 @@
+name: Fix laporan harian retry
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/fix-laporan-harian-retry.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Patch retry and cache invalidation
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('SiSi_BackEnd/Teknik/Tek-LapUP3UIWHarian.js')
+          s = p.read_text(encoding='utf-8')
+
+          old_recalc = '''  sh.getRange(rowNum, LH.COL.lapUp3 + 1).setValue(up3);
+  sh.getRange(rowNum, LH.COL.lapUiw + 1).setValue(uiw);
+  return { tanggal: tglIso, up3: up3, uiw: uiw };'''
+          new_recalc = '''  sh.getRange(rowNum, LH.COL.lapUp3 + 1).setValue(up3);
+  sh.getRange(rowNum, LH.COL.lapUiw + 1).setValue(uiw);
+  SpreadsheetApp.flush();
+  // Jangan biarkan mobile menampilkan cache lama setelah laporan berhasil dibangun ulang.
+  try {
+    CacheService.getScriptCache().remove(_lapMobileCacheKey_(ulp, tglIso));
+  } catch (eCache) {
+    Logger.log("_lhRecalcRow: gagal membuang cache " + tglIso + " — " + eCache);
+  }
+  return { tanggal: tglIso, up3: up3, uiw: uiw };'''
+
+          old_drain = '''  for (var j = 0; j < dd.length; j++) {
+    try {
+      refreshLaporanHarian({ tanggal: dd[j] });
+    } catch (eRun) {
+      // build UP3 + UIW lalu tulis sheet
+      gagal[dd[j]] = Date.now();
+    }
+  }'''
+          new_drain = '''  for (var j = 0; j < dd.length; j++) {
+    try {
+      var hasilRefresh = refreshLaporanHarian({ tanggal: dd[j] });
+      // refreshLaporanHarian menangkap error internal dan mengembalikan ok:false.
+      // Dulu hasil itu diabaikan sehingga tanggal dianggap sukses lalu hilang dari antrean.
+      if (!hasilRefresh || hasilRefresh.ok !== true) {
+        gagal[dd[j]] = claimed[dd[j]] || Date.now();
+        Logger.log(
+          "drainLaporanDirty: rebuild gagal " +
+            dd[j] +
+            " — " +
+            String((hasilRefresh && hasilRefresh.message) || "hasil kosong"),
+        );
+      }
+    } catch (eRun) {
+      gagal[dd[j]] = claimed[dd[j]] || Date.now();
+      Logger.log("drainLaporanDirty: exception " + dd[j] + " — " + eRun);
+    }
+  }'''
+
+          if old_recalc not in s:
+              raise SystemExit('target _lhRecalcRow tidak ditemukan')
+          if old_drain not in s:
+              raise SystemExit('target drainLaporanDirty tidak ditemukan')
+          s = s.replace(old_recalc, new_recalc, 1).replace(old_drain, new_drain, 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+          grep -q 'hasilRefresh.ok !== true' SiSi_BackEnd/Teknik/Tek-LapUP3UIWHarian.js
+          grep -q 'Jangan biarkan mobile menampilkan cache lama' SiSi_BackEnd/Teknik/Tek-LapUP3UIWHarian.js
+      - name: Commit fix and remove workflow
+        run: |
+          rm .github/workflows/fix-laporan-harian-retry.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add SiSi_BackEnd/Teknik/Tek-LapUP3UIWHarian.js .github/workflows/fix-laporan-harian-retry.yml
+          git commit -m "fix(laporan-harian): retry failed UP3 and Wilayah rebuilds"
+          git push origin HEAD:main
