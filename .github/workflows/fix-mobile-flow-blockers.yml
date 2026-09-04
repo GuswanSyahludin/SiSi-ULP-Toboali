@@ -1,0 +1,221 @@
+name: Fix audited mobile flow blockers
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/fix-mobile-flow-blockers.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Apply four blocker fixes
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          # 1. Apply the five-menu navigation directly to source.
+          p=Path('SiSi_Mobile/lib/screens/dashboard_screen.dart')
+          s=p.read_text(encoding='utf-8')
+          old="""  final List<String> menuItems = ['Tim', 'Teknik', 'Pengaturan'];
+  final List<IconData> menuIcons = [
+    Icons.people_outline_rounded,
+    Icons.handyman_outlined,
+    Icons.settings_outlined,
+  ];
+"""
+          new="""  final List<String> menuItems = const [
+    'Tim',
+    'Pengukuran',
+    'Beranda',
+    'Teknik',
+    'Pengaturan',
+  ];
+  final List<IconData> menuIcons = const [
+    Icons.groups_2_outlined,
+    Icons.electric_meter_outlined,
+    Icons.home_rounded,
+    Icons.handyman_outlined,
+    Icons.settings_outlined,
+  ];
+"""
+          if old not in s: raise SystemExit('dashboard menu declaration not found')
+          s=s.replace(old,new,1)
+          s=s.replace("    _bubbleController = AnimationController(vsync: this);", """    _bubbleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 380),
+    );""",1)
+          start=s.index('  List<String> get currentMenuItems {')
+          end=s.index('  void _selectMenu(int index)',start)
+          s=s[:start]+"""  List<String> get currentMenuItems => menuItems;
+
+  List<IconData> get currentMenuIcons => menuIcons;
+
+"""+s[end:]
+          spring="""    _bubbleController.animateWith(
+      SpringSimulation(
+        const SpringDescription(mass: 1.0, stiffness: 200.0, damping: 26.0),
+        0.0,
+        1.0,
+        0.0,
+      ),
+    );"""
+          if spring not in s: raise SystemExit('spring block not found')
+          s=s.replace(spring,"""    _bubbleController.forward(from: 0);""",1)
+          s=s.replace("""                      notchX =
+                          startX + (targetX - startX) * _bubbleController.value;""","""                      final motion = Curves.easeOutCubic.transform(
+                        _bubbleController.value,
+                      );
+                      notchX = startX + (targetX - startX) * motion;""",1)
+          s=s.replace("""                      final currentX =
+                          startX + (targetX - startX) * _bubbleController.value;""","""                      final motion = Curves.easeOutCubic.transform(
+                        _bubbleController.value,
+                      );
+                      final currentX = startX + (targetX - startX) * motion;""",1)
+          s=s.replace("""                            size: 37.4,""","""                            size: selectedIndex == 2 ? 28.6 : 22,""",1)
+          s=s.replace("""      case 'Gardu':
+        return GarduScreen(sesi: widget.sesi);""","""      case 'Pengukuran':
+        return GarduScreen(sesi: widget.sesi);""",1)
+          marker="""    final List<Map<String, dynamic>> subTeknik = [
+      {
+        'title': 'Jadwal Padam',"""
+          insert="""    final List<Map<String, dynamic>> subTeknik = [
+      {
+        'title': 'Pengukuran Gardu',
+        'icon': Icons.electric_meter_rounded,
+        'desc': 'Lihat pembebanan, tegangan WBP/LWBP, dan hasil ukur gardu',
+        'iconColor': AppColors.brand600,
+      },
+      {
+        'title': 'Jadwal Padam',"""
+          if marker not in s: raise SystemExit('teknik marker not found')
+          s=s.replace(marker,insert,1)
+          route="""                  if (title == 'Jadwal Padam') {
+          tujuan = JadwalPadamScreen("""
+          route2="""                  if (title == 'Pengukuran Gardu') {
+                    tujuan = GarduScreen(sesi: widget.sesi);
+                  } else if (title == 'Jadwal Padam') {
+          tujuan = JadwalPadamScreen("""
+          if route not in s: raise SystemExit('jadwal route marker not found')
+          s=s.replace(route,route2,1)
+          s=s.replace("import 'package:flutter/physics.dart';\n",'',1)
+          p.write_text(s,encoding='utf-8')
+
+          # 2. Wire the existing Jadwal Padam mobile router before legacy switch.
+          p=Path('SiSi_BackEnd/Core/Code.js')
+          s=p.read_text(encoding='utf-8')
+          anchor="""  if (typeof authPerangkatRouter_ === "function") {
+    var lewatAuth = authPerangkatRouter_(e, body);
+    if (lewatAuth) return lewatAuth;
+  }
+
+  try {"""
+          wired="""  if (typeof authPerangkatRouter_ === "function") {
+    var lewatAuth = authPerangkatRouter_(e, body);
+    if (lewatAuth) return lewatAuth;
+  }
+
+  if (typeof jadwalPadamMobileRouter_ === "function") {
+    var lewatJadwal = jadwalPadamMobileRouter_(e, body);
+    if (lewatJadwal) {
+      return ContentService.createTextOutput(JSON.stringify(lewatJadwal))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
+  try {"""
+          if anchor not in s: raise SystemExit('api router anchor not found')
+          s=s.replace(anchor,wired,1)
+          p.write_text(s,encoding='utf-8')
+
+          # 3. Add the active session token to all P0 server calls without changing callers.
+          p=Path('SiSi_Mobile/lib/services/api_service.dart')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace("""  static Future<Map<String, dynamic>> getApprovalP0List({
+    required String ulp,
+    String status = 'Menunggu',
+    String? tanggal,
+  }) async {
+    final uri = Uri.parse(
+      '$baseUrl?mobile=1&action=getMobileApprovalP0List&ulp=""","""  static Future<Map<String, dynamic>> getApprovalP0List({
+    required String ulp,
+    String status = 'Menunggu',
+    String? tanggal,
+  }) async {
+    final sesi = await SesiStore.muat();
+    final token = (sesi?['token'] ?? '').toString();
+    final uri = Uri.parse(
+      '$baseUrl?mobile=1&action=getMobileApprovalP0List&token=${Uri.encodeComponent(token)}&ulp=""",1)
+          s=s.replace("""  }) async {
+    // Rev 19 Agu malam: POST -> GET. Backend sudah membaca e.parameter (doGet -> apiRouter_),""","""  }) async {
+    final sesi = await SesiStore.muat();
+    final token = (sesi?['token'] ?? '').toString();
+    // Rev 19 Agu malam: POST -> GET. Backend sudah membaca e.parameter (doGet -> apiRouter_),""",1)
+          s=s.replace("""      '$baseUrl?mobile=1&action=setMobileApprovalP0'
+      '&kodeP0=""","""      '$baseUrl?mobile=1&action=setMobileApprovalP0'
+      '&token=${Uri.encodeComponent(token)}'
+      '&kodeP0=""",1)
+          s=s.replace("""  static Future<Map<String, dynamic>> getLampiranPengecekanP0(
+      String kodeP0) async {
+    final uri = Uri.parse(
+      '$baseUrl?mobile=1&action=getMobileLampiranPengecekanP0&kodeP0=""","""  static Future<Map<String, dynamic>> getLampiranPengecekanP0(
+      String kodeP0) async {
+    final sesi = await SesiStore.muat();
+    final token = (sesi?['token'] ?? '').toString();
+    final uri = Uri.parse(
+      '$baseUrl?mobile=1&action=getMobileLampiranPengecekanP0&token=${Uri.encodeComponent(token)}&kodeP0=""",1)
+          p.write_text(s,encoding='utf-8')
+
+          # 4. Fix read-before-declaration in archived P0 attachment lookup.
+          p=Path('SiSi_BackEnd/Core/Tek-MobileDual.js')
+          s=p.read_text(encoding='utf-8')
+          old="""    /* PEMILIKAN: P0 harus milik ULP sesi (kecuali Super User). Tanpa ini
+       kodeP0 milik ULP lain tetap terbaca (IDOR). */
+    if (!barisUlpCocok_(g, rp[COL_P0.ulp])) {
+      audit_(g.sesi, "getLampiranPengecekanP0Dual_", kodeP0, "TOLAK",
+        "P0 milik ULP lain");
+      return { ok: false, error: "Data P0 bukan milik ULP Anda." };
+    }
+    var rp = rowsP[0];"""
+          new="""    var rp = rowsP[0];
+    /* PEMILIKAN: P0 harus milik ULP sesi (kecuali Super User). Tanpa ini
+       kodeP0 milik ULP lain tetap terbaca (IDOR). */
+    if (!barisUlpCocok_(g, rp[COL_P0.ulp])) {
+      audit_(g.sesi, "getLampiranPengecekanP0Dual_", kodeP0, "TOLAK",
+        "P0 milik ULP lain");
+      return { ok: false, error: "Data P0 bukan milik ULP Anda." };
+    }"""
+          if old not in s: raise SystemExit('rp blocker not found')
+          s=s.replace(old,new,1)
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Static blocker checks
+        run: |
+          grep -q "'Pengukuran'," SiSi_Mobile/lib/screens/dashboard_screen.dart
+          grep -q "size: selectedIndex == 2 ? 28.6 : 22" SiSi_Mobile/lib/screens/dashboard_screen.dart
+          grep -q "jadwalPadamMobileRouter_" SiSi_BackEnd/Core/Code.js
+          grep -q "getMobileApprovalP0List&token=" SiSi_Mobile/lib/services/api_service.dart
+          grep -q "getMobileLampiranPengecekanP0&token=" SiSi_Mobile/lib/services/api_service.dart
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('SiSi_BackEnd/Core/Tek-MobileDual.js').read_text()
+          assert s.index('var rp = rowsP[0];') < s.index('barisUlpCocok_(g, rp[COL_P0.ulp])')
+          PY
+      - name: Commit fixes and remove workflow
+        run: |
+          rm .github/workflows/fix-mobile-flow-blockers.yml
+          rm -f .github/workflows/apply-mobile-nav-v2.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add SiSi_Mobile/lib/screens/dashboard_screen.dart SiSi_Mobile/lib/services/api_service.dart SiSi_BackEnd/Core/Code.js SiSi_BackEnd/Core/Tek-MobileDual.js .github/workflows/
+          git commit -m "fix(mobile): resolve navigation, router, token, and P0 archive blockers"
+          git push origin HEAD:main
