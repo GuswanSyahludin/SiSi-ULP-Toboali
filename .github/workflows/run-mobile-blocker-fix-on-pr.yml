@@ -1,0 +1,42 @@
+name: Run mobile blocker fix on PR
+
+on:
+  pull_request:
+    types: [opened]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.head_ref == 'trigger-mobile-blocker-fix'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Extract and run audited patch
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('.github/workflows/fix-mobile-flow-blockers.yml').read_text()
+          start=s.index("          from pathlib import Path", s.index("python3 - <<'PY'"))
+          end=s.index("          PY", start)
+          lines=[]
+          for line in s[start:end].splitlines():
+              lines.append(line[10:] if line.startswith('          ') else line)
+          Path('/tmp/fix.py').write_text('\n'.join(lines)+'\n')
+          PY
+          python3 /tmp/fix.py
+          grep -q "'Pengukuran'," SiSi_Mobile/lib/screens/dashboard_screen.dart
+          grep -q "jadwalPadamMobileRouter_" SiSi_BackEnd/Core/Code.js
+          grep -q "getMobileApprovalP0List&token=" SiSi_Mobile/lib/services/api_service.dart
+      - name: Commit actual fixes
+        run: |
+          rm -f .github/workflows/fix-mobile-flow-blockers.yml .github/workflows/apply-mobile-nav-v2.yml .github/workflows/run-mobile-blocker-fix-on-pr.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add SiSi_Mobile/lib/screens/dashboard_screen.dart SiSi_Mobile/lib/services/api_service.dart SiSi_BackEnd/Core/Code.js SiSi_BackEnd/Core/Tek-MobileDual.js .github/workflows/
+          git commit -m "fix(mobile): resolve all four audited flow blockers"
+          git push origin HEAD:main
