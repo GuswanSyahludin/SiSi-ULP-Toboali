@@ -1,0 +1,198 @@
+name: Apply mobile nav v2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-mobile-nav-v2.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Patch dashboard navigation
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('SiSi_Mobile/lib/screens/dashboard_screen.dart')
+          s=p.read_text(encoding='utf-8')
+
+          s=s.replace("""  final List<String> menuItems = ['Tim', 'Teknik', 'Pengaturan'];
+  final List<IconData> menuIcons = [
+    Icons.people_outline_rounded,
+    Icons.handyman_outlined,
+    Icons.settings_outlined,
+  ];
+""","""  // Lima destinasi utama tetap. Beranda selalu di tengah agar muscle memory
+  // pengguna konsisten di semua role; tiap layar tetap menjalankan guard aksesnya.
+  final List<String> menuItems = const [
+    'Tim',
+    'Pengukuran',
+    'Beranda',
+    'Teknik',
+    'Pengaturan',
+  ];
+  final List<IconData> menuIcons = const [
+    Icons.groups_2_outlined,
+    Icons.electric_meter_outlined,
+    Icons.home_rounded,
+    Icons.handyman_outlined,
+    Icons.settings_outlined,
+  ];
+""",1)
+
+          s=s.replace("""    _bubbleController = AnimationController(vsync: this);
+""","""    _bubbleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 380),
+    );
+""",1)
+
+          old_lists="""  List<String> get currentMenuItems {
+    if (_isSuperUser) {
+      return ['Tim', 'Gardu', 'Beranda', 'Teknik', 'Pengaturan'];
+    }
+    if (_bolehGardu) {
+      return ['Tim', 'Gardu', 'Beranda', 'Pengaturan'];
+    }
+    return ['Tim', 'Beranda', 'Pengaturan'];
+  }
+
+  List<IconData> get currentMenuIcons {
+    if (_isSuperUser) {
+      return [
+        Icons.people_outline_rounded,
+        Icons.electrical_services_outlined,
+        Icons.home_rounded,
+        Icons.handyman_outlined,
+        Icons.settings_outlined,
+      ];
+    }
+    if (_bolehGardu) {
+      return [
+        Icons.people_outline_rounded,
+        Icons.electrical_services_outlined,
+        Icons.home_rounded,
+        Icons.settings_outlined,
+      ];
+    }
+    return [
+      Icons.people_outline_rounded,
+      Icons.home_rounded,
+      Icons.settings_outlined,
+    ];
+  }
+"""
+          new_lists="""  List<String> get currentMenuItems => menuItems;
+
+  List<IconData> get currentMenuIcons => menuIcons;
+"""
+          if old_lists not in s: raise SystemExit('current menu block not found')
+          s=s.replace(old_lists,new_lists,1)
+
+          old_anim="""    _bubbleController.animateWith(
+      SpringSimulation(
+        const SpringDescription(mass: 1.0, stiffness: 200.0, damping: 26.0),
+        0.0,
+        1.0,
+        0.0,
+      ),
+    );
+"""
+          new_anim="""    // Gerak halus tanpa bounce: posisi bubble mengikuti kurva exponential-out.
+    _bubbleController.forward(from: 0);
+"""
+          if old_anim not in s: raise SystemExit('spring animation block not found')
+          s=s.replace(old_anim,new_anim,1)
+
+          # Use eased value in both notch and bubble position interpolations.
+          s=s.replace("""                      notchX =
+                          startX + (targetX - startX) * _bubbleController.value;
+""","""                      final motion = Curves.easeOutCubic.transform(
+                        _bubbleController.value,
+                      );
+                      notchX = startX + (targetX - startX) * motion;
+""",1)
+          s=s.replace("""                      final currentX =
+                          startX + (targetX - startX) * _bubbleController.value;
+                      const bubbleSize = 56.0;
+""","""                      final motion = Curves.easeOutCubic.transform(
+                        _bubbleController.value,
+                      );
+                      final currentX = startX + (targetX - startX) * motion;
+                      const bubbleSize = 54.0;
+""",1)
+          s=s.replace("""                            size: 37.4,
+""","""                            // 1,3x ikon menu lain (22 x 1,3 = 28,6).
+                            size: 28.6,
+""",1)
+
+          s=s.replace("""      case 'Gardu':
+        return GarduScreen(sesi: widget.sesi);
+""","""      case 'Pengukuran':
+        return GarduScreen(sesi: widget.sesi);
+""",1)
+
+          # Add Pengukuran Gardu into Teknik as an explicit result-view entry.
+          marker="""    final List<Map<String, dynamic>> subTeknik = [
+      {
+        'title': 'Jadwal Padam',
+"""
+          insert="""    final List<Map<String, dynamic>> subTeknik = [
+      {
+        'title': 'Pengukuran Gardu',
+        'icon': Icons.electric_meter_rounded,
+        'desc': 'Lihat hasil pengukuran, pembebanan, tegangan, dan riwayat gardu',
+        'iconColor': AppColors.brand600,
+      },
+      {
+        'title': 'Jadwal Padam',
+"""
+          if marker not in s: raise SystemExit('subTeknik marker not found')
+          s=s.replace(marker,insert,1)
+
+          route="""                  if (title == 'Jadwal Padam') {
+          tujuan = JadwalPadamScreen(
+"""
+          route_new="""                  if (title == 'Pengukuran Gardu') {
+                    tujuan = GarduScreen(sesi: widget.sesi);
+                  } else if (title == 'Jadwal Padam') {
+          tujuan = JadwalPadamScreen(
+"""
+          if route not in s: raise SystemExit('teknik route marker not found')
+          s=s.replace(route,route_new,1)
+
+          # Remove unused physics/math imports after replacing spring navigation.
+          s=s.replace("import 'dart:math' as math;\n", "", 1)
+          s=s.replace("import 'package:flutter/physics.dart';\n", "", 1)
+          # Painter still needs math for circle geometry, so restore math import only.
+          s=s.replace("import 'dart:io';\n", "import 'dart:io';\nimport 'dart:math' as math;\n", 1)
+
+          p.write_text(s,encoding='utf-8')
+          PY
+          grep -q "'Pengukuran'," SiSi_Mobile/lib/screens/dashboard_screen.dart
+          grep -q "size: 28.6" SiSi_Mobile/lib/screens/dashboard_screen.dart
+          grep -q "Pengukuran Gardu" SiSi_Mobile/lib/screens/dashboard_screen.dart
+          grep -q "case 'Pengukuran'" SiSi_Mobile/lib/screens/dashboard_screen.dart
+          grep -q "Curves.easeOutCubic" SiSi_Mobile/lib/screens/dashboard_screen.dart
+      - name: Validate jadwal mobile flow
+        run: |
+          grep -q "class _JadwalForm" SiSi_Mobile/lib/screens/jadwal_padam_screen.dart
+          grep -q "JadwalPadamService.save" SiSi_Mobile/lib/screens/jadwal_padam_screen.dart
+          grep -q "getMobileJadwalPadamCalendar" SiSi_Mobile/lib/services/jadwal_padam_service.dart
+          grep -q "simpanMobileJadwalPadam" SiSi_Mobile/lib/services/jadwal_padam_service.dart
+      - name: Commit and remove workflow
+        run: |
+          rm .github/workflows/apply-mobile-nav-v2.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add SiSi_Mobile/lib/screens/dashboard_screen.dart .github/workflows/apply-mobile-nav-v2.yml
+          git commit -m "feat(mobile): add five-menu smooth nav and gardu measurement access"
+          git push origin HEAD:main
