@@ -2,7 +2,7 @@ name: Run mobile blocker fix on PR
 
 on:
   pull_request:
-    types: [opened]
+    types: [opened, synchronize]
 
 permissions:
   contents: write
@@ -23,17 +23,27 @@ jobs:
           s=Path('.github/workflows/fix-mobile-flow-blockers.yml').read_text()
           start=s.index("          from pathlib import Path", s.index("python3 - <<'PY'"))
           end=s.index("          PY", start)
-          lines=[]
-          for line in s[start:end].splitlines():
-              lines.append(line[10:] if line.startswith('          ') else line)
+          lines=[line[10:] if line.startswith('          ') else line for line in s[start:end].splitlines()]
           Path('/tmp/fix.py').write_text('\n'.join(lines)+'\n')
           PY
-          python3 /tmp/fix.py
+          set +e
+          python3 /tmp/fix.py > /tmp/mobile-fix.log 2>&1
+          code=$?
+          set -e
+          if [ "$code" -ne 0 ]; then
+            cp /tmp/mobile-fix.log /tmp/mobile-fix-saved.log
+            git reset --hard HEAD
+            cp /tmp/mobile-fix-saved.log .github/mobile-fix-error.log
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add .github/mobile-fix-error.log
+            git commit -m "chore: capture mobile blocker patch failure"
+            git push origin HEAD:main
+            exit 0
+          fi
           grep -q "'Pengukuran'," SiSi_Mobile/lib/screens/dashboard_screen.dart
           grep -q "jadwalPadamMobileRouter_" SiSi_BackEnd/Core/Code.js
           grep -q "getMobileApprovalP0List&token=" SiSi_Mobile/lib/services/api_service.dart
-      - name: Commit actual fixes
-        run: |
           rm -f .github/workflows/fix-mobile-flow-blockers.yml .github/workflows/apply-mobile-nav-v2.yml .github/workflows/run-mobile-blocker-fix-on-pr.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
