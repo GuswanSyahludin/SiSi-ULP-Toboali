@@ -24,7 +24,13 @@ jobs:
           start=s.index("          from pathlib import Path", s.index("python3 - <<'PY'"))
           end=s.index("          PY", start)
           lines=[line[10:] if line.startswith('          ') else line for line in s[start:end].splitlines()]
-          Path('/tmp/fix.py').write_text('\n'.join(lines)+'\n')
+          fix='\n'.join(lines)+'\n'
+          old="""if route not in s: raise SystemExit('jadwal route marker not found')
+s=s.replace(route,route2,1)"""
+          new="""if "if (title == 'Jadwal Padam') {" not in s: raise SystemExit('jadwal route marker not found')
+s=s.replace("if (title == 'Jadwal Padam') {", "if (title == 'Pengukuran Gardu') {\\n                    tujuan = GarduScreen(sesi: widget.sesi);\\n                  } else if (title == 'Jadwal Padam') {", 1)"""
+          fix=fix.replace(old,new)
+          Path('/tmp/fix.py').write_text(fix)
           PY
           set +e
           python3 /tmp/fix.py > /tmp/mobile-fix.log 2>&1
@@ -44,9 +50,9 @@ jobs:
           grep -q "'Pengukuran'," SiSi_Mobile/lib/screens/dashboard_screen.dart
           grep -q "jadwalPadamMobileRouter_" SiSi_BackEnd/Core/Code.js
           grep -q "getMobileApprovalP0List&token=" SiSi_Mobile/lib/services/api_service.dart
-          rm -f .github/workflows/fix-mobile-flow-blockers.yml .github/workflows/apply-mobile-nav-v2.yml .github/workflows/run-mobile-blocker-fix-on-pr.yml
+          rm -f .github/workflows/fix-mobile-flow-blockers.yml .github/workflows/apply-mobile-nav-v2.yml .github/workflows/run-mobile-blocker-fix-on-pr.yml .github/mobile-fix-error.log
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add SiSi_Mobile/lib/screens/dashboard_screen.dart SiSi_Mobile/lib/services/api_service.dart SiSi_BackEnd/Core/Code.js SiSi_BackEnd/Core/Tek-MobileDual.js .github/workflows/
+          git add SiSi_Mobile/lib/screens/dashboard_screen.dart SiSi_Mobile/lib/services/api_service.dart SiSi_BackEnd/Core/Code.js SiSi_BackEnd/Core/Tek-MobileDual.js .github/workflows/ .github/mobile-fix-error.log
           git commit -m "fix(mobile): resolve all four audited flow blockers"
           git push origin HEAD:main
