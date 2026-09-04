@@ -144,7 +144,8 @@
       }
       table {
         width: 100%;
-        min-width: 1680px;
+        min-width: 2200px;
+        table-layout: fixed;
         border-collapse: separate;
         border-spacing: 0;
         font-variant-numeric: tabular-nums;
@@ -162,12 +163,16 @@
         text-align: left;
         text-transform: uppercase;
         white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
       td {
-        padding: 12px 10px;
+        padding: 10px 8px;
         border-bottom: 1px solid oklch(93% 0.009 250);
-        vertical-align: top;
+        vertical-align: middle;
         white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
       tbody tr:nth-child(even) {
         background: oklch(98% 0.006 250);
@@ -179,23 +184,12 @@
         border-bottom: 0;
       }
       .cell-area {
-        max-width: 260px;
+        display: block;
+        width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
         line-height: 1.45;
-      }
-      span.cell-area {
-        display: block;
-      }
-      td.cell-area {
-        display: table-cell;
-      }
-      span.cell-area {
-        display: block;
-      }
-      td.cell-area {
-        display: table-cell;
       }
       .cell-empty {
         color: oklch(66% 0.018 250);
@@ -205,16 +199,16 @@
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        padding: 5px 9px;
+        padding: 4px 8px;
         border-radius: 999px;
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 700;
         white-space: nowrap;
       }
       .status:before {
         content: "";
-        width: 7px;
-        height: 7px;
+        width: 6px;
+        height: 6px;
         border-radius: 50%;
         background: currentColor;
       }
@@ -232,9 +226,9 @@
       }
       .work-status {
         display: inline-flex;
-        padding: 5px 9px;
+        padding: 4px 8px;
         border-radius: 999px;
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 700;
         white-space: nowrap;
       }
@@ -252,15 +246,15 @@
       .action-group {
         display: flex;
         justify-content: center;
-        gap: 8px;
+        gap: 6px;
       }
       .action-btn {
-        min-height: 34px;
-        padding: 0 12px;
+        min-height: 30px;
+        padding: 0 8px;
         border: 1px solid transparent;
-        border-radius: 7px;
+        border-radius: 6px;
         color: oklch(98% 0.005 250);
-        font: 700 12px/1 inherit;
+        font: 700 11px/1 inherit;
         cursor: pointer;
         white-space: nowrap;
       }
@@ -445,6 +439,29 @@
       <section class="table-shell">
         <div class="table-scroll">
           <table>
+            <colgroup>
+              <col style="width: 50px;">
+              <col style="width: 140px;">
+              <col style="width: 100px;">
+              <col style="width: 120px;">
+              <col style="width: 140px;">
+              <col style="width: 200px;">
+              <col style="width: 80px;">
+              <col style="width: 100px;">
+              <col style="width: 90px;">
+              <col style="width: 90px;">
+              <col style="width: 80px;">
+              <col style="width: 70px;">
+              <col style="width: 90px;">
+              <col style="width: 200px;">
+              <col style="width: 80px;">
+              <col style="width: 130px;">
+              <col style="width: 130px;">
+              <col style="width: 140px;">
+              <col style="width: 120px;">
+              <col style="width: 110px;">
+              <col style="width: 170px;">
+            </colgroup>
             <thead>
               <tr>
                 <th>No</th>
@@ -844,46 +861,46 @@
             return (
               '<tr data-kode="' +
               jpEsc(x.kode) +
-              '"><td>' +
+              '"><td title="' + jpEsc(x.no) + '">' +
               jpText(x.no) +
-              "</td><td><b>" +
+              '</td><td title="' + jpEsc(x.kode) + '"><b>' +
               jpText(x.kode) +
-              "</b></td><td>" +
+              '</b></td><td title="' + jpEsc(x.ulp) + '">' +
               jpText(x.ulp) +
-              "</td><td><b>" +
+              '</td><td title="' + jpEsc(x.penyulang) + '"><b>' +
               jpText(x.penyulang) +
-              "</b></td><td>" +
+              '</b></td><td title="' + jpEsc(x.section) + '">' +
               jpText(x.section) +
-              "</td><td>" +
+              '</td><td title="' + jpEsc(x.jenis) + '">' +
               jpText(x.jenis) +
-              "</td><td>" +
+              '</td><td title="' + jpEsc(x.hari) + '">' +
               jpText(x.hari) +
-              "</td><td>" +
+              '</td><td title="' + jpEsc(x.tanggalLabel || x.tanggal) + '">' +
               jpText(x.tanggalLabel || x.tanggal) +
-              "</td><td>" +
+              '</td><td title="' + jpEsc(x.jamPadam) + '">' +
               jpText(x.jamPadam) +
-              "</td><td>" +
+              '</td><td title="' + jpEsc(x.jamNyala) + '">' +
               jpText(x.jamNyala) +
-              "</td><td>" +
+              '</td><td title="' + jpEsc(x.durasi) + ' jam">' +
               jpNum(x.durasi, 2) +
-              " jam</td><td>" +
+              ' jam</td><td title="' + jpEsc(x.jumlahGardu) + '">' +
               jpNum(x.jumlahGardu, 0) +
-              "</td><td>" +
+              '</td><td title="' + jpEsc(x.jumlahPelanggan) + '">' +
               jpNum(x.jumlahPelanggan, 0) +
               '</td><td><span class="cell-area" title="' +
               jpEsc(x.daerah || "") +
               '">' +
               jpText(x.daerah) +
               "</span>" +
-              "</td><td>" +
+              '</td><td title="' + jpEsc(x.bebanA) + '">' +
               jpNum(x.bebanA, 2) +
-              "</td><td>" +
+              '</td><td title="' + jpEsc(x.ensRupiah) + '">' +
               jpRupiah(x.ensRupiah) +
-              '</td><td class="cell-area">' +
+              '</td><td><span class="cell-area" title="' + jpEsc(x.vip || "") + '">' +
               jpText(x.vip) +
-              '</td><td class="cell-area">' +
+              '</span></td><td><span class="cell-area" title="' + jpEsc(x.lokasi || "") + '">' +
               jpText(x.lokasi) +
-              '</td><td><span class="status ' +
+              '</span></td><td><span class="status ' +
               jpStatusClass(status) +
               '">' +
               jpEsc(status) +
