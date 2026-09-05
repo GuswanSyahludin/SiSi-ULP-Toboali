@@ -152,28 +152,42 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
   }
 
-  bool get _isSuperUser {
-    final role = (widget.sesi['role'] ?? '').toString().toLowerCase();
-    return role == 'super user' || role == 'admin';
+  String get _role =>
+      (widget.sesi['role'] ?? '').toString().trim().toLowerCase();
+
+  bool get _isSuperUser =>
+      _role == 'super user' || _role == 'superuser' || _role == 'admin';
+
+  bool get _bolehTeknik => _isSuperUser;
+
+  bool get _bolehGardu {
+    final subTim =
+        (widget.sesi['subTim'] ?? '').toString().trim().toLowerCase();
+    return _isSuperUser || subTim == 'inspeksi gardu';
   }
 
-  bool get _bolehGardu => GarduScreen.boleh(widget.sesi);
-
-  List<String> get currentMenuItems => const [
+  List<String> get currentMenuItems => [
         'Tim',
-        'Pengukuran',
+        if (_bolehGardu) 'Pengukuran',
         'Beranda',
-        'Teknik',
+        if (_bolehTeknik) 'Teknik',
         'Pengaturan',
       ];
 
-  List<IconData> get currentMenuIcons => const [
-        Icons.people_outline_rounded,
-        Icons.electrical_services_outlined,
-        Icons.home_rounded,
-        Icons.handyman_outlined,
-        Icons.settings_outlined,
-      ];
+  List<IconData> get currentMenuIcons => currentMenuItems.map((menu) {
+        switch (menu) {
+          case 'Tim':
+            return Icons.people_outline_rounded;
+          case 'Pengukuran':
+            return Icons.electrical_services_outlined;
+          case 'Beranda':
+            return Icons.home_rounded;
+          case 'Teknik':
+            return Icons.handyman_outlined;
+          default:
+            return Icons.settings_outlined;
+        }
+      }).toList();
 
   void _selectMenu(int index) {
     if (selectedIndex == index && _activeSubScreen == null) return;
@@ -353,7 +367,8 @@ class _DashboardScreenState extends State<DashboardScreen>
 
                       final currentX =
                           startX + (targetX - startX) * _bubbleController.value;
-                      final isBeranda = selectedIndex == 2;
+                      final isBeranda =
+                          currentMenuItems[selectedIndex] == 'Beranda';
                       final bubbleSize = isBeranda ? 64.0 : 52.0;
                       final bubbleTop = isBeranda ? -22.0 : -14.0;
 
@@ -512,7 +527,16 @@ class _DashboardScreenState extends State<DashboardScreen>
       case 'Pengukuran':
         return GarduScreen(sesi: widget.sesi);
       case 'Beranda':
-        return BerandaScreen(sesi: widget.sesi);
+        return BerandaScreen(
+          sesi: widget.sesi,
+          onOpenTim: () => _selectMenu(currentMenuItems.indexOf('Tim')),
+          onOpenPengukuran: _bolehGardu
+              ? () => _selectMenu(currentMenuItems.indexOf('Pengukuran'))
+              : null,
+          onOpenTeknik: _bolehTeknik
+              ? () => _selectMenu(currentMenuItems.indexOf('Teknik'))
+              : null,
+        );
       case 'Teknik':
         return _buildMenuTeknik();
       case 'Pengaturan':
