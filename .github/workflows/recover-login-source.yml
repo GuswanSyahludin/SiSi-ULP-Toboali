@@ -1,0 +1,32 @@
+name: Recover login source
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/recover-login-source.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Restore and patch
+        shell: bash
+        run: |
+          git checkout b131995894b03cead505eaa1d2ea90ea35438074 -- SiSi_Mobile/lib/screens/login_screen.dart
+          python3 -c "from pathlib import Path; p=Path('SiSi_Mobile/lib/screens/login_screen.dart'); s=p.read_text(); old='          border: InputBorder.none,\n          // Padding atas-bawah sama besar = teks benar-benar di tengah kolom'; new='          border: InputBorder.none,\n          enabledBorder: InputBorder.none,\n          focusedBorder: InputBorder.none,\n          disabledBorder: InputBorder.none,\n          errorBorder: InputBorder.none,\n          focusedErrorBorder: InputBorder.none,\n          // Border hanya digambar oleh Container luar.'; assert s.count(old)==1; p.write_text(s.replace(old,new,1)); assert p.stat().st_size > 10000"
+      - name: Commit recovery
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/recover-login-source.yml
+          git rm -f .github/workflows/fix-login-field-border.yml
+          git add SiSi_Mobile/lib/screens/login_screen.dart
+          git commit -m "fix(mobile): recover login and use single field border"
+          git push origin HEAD:main
