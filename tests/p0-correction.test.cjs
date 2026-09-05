@@ -29,7 +29,6 @@ function fixture() {
     _setTextY_:(s,r,c,v)=>s.getRange(r,c+1).setValue(v),_setY_:(s,r,c,v)=>s.getRange(r,c+1).setValue(v),
     safeCell_:s=>s,audit_:()=>{},SpreadsheetApp:{flush:()=>{}},Utilities:{getUuid:()=> 'web-id'},
     LockService:{getScriptLock:()=>({tryLock:()=>{if(locked)return false;locked=true;return true;},releaseLock:()=>{locked=false;}})},
-    _bobotPekerjaanMapY_:()=>({'row':4,'normal':2}),
     getListPekerjaanP0:()=>({ok:true,list:['ROW','Normal','Lain - Lain','Tanpa Bobot']}),
     getApprovalP0List:p=>({ok:true,list:[{kodeP0:'P0-1',status:p.status}]}),
     setApprovalP0:()=>{approvals++;return {ok:true,queued:true};},
@@ -38,7 +37,11 @@ function fixture() {
   vm.createContext(ctx);
   // Use the production duration parsing and scoring functions, not a test reimplementation.
   const score=legacy.slice(legacy.indexOf('function _skorDurasiY_('),legacy.indexOf('// Hitung & set Point'));
+  assert.ok(score.includes('function _hitungPoinDariRowY_('), 'Production score function must be loaded');
   vm.runInContext(score,ctx);
+  // The slice also defines the sheet-backed master reader. Replace only that I/O
+  // boundary AFTER loading the real formulas; never replace the formulas themselves.
+  ctx._bobotPekerjaanMapY_ = ()=>({row:4,normal:2});
   vm.runInContext(extension,ctx);
   const payload=(extra={})=>({token:'valid',kodeP0:'P0-1',namaPekerjaan:'Lain - Lain',bobotManual:3,alasanKoreksi:'Salah pilih jenis',requestId:'request-1',expectedNama:'ROW',expectedRevision:0,...extra});
   return {ctx,rows,C,session,payload,interrupt:()=>{failWrite=true;},approvals:()=>approvals};
