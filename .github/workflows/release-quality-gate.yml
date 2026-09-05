@@ -43,6 +43,11 @@ jobs:
         run: |
           grep -q 'jadwalPadamMobileRouter_(e, body)' SiSi_BackEnd/Core/Code.js
           grep -q 'gangguanBerandaMobileRouter_(e, body)' SiSi_BackEnd/Core/Code.js
+          grep -q 'SISI_WEBHOOK_SECRET' SiSi_BackEnd/Core/Guard.js
+          if grep -q 'var WEBHOOK_SECRET[[:space:]]*=' SiSi_BackEnd/Core/Code.js; then
+            echo 'Hardcoded webhook secret declaration found' >&2
+            exit 1
+          fi
           python3 - <<'PY'
           from pathlib import Path
           source = Path('SiSi_BackEnd/Core/Tek-MobileDual.js').read_text()
