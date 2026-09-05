@@ -164,16 +164,28 @@ function _deltaYandalPetugasRows_() {
   var ss = SpreadsheetApp.openById(SPREADSHEET_ID),
     sh = null,
     sheets = ss.getSheets();
+  var candidates = {
+    "db_list_petugas_yandal": true,
+    "db_yandal_list_petugas": true,
+    "list_petugas_yandal": true,
+    "list petugas yandal": true,
+  };
   for (var i = 0; i < sheets.length; i++) {
     var normalized = String(sheets[i].getName() || "")
       .trim()
-      .toLowerCase();
-    if (normalized === "db_list_petugas_yandal") {
+      .toLowerCase()
+      .replace(/\s+/g, " ");
+    var underscored = normalized.replace(/ /g, "_");
+    if (candidates[normalized] || candidates[underscored]) {
       sh = sheets[i];
       break;
     }
   }
-  if (!sh || sh.getLastRow() < 2) return [];
+  if (!sh)
+    throw new Error(
+      "Sheet List Petugas Yandal tidak ditemukan. Nama yang didukung: db_List_Petugas_Yandal, db_Yandal_List_Petugas, List Petugas Yandal.",
+    );
+  if (sh.getLastRow() < 2) return [];
   var width = sh.getLastColumn(),
     headers = sh.getRange(1, 1, 1, width).getValues()[0];
   var nameCols = [];
