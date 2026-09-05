@@ -7,8 +7,7 @@ import '../../services/sesi_store.dart';
 import '../app_database.dart';
 import '../db_provider.dart';
 
-/// Existing mirror/decision tables are retained. Corrections use an additive
-/// SQL table so upgrading never rebuilds or clears the user's outboxes.
+/// Existing mirrors and decisions are preserved. Corrections are additive.
 class P0Repository {
   AppDatabase get _db => DbProvider.instance;
   P0Dao get _dao => _db.p0Dao;
@@ -85,11 +84,16 @@ class P0Repository {
         final p = Map<String, dynamic>.from(jsonDecode(c['payload'] as String));
         final receipt = p['receipt'] is Map ? Map<String, dynamic>.from(p['receipt']) : <String, dynamic>{};
         final sent = c['state'] == 'sent';
-        // A receipt overlays stale mirrors only until an equal/newer server revision arrives.
         if (!sent || ((item['koreksiRevision'] as num?) ?? 0) < ((receipt['revision'] as num?) ?? 0)) {
           item['namaPekerjaan'] = sent ? receipt['namaPekerjaan'] : p['namaPekerjaan'];
           item['bobotManual'] = sent ? receipt['bobotManual'] : p['bobotManual'];
-          if (sent) { item['koreksiRevision'] = receipt['revision']; item['koreksiHistory'] = receipt['history']; item['point'] = receipt['point']; }
+          if (sent) {
+            item['namaPekerjaanRaw'] = receipt['namaPekerjaan'];
+            item['koreksiRevision'] = receipt['revision'];
+            item['koreksiHistory'] = receipt['history'];
+            item['point'] = receipt['point'];
+            item['koreksiServerPending'] = false;
+          }
         }
         item['koreksiPending'] = !sent;
         item['koreksiGagal'] = c['error'];
@@ -113,7 +117,7 @@ class P0Repository {
     await _db.transaction(() async {
       await _notSending();
       final old = await _db.customSelect('SELECT * FROM p0_corrections_v2 WHERE kode=?', variables: [Variable<String>(item['kodeP0'].toString())]).get();
-      if (old.isNotEmpty && old.first.data['state'] != 'sent') throw StateError('Kirim koreksi sebelumnya terlebih dahulu. Jika konflik, muat data server sebelum membuat koreksi baru.');
+      if (old.isNotEmpty && old.first.data['state'] != 'sent') throw StateError('Kirim koreksi sebelumnya terlebih dahulu. Jika konflik, minta administrator meninjau koreksi; antrean tidak dihapus.');
       final payload = {'kodeP0': item['kodeP0'], 'namaPekerjaan': nama, 'alasanKoreksi': alasan.trim(), 'bobotManual': other(nama) ? bobot : null, 'expectedNama': item['namaPekerjaanRaw'] ?? item['namaPekerjaan'], 'expectedRevision': item['koreksiRevision'] ?? 0, 'requestId': _id()};
       await _db.customStatement('INSERT OR REPLACE INTO p0_corrections_v2(kode,owner,ulp,payload,state,error) VALUES(?,?,?,?,?,?)', [item['kodeP0'], owner, s['ulp'] ?? '', jsonEncode(payload), 'pending', '']);
     });
@@ -125,6 +129,8 @@ class P0Repository {
       if (keputusan == 'Rejected' && alasan.trim().isEmpty) throw StateError('Alasan penolakan wajib diisi.');
       await _db.transaction(() async {
         await _notSending();
+        final existing = await _dao.keputusan(kodeP0);
+        if (existing != null && existing.username.toLowerCase() != s['username'].toString().toLowerCase()) throw StateError('Masih ada keputusan milik akun lain pada P0 ini.');
         await _dao.simpanKeputusan(P0OutboxesCompanion(kodeP0: Value(kodeP0), keputusan: Value(keputusan), alasan: Value(alasan.trim()), username: Value(s['username'].toString()), tanggal: Value(tanggal), dibuatPada: Value(DateTime.now().toIso8601String()), status: const Value('pending'), percobaan: const Value(0), pesanGagal: const Value('')));
       });
       return {'ok': true};
@@ -149,27 +155,41 @@ class P0Repository {
     final rows = await (_db.select(_db.p0Lokals)..where((t) => t.kodeP0.equals(code))).get();
     if (rows.isEmpty) return;
     final item = Map<String, dynamic>.from(jsonDecode(rows.first.dataJson));
-    item.addAll({'namaPekerjaan': r['namaPekerjaan'], 'namaPekerjaanRaw': r['namaPekerjaan'], 'bobotManual': r['bobotManual'], 'koreksiRevision': r['revision'], 'koreksiHistory': r['history'], 'point': r['point']});
+    item.addAll({'namaPekerjaan': r['namaPekerjaan'], 'namaPekerjaanRaw': r['namaPekerjaan'], 'bobotManual': r['bobotManual'], 'koreksiRevision': r['revision'], 'koreksiHistory': r['history'], 'koreksiServerPending': false, 'point': r['point']});
     await (_db.update(_db.p0Lokals)..where((t) => t.kodeP0.equals(code))).write(P0LokalsCompanion(dataJson: Value(jsonEncode(item))));
   }
   Future<Map<String, dynamic>> kirimAntrean() async {
     await _ensure();
     final s = await _session(), owner = _owner(s), lease = _id();
-    final corrections = (await _corrections(owner)).where((r) => r['state'] != 'sent').toList();
-    final decisions = (await _dao.antrean()).where((a) => a.username.toLowerCase() == s['username'].toString().toLowerCase()).toList();
-    if (corrections.isEmpty && decisions.isEmpty) return {'ok': true, 'terkirim': 0, 'gagal': 0, 'kosong': true};
-    if (!admin(s)) return {'ok': false, 'message': 'Akun ini tidak lagi memiliki izin Admin. Antrean tidak dihapus.'};
     try {
-      await _db.transaction(() async { await _notSending(); await _db.customStatement('INSERT OR REPLACE INTO p0_sync_lease_v2(id,owner,expires) VALUES(1,?,?)', [lease, DateTime.now().millisecondsSinceEpoch + 300000]); });
+      await _db.transaction(() async {
+        await _notSending();
+        await _db.customStatement('INSERT OR REPLACE INTO p0_sync_lease_v2(id,owner,expires) VALUES(1,?,?)', [lease, DateTime.now().millisecondsSinceEpoch + 300000]);
+      });
     } catch (e) { return {'ok': false, 'message': e.toString()}; }
-    var sent = 0, failed = 0; final errors = <String>[]; final blocked = <String>{};
+    var sent = 0, failed = 0;
+    final errors = <String>[];
+    final blocked = <String>{};
     Future<void> renew() async {
       final now = await _session();
       if (_owner(now) != owner || !admin(now)) throw StateError('Akun berubah saat sinkron. Antrean dihentikan.');
-      await _db.customStatement('UPDATE p0_sync_lease_v2 SET expires=? WHERE owner=?', [DateTime.now().millisecondsSinceEpoch + 300000, lease]);
+      await _db.transaction(() async {
+        final leaseRows = await _db.customSelect('SELECT owner FROM p0_sync_lease_v2 WHERE id=1').get();
+        if (leaseRows.isEmpty || leaseRows.first.data['owner'] != lease) throw StateError('Pengiriman diteruskan oleh proses lain.');
+        await _db.customStatement('UPDATE p0_sync_lease_v2 SET expires=? WHERE owner=?', [DateTime.now().millisecondsSinceEpoch + 300000, lease]);
+      });
     }
     try {
-      // Server corrections must succeed BEFORE approval for the same P0.
+      // Snapshot AFTER acquiring the shared lease: no edit can slip between
+      // snapshotting corrections and approvals, even from another isolate.
+      final corrections = (await _corrections(owner)).where((r) => r['state'] != 'sent').toList();
+      final decisions = (await _dao.antrean()).where((a) => a.username.toLowerCase() == s['username'].toString().toLowerCase()).toList();
+      if (corrections.isEmpty && decisions.isEmpty) return {'ok': true, 'terkirim': 0, 'gagal': 0, 'kosong': true};
+      if (!admin(s)) return {'ok': false, 'message': 'Akun ini tidak lagi memiliki izin Admin. Antrean tidak dihapus.'};
+      // A decision must not bypass an unsent correction belonging to another account.
+      final allPending = await _db.customSelect("SELECT kode FROM p0_corrections_v2 WHERE state <> 'sent'").get();
+      final ownCodes = corrections.map((r) => r['kode'].toString()).toSet();
+      for (final r in allPending) { final code = r.data['kode'].toString(); if (!ownCodes.contains(code)) blocked.add(code); }
       for (final c in corrections) {
         await renew();
         final code = c['kode'].toString();
@@ -177,8 +197,10 @@ class P0Repository {
         try {
           final capability = await P0CorrectionApi.call('getListPekerjaanP0', {});
           if (capability['correctionVersion'] != 2) throw StateError('Backend koreksi P0 belum di-deploy.');
+          await renew();
           final r = await P0CorrectionApi.call('updateNamaPekerjaanP0', p);
           if (r['ok'] != true) throw StateError('${r['error'] ?? r['message']}');
+          await renew();
           await _db.transaction(() async {
             await _receipt(code, r);
             await _db.customStatement('UPDATE p0_corrections_v2 SET state=?,payload=?,error=? WHERE kode=? AND owner=?', ['sent', jsonEncode({...p, 'receipt': r}), '', code, owner]);
@@ -190,11 +212,12 @@ class P0Repository {
         }
       }
       for (final a in decisions) {
-        if (blocked.contains(a.kodeP0)) { failed++; continue; }
+        if (blocked.contains(a.kodeP0)) { failed++; errors.add('${a.kodeP0}: koreksi jenis belum berhasil terkirim.'); continue; }
         await renew();
         try {
           final r = await P0CorrectionApi.call('setMobileApprovalP0', {'kodeP0': a.kodeP0, 'keputusan': a.keputusan, 'alasan': a.alasan});
           if (r['ok'] != true) throw StateError('${r['error'] ?? r['message']}');
+          await renew();
           await _db.transaction(() async { await _dao.setStatusServer(a.kodeP0, a.keputusan); await _dao.hapusTerkirim(a.kodeP0); });
           sent++;
         } catch (e) { failed++; errors.add('${a.kodeP0}: $e'); await _dao.tandaiGagal(a.kodeP0, a.percobaan + 1, e.toString()); }
