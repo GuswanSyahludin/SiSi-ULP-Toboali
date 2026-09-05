@@ -1,81 +1,30 @@
-# Triggered after workflow registration on the default branch.
-name: Fix verified release blockers
-
+name: Apply release blocker fixes
 on:
   push:
     branches: [main]
-    paths:
-      - '.github/workflows/fix-verified-release-blockers.yml'
-
+    paths: ['.github/workflows/fix-verified-release-blockers.yml']
 permissions:
   contents: write
-
 jobs:
-  patch-source:
+  patch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 0
-      - name: Patch verified blockers
-        shell: bash
+        with: {ref: main, fetch-depth: 0}
+      - name: Patch source
         run: |
           python3 <<'PY'
           from pathlib import Path
-
-          def replace_once(path, old, new):
-              p = Path(path)
-              text = p.read_text()
-              count = text.count(old)
-              if count != 1:
-                  raise SystemExit(f'{path}: expected one match, found {count}')
-              p.write_text(text.replace(old, new, 1))
-
-          dashboard = 'SiSi_Mobile/lib/screens/dashboard_screen.dart'
-          replace_once(dashboard, """  final List<String> menuItems = ['Tim', 'Teknik', 'Pengaturan'];
-  final List<IconData> menuIcons = [
-    Icons.people_outline_rounded,
-    Icons.handyman_outlined,
-    Icons.settings_outlined,
-  ];
-
-""", "")
-          replace_once(dashboard, """  List<String> get currentMenuItems {
-    if (_isSuperUser) {
-      return ['Tim', 'Gardu', 'Beranda', 'Teknik', 'Pengaturan'];
-    }
-    if (_bolehGardu) {
-      return ['Tim', 'Gardu', 'Beranda', 'Pengaturan'];
-    }
-    return ['Tim', 'Beranda', 'Pengaturan'];
-  }
-
-  List<IconData> get currentMenuIcons {
-    if (_isSuperUser) {
-      return [
-        Icons.people_outline_rounded,
-        Icons.electrical_services_outlined,
-        Icons.home_rounded,
-        Icons.handyman_outlined,
-        Icons.settings_outlined,
-      ];
-    }
-    if (_bolehGardu) {
-      return [
-        Icons.people_outline_rounded,
-        Icons.electrical_services_outlined,
-        Icons.home_rounded,
-        Icons.settings_outlined,
-      ];
-    }
-    return [
-      Icons.people_outline_rounded,
-      Icons.home_rounded,
-      Icons.settings_outlined,
-    ];
-  }
-""", """  List<String> get currentMenuItems => const [
+          import re
+          def one(path, old, new):
+            p=Path(path); s=p.read_text()
+            if s.count(old)!=1: raise SystemExit(f'{path}: match={s.count(old)}')
+            p.write_text(s.replace(old,new,1))
+          d='SiSi_Mobile/lib/screens/dashboard_screen.dart'
+          p=Path(d); s=p.read_text()
+          s,n=re.subn(r"  final List<String> menuItems = .*?\n  \];\n\n",'',s,count=1,flags=re.S)
+          if n!=1: raise SystemExit('legacy menu fields not found')
+          fixed="""  List<String> get currentMenuItems => const [
         'Tim',
         'Pengukuran',
         'Beranda',
@@ -90,124 +39,68 @@ jobs:
         Icons.handyman_outlined,
         Icons.settings_outlined,
       ];
-""")
-          replace_once(dashboard, """      case 'Gardu':
-        return GarduScreen(sesi: widget.sesi);
-""", """      case 'Pengukuran':
-        return GarduScreen(sesi: widget.sesi);
-""")
-          replace_once(dashboard, """                      const bubbleSize = 56.0;
 
-                      return Positioned(
-                        left: currentX - (bubbleSize / 2),
-                        top: -17,
-""", """                      final isBeranda = selectedIndex == 2;
-                      final bubbleSize = isBeranda ? 64.0 : 52.0;
-                      final bubbleTop = isBeranda ? -22.0 : -14.0;
+"""
+          s,n=re.subn(r"  List<String> get currentMenuItems \{.*?(?=  void _selectMenu)",fixed,s,count=1,flags=re.S)
+          if n!=1: raise SystemExit('dynamic menu getters not found')
+          s=s.replace("case 'Gardu':","case 'Pengukuran':",1)
+          s=s.replace("const bubbleSize = 56.0;","final isBeranda = selectedIndex == 2;\n                      final bubbleSize = isBeranda ? 64.0 : 52.0;\n                      final bubbleTop = isBeranda ? -22.0 : -14.0;",1)
+          s=s.replace('top: -17,','top: bubbleTop,',1).replace('size: 37.4,','size: isBeranda ? 39.0 : 30.0,',1)
+          p.write_text(s)
 
-                      return Positioned(
-                        left: currentX - (bubbleSize / 2),
-                        top: bubbleTop,
-""")
-          replace_once(dashboard, """                            size: 37.4,
-                            color: Colors.white,
-""", """                            size: isBeranda ? 39.0 : 30.0,
-                            color: Colors.white,
-""")
-
-          api = 'SiSi_Mobile/lib/services/api_service.dart'
-          replace_once(api, """  static Future<Map<String, dynamic>> getApprovalP0List({
-    required String ulp,
-    String status = 'Menunggu',
-    String? tanggal,
-  }) async {
+          a='SiSi_Mobile/lib/services/api_service.dart'
+          one(a,"""  }) async {
     final uri = Uri.parse(
-      '$baseUrl?mobile=1&action=getMobileApprovalP0List&ulp=${Uri.encodeComponent(ulp)}&status=${Uri.encodeComponent(status)}&tanggal=${Uri.encodeComponent(tanggal ?? '')}',
-    );
-""", """  static Future<Map<String, dynamic>> getApprovalP0List({
-    required String ulp,
-    String status = 'Menunggu',
-    String? tanggal,
-  }) async {
+      '$baseUrl?mobile=1&action=getMobileApprovalP0List""","""  }) async {
     final sesi = await SesiStore.muat();
     final token = (sesi?['token'] ?? '').toString();
     final uri = Uri.parse(
-      '$baseUrl?mobile=1&action=getMobileApprovalP0List&token=${Uri.encodeComponent(token)}&ulp=${Uri.encodeComponent(ulp)}&status=${Uri.encodeComponent(status)}&tanggal=${Uri.encodeComponent(tanggal ?? '')}',
-    );
-""")
-          replace_once(api, """  }) async {
-    // Rev 19 Agu malam: POST -> GET. Backend sudah membaca e.parameter (doGet -> apiRouter_),
-""", """  }) async {
+      '$baseUrl?mobile=1&action=getMobileApprovalP0List&token=${Uri.encodeComponent(token)}""")
+          one(a,"""  }) async {
+    // Rev 19 Agu malam: POST -> GET.""","""  }) async {
     final sesi = await SesiStore.muat();
     final token = (sesi?['token'] ?? '').toString();
-    // Rev 19 Agu malam: POST -> GET. Backend sudah membaca e.parameter (doGet -> apiRouter_),
-""")
-          replace_once(api, """      '$baseUrl?mobile=1&action=setMobileApprovalP0'
-      '&kodeP0=${Uri.encodeComponent(kodeP0)}'
-""", """      '$baseUrl?mobile=1&action=setMobileApprovalP0'
+    // Rev 19 Agu malam: POST -> GET.""")
+          one(a,"""      '$baseUrl?mobile=1&action=setMobileApprovalP0'
+      '&kodeP0=""","""      '$baseUrl?mobile=1&action=setMobileApprovalP0'
       '&token=${Uri.encodeComponent(token)}'
-      '&kodeP0=${Uri.encodeComponent(kodeP0)}'
-""")
-          replace_once(api, """  static Future<Map<String, dynamic>> getLampiranPengecekanP0(
-      String kodeP0) async {
+      '&kodeP0=""")
+          one(a,"""      String kodeP0) async {
     final uri = Uri.parse(
-      '$baseUrl?mobile=1&action=getMobileLampiranPengecekanP0&kodeP0=${Uri.encodeComponent(kodeP0)}',
-    );
-""", """  static Future<Map<String, dynamic>> getLampiranPengecekanP0(
-      String kodeP0) async {
+      '$baseUrl?mobile=1&action=getMobileLampiranPengecekanP0&kodeP0=""","""      String kodeP0) async {
     final sesi = await SesiStore.muat();
     final token = (sesi?['token'] ?? '').toString();
     final uri = Uri.parse(
-      '$baseUrl?mobile=1&action=getMobileLampiranPengecekanP0&token=${Uri.encodeComponent(token)}&kodeP0=${Uri.encodeComponent(kodeP0)}',
-    );
-""")
+      '$baseUrl?mobile=1&action=getMobileLampiranPengecekanP0&token=${Uri.encodeComponent(token)}&kodeP0=""")
 
-          code = 'SiSi_BackEnd/Core/Code.js'
-          replace_once(code, """  if (typeof gangguanBerandaMobileRouter_ === "function") {
-""", """  if (typeof jadwalPadamMobileRouter_ === "function") {
+          c='SiSi_BackEnd/Core/Code.js'
+          one(c,'  if (typeof gangguanBerandaMobileRouter_ === "function") {',"""  if (typeof jadwalPadamMobileRouter_ === "function") {
     var lewatJadwalPadam = jadwalPadamMobileRouter_(e, body);
     if (lewatJadwalPadam)
-      return ContentService.createTextOutput(
-        JSON.stringify(lewatJadwalPadam),
-      ).setMimeType(ContentService.MimeType.JSON);
+      return ContentService.createTextOutput(JSON.stringify(lewatJadwalPadam))
+        .setMimeType(ContentService.MimeType.JSON);
   }
 
-  if (typeof gangguanBerandaMobileRouter_ === "function") {
-""")
+  if (typeof gangguanBerandaMobileRouter_ === "function") {""")
+          t='SiSi_BackEnd/Core/Tek-MobileDual.js'
+          p=Path(t); s=p.read_text(); marker='    /* PEMILIKAN: P0 harus milik ULP sesi'
+          if s.count(marker)!=1: raise SystemExit('ownership marker missing')
+          s=s.replace(marker,'    var rp = rowsP[0];\n'+marker,1)
+          if s.count('    var rp = rowsP[0];')!=2: raise SystemExit('unexpected rp count')
+          first=s.index('    var rp = rowsP[0];'); second=s.index('    var rp = rowsP[0];',first+1)
+          s=s[:second]+s[second+len('    var rp = rowsP[0];\n'):]
+          p.write_text(s)
 
-          dual = 'SiSi_BackEnd/Core/Tek-MobileDual.js'
-          replace_once(dual, """    /* PEMILIKAN: P0 harus milik ULP sesi (kecuali Super User). Tanpa ini
-       kodeP0 milik ULP lain tetap terbaca (IDOR). */
-    if (!barisUlpCocok_(g, rp[COL_P0.ulp])) {
-""", """    var rp = rowsP[0];
-    /* PEMILIKAN: P0 harus milik ULP sesi (kecuali Super User). Tanpa ini
-       kodeP0 milik ULP lain tetap terbaca (IDOR). */
-    if (!barisUlpCocok_(g, rp[COL_P0.ulp])) {
-""")
-          replace_once(dual, """    var rp = rowsP[0];
-    var p0 = {
-""", """    var p0 = {
-""")
-
-          d = Path(dashboard).read_text()
-          a = Path(api).read_text()
-          c = Path(code).read_text()
-          t = Path(dual).read_text()
-          assert "['Tim', 'Gardu', 'Beranda'" not in d
-          assert "'Pengukuran',\n        'Beranda'" in d
-          assert a.count("token=${Uri.encodeComponent(token)}") >= 3
-          assert 'jadwalPadamMobileRouter_(e, body)' in c
-          assert t.index('var rp = rowsP[0];') < t.index('barisUlpCocok_(g, rp[COL_P0.ulp])')
+          assert "'Pengukuran',\n        'Beranda'" in Path(d).read_text()
+          assert Path(a).read_text().count('&token=${Uri.encodeComponent(token)}') >= 3
+          assert 'jadwalPadamMobileRouter_(e, body)' in Path(c).read_text()
+          z=Path(t).read_text(); assert z.index('var rp = rowsP[0];') < z.index('barisUlpCocok_(g, rp[COL_P0.ulp])')
           PY
-      - name: Commit source fixes and remove one-shot workflow
-        shell: bash
+      - name: Commit fixes
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git rm .github/workflows/fix-verified-release-blockers.yml
-          git add SiSi_Mobile/lib/screens/dashboard_screen.dart \
-                  SiSi_Mobile/lib/services/api_service.dart \
-                  SiSi_BackEnd/Core/Code.js \
-                  SiSi_BackEnd/Core/Tek-MobileDual.js
-          git commit -m "fix: clear four verified mobile release blockers"
+          git add SiSi_Mobile/lib/screens/dashboard_screen.dart SiSi_Mobile/lib/services/api_service.dart SiSi_BackEnd/Core/Code.js SiSi_BackEnd/Core/Tek-MobileDual.js
+          git commit -m 'fix: clear four verified mobile release blockers'
           git push origin HEAD:main
