@@ -1,273 +1,206 @@
-// lib/db/repositories/p0_repository.dart
-// ───────────────────────────────────────────────────
-// Repository Verifikasi P0 — satu-satunya lapisan yang boleh disentuh UI.
-//
-// ATURAN MENU INI (Rev 22 Agu 2026):
-//   MEMBACA daftar : server dulu → cermin lokal disegarkan → offline baca cermin.
-//   MENULIS keputusan : SELALU ke server lokal (SQLite) dulu. TIDAK ada satu pun
-//     permintaan jaringan saat Approve/Reject ditekan.
-//   MENGIRIM : hanya lewat Pengaturan → Sinkron (kirimAntrean), yang meneruskan
-//     ke Apps Script (setMobileApprovalP0) lalu ke gsheet.
-//
-// Efeknya untuk admin: keputusan terasa seketika, dan verifikasi bisa dikerjakan
-// di lapangan tanpa sinyal — pengiriman menyusul saat kembali online.
-// ───────────────────────────────────────────────────
-
 import 'dart:convert';
-
-import 'package:drift/drift.dart' show Value;
-
+import 'dart:math';
+import 'package:drift/drift.dart' show Value, Variable;
 import '../../services/api_service.dart';
-import '../app_database.dart'; // wajib: Companion class hasil generate ada di sini
+import '../../services/p0_correction_api.dart';
+import '../../services/sesi_store.dart';
+import '../app_database.dart';
 import '../db_provider.dart';
 
+/// Existing mirror/decision tables are retained. Corrections use an additive
+/// SQL table so upgrading never rebuilds or clears the user's outboxes.
 class P0Repository {
-  P0Dao get _dao => DbProvider.instance.p0Dao;
-
-  // ═════ BACA DAFTAR ═════
-
-  /// Daftar kartu P0 untuk 1 tanggal + 1 status — SERVER dulu.
-  ///
-  /// Bentuk balasan menyerupai ApiService.getApprovalP0List agar UI lama nyaris
-  /// tidak berubah, dengan tambahan:
-  ///   'offline'      : true bila daftar berasal dari cermin lokal
-  ///   'jumlahAntrean': banyaknya keputusan yang belum dikirim
-  /// dan pada tiap item:
-  ///   'lokalPending' : true bila status item berasal dari keputusan lokal yang
-  ///                    BELUM terkirim (UI menandainya "belum tersinkron").
-  Future<Map<String, dynamic>> bacaList({
-    required String ulp,
-    required String status,
-    required String tanggal,
-  }) async {
-    var offline = false;
-
-    // 1) Server dulu — status "semua" agar cermin lokal lengkap untuk ketiga tab
-    //    sekali tarik (hemat permintaan: pindah tab tidak menembak server lagi).
+  AppDatabase get _db => DbProvider.instance;
+  P0Dao get _dao => _db.p0Dao;
+  static bool other(String name) => name.toLowerCase().replaceAll(RegExp(r'[\s_\-]+'), '') == 'lainlain';
+  static bool admin(Map<String, dynamic> s) => {'admin', 'administrator', 'super', 'superuser'}.contains((s['role'] ?? '').toString().toLowerCase().replaceAll(RegExp(r'[\s_\-]+'), ''));
+  static String _id() => '${DateTime.now().microsecondsSinceEpoch}-${Random.secure().nextInt(1 << 30)}';
+  Future<void> _ensure() async {
+    await _db.customStatement('CREATE TABLE IF NOT EXISTS p0_corrections_v2 (kode TEXT PRIMARY KEY, owner TEXT NOT NULL, ulp TEXT NOT NULL, payload TEXT NOT NULL, state TEXT NOT NULL, error TEXT NOT NULL DEFAULT \'\')');
+    await _db.customStatement('CREATE TABLE IF NOT EXISTS p0_master_v2 (owner TEXT PRIMARY KEY, payload TEXT NOT NULL)');
+    await _db.customStatement('CREATE TABLE IF NOT EXISTS p0_sync_lease_v2 (id INTEGER PRIMARY KEY, owner TEXT NOT NULL, expires INTEGER NOT NULL)');
+  }
+  Future<Map<String, dynamic>> _session({bool write = false}) async {
+    final s = await SesiStore.muat();
+    if (s == null || (s['username'] ?? '').toString().isEmpty) throw StateError('Silakan login ulang.');
+    if (write && !admin(s)) throw StateError('Koreksi dan keputusan hanya untuk Admin / Super User.');
+    return Map<String, dynamic>.from(s);
+  }
+  String _owner(Map<String, dynamic> s) => '${s['username']}|${s['ulp']}'.toLowerCase();
+  Future<void> _notSending() async {
+    final rows = await _db.customSelect('SELECT expires FROM p0_sync_lease_v2 WHERE id=1').get();
+    if (rows.isNotEmpty && (rows.first.data['expires'] as int) > DateTime.now().millisecondsSinceEpoch) throw StateError('Pengiriman P0 sedang berjalan. Tunggu sebelum mengedit atau membatalkan.');
+  }
+  Future<List<Map<String, dynamic>>> _corrections(String owner) async {
+    await _ensure();
+    final rows = await _db.customSelect('SELECT * FROM p0_corrections_v2 WHERE owner=?', variables: [Variable<String>(owner)]).get();
+    return rows.map((r) => Map<String, dynamic>.from(r.data)).toList();
+  }
+  Future<Map<String, dynamic>> masterJenis() async {
+    await _ensure();
+    final s = await _session(write: true), owner = _owner(s);
     try {
-      final res = await ApiService.getApprovalP0List(
-        ulp: ulp,
-        status: '',
-        tanggal: tanggal,
-      );
-      if (res['ok'] == true) {
-        await _segarkanCermin(
-            ulp, tanggal, List<dynamic>.from(res['list'] ?? []));
-      } else {
-        offline = true;
-      }
-    } catch (_) {
-      offline = true;
-    }
-
-    // 2) Selalu sajikan dari cermin lokal supaya hasilnya identik online maupun
-    //    offline, dan keputusan yang belum terkirim ikut terlihat.
-    return _susunDariCermin(
-      ulp: ulp,
-      status: status,
-      tanggal: tanggal,
-      offline: offline,
-    );
-  }
-
-  /// Daftar dari CERMIN LOKAL saja — tanpa satu pun permintaan jaringan.
-  ///
-  /// Dipakai saat berpindah tab (Menunggu / Approved / Rejected): cermin sudah
-  /// memuat ketiga status hasil satu kali tarik, jadi tidak ada alasan menembak
-  /// backend lagi hanya untuk menyaring.
-  Future<Map<String, dynamic>> bacaListLokal({
-    required String ulp,
-    required String status,
-    required String tanggal,
-  }) {
-    return _susunDariCermin(
-      ulp: ulp,
-      status: status,
-      tanggal: tanggal,
-      offline: false,
-      diamSaatKosong: true,
-    );
-  }
-
-  /// Menyusun daftar + badge dari cermin lokal, dengan keputusan lokal ditumpuk
-  /// di atas status server.
-  Future<Map<String, dynamic>> _susunDariCermin({
-    required String ulp,
-    required String status,
-    required String tanggal,
-    required bool offline,
-    bool diamSaatKosong = false,
-  }) async {
-    final baris = await _dao.bacaCermin(ulp, tanggal);
-    final antrean = await _dao.antrean();
-    final petaKeputusan = {for (final a in antrean) a.kodeP0: a};
-
-    final hasil = <Map<String, dynamic>>[];
-    final counts = <String, int>{'Menunggu': 0, 'Approved': 0, 'Rejected': 0};
-
-    for (final b in baris) {
-      Map<String, dynamic> item;
-      try {
-        item = Map<String, dynamic>.from(jsonDecode(b.dataJson));
-      } catch (_) {
-        continue; // baris rusak — lewati, jangan sampai menjatuhkan daftar
-      }
-
-      // Keputusan lokal MENANG atas status server: itulah yang baru saja
-      // dilakukan admin, walau server belum tahu.
-      final lokal = petaKeputusan[b.kodeP0];
-      final statusTampil = lokal?.keputusan ?? b.statusServer;
-      item['status'] = statusTampil;
-      item['lokalPending'] = lokal != null;
-      if (lokal != null) {
-        item['lokalKeputusanPada'] = lokal.dibuatPada;
-        item['lokalGagal'] = lokal.status == 'gagal' ? lokal.pesanGagal : '';
-        if (lokal.keputusan == 'Rejected' && lokal.alasan.isNotEmpty) {
-          item['alasanRejected'] = lokal.alasan;
-        }
-      }
-
-      counts[statusTampil] = (counts[statusTampil] ?? 0) + 1;
-      if (status.isEmpty || statusTampil == status) hasil.add(item);
-    }
-
-    if (baris.isEmpty && offline && !diamSaatKosong) {
-      return {
-        'ok': false,
-        'offline': true,
-        'message':
-            'Tidak ada koneksi & belum ada data P0 tersimpan di HP untuk tanggal ini. '
-                'Buka menu ini sekali saat online agar datanya tersimpan.',
-        'jumlahAntrean': antrean.length,
-      };
-    }
-
-    return {
-      'ok': true,
-      'offline': offline,
-      'list': hasil,
-      'counts': counts,
-      'jumlahAntrean': antrean.length,
-    };
-  }
-
-  Future<void> _segarkanCermin(
-    String ulp,
-    String tanggal,
-    List<dynamic> list,
-  ) async {
-    final now = DateTime.now().toIso8601String();
-    final baris = <P0LokalsCompanion>[];
-    for (final e in list) {
-      final item = Map<String, dynamic>.from(e as Map);
-      final kode = (item['kodeP0'] ?? '').toString().trim();
-      if (kode.isEmpty) continue;
-      baris.add(P0LokalsCompanion(
-        kodeP0: Value(kode),
-        ulp: Value((item['ulp'] ?? ulp).toString()),
-        tanggal: Value((item['tanggal'] ?? tanggal).toString()),
-        statusServer: Value((item['status'] ?? 'Menunggu').toString()),
-        dataJson: Value(jsonEncode(item)),
-        diambilPada: Value(now),
-      ));
-    }
-    await _dao.gantiCermin(ulp, tanggal, baris);
-  }
-
-  // ═════ TULIS KEPUTUSAN (LOKAL SAJA) ═════
-
-  /// Catat keputusan ke server lokal. TIDAK menyentuh jaringan.
-  Future<Map<String, dynamic>> catatKeputusan({
-    required String kodeP0,
-    required String keputusan,
-    required String username,
-    String alasan = '',
-    String tanggal = '',
-  }) async {
-    if (keputusan == 'Rejected' && alasan.trim().isEmpty) {
-      return {'ok': false, 'message': 'Alasan penolakan wajib diisi.'};
-    }
-    try {
-      await _dao.simpanKeputusan(P0OutboxesCompanion(
-        kodeP0: Value(kodeP0),
-        keputusan: Value(keputusan),
-        alasan: Value(alasan.trim()),
-        username: Value(username),
-        tanggal: Value(tanggal),
-        dibuatPada: Value(DateTime.now().toIso8601String()),
-        status: const Value('pending'),
-        percobaan: const Value(0),
-        pesanGagal: const Value(''),
-      ));
-      final sisa = (await _dao.antrean()).length;
-      return {'ok': true, 'jumlahAntrean': sisa};
+      final result = await P0CorrectionApi.call('getListPekerjaanP0', {});
+      if (result['ok'] != true) throw StateError('${result['error'] ?? result['message']}');
+      if (result['correctionVersion'] != 2) throw StateError('Backend koreksi P0 belum di-deploy.');
+      await _db.customStatement('INSERT OR REPLACE INTO p0_master_v2(owner,payload) VALUES(?,?)', [owner, jsonEncode(result)]);
+      return result;
     } catch (e) {
-      return {'ok': false, 'message': 'Gagal menyimpan ke server lokal: $e'};
+      final cached = await _db.customSelect('SELECT payload FROM p0_master_v2 WHERE owner=?', variables: [Variable<String>(owner)]).get();
+      if (cached.isEmpty) rethrow;
+      return {...Map<String, dynamic>.from(jsonDecode(cached.first.data['payload'] as String)), 'offline': true};
     }
   }
-
-  /// Batalkan keputusan yang belum terkirim.
-  Future<Map<String, dynamic>> batalkanKeputusan(String kodeP0) async {
-    await _dao.batalkan(kodeP0);
-    return {'ok': true, 'jumlahAntrean': (await _dao.antrean()).length};
-  }
-
-  Future<int> jumlahAntrean() async => (await _dao.antrean()).length;
-
-  Stream<List<P0Outbox>> pantauAntrean() => _dao.pantauAntrean();
-
-  // ═════ KIRIM ANTREAN (dipanggil kartu Sinkron di Pengaturan) ═════
-
-  /// Kirim seluruh antrean ke Apps Script, satu per satu.
-  ///
-  /// Sengaja BERURUTAN (bukan paralel): Apps Script punya batas eksekusi
-  /// simultan, dan menembakkan puluhan permintaan sekaligus justru membuat
-  /// approval/login lain ikut timeout. Baris yang gagal TETAP di antrean
-  /// lengkap dengan pesannya, jadi sync berikutnya cukup mengulang sisanya.
-  Future<Map<String, dynamic>> kirimAntrean() async {
-    final antrean = await _dao.antrean();
-    if (antrean.isEmpty) {
-      return {'ok': true, 'terkirim': 0, 'gagal': 0, 'kosong': true};
-    }
-
-    var terkirim = 0;
-    var gagal = 0;
-    final pesan = <String>[];
-
-    for (final a in antrean) {
-      try {
-        final res = await ApiService.setApprovalP0(
-          kodeP0: a.kodeP0,
-          keputusan: a.keputusan,
-          username: a.username,
-          alasan: a.alasan,
-        );
-        if (res['ok'] == true) {
-          await _dao.hapusTerkirim(a.kodeP0);
-          // Cermin ikut diperbarui agar kartu pindah tab tanpa tarik ulang.
-          await _dao.setStatusServer(a.kodeP0, a.keputusan);
-          terkirim++;
-        } else {
-          gagal++;
-          final p =
-              (res['error'] ?? res['message'] ?? 'ditolak server').toString();
-          await _dao.tandaiGagal(a.kodeP0, a.percobaan + 1, p);
-          pesan.add('${a.kodeP0}: $p');
-        }
-      } catch (_) {
-        gagal++;
-        await _dao.tandaiGagal(a.kodeP0, a.percobaan + 1, 'timeout/jaringan');
-        pesan.add('${a.kodeP0}: timeout/jaringan');
+  Future<Map<String, dynamic>> bacaList({required String ulp, required String status, required String tanggal}) async {
+    await _ensure();
+    var offline = false;
+    try {
+      final r = await ApiService.getApprovalP0List(ulp: ulp, status: '', tanggal: tanggal);
+      if (r['ok'] != true) throw StateError('${r['error'] ?? r['message']}');
+      final rows = <P0LokalsCompanion>[];
+      for (final e in (r['list'] as List? ?? [])) {
+        final item = Map<String, dynamic>.from(e as Map);
+        final code = (item['kodeP0'] ?? '').toString();
+        if (code.isEmpty) continue;
+        rows.add(P0LokalsCompanion(kodeP0: Value(code), ulp: Value((item['ulp'] ?? ulp).toString()), tanggal: Value((item['tanggal'] ?? tanggal).toString()), statusServer: Value((item['status'] ?? 'Menunggu').toString()), dataJson: Value(jsonEncode(item)), diambilPada: Value(DateTime.now().toIso8601String())));
       }
+      await _dao.gantiCermin(ulp, tanggal, rows);
+    } catch (_) { offline = true; }
+    final result = await bacaListLokal(ulp: ulp, status: status, tanggal: tanggal);
+    result['offline'] = offline;
+    if (offline && (result['total'] ?? 0) == 0) return {...result, 'ok': false, 'message': 'Tidak ada koneksi dan belum ada P0 tersimpan untuk tanggal ini.'};
+    return result;
+  }
+  Future<Map<String, dynamic>> bacaListLokal({required String ulp, required String status, required String tanggal}) async {
+    final s = await _session();
+    final corrections = {for (final r in await _corrections(_owner(s))) r['kode']: r};
+    final decisions = {for (final r in await _dao.antrean()) if (r.username.toLowerCase() == (s['username'] ?? '').toString().toLowerCase()) r.kodeP0: r};
+    final result = <Map<String, dynamic>>[];
+    final counts = <String, int>{'Menunggu': 0, 'Approved': 0, 'Rejected': 0};
+    final mirror = await _dao.bacaCermin(ulp, tanggal);
+    for (final row in mirror) {
+      final item = Map<String, dynamic>.from(jsonDecode(row.dataJson));
+      final c = corrections[row.kodeP0];
+      if (c != null) {
+        final p = Map<String, dynamic>.from(jsonDecode(c['payload'] as String));
+        final receipt = p['receipt'] is Map ? Map<String, dynamic>.from(p['receipt']) : <String, dynamic>{};
+        final sent = c['state'] == 'sent';
+        // A receipt overlays stale mirrors only until an equal/newer server revision arrives.
+        if (!sent || ((item['koreksiRevision'] as num?) ?? 0) < ((receipt['revision'] as num?) ?? 0)) {
+          item['namaPekerjaan'] = sent ? receipt['namaPekerjaan'] : p['namaPekerjaan'];
+          item['bobotManual'] = sent ? receipt['bobotManual'] : p['bobotManual'];
+          if (sent) { item['koreksiRevision'] = receipt['revision']; item['koreksiHistory'] = receipt['history']; item['point'] = receipt['point']; }
+        }
+        item['koreksiPending'] = !sent;
+        item['koreksiGagal'] = c['error'];
+        if (!sent) { item['alasanKoreksiLokal'] = p['alasanKoreksi']; item['point'] = ''; }
+      }
+      final local = decisions[row.kodeP0];
+      item['status'] = local?.keputusan ?? row.statusServer;
+      item['lokalPending'] = local != null;
+      if (local != null) { item['lokalGagal'] = local.pesanGagal; item['alasanRejected'] = local.alasan; }
+      final st = item['status'].toString();
+      counts[st] = (counts[st] ?? 0) + 1;
+      if (status.isEmpty || status == st) result.add(item);
     }
-
-    return {
-      'ok': gagal == 0,
-      'terkirim': terkirim,
-      'gagal': gagal,
-      'message': gagal == 0
-          ? '$terkirim keputusan terkirim ke server & gsheet.'
-          : '$terkirim terkirim, $gagal gagal. ${pesan.take(2).join(' | ')}',
-    };
+    return {'ok': true, 'list': result, 'counts': counts, 'total': mirror.length};
+  }
+  Future<void> catatKoreksi({required Map<String, dynamic> item, required String nama, required String alasan, num? bobot}) async {
+    await _ensure();
+    final s = await _session(write: true), owner = _owner(s);
+    if (alasan.trim().isEmpty || alasan.length > 500) throw StateError('Alasan wajib diisi, maksimal 500 karakter.');
+    if (other(nama) && (bobot == null || !bobot.isFinite || bobot < 1 || bobot > 5)) throw StateError('Bobot pekerjaan Lain-lain wajib berupa angka 1-5.');
+    await _db.transaction(() async {
+      await _notSending();
+      final old = await _db.customSelect('SELECT * FROM p0_corrections_v2 WHERE kode=?', variables: [Variable<String>(item['kodeP0'].toString())]).get();
+      if (old.isNotEmpty && old.first.data['state'] != 'sent') throw StateError('Kirim koreksi sebelumnya terlebih dahulu. Jika konflik, muat data server sebelum membuat koreksi baru.');
+      final payload = {'kodeP0': item['kodeP0'], 'namaPekerjaan': nama, 'alasanKoreksi': alasan.trim(), 'bobotManual': other(nama) ? bobot : null, 'expectedNama': item['namaPekerjaanRaw'] ?? item['namaPekerjaan'], 'expectedRevision': item['koreksiRevision'] ?? 0, 'requestId': _id()};
+      await _db.customStatement('INSERT OR REPLACE INTO p0_corrections_v2(kode,owner,ulp,payload,state,error) VALUES(?,?,?,?,?,?)', [item['kodeP0'], owner, s['ulp'] ?? '', jsonEncode(payload), 'pending', '']);
+    });
+  }
+  Future<Map<String, dynamic>> catatKeputusan({required String kodeP0, required String keputusan, required String username, String alasan = '', String tanggal = ''}) async {
+    try {
+      await _ensure(); final s = await _session(write: true);
+      if (!{'Approved', 'Rejected'}.contains(keputusan)) throw StateError('Keputusan tidak valid.');
+      if (keputusan == 'Rejected' && alasan.trim().isEmpty) throw StateError('Alasan penolakan wajib diisi.');
+      await _db.transaction(() async {
+        await _notSending();
+        await _dao.simpanKeputusan(P0OutboxesCompanion(kodeP0: Value(kodeP0), keputusan: Value(keputusan), alasan: Value(alasan.trim()), username: Value(s['username'].toString()), tanggal: Value(tanggal), dibuatPada: Value(DateTime.now().toIso8601String()), status: const Value('pending'), percobaan: const Value(0), pesanGagal: const Value('')));
+      });
+      return {'ok': true};
+    } catch (e) { return {'ok': false, 'message': e.toString()}; }
+  }
+  Future<Map<String, dynamic>> batalkanKeputusan(String kodeP0) async {
+    try {
+      await _ensure(); final s = await _session(write: true);
+      await _db.transaction(() async {
+        await _notSending();
+        final a = await _dao.keputusan(kodeP0);
+        if (a != null && a.username.toLowerCase() != s['username'].toString().toLowerCase()) throw StateError('Keputusan milik akun lain.');
+        await _dao.batalkan(kodeP0);
+      });
+      return {'ok': true};
+    } catch (e) { return {'ok': false, 'message': e.toString()}; }
+  }
+  Stream<List<P0Outbox>> pantauAntrean() => _dao.pantauAntrean();
+  Future<int> jumlahAntrean() async { final s = await _session(); return (await _corrections(_owner(s))).where((r) => r['state'] != 'sent').length + (await _dao.antrean()).where((a) => a.username.toLowerCase() == s['username'].toString().toLowerCase()).length; }
+  Stream<int> pantauJumlahAntrean() async* { while (true) { try { yield await jumlahAntrean(); } catch (_) { yield 0; } await Future<void>.delayed(const Duration(seconds: 2)); } }
+  Future<void> _receipt(String code, Map<String, dynamic> r) async {
+    final rows = await (_db.select(_db.p0Lokals)..where((t) => t.kodeP0.equals(code))).get();
+    if (rows.isEmpty) return;
+    final item = Map<String, dynamic>.from(jsonDecode(rows.first.dataJson));
+    item.addAll({'namaPekerjaan': r['namaPekerjaan'], 'namaPekerjaanRaw': r['namaPekerjaan'], 'bobotManual': r['bobotManual'], 'koreksiRevision': r['revision'], 'koreksiHistory': r['history'], 'point': r['point']});
+    await (_db.update(_db.p0Lokals)..where((t) => t.kodeP0.equals(code))).write(P0LokalsCompanion(dataJson: Value(jsonEncode(item))));
+  }
+  Future<Map<String, dynamic>> kirimAntrean() async {
+    await _ensure();
+    final s = await _session(), owner = _owner(s), lease = _id();
+    final corrections = (await _corrections(owner)).where((r) => r['state'] != 'sent').toList();
+    final decisions = (await _dao.antrean()).where((a) => a.username.toLowerCase() == s['username'].toString().toLowerCase()).toList();
+    if (corrections.isEmpty && decisions.isEmpty) return {'ok': true, 'terkirim': 0, 'gagal': 0, 'kosong': true};
+    if (!admin(s)) return {'ok': false, 'message': 'Akun ini tidak lagi memiliki izin Admin. Antrean tidak dihapus.'};
+    try {
+      await _db.transaction(() async { await _notSending(); await _db.customStatement('INSERT OR REPLACE INTO p0_sync_lease_v2(id,owner,expires) VALUES(1,?,?)', [lease, DateTime.now().millisecondsSinceEpoch + 300000]); });
+    } catch (e) { return {'ok': false, 'message': e.toString()}; }
+    var sent = 0, failed = 0; final errors = <String>[]; final blocked = <String>{};
+    Future<void> renew() async {
+      final now = await _session();
+      if (_owner(now) != owner || !admin(now)) throw StateError('Akun berubah saat sinkron. Antrean dihentikan.');
+      await _db.customStatement('UPDATE p0_sync_lease_v2 SET expires=? WHERE owner=?', [DateTime.now().millisecondsSinceEpoch + 300000, lease]);
+    }
+    try {
+      // Server corrections must succeed BEFORE approval for the same P0.
+      for (final c in corrections) {
+        await renew();
+        final code = c['kode'].toString();
+        final p = Map<String, dynamic>.from(jsonDecode(c['payload'] as String));
+        try {
+          final capability = await P0CorrectionApi.call('getListPekerjaanP0', {});
+          if (capability['correctionVersion'] != 2) throw StateError('Backend koreksi P0 belum di-deploy.');
+          final r = await P0CorrectionApi.call('updateNamaPekerjaanP0', p);
+          if (r['ok'] != true) throw StateError('${r['error'] ?? r['message']}');
+          await _db.transaction(() async {
+            await _receipt(code, r);
+            await _db.customStatement('UPDATE p0_corrections_v2 SET state=?,payload=?,error=? WHERE kode=? AND owner=?', ['sent', jsonEncode({...p, 'receipt': r}), '', code, owner]);
+          });
+          sent++;
+        } catch (e) {
+          blocked.add(code); failed++; errors.add('$code: $e');
+          await _db.customStatement('UPDATE p0_corrections_v2 SET state=?,error=? WHERE kode=? AND owner=?', ['gagal', e.toString(), code, owner]);
+        }
+      }
+      for (final a in decisions) {
+        if (blocked.contains(a.kodeP0)) { failed++; continue; }
+        await renew();
+        try {
+          final r = await P0CorrectionApi.call('setMobileApprovalP0', {'kodeP0': a.kodeP0, 'keputusan': a.keputusan, 'alasan': a.alasan});
+          if (r['ok'] != true) throw StateError('${r['error'] ?? r['message']}');
+          await _db.transaction(() async { await _dao.setStatusServer(a.kodeP0, a.keputusan); await _dao.hapusTerkirim(a.kodeP0); });
+          sent++;
+        } catch (e) { failed++; errors.add('${a.kodeP0}: $e'); await _dao.tandaiGagal(a.kodeP0, a.percobaan + 1, e.toString()); }
+      }
+      return {'ok': failed == 0, 'terkirim': sent, 'gagal': failed, 'message': '$sent perubahan diterima backend, $failed gagal. Keputusan dapat menunggu antrean server. ${errors.take(2).join(' | ')}'};
+    } catch (e) { return {'ok': false, 'terkirim': sent, 'gagal': failed + 1, 'message': e.toString()}; }
+    finally { await _db.customStatement('DELETE FROM p0_sync_lease_v2 WHERE owner=?', [lease]); }
   }
 }
