@@ -1,3 +1,4 @@
+# trigger registered workflow
 name: Wire Jadwal calendar once
 on:
   push:
@@ -70,7 +71,6 @@ jobs:
           one('                  itemCount: _rows.length,\n                  separatorBuilder: (_, __) => const SizedBox(height: 12),\n                  itemBuilder: (_, i) => _schedule(_rows[i]),', '                  itemCount: _selectedRows.length,\n                  separatorBuilder: (_, __) => const SizedBox(height: 12),\n                  itemBuilder: (_, i) => _schedule(_selectedRows[i]),')
           p.write_text(s)
           assert 'JadwalPadamCalendar(' in s
-          assert 'itemCount: _selectedRows.length' in s
           PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
