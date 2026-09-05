@@ -62,14 +62,20 @@ class _State extends State<SyncSectionPengaturan> {
   Future<void> _sinkronSemua() async {
     if (proses) return;
     setState(() => proses = true);
-    final hasil = await repo.sinkronSemua(token);
+    Map<String, dynamic> hasil;
+    try {
+      hasil = await repo.sinkronSemua(token);
+      final ok = hasil['ok'] == true;
+      if (ok) await AutoSyncService.activate();
+    } catch (error) {
+      hasil = {'ok': false, 'message': 'Sinkron gagal: $error'};
+    } finally {
+      if (mounted) setState(() => proses = false);
+    }
     if (!mounted) return;
-    setState(() => proses = false);
     final ok = hasil['ok'] == true;
-    if (ok) await AutoSyncService.activate();
-    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text((hasil['message'] ?? (ok ? 'Selesai' : 'Gagal')).toString()),
+      content: Text((hasil['message'] ?? (ok ? 'Sinkron selesai' : 'Sinkron gagal')).toString()),
       backgroundColor: ok ? AppColors.success700 : AppColors.red600,
       duration: const Duration(seconds: 5),
     ));
@@ -82,12 +88,12 @@ class _State extends State<SyncSectionPengaturan> {
     final totalAntrean = p0.length + gardu.length;
     final warna = totalAntrean > 0 ? AppColors.amber700 : AppColors.navy700;
     final subtitle = proses
-        ? 'Proses Sinkron....'
+        ? 'Proses sinkron...'
         : totalAntrean > 0
             ? '${p0.length} keputusan P0 · ${gardu.length} edit Gardu menunggu kirim'
             : sudahPernahSinkron
-                ? 'Sinkron otomatis aktif · data siap offline'
-                : 'Upload Data & Proses Sinkron';
+                ? 'Sinkron selesai · data siap offline'
+                : 'Upload data dan mulai sinkron';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -104,14 +110,14 @@ class _State extends State<SyncSectionPengaturan> {
             leading: Container(
               padding: const EdgeInsets.all(9),
               decoration: BoxDecoration(color: warna.withOpacity(.10), borderRadius: BorderRadius.circular(9)),
-              child: Icon(Icons.sync_alt_rounded, color: warna),
+              child: Icon(proses ? Icons.sync_rounded : Icons.cloud_done_outlined, color: warna),
             ),
-            title: const Text('Sinkron Semua Data', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.navy700)),
+            title: Text(proses ? 'Sinkronisasi berjalan' : 'Sinkron Semua Data', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.navy700)),
             subtitle: Padding(
               padding: const EdgeInsets.only(top: 3),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.neutral500)),
-                if (sudahPernahSinkron) ...[
+                if (sudahPernahSinkron && !proses) ...[
                   const SizedBox(height: 3),
                   Text('Terakhir sinkron ${_jamSinkron(info)}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.success700)),
                 ],
@@ -125,7 +131,7 @@ class _State extends State<SyncSectionPengaturan> {
                         decoration: BoxDecoration(color: const Color(0xFFFEF3C7), borderRadius: BorderRadius.circular(20)),
                         child: Text('$totalAntrean', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AppColors.amber700)),
                       )
-                    : Icon(Icons.chevron_right_rounded, color: warna),
+                    : const Icon(Icons.check_circle_rounded, color: AppColors.success700),
             onTap: proses ? null : _sinkronSemua,
           ),
         ),
