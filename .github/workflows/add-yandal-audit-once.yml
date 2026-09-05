@@ -1,0 +1,55 @@
+name: Add Yandal dataset audit
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/add-yandal-audit-once.yml
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Add dataset and sheet audit
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          p = Path('SiSi_BackEnd/Core/Predeploy-Audit.js')
+          s = p.read_text()
+          marker = '''  try {
+    var cfg =
+      typeof MASTER_GARDU_MOBILE !== "undefined" ? MASTER_GARDU_MOBILE : null;
+'''
+          insert = '''  try {
+    var petugasAudit = typeof _deltaYandalPetugasRows_ === "function"
+      ? _deltaYandalPetugasRows_()
+      : null;
+    add(
+      "dataset db_List_Petugas_Yandal",
+      petugasAudit !== null,
+      petugasAudit === null ? "fungsi tidak tersedia" : petugasAudit.length + " petugas",
+    );
+    add(
+      "sheet db_List_Petugas_Yandal",
+      petugasAudit !== null && petugasAudit.length > 0,
+      petugasAudit === null ? "dataset gagal dibaca" : petugasAudit.length + " petugas",
+    );
+  } catch (e) {
+    add("dataset db_List_Petugas_Yandal", false, e.message);
+  }
+
+'''
+          if s.count(marker) != 1:
+              raise SystemExit(f'audit marker count={s.count(marker)}')
+          p.write_text(s.replace(marker, insert + marker, 1))
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/add-yandal-audit-once.yml
+          git add SiSi_BackEnd/Core/Predeploy-Audit.js
+          git commit -m "audit: verify Yandal crew dataset before deploy"
+          git push origin HEAD:main
