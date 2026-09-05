@@ -1,0 +1,81 @@
+name: Release Quality Gate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'SiSi_Mobile/**'
+      - 'SiSi_BackEnd/**'
+      - 'tests/**'
+      - '.github/workflows/release-quality-gate.yml'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend syntax and security tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check Apps Script JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do
+            node --check "$file"
+          done < <(find SiSi_BackEnd -type f -name '*.js' -print0)
+      - name: Run backend harness
+        working-directory: tests
+        run: npm test
+      - name: Verify critical mobile routes
+        shell: bash
+        run: |
+          grep -q 'jadwalPadamMobileRouter_(e, body)' SiSi_BackEnd/Core/Code.js
+          grep -q 'gangguanBerandaMobileRouter_(e, body)' SiSi_BackEnd/Core/Code.js
+          python3 - <<'PY'
+          from pathlib import Path
+          source = Path('SiSi_BackEnd/Core/Tek-MobileDual.js').read_text()
+          declaration = source.index('var rp = rowsP[0];')
+          usage = source.index('barisUlpCocok_(g, rp[COL_P0.ulp])')
+          if declaration > usage:
+              raise SystemExit('rp is used before declaration')
+          PY
+
+  mobile:
+    name: Flutter analyze and release APK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: SiSi_Mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve dependencies
+        run: flutter pub get
+      - name: Verify generated Drift source
+        run: dart run build_runner build --delete-conflicting-outputs
+      - name: Analyze compile blockers
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+      - name: Build release APK
+        run: flutter build apk --release
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: sisi-release-apk
+          path: SiSi_Mobile/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
