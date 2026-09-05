@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/accurate_location_service.dart';
 import '../theme/app_colors.dart';
+import 'mock_gps_warning_dialog.dart';
 
 class AccurateGpsButton extends StatefulWidget {
   final TextEditingController controller;
@@ -44,7 +45,12 @@ class _AccurateGpsButtonState extends State<AccurateGpsButton> {
       }
     } catch (error) {
       if (!mounted) return;
-      if (widget.onError != null) {
+      if (error is MockLocationException) {
+        // Dedicated popup replaces the default small snackbar. Retain custom
+        // callbacks for host state/validation; they do not receive a position.
+        await MockGpsWarningDialog.show(context);
+        if (mounted) widget.onError?.call(error);
+      } else if (widget.onError != null) {
         widget.onError!(error);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -16,6 +16,12 @@ class AccurateLocationException implements Exception {
   @override String toString() => message;
 }
 
+/// Distinct from permission, weak-signal and disabled-location errors.
+class MockLocationException extends AccurateLocationException {
+  const MockLocationException()
+      : super('Silahkan Matikan Aplikasi Pihak Ke-3 GPS');
+}
+
 class AccurateLocationService {
   static const Duration defaultDuration = Duration(seconds: 15);
   static const double preferredAccuracyMeters = 8;
@@ -54,12 +60,12 @@ class AccurateLocationService {
     await completer.future;
     timer.cancel();
     await subscription.cancel();
-    if (mocked) throw const AccurateLocationException('Matikan Fake GPS');
+    if (mocked) throw const MockLocationException();
 
     if (best == null) {
       try {
         best = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.bestForNavigation, timeLimit: const Duration(seconds: 12));
-        if (best!.isMocked) throw const AccurateLocationException('Matikan Fake GPS');
+        if (best!.isMocked) throw const MockLocationException();
         samples = 1;
       } on AccurateLocationException { rethrow; }
       catch (_) { throw const AccurateLocationException('GPS belum memperoleh posisi. Coba di area lebih terbuka.'); }
