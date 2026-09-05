@@ -337,8 +337,10 @@ class ApiService {
     String status = 'Menunggu',
     String? tanggal,
   }) async {
+    final sesi = await SesiStore.muat();
+    final token = (sesi?['token'] ?? '').toString();
     final uri = Uri.parse(
-      '$baseUrl?mobile=1&action=getMobileApprovalP0List&ulp=${Uri.encodeComponent(ulp)}&status=${Uri.encodeComponent(status)}&tanggal=${Uri.encodeComponent(tanggal ?? '')}',
+      '$baseUrl?mobile=1&action=getMobileApprovalP0List&token=${Uri.encodeComponent(token)}&ulp=${Uri.encodeComponent(ulp)}&status=${Uri.encodeComponent(status)}&tanggal=${Uri.encodeComponent(tanggal ?? '')}',
     );
     // Rev 19 Agu sore: 15 → 30 dtk (jaring pengaman saat server sibuk)
     final res = await http.get(uri).timeout(const Duration(seconds: 30));
@@ -351,11 +353,14 @@ class ApiService {
     required String username,
     String alasan = '',
   }) async {
+    final sesi = await SesiStore.muat();
+    final token = (sesi?['token'] ?? '').toString();
     // Rev 19 Agu malam: POST -> GET. Backend sudah membaca e.parameter (doGet -> apiRouter_),
     // jadi backend TIDAK perlu deploy ulang. GET terbukti lancar di jalur redirect Apps Script
     // (login/list/detail semuanya GET); POST -> 302 berulang kali menggantung di emulator.
     final uri = Uri.parse(
       '$baseUrl?mobile=1&action=setMobileApprovalP0'
+      '&token=${Uri.encodeComponent(token)}'
       '&kodeP0=${Uri.encodeComponent(kodeP0)}'
       '&keputusan=${Uri.encodeComponent(keputusan)}'
       '&username=${Uri.encodeComponent(username)}'
@@ -367,8 +372,10 @@ class ApiService {
 
   static Future<Map<String, dynamic>> getLampiranPengecekanP0(
       String kodeP0) async {
+    final sesi = await SesiStore.muat();
+    final token = (sesi?['token'] ?? '').toString();
     final uri = Uri.parse(
-      '$baseUrl?mobile=1&action=getMobileLampiranPengecekanP0&kodeP0=${Uri.encodeComponent(kodeP0)}',
+      '$baseUrl?mobile=1&action=getMobileLampiranPengecekanP0&token=${Uri.encodeComponent(token)}&kodeP0=${Uri.encodeComponent(kodeP0)}',
     );
     // Rev 19 Agu sore: 20 → 30 dtk (detail Gardu membaca spreadsheet kedua)
     final res = await http.get(uri).timeout(const Duration(seconds: 30));

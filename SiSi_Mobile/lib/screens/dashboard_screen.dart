@@ -46,13 +46,6 @@ class _DashboardScreenState extends State<DashboardScreen>
   Widget? _activeSubScreen;
   Map<String, dynamic>? _selectedTeamDetail;
 
-  final List<String> menuItems = ['Tim', 'Teknik', 'Pengaturan'];
-  final List<IconData> menuIcons = [
-    Icons.people_outline_rounded,
-    Icons.handyman_outlined,
-    Icons.settings_outlined,
-  ];
-
   final List<Map<String, dynamic>> allTeams = [
     {
       'name': 'Inspeksi Gardu',
@@ -166,40 +159,21 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   bool get _bolehGardu => GarduScreen.boleh(widget.sesi);
 
-  List<String> get currentMenuItems {
-    if (_isSuperUser) {
-      return ['Tim', 'Gardu', 'Beranda', 'Teknik', 'Pengaturan'];
-    }
-    if (_bolehGardu) {
-      return ['Tim', 'Gardu', 'Beranda', 'Pengaturan'];
-    }
-    return ['Tim', 'Beranda', 'Pengaturan'];
-  }
+  List<String> get currentMenuItems => const [
+        'Tim',
+        'Pengukuran',
+        'Beranda',
+        'Teknik',
+        'Pengaturan',
+      ];
 
-  List<IconData> get currentMenuIcons {
-    if (_isSuperUser) {
-      return [
+  List<IconData> get currentMenuIcons => const [
         Icons.people_outline_rounded,
         Icons.electrical_services_outlined,
         Icons.home_rounded,
         Icons.handyman_outlined,
         Icons.settings_outlined,
       ];
-    }
-    if (_bolehGardu) {
-      return [
-        Icons.people_outline_rounded,
-        Icons.electrical_services_outlined,
-        Icons.home_rounded,
-        Icons.settings_outlined,
-      ];
-    }
-    return [
-      Icons.people_outline_rounded,
-      Icons.home_rounded,
-      Icons.settings_outlined,
-    ];
-  }
 
   void _selectMenu(int index) {
     if (selectedIndex == index && _activeSubScreen == null) return;
@@ -379,11 +353,13 @@ class _DashboardScreenState extends State<DashboardScreen>
 
                       final currentX =
                           startX + (targetX - startX) * _bubbleController.value;
-                      const bubbleSize = 56.0;
+                      final isBeranda = selectedIndex == 2;
+                      final bubbleSize = isBeranda ? 64.0 : 52.0;
+                      final bubbleTop = isBeranda ? -22.0 : -14.0;
 
                       return Positioned(
                         left: currentX - (bubbleSize / 2),
-                        top: -17,
+                        top: bubbleTop,
                         child: Container(
                           width: bubbleSize,
                           height: bubbleSize,
@@ -404,7 +380,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                           ),
                           child: Icon(
                             currentMenuIcons[selectedIndex],
-                            size: 37.4,
+                            size: isBeranda ? 39.0 : 30.0,
                             color: Colors.white,
                           ),
                         ),
@@ -533,7 +509,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     switch (menu) {
       case 'Tim':
         return _buildMenuTim();
-      case 'Gardu':
+      case 'Pengukuran':
         return GarduScreen(sesi: widget.sesi);
       case 'Beranda':
         return BerandaScreen(sesi: widget.sesi);

@@ -2401,6 +2401,13 @@ function apiRouter_(e, body) {
     if (lewatAuth) return lewatAuth;
   }
 
+  if (typeof jadwalPadamMobileRouter_ === "function") {
+    var lewatJadwalPadam = jadwalPadamMobileRouter_(e, body);
+    if (lewatJadwalPadam)
+      return ContentService.createTextOutput(JSON.stringify(lewatJadwalPadam))
+        .setMimeType(ContentService.MimeType.JSON);
+  }
+
   if (typeof gangguanBerandaMobileRouter_ === "function") {
     var lewatGangguan = gangguanBerandaMobileRouter_(e, body);
     if (lewatGangguan) return ContentService.createTextOutput(JSON.stringify(lewatGangguan)).setMimeType(ContentService.MimeType.JSON);

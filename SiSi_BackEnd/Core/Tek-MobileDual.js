@@ -158,6 +158,7 @@ function getLampiranPengecekanP0Dual_(params) {
     );
     if (!rowsP.length)
       return { ok: false, error: "Baris P0 tidak ditemukan: " + kodeP0 };
+    var rp = rowsP[0];
     /* PEMILIKAN: P0 harus milik ULP sesi (kecuali Super User). Tanpa ini
        kodeP0 milik ULP lain tetap terbaca (IDOR). */
     if (!barisUlpCocok_(g, rp[COL_P0.ulp])) {
@@ -165,7 +166,6 @@ function getLampiranPengecekanP0Dual_(params) {
         "P0 milik ULP lain");
       return { ok: false, error: "Data P0 bukan milik ULP Anda." };
     }
-    var rp = rowsP[0];
     var p0 = {
       kodeP0: kodeP0,
       namaPekerjaan:
