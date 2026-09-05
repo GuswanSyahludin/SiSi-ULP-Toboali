@@ -1,4 +1,4 @@
-# trigger registered workflow
+# trigger through normal merge
 name: Fix login field border
 on:
   push:
