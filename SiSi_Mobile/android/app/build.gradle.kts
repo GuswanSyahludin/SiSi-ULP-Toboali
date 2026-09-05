@@ -12,7 +12,7 @@ val localProperties = Properties().apply {
 }
 
 android {
-    namespace = "com.example.coba_sisi"
+    namespace = "id.co.ulptoboali.sisi"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -22,7 +22,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.coba_sisi"
+        applicationId = "id.co.ulptoboali.sisi"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
