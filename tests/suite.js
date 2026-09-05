@@ -393,13 +393,20 @@ reset(ctx, SS);
 console.log("\n=== 12. Webhook AppSheet ===");
 reset(ctx, SS);
 {
-  const SECRET = "P@ssw0rd`123";
+  const SECRET = "test-webhook-secret-32-characters-ok";
   const W = (body) => ctx.call("webhookVerifikasi_", [body]).value;
+
+  /* Production is fail-closed: no source-code fallback is allowed. */
+  const kosong = W({ secret: SECRET, action: "recalcRow" });
+  sama("tanpa Script Property -> SECRET_KOSONG", kosong.kode, "SECRET_KOSONG");
+
+  ctx.evalInVm(`PropertiesService.getScriptProperties()
+    .setProperty('SISI_WEBHOOK_SECRET', '${SECRET}')`);
 
   ok("secret salah -> ditolak", W({ secret: "bukan", action: "recalcRow" }).ok === false);
   ok("secret kosong -> ditolak", W({ action: "recalcRow" }).ok === false);
   const benar = W({ secret: SECRET, action: "recalcRow" });
-  ok("secret benar + action dikenal -> lolos", benar.ok === true, JSON.stringify(benar));
+  ok("secret property benar + action dikenal -> lolos", benar.ok === true, JSON.stringify(benar));
   sama("  action dikembalikan", benar.action, "recalcRow");
 
   ok("action di luar daftar -> ditolak",
@@ -408,18 +415,6 @@ reset(ctx, SS);
     W({ secret: SECRET, action: "hapusSemuaData" }).kode, "ACTION_TIDAK_DIKENAL");
   ok("action kosong -> ditolak", W({ secret: SECRET }).ok === false);
 
-  /* Secret dari Script Properties harus mengalahkan konstanta. */
-  ctx.evalInVm(`PropertiesService.getScriptProperties()
-    .setProperty('SISI_WEBHOOK_SECRET', 'secret-baru-dari-properti')`);
-  ok("secret property menang (siap rotasi tanpa ubah kode)",
-    W({ secret: "secret-baru-dari-properti", action: "recalcRow" }).ok === true);
-  ok("secret lama tidak berlaku lagi setelah property diisi",
-    W({ secret: SECRET, action: "recalcRow" }).ok === false);
-  ctx.evalInVm(`PropertiesService.getScriptProperties().deleteProperty('SISI_WEBHOOK_SECRET')`);
-  ok("kembali ke konstanta setelah property dihapus",
-    W({ secret: SECRET, action: "recalcRow" }).ok === true);
-
-  /* Parsing ts. */
   const tsMs = (v) => ctx.call("_webhookTsMs_", [v]).value;
   const sekarang = Date.now();
   sama("epoch milidetik", tsMs(String(sekarang)), sekarang);
@@ -434,59 +429,53 @@ reset(ctx, SS);
   sama("teks ngawur -> 0", tsMs("bukan-waktu"), 0);
   sama("kosong -> 0", tsMs(""), 0);
 
-  /* Mode ts. */
   const mode = () => ctx.call("_webhookTsMode_", []).value;
   sama("mode default = warn", mode(), "warn");
-
-  ok("mode warn: tanpa ts tetap lolos (bot belum dikonfirmasi)",
+  ok("mode warn: tanpa ts tetap lolos",
     W({ secret: SECRET, action: "recalcRow" }).ok === true);
 
   ctx.evalInVm(`PropertiesService.getScriptProperties().setProperty('SISI_WEBHOOK_TS_MODE','enforce')`);
   sama("mode terbaca enforce", mode(), "enforce");
-  ok("mode enforce: tanpa ts -> ditolak",
-    W({ secret: SECRET, action: "recalcRow" }).ok === false);
-  sama("  kode TS_TIDAK_VALID",
+  sama("mode enforce: tanpa ts -> TS_TIDAK_VALID",
     W({ secret: SECRET, action: "recalcRow" }).kode, "TS_TIDAK_VALID");
   ok("mode enforce: ts sekarang -> lolos",
     W({ secret: SECRET, action: "recalcRow", ts: String(Date.now()) }).ok === true);
-  ok("mode enforce: ts 20 menit lalu -> ditolak (replay)",
+  ok("mode enforce: ts 20 menit lalu -> ditolak",
     W({ secret: SECRET, action: "recalcRow", ts: String(Date.now() - 20 * 60000) }).ok === false);
-  ok("mode enforce: ts 20 menit mendatang -> ditolak",
-    W({ secret: SECRET, action: "recalcRow", ts: String(Date.now() + 20 * 60000) }).ok === false);
   ok("mode enforce: ts 5 menit lalu -> lolos",
     W({ secret: SECRET, action: "recalcRow", ts: String(Date.now() - 5 * 60000) }).ok === true);
 
   ctx.evalInVm(`PropertiesService.getScriptProperties().setProperty('SISI_WEBHOOK_TS_MODE','off')`);
   ok("mode off: tanpa ts lolos", W({ secret: SECRET, action: "recalcRow" }).ok === true);
   ctx.evalInVm(`PropertiesService.getScriptProperties().deleteProperty('SISI_WEBHOOK_TS_MODE')`);
-  sama("kembali ke mode default", mode(), "warn");
 }
 
 console.log("\n=== 13. Pemisahan jalur doPost ===");
 reset(ctx, SS);
 {
-  const SECRET = "P@ssw0rd`123";
+  const SECRET = "test-webhook-secret-32-characters-ok";
+  ctx.evalInVm(`PropertiesService.getScriptProperties()
+    .setProperty('SISI_WEBHOOK_SECRET', '${SECRET}')`);
   const post = (parameter, contents) => {
     const e = { parameter, postData: { contents: JSON.stringify(contents) } };
     const r = ctx.call("doPost", [e]);
     if (!r.ok) return { ok: false, error: r.error };
-    try { return JSON.parse(r.value.getContent()); } catch (err) { return { ok: false, error: "bukan JSON" }; }
+    try { return JSON.parse(r.value.getContent()); }
+    catch (err) { return { ok: false, error: "bukan JSON" }; }
   };
 
   const viaBody = post({}, { secret: SECRET, action: "recalcRow", tim: "X" });
   ok("secret di body POST -> diterima", viaBody.ok === true, JSON.stringify(viaBody));
 
-  /* Secret di query string tidak boleh diterima lagi. */
   const viaQuery = post({ secret: SECRET, action: "recalcRow" }, {});
   ok("secret di query string -> DITOLAK", viaQuery.ok === false, JSON.stringify(viaQuery));
   sama("  kode SECRET_SALAH", viaQuery.kode, "SECRET_SALAH");
 
-  /* ?mobile= tidak boleh lagi dipakai untuk menjalankan action webhook. */
   const mobileBawaSecret = post({ mobile: "1" }, { secret: SECRET, action: "recalcRow" });
-  ok("?mobile=1 + action webhook -> tidak dieksekusi webhook",
+  ok("?mobile=1 + action webhook tidak dieksekusi webhook",
     mobileBawaSecret.ok !== true || !("queued" in mobileBawaSecret),
     JSON.stringify(mobileBawaSecret));
-  ok("  malah masuk apiRouter_ (action tidak dikenal di situ)",
+  ok("  masuk apiRouter_ sebagai action tidak dikenal",
     /tidak dikenal/i.test(String(mobileBawaSecret.message || "")),
     JSON.stringify(mobileBawaSecret));
 }

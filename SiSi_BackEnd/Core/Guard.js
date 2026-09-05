@@ -732,13 +732,13 @@ function _webhookTsMs_(v) {
     return 0;
   }
 
-  var t = Date.parse(s);
-  if (!isNaN(t)) return t;
-
   var m = s.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/);
   if (m) {
     return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4] - 7, +m[5], +(m[6] || 0));
   }
+
+  var t = Date.parse(s);
+  if (!isNaN(t)) return t;
   return 0;
 }
 
