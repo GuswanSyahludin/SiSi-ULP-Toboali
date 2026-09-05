@@ -1,0 +1,80 @@
+name: Wire Jadwal calendar once
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/wire-jadwal-calendar-once.yml]
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          p=Path('SiSi_Mobile/lib/screens/jadwal_padam_screen.dart')
+          s=p.read_text()
+          def one(old,new):
+            global s
+            if s.count(old)!=1: raise SystemExit(f'marker count {s.count(old)}: {old[:40]}')
+            s=s.replace(old,new,1)
+          one("import '../theme/app_colors.dart';", "import '../theme/app_colors.dart';\nimport '../widgets/jadwal_padam_calendar.dart';")
+          one('  late DateTime _to;\n', '  late DateTime _to;\n  late DateTime _selectedDate;\n')
+          one('    _to = DateTime(now.year, now.month + 1, 0);\n    _boot();', '    _to = DateTime(now.year, now.month + 1, 0);\n    _selectedDate = DateTime(now.year, now.month, now.day);\n    _boot();')
+          marker='  List<String> get _penyulangOptions {\n'
+          insert="""  List<Map<String, dynamic>> get _selectedRows => _rows
+      .where((row) => '${row['tanggal'] ?? ''}' == _iso(_selectedDate))
+      .toList();
+
+  Set<String> get _eventDates =>
+      _rows.map((row) => '${row['tanggal'] ?? ''}').toSet();
+
+  Future<void> _changeMonth(int delta) async {
+    final month = DateTime(_from.year, _from.month + delta, 1);
+    setState(() {
+      _from = month;
+      _to = DateTime(month.year, month.month + 1, 0);
+      _selectedDate = month;
+    });
+    await _load();
+  }
+
+"""
+          one(marker,insert+marker)
+          one('            SliverToBoxAdapter(child: _filters()),\n', """            SliverToBoxAdapter(child: _filters()),
+            SliverToBoxAdapter(
+              child: JadwalPadamCalendar(
+                month: _from,
+                selectedDate: _selectedDate,
+                eventDates: _eventDates,
+                onDateSelected: (date) => setState(() => _selectedDate = date),
+                onPreviousMonth: () => _changeMonth(-1),
+                onNextMonth: () => _changeMonth(1),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 18, 16, 10),
+                child: Row(children: [
+                  Expanded(child: Text(DateFormat('dd MMMM yyyy', 'id_ID').format(_selectedDate), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: AppColors.navy900))),
+                  Text('${_selectedRows.length} jadwal', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF667085))),
+                ]),
+              ),
+            ),
+""")
+          one("            else if (_rows.isEmpty)\n              SliverFillRemaining(hasScrollBody: false, child: _StateView(icon: Icons.event_available_rounded, title: 'Tidak ada jadwal', message: 'Coba periode atau filter lain.', action: _load))", "            else if (_selectedRows.isEmpty)\n              SliverToBoxAdapter(child: _StateView(icon: Icons.event_available_rounded, title: 'Tidak ada jadwal', message: 'Pilih tanggal bertanda atau ubah filter.', action: _load))")
+          one('                  itemCount: _rows.length,\n                  separatorBuilder: (_, __) => const SizedBox(height: 12),\n                  itemBuilder: (_, i) => _schedule(_rows[i]),', '                  itemCount: _selectedRows.length,\n                  separatorBuilder: (_, __) => const SizedBox(height: 12),\n                  itemBuilder: (_, i) => _schedule(_selectedRows[i]),')
+          p.write_text(s)
+          assert 'JadwalPadamCalendar(' in s
+          assert 'itemCount: _selectedRows.length' in s
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/wire-jadwal-calendar-once.yml .github/workflows/apply-calendar-login-fix.yml
+          git add SiSi_Mobile/lib/screens/jadwal_padam_screen.dart SiSi_Mobile/lib/widgets/jadwal_padam_calendar.dart
+          git commit -m "feat(mobile): show Jadwal Padam as monthly calendar"
+          git push origin HEAD:main
