@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/accurate_gps_button.dart';
+import '../widgets/ins_gardu_report_card.dart';
 import '../db/app_database.dart';
 import '../db/repositories/inspeksi_gardu_repository.dart';
 import '../theme/app_colors.dart';
@@ -23,6 +24,8 @@ class LaporanHarianScreen extends StatefulWidget {
 
 class _LaporanState extends State<LaporanHarianScreen> {
   final repo = InspeksiGarduRepository();
+  late Stream<List<InsGarduHeader>> _reports;
+  final Map<String, Future<List<InsGarduRealisasi>>> _summaries = {};
 
   String get sub => (widget.targetSubTim ??
           widget.sesi['subTim'] ??
@@ -35,8 +38,49 @@ class _LaporanState extends State<LaporanHarianScreen> {
   @override
   void initState() {
     super.initState();
+    _reports = repo.pantauLaporan();
     if (gardu) {
       repo.downloadListTemuan('${widget.sesi['token'] ?? ''}').catchError((_) {});
+    }
+  }
+
+  Future<void> _refresh() async {
+    if (!mounted) return;
+    setState(() {
+      _summaries.clear();
+      _reports = repo.pantauLaporan();
+    });
+    // Refresh only local data. Sending remains an explicit existing sync flow.
+    await _reports.first;
+  }
+
+  Future<void> _refreshSafely() async {
+    try {
+      await _refresh();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Laporan lokal belum dapat dimuat. Coba lagi.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _add() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => InsGarduForm(sesi: widget.sesi)),
+    );
+    if (mounted) await _refreshSafely();
+  }
+
+  Future<void> _open(InsGarduHeader h) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => InsGarduDetail(header: h)),
+    );
+    if (mounted) {
+      setState(() => _summaries[h.localId] = repo.garduLaporan(h.localId));
     }
   }
 
@@ -63,61 +107,127 @@ class _LaporanState extends State<LaporanHarianScreen> {
             ),
           ],
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Muat ulang laporan lokal',
+            onPressed: _refreshSafely,
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+        ],
       ),
-      body: _local(),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppColors.navy700,
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => InsGarduForm(sesi: widget.sesi)),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760),
+          child: _local(),
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        tooltip: 'Tambah Laporan Harian',
+        backgroundColor: AppColors.navy700,
+        onPressed: _add,
         child: const Icon(Icons.add_rounded, color: Colors.white),
       ),
     );
   }
 
   Widget _local() => StreamBuilder<List<InsGarduHeader>>(
-        stream: repo.pantauLaporan(),
+        stream: _reports,
         builder: (context, snapshot) {
-          final list = snapshot.data ?? [];
-          if (list.isEmpty) {
+          if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
             return const Center(
-              child: Text('Belum ada laporan Inspeksi Gardu.'),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: AppColors.cyan600),
+                  SizedBox(height: 12),
+                  Text('Memuat laporan lokal…', style: TextStyle(fontSize: 13, color: AppColors.neutral500)),
+                ],
+              ),
             );
           }
-          return ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: list.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
-            itemBuilder: (_, i) => _draft(list[i]),
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.error_outline_rounded, size: 44, color: AppColors.neutral500),
+                    const SizedBox(height: 12),
+                    const Text('Laporan lokal belum dapat dimuat. Data tidak dihapus.', textAlign: TextAlign.center),
+                    const SizedBox(height: 14),
+                    OutlinedButton.icon(onPressed: _refreshSafely, icon: const Icon(Icons.refresh_rounded), label: const Text('Coba Lagi')),
+                  ],
+                ),
+              ),
+            );
+          }
+          final list = snapshot.data ?? [];
+          if (list.isEmpty) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(color: const Color(0xFFE4F3FA), borderRadius: BorderRadius.circular(18)),
+                      child: const Icon(Icons.electrical_services_rounded, size: 36, color: AppColors.cyan600),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text('Belum ada laporan Inspeksi Gardu', textAlign: TextAlign.center, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.navy900)),
+                    const SizedBox(height: 10),
+                    const Text('Buat laporan harian untuk mulai mencatat pemeriksaan. Data disimpan di HP sebelum dikirim melalui Pengaturan.', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, height: 1.5, color: AppColors.neutral500)),
+                    const SizedBox(height: 20),
+                    ElevatedButton.icon(onPressed: _add, icon: const Icon(Icons.add_rounded), label: const Text('Tambah Laporan')),
+                  ],
+                ),
+              ),
+            );
+          }
+          return RefreshIndicator(
+            onRefresh: _refreshSafely,
+            child: ListView.separated(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+              itemCount: list.length + 1,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (_, i) {
+                if (i == 0) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('${list.length} laporan tersimpan di HP', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.navy900)),
+                        const SizedBox(height: 4),
+                        const Text('Progres menunjukkan gardu yang telah diisi tier. Pengiriman melalui Pengaturan → Sinkron Semua Data.', style: TextStyle(fontSize: 12, height: 1.5, color: AppColors.neutral500)),
+                      ],
+                    ),
+                  );
+                }
+                return _draft(list[i - 1]);
+              },
+            ),
           );
         },
       );
 
   Widget _draft(InsGarduHeader h) => FutureBuilder<List<InsGarduRealisasi>>(
-        future: repo.garduLaporan(h.localId),
+        key: ValueKey(h.localId),
+        future: _summaries.putIfAbsent(h.localId, () => repo.garduLaporan(h.localId)),
         builder: (context, snapshot) {
-          final gs = snapshot.data ?? [];
-          final done = gs.where((x) => x.tier.isNotEmpty).length;
-          return Card(
-            child: ListTile(
-              contentPadding: const EdgeInsets.all(16),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => InsGarduDetail(header: h),
-                ),
-              ),
-              title: Text(
-                h.kodeHeader.isEmpty ? 'Laporan Lokal' : h.kodeHeader,
-                style: const TextStyle(fontWeight: FontWeight.w900),
-              ),
-              subtitle: Text(
-                '${h.hari}, ${h.tanggal}\n$done dari ${gs.length} gardu sudah diisi',
-              ),
-              isThreeLine: true,
-              trailing: const Icon(Icons.chevron_right_rounded),
-            ),
+          final gs = snapshot.data;
+          return InsGarduReportCard(
+            header: h,
+            subTim: sub,
+            total: gs?.length,
+            filled: gs?.where((x) => x.tier.trim().isNotEmpty).length,
+            loading: snapshot.connectionState == ConnectionState.waiting,
+            summaryError: snapshot.hasError ? 'Coba muat ulang atau buka detail laporan.' : null,
+            onRetry: () => setState(() => _summaries[h.localId] = repo.garduLaporan(h.localId)),
+            onTap: () => _open(h),
           );
         },
       );
