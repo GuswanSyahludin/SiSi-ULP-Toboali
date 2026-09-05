@@ -1,0 +1,27 @@
+name: Fix webhook tests once
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/scripts/fix_webhook_tests.py
+      - .github/workflows/fix-webhook-tests-once.yml
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - run: python3 .github/scripts/fix_webhook_tests.py
+      - run: npm test
+        working-directory: tests
+      - shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/scripts/fix_webhook_tests.py .github/workflows/fix-webhook-tests-once.yml
+          git add SiSi_BackEnd/Core/Guard.js tests/suite.js
+          git commit -m "fix(tests): align webhook tests with property-only secret"
+          git push origin HEAD:main
