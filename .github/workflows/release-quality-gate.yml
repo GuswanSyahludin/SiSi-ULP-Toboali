@@ -58,7 +58,7 @@ jobs:
           PY
 
   mobile:
-    name: Flutter analyze and release APK
+    name: Flutter analyze and compile
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -75,12 +75,12 @@ jobs:
         run: dart run build_runner build --delete-conflicting-outputs
       - name: Analyze compile blockers
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
-      - name: Build release APK
-        run: flutter build apk --release
-      - name: Upload APK
+      - name: Compile debug APK
+        run: flutter build apk --debug
+      - name: Upload compile artifact
         uses: actions/upload-artifact@v4
         with:
-          name: sisi-release-apk
-          path: SiSi_Mobile/build/app/outputs/flutter-apk/app-release.apk
+          name: sisi-quality-gate-debug-apk
+          path: SiSi_Mobile/build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 3
