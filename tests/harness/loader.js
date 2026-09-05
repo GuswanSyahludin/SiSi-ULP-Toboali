@@ -76,7 +76,9 @@ export function loadBackend(options = {}) {
   const loaded = [];
 
   for (const rel of orderFiles(listBackendFiles(backendRoot))) {
-    const src = readFileSync(join(backendRoot, rel.replace(/\//g, "\\")), "utf8");
+    // rel is normalized with forward slashes. Split it into native path
+    // segments so this loader works on both Windows and Linux CI runners.
+    const src = readFileSync(join(backendRoot, ...rel.split("/")), "utf8");
     try {
       runInContext(src, context, { filename: rel, displayErrors: true });
       loaded.push(rel);
