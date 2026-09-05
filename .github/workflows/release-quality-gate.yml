@@ -75,6 +75,9 @@ jobs:
         run: dart run build_runner build --delete-conflicting-outputs
       - name: Analyze compile blockers
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
+      - name: Run GPS warning regression tests
+        timeout-minutes: 5
+        run: flutter test test/mock_gps_warning_dialog_test.dart --reporter expanded
       - name: Compile debug APK
         run: flutter build apk --debug
       - name: Upload compile artifact
