@@ -697,8 +697,7 @@ function _webhookSecret_() {
     p = PropertiesService.getScriptProperties().getProperty(PROP_WEBHOOK_SECRET);
   } catch (e) {}
   p = String(p || "").trim();
-  if (p) return p;
-  return typeof WEBHOOK_SECRET !== "undefined" ? String(WEBHOOK_SECRET || "") : "";
+  return p;
 }
 
 function _webhookTsMode_() {
