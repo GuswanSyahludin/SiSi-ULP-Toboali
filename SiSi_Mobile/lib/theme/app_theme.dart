@@ -96,7 +96,7 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         modalBarrierColor: Color(0x9910252E),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(26))),
-        showDragHandle: true,
+        showDragHandle: false,
         dragHandleColor: AppColors.neutral300,
       ),
       inputDecorationTheme: const InputDecorationTheme(
