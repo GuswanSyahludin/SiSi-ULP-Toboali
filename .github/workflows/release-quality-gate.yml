@@ -23,24 +23,43 @@ jobs:
   backend:
     name: Backend syntax and security tests
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Record backend version and commit
+        shell: bash
+        run: |
+          mkdir -p ci-logs
+          { git rev-parse HEAD; node --version; } | tee ci-logs/backend-version.log
       - name: Check Apps Script JavaScript syntax
         shell: bash
         run: |
           set -euo pipefail
           while IFS= read -r -d '' file; do
+            echo "Checking $file"
             node --check "$file"
-          done < <(find SiSi_BackEnd -type f -name '*.js' -print0)
+          done < <(find SiSi_BackEnd -type f -name '*.js' -print0) 2>&1 | tee ci-logs/backend-syntax.log
       - name: Run backend harness
+        if: ${{ !cancelled() }}
         working-directory: tests
-        run: npm test
-      - name: Verify critical mobile routes
         shell: bash
         run: |
+          set -euo pipefail
+          npm test 2>&1 | tee ../ci-logs/backend-harness.log
+      - name: Run P0 correction regression tests
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test tests/p0-correction.test.cjs 2>&1 | tee ci-logs/backend-p0.log
+      - name: Verify critical mobile routes
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          set -euo pipefail
           grep -q 'jadwalPadamMobileRouter_(e, body)' SiSi_BackEnd/Core/Code.js
           grep -q 'gangguanBerandaMobileRouter_(e, body)' SiSi_BackEnd/Core/Code.js
           grep -q 'SISI_WEBHOOK_SECRET' SiSi_BackEnd/Core/Guard.js
@@ -56,30 +75,65 @@ jobs:
           if declaration > usage:
               raise SystemExit('rp is used before declaration')
           PY
+      - name: Upload backend diagnostic logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sisi-backend-logs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ci-logs/
+          if-no-files-found: warn
+          retention-days: 7
 
   mobile:
     name: Flutter analyze and compile
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: SiSi_Mobile
+        shell: bash
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
+      - name: Record Flutter version and commit
+        run: |
+          set -euo pipefail
+          mkdir -p ci-logs
+          { git rev-parse HEAD; flutter --version; dart --version; java -version; } 2>&1 | tee ci-logs/mobile-version.log
       - name: Resolve dependencies
-        run: flutter pub get
+        id: dependencies
+        run: |
+          set -euo pipefail
+          flutter pub get 2>&1 | tee ci-logs/pub-get.log
       - name: Verify generated Drift source
-        run: dart run build_runner build --delete-conflicting-outputs
+        id: generated
+        run: |
+          set -euo pipefail
+          dart run build_runner build --delete-conflicting-outputs 2>&1 | tee ci-logs/build-runner.log
       - name: Analyze compile blockers
-        run: flutter analyze --no-fatal-infos --no-fatal-warnings
-      - name: Run GPS warning regression tests
-        timeout-minutes: 5
-        run: flutter test test/mock_gps_warning_dialog_test.dart --reporter expanded
+        id: analyze
+        run: |
+          set -euo pipefail
+          flutter analyze --no-fatal-infos --no-fatal-warnings 2>&1 | tee ci-logs/flutter-analyze.log
+      - name: Run all Flutter regression tests
+        id: tests
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.generated.outcome == 'success' }}
+        timeout-minutes: 15
+        run: |
+          set -euo pipefail
+          flutter test --reporter expanded --concurrency=1 2>&1 | tee ci-logs/flutter-tests.log
       - name: Compile debug APK
-        run: flutter build apk --debug
+        if: ${{ success() && steps.analyze.outcome == 'success' && steps.tests.outcome == 'success' }}
+        run: |
+          set -euo pipefail
+          flutter build apk --debug 2>&1 | tee ci-logs/flutter-build.log
       - name: Upload compile artifact
         uses: actions/upload-artifact@v4
         with:
@@ -87,3 +141,11 @@ jobs:
           path: SiSi_Mobile/build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
           retention-days: 3
+      - name: Upload Flutter diagnostic logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sisi-flutter-logs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: SiSi_Mobile/ci-logs/
+          if-no-files-found: warn
+          retention-days: 7
