@@ -1,0 +1,26 @@
+name: Fix Yandal crew source
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/scripts/fix_yandal_petugas_source.py
+      - .github/workflows/fix-yandal-petugas-source.yml
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - run: python3 .github/scripts/fix_yandal_petugas_source.py
+      - shell: bash
+        run: |
+          node --check SiSi_BackEnd/Core/Delta-Sync-Mobile.js
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/scripts/fix_yandal_petugas_source.py .github/workflows/fix-yandal-petugas-source.yml
+          git add SiSi_BackEnd/Core/Delta-Sync-Mobile.js
+          git commit -m "fix(sync): discover Yandal crew sheet aliases"
+          git push origin HEAD:main

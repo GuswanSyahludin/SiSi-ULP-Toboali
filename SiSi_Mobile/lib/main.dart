@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'screens/splash_gate.dart';
@@ -21,6 +22,13 @@ class SiSiApp extends StatelessWidget {
       title: 'SiSi Mobile',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
+      locale: const Locale('id', 'ID'),
+      supportedLocales: const [Locale('id', 'ID')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       home: const SplashGate(),
     );
   }
