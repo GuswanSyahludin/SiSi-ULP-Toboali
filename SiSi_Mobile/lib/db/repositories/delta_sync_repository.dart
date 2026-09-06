@@ -31,6 +31,7 @@ class DeltaTransferProgress {
 }
 
 typedef DeltaSyncProgress = void Function(DeltaTransferProgress progress);
+typedef RowProgress = void Function(int rows);
 
 class DeltaSyncRepository {
   final db = DbProvider.instance;
@@ -119,7 +120,7 @@ class DeltaSyncRepository {
     return DeltaSyncResult(ok: true, initial: local.isEmpty, changed: changed, message: changed.isEmpty ? 'Tidak ada perubahan server$warningText.' : '${changed.length} tabel diperbarui$warningText.');
   }
 
-  Future<int> _download(String token, String name, String expected, String kind, {ValueChanged<int>? onRows}) async {
+  Future<int> _download(String token, String name, String expected, String kind, {RowProgress? onRows}) async {
     var offset = 0;
     final all = <dynamic>[];
     var version = expected;
