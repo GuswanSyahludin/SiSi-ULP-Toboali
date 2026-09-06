@@ -57,10 +57,10 @@ class SyncRepository {
         firstMaster=await downloadMasterData(activeToken, reportProgress: false);
       }
 
-      progress.update('Menghitung total baris database', completed: 6, total: 10);
+      progress.update('Menyiapkan Data Master', completed: 6, total: 10);
       final delta = await deltaRepo.sync(activeToken, onProgress: (transfer) {
         progress.update(
-          'Mengunduh data',
+          'Mengunduh data master',
           dataset: transfer.dataset,
           completed: 0,
           total: 1,
@@ -96,7 +96,7 @@ class SyncRepository {
     if(_kunci.contains(modul))return {'ok':false,'message':'Sinkron master sedang berjalan.'};
     _kunci.add(modul);
     final progress=SyncProgressService.instance;
-    if(reportProgress)progress.begin(stage:'Menyiapkan master data',total:4);
+    if(reportProgress)progress.begin(stage:'Menyiapkan Data Master',total:4);
     try {
       if(reportProgress)progress.update('Memperbarui sesi',completed:0,total:4);
       final activeToken=await _tokenAktif(token);
