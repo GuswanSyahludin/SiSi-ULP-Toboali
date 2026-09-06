@@ -37,9 +37,124 @@ class _RowState extends State<EksekusiRowScreen>{
   Future<void> maps(String coord)async{if(coord.trim().isEmpty)return;try{await launchUrl(Uri.https('www.google.com','/maps/search/',{'api':'1','query':coord}),mode:LaunchMode.externalApplication);}catch(_){}}
   Widget photos(Map<String,dynamic>x)=>Row(children:[for(final e in const {'Sebelum':'fotoSebelumUrl','Pekerjaan':'fotoPekerjaanUrl','Sesudah':'fotoSesudahUrl'}.entries)Expanded(child:Padding(padding:const EdgeInsets.all(4),child:InkWell(onTap:() => photo(x,e.key,'${x[e.value]??''}'),child:Column(children:[SizedBox(height:76,child:'${x[e.value]??''}'.isEmpty?const Center(child:Icon(Icons.image_not_supported_outlined)):Image.network('${x[e.value]}',fit:BoxFit.cover,errorBuilder:(_,__,___)=>const Icon(Icons.broken_image_outlined))),Text(e.key,style:const TextStyle(fontSize:11)),const Icon(Icons.open_in_full,size:14)]))))]);
   void detail(Map<String,dynamic>x){showModalBottomSheet(context:context,isScrollControlled:true,useSafeArea:true,builder:(ctx)=>SizedBox(height:MediaQuery.sizeOf(ctx).height*.8,child:ListView(padding:const EdgeInsets.all(20),children:[Text('${x['kodeEksekusi']}',style:const TextStyle(fontSize:20,fontWeight:FontWeight.bold)),const SizedBox(height:12),for(final e in x.entries.where((e)=>!e.key.toLowerCase().contains('foto')&&!e.key.startsWith('tampil')))Padding(padding:const EdgeInsets.symmetric(vertical:5),child:Text('${e.key}: ${e.value}')),TextButton.icon(onPressed:()=>maps('${x['koordinatPekerjaan']??x['koordinatTiang']??''}'),icon:const Icon(Icons.map_outlined),label:const Text('Buka lokasi')),photos(x),const Text('Ketuk foto untuk pratinjau dan download watermark jika indikator lengkap.',style:TextStyle(fontSize:12)),if(stage(x)<3)FilledButton(onPressed:(){Navigator.pop(ctx);form(x);},child:Text(stage(x)<2?'Lanjutkan Foto Pekerjaan':'Selesaikan Foto Sesudah'))])));}
-  @override Widget build(BuildContext context)=>Scaffold(backgroundColor:AppColors.neutral100,appBar:AppBar(backgroundColor:AppColors.navy700,foregroundColor:Colors.white,title:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Eksekusi Pekerjaan',style:TextStyle(fontSize:18)),Text('$sub · ${date==null?'Pilih tanggal':iso(date!)}',style:const TextStyle(fontSize:12))]),actions:[IconButton(onPressed:()=>date==null?pick():load(),icon:const Icon(Icons.refresh))]),
-    floatingActionButton:FloatingActionButton.extended(backgroundColor:AppColors.amber600,onPressed:()=>form(),icon:const Icon(Icons.add_a_photo),label:const Text('Input Eksekusi')),
-    body:Column(children:[if(filter)Padding(padding:const EdgeInsets.all(12),child:Row(children:[Expanded(child:OutlinedButton.icon(onPressed:pick,icon:const Icon(Icons.calendar_today),label:Text(date==null?'Pilih tanggal':iso(date!)))),const SizedBox(width:8),FilledButton(onPressed:()=>date==null?pick():load(),child:const Text('Cari'))])),Expanded(child:loading?const Center(child:CircularProgressIndicator()):error!=null?Center(child:Padding(padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[Text(error!),TextButton(onPressed:load,child:const Text('Coba lagi'))])):!searched?const Center(child:Text('Pilih tanggal untuk melihat eksekusi.')):RefreshIndicator(onRefresh:load,child:ListView(padding:const EdgeInsets.fromLTRB(16,16,16,100),physics:const AlwaysScrollableScrollPhysics(),children:[Text('${rows.length} titik pekerjaan',style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),if(rows.isEmpty)const Padding(padding:EdgeInsets.all(24),child:Text('Belum ada eksekusi pada tanggal ini.')),for(final x in rows)Card(child:InkWell(onTap:()=>detail(x),child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('${x['kodeEksekusi']}',style:const TextStyle(fontWeight:FontWeight.bold)),Text('${x['penyulang']} / ${x['section']}'),Text('${x['jenisPekerjaan']} · ${x['diameter']} cm'),Text('Input: ${x['inputOleh']??''} · ${stage(x)}/3 ${stage(x)==3?'Selesai':''}',style:const TextStyle(fontSize:12)),photos(x)]))))])))]));
+
+  Widget _body() {
+    if (loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(error!),
+              TextButton(onPressed: load, child: const Text('Coba lagi')),
+            ],
+          ),
+        ),
+      );
+    }
+    if (!searched) {
+      return const Center(child: Text('Pilih tanggal untuk melihat eksekusi.'));
+    }
+    return RefreshIndicator(
+      onRefresh: load,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          Text('${rows.length} titik pekerjaan',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          if (rows.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(24),
+              child: Text('Belum ada eksekusi pada tanggal ini.'),
+            ),
+          for (final x in rows)
+            Card(
+              child: InkWell(
+                onTap: () => detail(x),
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('${x['kodeEksekusi']}',
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text('${x['penyulang']} / ${x['section']}'),
+                      Text('${x['jenisPekerjaan']} · ${x['diameter']} cm'),
+                      Text(
+                        'Input: ${x['inputOleh'] ?? ''} · ${stage(x)}/3 ${stage(x) == 3 ? 'Selesai' : ''}',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      photos(x),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.neutral100,
+      appBar: AppBar(
+        backgroundColor: AppColors.navy700,
+        foregroundColor: Colors.white,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Eksekusi Pekerjaan', style: TextStyle(fontSize: 18)),
+            Text('$sub · ${date == null ? 'Pilih tanggal' : iso(date!)}',
+                style: const TextStyle(fontSize: 12)),
+          ],
+        ),
+        actions: [
+          IconButton(
+            onPressed: () => date == null ? pick() : load(),
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppColors.amber600,
+        onPressed: () => form(),
+        icon: const Icon(Icons.add_a_photo),
+        label: const Text('Input Eksekusi'),
+      ),
+      body: Column(
+        children: [
+          if (filter)
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: pick,
+                      icon: const Icon(Icons.calendar_today),
+                      label: Text(date == null ? 'Pilih tanggal' : iso(date!)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: () => date == null ? pick() : load(),
+                    child: const Text('Cari'),
+                  ),
+                ],
+              ),
+            ),
+          Expanded(child: _body()),
+        ],
+      ),
+    );
+  }
 }
 class _RowPhotoForm extends StatefulWidget{
   final Map<String,dynamic> sesi;
@@ -79,13 +194,81 @@ class _FormState extends State<_RowPhotoForm>{
     finally{if(mounted)setState(()=>busy=false);}
   }
   Widget field(String label,TextEditingController c,{bool gps=false})=>Padding(padding:const EdgeInsets.only(bottom:12),child:TextField(controller:c,enabled:!busy&&!saved,keyboardType:c==diameter?TextInputType.number:TextInputType.text,decoration:InputDecoration(labelText:label,border:const OutlineInputBorder(),suffixIcon:gps?AccurateGpsButton(controller:c):null)));
-  @override Widget build(BuildContext context)=>PopScope(canPop:!busy,child:Scaffold(appBar:AppBar(title:Text('Eksekusi ROW · $slot')),body:loading?const Center(child:CircularProgressIndicator()):AbsorbPointer(absorbing:busy,child:ListView(padding:const EdgeInsets.all(20),children:[
-    if(error!=null)Padding(padding:const EdgeInsets.only(bottom:12),child:Text(error!,style:const TextStyle(color:Colors.red))),
-    if(initial)...[DropdownButtonFormField<String>(value:feeder,isExpanded:true,decoration:const InputDecoration(labelText:'Penyulang'),items:feeders.map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(),onChanged:saved?null:(v)=>setState((){feeder=v;section=null;})),DropdownButtonFormField<String>(value:section,isExpanded:true,decoration:const InputDecoration(labelText:'Section'),items:(sections[feeder]??[]).map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(),onChanged:saved?null:(v)=>setState(()=>section=v)),const SizedBox(height:16),field('Nomor Tiang (opsional)',tiang),field('Koordinat Tiang',koorTiang,gps:true),field('Koordinat Pekerjaan',koorKerja,gps:true),field('Diameter (cm)',diameter)]else Text('$code · $feeder / $section'),
-    if(image!=null)InkWell(onTap:()=>PetugasPhotoFlow.open(context,photo:image,title:'Foto $slot'),child:Image.file(File(image!.path),height:200,fit:BoxFit.contain)),
-    if(!saved)OutlinedButton.icon(onPressed:busy?null:take,icon:const Icon(Icons.camera_alt),label:Text(image==null?'Ambil / pilih foto':'Ganti foto')),
-    if(image!=null)TextButton.icon(onPressed:()=>PetugasPhotoFlow.open(context,photo:image,title:'Foto $slot'),icon:const Icon(Icons.open_in_full),label:const Text('Lihat foto / watermark')),
-    const Text('Download hanya tersedia setelah kode resmi dan semua indikator per foto lengkap. Foto galeri tanpa metadata asli hanya dapat dipratinjau.',style:TextStyle(fontSize:12)),const SizedBox(height:20),
-    if(!saved)FilledButton(onPressed:busy?null:save,child:Text(busy?'Menyimpan…':'Simpan progres'))else ...[Text('Progres tersimpan: $code',style:const TextStyle(fontWeight:FontWeight.bold)),FilledButton(onPressed:()=>Navigator.pop(context,true),child:const Text('Selesai'))],
-  ])))));
+
+  Widget _formBody() {
+    if (loading) return const Center(child: CircularProgressIndicator());
+    return AbsorbPointer(
+      absorbing: busy,
+      child: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          if (error != null)
+            Padding(padding: const EdgeInsets.only(bottom: 12),
+                child: Text(error!, style: const TextStyle(color: Colors.red))),
+          if (initial) ...[
+            DropdownButtonFormField<String>(
+              value: feeder,
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'Penyulang'),
+              items: feeders.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
+              onChanged: saved ? null : (v) => setState(() { feeder = v; section = null; }),
+            ),
+            DropdownButtonFormField<String>(
+              value: section,
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'Section'),
+              items: (sections[feeder] ?? []).map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
+              onChanged: saved ? null : (v) => setState(() => section = v),
+            ),
+            const SizedBox(height: 16),
+            field('Nomor Tiang (opsional)', tiang),
+            field('Koordinat Tiang', koorTiang, gps: true),
+            field('Koordinat Pekerjaan', koorKerja, gps: true),
+            field('Diameter (cm)', diameter),
+          ] else
+            Text('$code · $feeder / $section'),
+          if (image != null)
+            InkWell(
+              onTap: () => PetugasPhotoFlow.open(context, photo: image, title: 'Foto $slot'),
+              child: Image.file(File(image!.path), height: 200, fit: BoxFit.contain),
+            ),
+          if (!saved)
+            OutlinedButton.icon(
+              onPressed: busy ? null : take,
+              icon: const Icon(Icons.camera_alt),
+              label: Text(image == null ? 'Ambil / pilih foto' : 'Ganti foto'),
+            ),
+          if (image != null)
+            TextButton.icon(
+              onPressed: () => PetugasPhotoFlow.open(context, photo: image, title: 'Foto $slot'),
+              icon: const Icon(Icons.open_in_full),
+              label: const Text('Lihat foto / watermark'),
+            ),
+          const Text(
+            'Download hanya tersedia setelah kode resmi dan semua indikator per foto lengkap. Foto galeri tanpa metadata asli hanya dapat dipratinjau.',
+            style: TextStyle(fontSize: 12),
+          ),
+          const SizedBox(height: 20),
+          if (!saved)
+            FilledButton(onPressed: busy ? null : save,
+                child: Text(busy ? 'Menyimpan…' : 'Simpan progres'))
+          else ...[
+            Text('Progres tersimpan: $code', style: const TextStyle(fontWeight: FontWeight.bold)),
+            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Selesai')),
+          ],
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: !busy,
+      child: Scaffold(
+        appBar: AppBar(title: Text('Eksekusi ROW · $slot')),
+        body: _formBody(),
+      ),
+    );
+  }
 }

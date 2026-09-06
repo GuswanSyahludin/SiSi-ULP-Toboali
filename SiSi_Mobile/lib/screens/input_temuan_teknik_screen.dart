@@ -59,16 +59,95 @@ class _InputState extends State<InputTemuanTeknikScreen>{
   Widget dropdown(String label,String? value,List<String> options,ValueChanged<String?> changed)=>Padding(padding:const EdgeInsets.only(bottom:14),child:DropdownButtonFormField<String>(value:options.contains(value)?value:null,isExpanded:true,decoration:InputDecoration(labelText:label,border:const OutlineInputBorder()),items:options.toSet().map((s)=>DropdownMenuItem(value:s,child:Text(s,overflow:TextOverflow.ellipsis))).toList(),onChanged:busy||saved?null:changed));
   Widget field(String label,TextEditingController c,{bool gps=false,bool readOnly=false,int lines=1})=>Padding(padding:const EdgeInsets.only(bottom:14),child:TextField(controller:c,enabled:!busy&&!saved,readOnly:readOnly,maxLines:lines,decoration:InputDecoration(labelText:label,border:const OutlineInputBorder(),suffixIcon:gps?AccurateGpsButton(controller:c,showAccuracyFeedback:false,onCaptured:(r)=>setState((){if(c==koorTiang)accuracyTiang=r.accuracyLabel;else accuracyTemuan=r.accuracyLabel;})):null)));
   Widget photo(String title,PetugasPhoto? p,bool temuan)=>Column(children:[if(p!=null)InkWell(onTap:()=>PetugasPhotoFlow.open(context,photo:p,title:title),child:Image.file(File(p.path),height:120,fit:BoxFit.contain)),if(!saved)TextButton(onPressed:busy?null:()=>take(temuan),child:Text('Ambil / ganti $title')),if(p!=null)TextButton.icon(onPressed:busy?null:()=>PetugasPhotoFlow.open(context,photo:p,title:title),icon:const Icon(Icons.open_in_full,size:16),label:const Text('Lihat / watermark'))]);
-  @override Widget build(BuildContext context)=>PopScope(canPop:!busy,child:Scaffold(backgroundColor:const Color(0xFFF6F8FC),appBar:AppBar(backgroundColor:AppColors.navy700,foregroundColor:Colors.white,title:const Text('Input Temuan')),body:loading?const Center(child:CircularProgressIndicator()):AbsorbPointer(absorbing:busy,child:ListView(padding:const EdgeInsets.all(18),children:[
-    if(error!=null)Padding(padding:const EdgeInsets.only(bottom:12),child:Text(error!,style:const TextStyle(color:Colors.red))),
-    SegmentedButton<String>(segments:const[ButtonSegment(value:'Jaringan',label:Text('Jaringan')),ButtonSegment(value:'Gardu',label:Text('Gardu'))],selected:{object},onSelectionChanged:saved?null:(s)=>changeObject(s.first)),const SizedBox(height:16),
-    if(jaringan)...[dropdown('Penyulang',feeder,feeders,(v)=>setState((){feeder=v;final s=sections[v]??[];section=s.isEmpty?null:s.first;})),dropdown('Section',section,sections[feeder]??[],(v)=>setState(()=>section=v))]else ...[dropdown('Nomor Gardu',gardu,gardus.map((g)=>g.gardu).toList(),selectGardu),Text('Penyulang: ${feeder??'Belum tersedia'}\nSection: ${section??'Belum tersedia'}'),const SizedBox(height:16)],
-    field('Segmen',segmen),if(jaringan)...[field('Nomor Tiang',tiang),field('Koordinat Tiang',koorTiang,gps:true,readOnly:true),if(accuracyTiang!=null)Text('Akurasi $accuracyTiang')],
-    dropdown('Tier',tier,['Tier 1','Tier 2'],(v){if(v!=null){setState(()=>tier=v);loadFindings();}}),if(loadingFindings)const LinearProgressIndicator()else dropdown('Temuan',finding,findings,(v)=>setState(()=>finding=v)),
-    field(jaringan?'Koordinat Temuan':'Koordinat Temuan (Master Gardu)',koorTemuan,gps:jaringan,readOnly:true),if(accuracyTemuan!=null)Text('Akurasi $accuracyTemuan'),
-    Text('Petugas Inspeksi: $sub',style:const TextStyle(fontWeight:FontWeight.bold)),const SizedBox(height:14),field('Deskripsi / Catatan Lapangan',description,lines:3),
-    const Text('Untuk watermark, lengkapi indikator sebelum mengambil foto. GPS per foto diperiksa saat pengambilan; foto galeri tanpa metadata asli tidak dapat diekspor.'),
-    Row(crossAxisAlignment:CrossAxisAlignment.start,children:[Expanded(child:photo('Foto Temuan',fotoTemuan,true)),Expanded(child:photo(jaringan?'Foto Tiang':'Foto Gardu',fotoObject,false))]),const SizedBox(height:20),
-    if(!saved)FilledButton(onPressed:busy?null:save,child:Text(busy?'Menyimpan…':'Simpan Temuan'))else ...[Text('Temuan tersimpan: $officialCode'),const Text('Buka foto di atas untuk membuat dan mengunduh watermark.'),FilledButton(onPressed:()=>Navigator.pop(context,true),child:const Text('Selesai'))],
-  ])))));
+
+  Widget _formBody() {
+    if (loading) return const Center(child: CircularProgressIndicator());
+    return AbsorbPointer(
+      absorbing: busy,
+      child: ListView(
+        padding: const EdgeInsets.all(18),
+        children: [
+          if (error != null)
+            Padding(padding: const EdgeInsets.only(bottom: 12),
+                child: Text(error!, style: const TextStyle(color: Colors.red))),
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(value: 'Jaringan', label: Text('Jaringan')),
+              ButtonSegment(value: 'Gardu', label: Text('Gardu')),
+            ],
+            selected: {object},
+            onSelectionChanged: saved ? null : (s) => changeObject(s.first),
+          ),
+          const SizedBox(height: 16),
+          if (jaringan) ...[
+            dropdown('Penyulang', feeder, feeders, (v) => setState(() {
+              feeder = v;
+              final s = sections[v] ?? [];
+              section = s.isEmpty ? null : s.first;
+            })),
+            dropdown('Section', section, sections[feeder] ?? [], (v) => setState(() => section = v)),
+          ] else ...[
+            dropdown('Nomor Gardu', gardu, gardus.map((g) => g.gardu).toList(), selectGardu),
+            Text('Penyulang: ${feeder ?? 'Belum tersedia'}\nSection: ${section ?? 'Belum tersedia'}'),
+            const SizedBox(height: 16),
+          ],
+          field('Segmen', segmen),
+          if (jaringan) ...[
+            field('Nomor Tiang', tiang),
+            field('Koordinat Tiang', koorTiang, gps: true, readOnly: true),
+            if (accuracyTiang != null) Text('Akurasi $accuracyTiang'),
+          ],
+          dropdown('Tier', tier, ['Tier 1', 'Tier 2'], (v) {
+            if (v != null) {
+              setState(() => tier = v);
+              loadFindings();
+            }
+          }),
+          if (loadingFindings)
+            const LinearProgressIndicator()
+          else
+            dropdown('Temuan', finding, findings, (v) => setState(() => finding = v)),
+          field(jaringan ? 'Koordinat Temuan' : 'Koordinat Temuan (Master Gardu)',
+              koorTemuan, gps: jaringan, readOnly: true),
+          if (accuracyTemuan != null) Text('Akurasi $accuracyTemuan'),
+          Text('Petugas Inspeksi: $sub', style: const TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 14),
+          field('Deskripsi / Catatan Lapangan', description, lines: 3),
+          const Text('Untuk watermark, lengkapi indikator sebelum mengambil foto. GPS per foto diperiksa saat pengambilan; foto galeri tanpa metadata asli tidak dapat diekspor.'),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: photo('Foto Temuan', fotoTemuan, true)),
+              Expanded(child: photo(jaringan ? 'Foto Tiang' : 'Foto Gardu', fotoObject, false)),
+            ],
+          ),
+          const SizedBox(height: 20),
+          if (!saved)
+            FilledButton(onPressed: busy ? null : save,
+                child: Text(busy ? 'Menyimpan…' : 'Simpan Temuan'))
+          else ...[
+            Text('Temuan tersimpan: $officialCode'),
+            const Text('Buka foto di atas untuk membuat dan mengunduh watermark.'),
+            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Selesai')),
+          ],
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: !busy,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF6F8FC),
+        appBar: AppBar(
+          backgroundColor: AppColors.navy700,
+          foregroundColor: Colors.white,
+          title: const Text('Input Temuan'),
+        ),
+        body: _formBody(),
+      ),
+    );
+  }
 }
