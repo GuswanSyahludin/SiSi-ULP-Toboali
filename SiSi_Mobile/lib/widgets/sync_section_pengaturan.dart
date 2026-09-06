@@ -7,6 +7,7 @@ import '../db/repositories/p0_repository.dart';
 import '../db/repositories/sync_repository.dart';
 import '../theme/app_colors.dart';
 import '../services/auto_sync_service.dart';
+import '../services/sync_progress_service.dart';
 
 class SyncSectionPengaturan extends StatefulWidget {
   final Map<String,dynamic> sesi;
@@ -22,7 +23,7 @@ class _State extends State<SyncSectionPengaturan>{
   int p0=0;
   List<GarduOutbox> gardu=[];
   String device='…';
-  bool proses=false;
+  bool prosesP0=false;
   @override void initState(){super.initState();
     _syncSub=DbProvider.instance.syncDao.pantauSemua().listen((rows){if(mounted)setState(()=>status={for(final x in rows)x.key:x});});
     _p0Sub=P0Repository().pantauJumlahAntrean().listen((n){if(mounted)setState(()=>p0=n);});
@@ -31,11 +32,11 @@ class _State extends State<SyncSectionPengaturan>{
   }
   @override void dispose(){_syncSub?.cancel();_p0Sub?.cancel();_garduSub?.cancel();super.dispose();}
   Future<void> _sync({bool onlyP0=false})async{
-    if(proses)return;setState(()=>proses=true);
+    if(prosesP0 || SyncProgressService.instance.state.value.running)return;if(onlyP0)setState(()=>prosesP0=true);
     Map<String,dynamic> r;
     try{r=onlyP0?await repo.sinkronVerifikasiP0():await repo.sinkronSemua((widget.sesi['token']??'').toString());if(!onlyP0&&r['ok']==true)await AutoSyncService.activate();}
     catch(e){r={'ok':false,'message':'Sinkron gagal: $e'};}
-    finally{if(mounted)setState(()=>proses=false);}
+    finally{if(onlyP0&&mounted)setState(()=>prosesP0=false);}
     if(!mounted)return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('${r['message']??(r['ok']==true?'Sinkron selesai':'Sinkron gagal')}'),backgroundColor:r['ok']==true?AppColors.success700:AppColors.red600,duration:const Duration(seconds:7)));
   }
@@ -46,10 +47,17 @@ class _State extends State<SyncSectionPengaturan>{
     return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
       const Text('Data & Server Lokal',style:TextStyle(fontSize:14,fontWeight:FontWeight.bold,color:AppColors.navy700)),
       const SizedBox(height:4),Text('ID server lokal HP: $device',style:const TextStyle(fontSize:11,color:AppColors.neutral500)),const SizedBox(height:10),
-      Card(elevation:0,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12)),child:ListTile(contentPadding:const EdgeInsets.all(16),leading:Icon(proses?Icons.sync:Icons.cloud_done_outlined,color:AppColors.navy700),title:Text(proses?'Sinkronisasi berjalan':'Sinkron Semua Data',style:const TextStyle(fontSize:14,fontWeight:FontWeight.bold)),subtitle:Text(proses?'Sedang mengirim dan memuat data…':total>0?'$p0 perubahan P0 · ${gardu.length} edit Gardu menunggu kirim':last!=null?'Sinkron terakhir ${last.hour.toString().padLeft(2,'0')}:${last.minute.toString().padLeft(2,'0')}':'Belum pernah sinkron',style:const TextStyle(fontSize:12)),trailing:proses?const SizedBox(width:22,height:22,child:CircularProgressIndicator(strokeWidth:2)):total>0?Text('$total'):const Icon(Icons.check_circle_outline),onTap:proses?null:()=>_sync())),
+      ValueListenableBuilder<SyncProgressState>(valueListenable:SyncProgressService.instance.state,builder:(context,progress,_){
+        final busy=progress.running||prosesP0;
+        return Card(elevation:0,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12)),child:InkWell(borderRadius:BorderRadius.circular(12),onTap:busy?null:()=>_sync(),child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          Row(children:[Icon(busy?Icons.sync:Icons.cloud_done_outlined,color:AppColors.navy700),const SizedBox(width:14),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(busy?'Sinkronisasi berjalan':'Sinkron Semua Data',style:const TextStyle(fontSize:14,fontWeight:FontWeight.bold)),const SizedBox(height:4),Text(progress.running?progress.stage:total>0?'$p0 perubahan P0 · ${gardu.length} edit Gardu menunggu kirim':last!=null?'Sinkron terakhir ${last.hour.toString().padLeft(2,'0')}:${last.minute.toString().padLeft(2,'0')}':'Belum pernah sinkron',style:const TextStyle(fontSize:12))])),if(progress.running)Text('${progress.percent}%',style:const TextStyle(fontSize:13,fontWeight:FontWeight.w800,color:AppColors.navy700))else if(total>0)Text('$total')else const Icon(Icons.check_circle_outline)]),
+          if(progress.running)...[const SizedBox(height:14),ClipRRect(borderRadius:BorderRadius.circular(4),child:LinearProgressIndicator(value:progress.fraction,minHeight:7)),const SizedBox(height:10),Wrap(spacing:8,runSpacing:6,children:[Chip(avatar:const Icon(Icons.downloading_rounded,size:16),label:Text(progress.dataset??progress.stage),visualDensity:VisualDensity.compact),if(progress.rows>0)Chip(label:Text('${progress.rows} baris'),visualDensity:VisualDensity.compact)])],
+          if(!progress.running&&progress.message!=null)...[const SizedBox(height:8),Text(progress.message!,style:TextStyle(fontSize:11,color:progress.failed?AppColors.red600:AppColors.success700))],
+        ])))) ;
+      }),
       if(p0>0) ...[
         const SizedBox(height:8),const Text('P0: koreksi jenis dikirim sebelum keputusan. Perubahan gagal tetap disimpan di HP.',style:TextStyle(fontSize:12,color:AppColors.neutral500)),
-        TextButton.icon(onPressed:proses?null:()=>_sync(onlyP0:true),icon:const Icon(Icons.upload_outlined),label:Text('Kirim perubahan P0 ($p0)')),
+        TextButton.icon(onPressed:prosesP0||SyncProgressService.instance.state.value.running?null:()=>_sync(onlyP0:true),icon:const Icon(Icons.upload_outlined),label:Text('Kirim perubahan P0 ($p0)')),
       ],
     ]);
   }

@@ -211,7 +211,7 @@ class _GangguanState extends State<GangguanBerandaSection> {
                   SizedBox(height:labelHeight,child:Center(child:Text('$n',style:TextStyle(fontSize:11,fontWeight:FontWeight.w700,color:chosen?accent:muted)))),
                   SizedBox(height:144,child:Stack(alignment:Alignment.bottomCenter,children:[
                     Positioned.fill(child:Column(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:const[Divider(height:1,color:line),Divider(height:1,color:line),Divider(height:1,color:line)])),
-                    if(n>0) Container(width:22,height:144*n/ceiling,decoration:BoxDecoration(color:chosen?accent:accent.withValues(alpha:.28),borderRadius:const BorderRadius.vertical(top:Radius.circular(5)))),
+                    if(n>0) Container(width:28,height:144*n/ceiling,decoration:BoxDecoration(color:chosen?accent:accent.withValues(alpha:.34),borderRadius:const BorderRadius.vertical(top:Radius.circular(5))),alignment:Alignment.topCenter,padding:const EdgeInsets.only(top:3),child:Text('$n',style:TextStyle(fontSize:10,fontWeight:FontWeight.w800,color:chosen?Colors.white:ink))),
                   ])),
                   SizedBox(height:dateHeight,child:Center(child:Container(padding:const EdgeInsets.symmetric(horizontal:7,vertical:4),decoration:BoxDecoration(color:chosen?const Color(0xFFEAF1FC):null,borderRadius:BorderRadius.circular(6)),child:Text(d.substring(8),style:TextStyle(fontSize:11,color:chosen?accent:muted,fontWeight:chosen?FontWeight.w700:FontWeight.w400))))),
                 ]),

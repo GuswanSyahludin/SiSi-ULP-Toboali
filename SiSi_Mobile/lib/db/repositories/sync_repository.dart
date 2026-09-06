@@ -1,4 +1,5 @@
 import '../../services/api_service.dart';
+import '../../services/sync_progress_service.dart';
 import '../db_provider.dart';
 import 'gardu_sync_repository.dart';
 import 'inspeksi_gardu_repository.dart';
@@ -35,22 +36,35 @@ class SyncRepository {
 
   Future<Map<String, dynamic>> sinkronSemua(String token) async {
     const modul = modulSinkronSemua;
+    final progress = SyncProgressService.instance;
     if (_kunci.contains(modul)) return {'ok':false,'message':'Sinkron data sedang berjalan.'};
     _kunci.add(modul);
+    progress.begin(total: 10);
     try {
+      progress.update('Memperbarui sesi', completed: 0, total: 10);
       final activeToken = await _tokenAktif(token);
       final deltaRepo = DeltaSyncRepository();
       final initial = !await deltaRepo.sudahPernah();
 
+      progress.update('Mengirim antrean P0', completed: 1, total: 10);
       final p0 = await P0Repository().kirimAntrean();
+      progress.update('Mengirim perubahan Gardu', completed: 2, total: 10);
       final garduEdit = await GarduSyncRepository().kirim(activeToken);
+      progress.update('Mengirim inspeksi Gardu', completed: 3, total: 10);
       final inspeksi = await InspeksiGarduRepository().syncSemua(activeToken);
+      progress.update('Mengirim penugasan tim', completed: 4, total: 10);
       try { await TeknikToRepository().flushOutbox(activeToken); } catch (_) {}
 
       Map<String,dynamic> firstMaster={'ok':true};
-      if(initial) firstMaster=await downloadMasterData(activeToken);
+      if(initial) {
+        progress.update('Mengunduh master awal', completed: 5, total: 10);
+        firstMaster=await downloadMasterData(activeToken, reportProgress: false);
+      }
 
-      final delta = await deltaRepo.sync(activeToken);
+      progress.update('Memeriksa daftar dataset', completed: 6, total: 10);
+      final delta = await deltaRepo.sync(activeToken, onProgress: (name, index, total, rows) {
+        progress.update('Mengunduh data', dataset: name, completed: 6 + ((index + 1) * 3 ~/ (total == 0 ? 1 : total)), total: 10, rows: rows);
+      });
       final changed=delta.changed.toSet();
 
       if(!initial && changed.contains('db_Penyulang')){
@@ -71,21 +85,27 @@ class SyncRepository {
       final ok=p0['ok']==true && garduEdit['ok']==true && inspeksi['ok']==true && firstMaster['ok']==true;
       await DbProvider.instance.syncDao.tandaiTersinkron(modul,
         jumlah:delta.changed.length,keterangan:delta.message);
-      return {'ok':ok,'initial':initial,'changed':delta.changed,
-        'message':'${delta.message} • Outbox: P0 ${p0['terkirim']??0}, Gardu ${garduEdit['terkirim']??0}, Inspeksi ${inspeksi['terkirim']??0}'};
+      final message='${delta.message} • Outbox: P0 ${p0['terkirim']??0}, Gardu ${garduEdit['terkirim']??0}, Inspeksi ${inspeksi['terkirim']??0}';
+      if (ok) { progress.success(message); } else { progress.failure(message); }
+      return {'ok':ok,'initial':initial,'changed':delta.changed,'message':message};
     } catch(e) {
-      return {'ok':false,'message':'Koneksi bermasalah: $e'};
+      final message='Koneksi bermasalah: $e';
+      progress.failure(message);
+      return {'ok':false,'message':message};
     } finally { _kunci.remove(modul); }
   }
 
-  Future<Map<String, dynamic>> downloadMasterData(String token) async {
+  Future<Map<String, dynamic>> downloadMasterData(String token, {bool reportProgress = true}) async {
     const modul = modulMasterData;
     if (_kunci.contains(modul)) {
       return {'ok': false, 'message': 'Sinkron master sedang berjalan.'};
     }
 
     _kunci.add(modul);
+    final progress = SyncProgressService.instance;
+    if (reportProgress) progress.begin(stage: 'Menyiapkan master data', total: 4);
     try {
+      if (reportProgress) progress.update('Memperbarui sesi', completed: 0, total: 4);
       final activeToken = await _tokenAktif(token);
       final edit = await GarduSyncRepository().kirim(activeToken);
       if (edit['ok'] != true) {
@@ -103,6 +123,7 @@ class SyncRepository {
         };
       }
 
+      if (reportProgress) progress.update('Mengunduh Penyulang', dataset: 'db_Penyulang', completed: 1, total: 4);
       final rp = await ApiService.getDropdownRow(token: activeToken);
       if (rp['success'] != true) {
         final reason = (rp['message'] ?? 'respons server tidak valid').toString();
@@ -121,6 +142,7 @@ class SyncRepository {
       }
       await MasterRepository().simpanDariApi(listP, mapS);
 
+      if (reportProgress) progress.update('Mengunduh Master Gardu', dataset: 'Master_Gardu', completed: 2, total: 4);
       final rg = await MasterGarduRepository().download(activeToken);
       if (rg['success'] != true) {
         return {
@@ -130,6 +152,7 @@ class SyncRepository {
         };
       }
 
+      if (reportProgress) progress.update('Mengunduh daftar temuan', dataset: 'db_List_Temuan', completed: 3, total: 4);
       await InspeksiGarduRepository().downloadListTemuan(activeToken);
 
       final jumlahGardu = (rg['jumlah'] ?? 0) as int;
@@ -139,13 +162,13 @@ class SyncRepository {
         keterangan: '${listP.length} penyulang · $jumlahGardu gardu',
       );
 
-      return {
-        'ok': true,
-        'message':
-            '${edit['terkirim'] ?? 0} edit Gardu, ${inspeksi['terkirim'] ?? 0} laporan inspeksi, ${listP.length} penyulang, dan $jumlahGardu Master Gardu.',
-      };
+      final message='${edit['terkirim'] ?? 0} edit Gardu, ${inspeksi['terkirim'] ?? 0} laporan inspeksi, ${listP.length} penyulang, dan $jumlahGardu Master Gardu.';
+      if (reportProgress) progress.success(message);
+      return {'ok': true, 'message': message};
     } catch (e) {
-      return {'ok': false, 'message': 'Koneksi bermasalah: $e'};
+      final message='Koneksi bermasalah: $e';
+      if (reportProgress) progress.failure(message);
+      return {'ok': false, 'message': message};
     } finally {
       _kunci.remove(modul);
     }

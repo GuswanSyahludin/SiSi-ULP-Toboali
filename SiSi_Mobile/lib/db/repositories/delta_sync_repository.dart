@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart';
 import '../../services/apps_script_http.dart' as http;
 import '../../services/api_service.dart';
 import '../db_provider.dart';
@@ -13,6 +14,8 @@ class DeltaSyncResult {
   final String message;
   const DeltaSyncResult({required this.ok, required this.initial, required this.changed, required this.message});
 }
+
+typedef DeltaSyncProgress = void Function(String dataset, int index, int total, int rows);
 
 class DeltaSyncRepository {
   final db = DbProvider.instance;
@@ -57,17 +60,21 @@ class DeltaSyncRepository {
 
   Future<bool> sudahPernah() async => (await _versions()).isNotEmpty;
 
-  Future<DeltaSyncResult> sync(String token, {bool force = false}) async {
+  Future<DeltaSyncResult> sync(String token, {bool force = false, DeltaSyncProgress? onProgress}) async {
     final local = await _versions();
     final manifest = await _send(token, {'cmd': 'manifest', 'force': force});
     final datasets = List.from(manifest['datasets'] ?? const []);
     final changed = <String>[];
-    for (final raw in datasets) {
+    for (var datasetIndex = 0; datasetIndex < datasets.length; datasetIndex++) {
+      final raw = datasets[datasetIndex];
       final item = Map<String, dynamic>.from(raw as Map);
       final name = item['name'].toString();
       final version = item['version'].toString();
       if (!force && local[name] == version) continue;
-      await _download(token, name, version, item['kind'].toString());
+      onProgress?.call(name, datasetIndex, datasets.length, 0);
+      await _download(token, name, version, item['kind'].toString(), onRows: (rows) {
+        onProgress?.call(name, datasetIndex, datasets.length, rows);
+      });
       changed.add(name);
     }
     final warnings = List.from(manifest['warnings'] ?? const []);
@@ -75,7 +82,7 @@ class DeltaSyncRepository {
     return DeltaSyncResult(ok: true, initial: local.isEmpty, changed: changed, message: changed.isEmpty ? 'Tidak ada perubahan server$warningText.' : '${changed.length} tabel diperbarui$warningText.');
   }
 
-  Future<void> _download(String token, String name, String expected, String kind) async {
+  Future<void> _download(String token, String name, String expected, String kind, {ValueChanged<int>? onRows}) async {
     var offset = 0;
     final all = <dynamic>[];
     var version = expected;
@@ -83,6 +90,7 @@ class DeltaSyncRepository {
       final page = await _send(token, {'cmd': 'fetch', 'dataset': name, 'offset': offset, 'limit': 250});
       version = page['version'].toString();
       all.addAll(List.from(page['rows'] ?? const []));
+      onRows?.call(all.length);
       if (page['hasMore'] != true) break;
       offset = all.length;
     }
