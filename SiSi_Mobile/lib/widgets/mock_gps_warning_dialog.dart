@@ -65,9 +65,9 @@ class MockGpsWarningDialog extends StatelessWidget {
                   child: const Icon(Icons.cancel_outlined, size: 48, color: red),
                 ),
                 const SizedBox(height: 24),
-                const Semantics(
+                Semantics(
                   header: true,
-                  child: Text(
+                  child: const Text(
                     'Silahkan Matikan Aplikasi Pihak Ke-3 GPS',
                     textAlign: TextAlign.center,
                     style: TextStyle(

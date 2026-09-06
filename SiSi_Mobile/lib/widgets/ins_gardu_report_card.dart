@@ -145,8 +145,9 @@ class InsGarduReportCard extends StatelessWidget {
                     minHeight: 5,
                     backgroundColor: const Color(0xFFE3EDF4),
                     color: AppColors.cyan600,
-                    semanticsLabel: 'Gardu yang telah diisi tier',
-                    semanticsValue: '$filled dari $total',
+                    // Human-readable counts belong in the label. Leave the
+                    // value to Flutter's numeric percentage semantics.
+                    semanticsLabel: 'Gardu yang telah diisi tier: $filled dari $total',
                   ),
                 ),
               ],
