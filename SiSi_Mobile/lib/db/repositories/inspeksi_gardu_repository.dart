@@ -1,158 +1,277 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+
 import 'package:drift/drift.dart' show Value;
 import 'package:http/http.dart' as http;
+
 import '../../services/api_service.dart';
 import '../app_database.dart';
 import '../db_provider.dart';
 
 class InspeksiGarduRepository {
   final dao = DbProvider.instance.inspeksiGarduDao;
-  String _id(String p) => '$p-${DateTime.now().microsecondsSinceEpoch}-${Random().nextInt(1 << 32).toRadixString(36)}';
+  String _id(String prefix) =>
+      '$prefix-${DateTime.now().microsecondsSinceEpoch}-${Random().nextInt(1 << 32).toRadixString(36)}';
+
+  Future<Map<String, dynamic>> _post(
+    String token,
+    String command, {
+    Duration timeout = const Duration(seconds: 90),
+  }) async {
+    final response = await http
+        .post(
+          Uri.parse('${ApiService.baseUrl}?mobile=1'),
+          headers: const {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'action': 'getMasterGarduMobile',
+            'token': token,
+            'ulp': command,
+          }),
+        )
+        .timeout(timeout);
+    final result = Map<String, dynamic>.from(jsonDecode(response.body));
+    if (result['success'] != true) {
+      throw Exception(result['message'] ?? 'Server menolak paket');
+    }
+    return result;
+  }
 
   Future<void> downloadListTemuan(String token) async {
-    final r = await http.get(Uri.parse('${ApiService.baseUrl}?mobile=1&action=getMasterGarduMobile&token=${Uri.encodeComponent(token)}&ulp=LIST_TEMUAN')).timeout(const Duration(seconds: 30));
-    final res = Map<String, dynamic>.from(jsonDecode(r.body));
-    if (res['success'] != true) throw Exception(res['message']);
+    final result = await _post(
+      token,
+      'LIST_TEMUAN',
+      timeout: const Duration(seconds: 30),
+    );
     final rows = <ListTemuansCompanion>[];
-    for (final raw in List.from(res['list'] ?? [])) {
-      final m = Map<String, dynamic>.from(raw);
-      rows.add(ListTemuansCompanion(no: Value(int.tryParse('${m['no']}')),
-        tier: Value('${m['tier']}'), objekInspeksi: Value('${m['objekInspeksi']}'),
-        temuan: Value('${m['temuan']}')));
+    for (final raw in List.from(result['list'] ?? [])) {
+      final item = Map<String, dynamic>.from(raw);
+      rows.add(ListTemuansCompanion(
+        no: Value(int.tryParse('${item['no']}')),
+        tier: Value('${item['tier']}'),
+        objekInspeksi: Value('${item['objekInspeksi']}'),
+        temuan: Value('${item['temuan']}'),
+      ));
     }
     await dao.gantiListTemuan(rows);
   }
 
-  Future<String> buatLaporan({required String ulp, required String hari,
-    required String tanggal, required String koordinatAwal,
-    required String koordinatAkhir, required String inputBy,
-    String kmAwal = '', String kmAkhir = '', String kendala = ''}) async {
+  Future<String> buatLaporan({
+    required String ulp,
+    required String hari,
+    required String tanggal,
+    required String koordinatAwal,
+    required String koordinatAkhir,
+    required String inputBy,
+    String kmAwal = '',
+    String kmAkhir = '',
+    String kendala = '',
+  }) async {
     final id = _id('H');
-    await dao.simpanHeader(InsGarduHeadersCompanion(localId: Value(id),
-      ulp: Value(ulp), hari: Value(hari), tanggal: Value(tanggal),
-      koordinatAwal: Value(koordinatAwal), koordinatAkhir: Value(koordinatAkhir),
-      kmAwal: Value(kmAwal), kmAkhir: Value(kmAkhir), kendala: Value(kendala),
-      inputBy: Value(inputBy), dibuatPada: Value(DateTime.now().toIso8601String())));
-    final gs = await DbProvider.instance.masterGarduDao.cari('', ulp: ulp, limit: 5000);
-    for (final g in gs) {
-      if (_date(g.tanggalPengukuran) != tanggal) continue;
-      final snap = {'ulp': g.ulp, 'nomorGardu': g.gardu, 'alamat': g.alamat,
-        'penyulang': g.penyulang, 'section': g.section, 'merkTrafo': g.merk,
-        'dayaKva': g.kapasitasKva, 'beratTrafo': g.beratTrafo,
-        'volumeMinyak': g.volumeMinyak, 'merkPhbTr': g.merkPhbTr,
-        'nomorSeriPhbTr': g.nomorSeriPhbTr, 'tahunPhbTr': g.tahunPhbTr};
-      await dao.simpanRealisasi(InsGarduRealisasisCompanion(localId: Value(_id('G')),
-        localHeaderId: Value(id), nomorGardu: Value(g.gardu),
-        snapshotJson: Value(jsonEncode(snap))));
+    await dao.simpanHeader(InsGarduHeadersCompanion(
+      localId: Value(id),
+      ulp: Value(ulp),
+      hari: Value(hari),
+      tanggal: Value(tanggal),
+      koordinatAwal: Value(koordinatAwal),
+      koordinatAkhir: Value(koordinatAkhir),
+      kmAwal: Value(kmAwal),
+      kmAkhir: Value(kmAkhir),
+      kendala: Value(kendala),
+      inputBy: Value(inputBy),
+      dibuatPada: Value(DateTime.now().toIso8601String()),
+    ));
+    final gardus =
+        await DbProvider.instance.masterGarduDao.cari('', ulp: ulp, limit: 5000);
+    for (final gardu in gardus) {
+      if (_date(gardu.tanggalPengukuran) != tanggal) continue;
+      final snapshot = {
+        'ulp': gardu.ulp,
+        'nomorGardu': gardu.gardu,
+        'alamat': gardu.alamat,
+        'penyulang': gardu.penyulang,
+        'section': gardu.section,
+        'merkTrafo': gardu.merk,
+        'dayaKva': gardu.kapasitasKva,
+        'beratTrafo': gardu.beratTrafo,
+        'volumeMinyak': gardu.volumeMinyak,
+        'merkPhbTr': gardu.merkPhbTr,
+        'nomorSeriPhbTr': gardu.nomorSeriPhbTr,
+        'tahunPhbTr': gardu.tahunPhbTr,
+      };
+      await dao.simpanRealisasi(InsGarduRealisasisCompanion(
+        localId: Value(_id('G')),
+        localHeaderId: Value(id),
+        nomorGardu: Value(gardu.gardu),
+        snapshotJson: Value(jsonEncode(snapshot)),
+      ));
     }
     return id;
   }
 
-  String _date(String s) {
-    final x = s.trim(), a = RegExp(r'^(\d{4})-(\d{2})-(\d{2})').firstMatch(x);
-    if (a != null) return '${a[1]}-${a[2]}-${a[3]}';
-    final b = RegExp(r'^(\d{1,2})[/-](\d{1,2})[/-](\d{4})').firstMatch(x);
-    return b == null ? x : '${b[3]}-${b[2]!.padLeft(2, '0')}-${b[1]!.padLeft(2, '0')}';
+  String _date(String source) {
+    final value = source.trim();
+    final iso = RegExp(r'^(\d{4})-(\d{2})-(\d{2})').firstMatch(value);
+    if (iso != null) return '${iso[1]}-${iso[2]}-${iso[3]}';
+    final local =
+        RegExp(r'^(\d{1,2})[/-](\d{1,2})[/-](\d{4})').firstMatch(value);
+    return local == null
+        ? value
+        : '${local[3]}-${local[2]!.padLeft(2, '0')}-${local[1]!.padLeft(2, '0')}';
   }
 
   Stream<List<InsGarduHeader>> pantauLaporan() => dao.pantauHeader();
   Future<List<InsGarduRealisasi>> garduLaporan(String id) => dao.realisasi(id);
   Future<List<InsGarduTemuan>> temuan(String id) => dao.temuan(id);
-  Future<List<ListTemuan>> pilihan(String tier) =>
-      dao.pilihanTier(tier == 'Tier 1 & Tier 2' ? ['Tier 1', 'Tier 2'] : [tier]);
+  Future<List<ListTemuan>> pilihan(String tier) => dao.pilihanTier(
+        tier == 'Tier 1 & Tier 2' ? ['Tier 1', 'Tier 2'] : [tier],
+      );
 
-  Future<void> setGardu({required InsGarduRealisasi gardu, required String tier,
-    required List<Map<String, String>> temuan}) async {
-    await dao.simpanRealisasi(InsGarduRealisasisCompanion(localId: Value(gardu.localId),
-      localHeaderId: Value(gardu.localHeaderId), nomorGardu: Value(gardu.nomorGardu),
-      tier: Value(tier), snapshotJson: Value(gardu.snapshotJson)));
+  Future<void> setGardu({
+    required InsGarduRealisasi gardu,
+    required String tier,
+    required List<Map<String, String>> temuan,
+  }) async {
+    await dao.simpanRealisasi(InsGarduRealisasisCompanion(
+      localId: Value(gardu.localId),
+      localHeaderId: Value(gardu.localHeaderId),
+      nomorGardu: Value(gardu.nomorGardu),
+      tier: Value(tier),
+      snapshotJson: Value(gardu.snapshotJson),
+    ));
     await dao.hapusTemuanRealisasi(gardu.localId);
     final rows = <InsGarduTemuansCompanion>[];
-    for (final t in temuan) {
-      rows.add(InsGarduTemuansCompanion(localId: Value(_id('T')),
-        localRealisasiId: Value(gardu.localId), tier: Value(t['tier'] ?? tier),
-        temuan: Value(t['temuan'] ?? ''), deskripsi: Value(t['deskripsi'] ?? ''),
-        fotoTemuanPath: Value(t['fotoTemuanPath'] ?? ''),
-        fotoGarduPath: Value(t['fotoGarduPath'] ?? '')));
+    for (final item in temuan) {
+      rows.add(InsGarduTemuansCompanion(
+        localId: Value(_id('T')),
+        localRealisasiId: Value(gardu.localId),
+        tier: Value(item['tier'] ?? tier),
+        temuan: Value(item['temuan'] ?? ''),
+        deskripsi: Value(item['deskripsi'] ?? ''),
+        fotoTemuanPath: Value(item['fotoTemuanPath'] ?? ''),
+        fotoGarduPath: Value(item['fotoGarduPath'] ?? ''),
+      ));
     }
     if (rows.isNotEmpty) await dao.simpanTemuan(rows);
   }
 
-  Map<String, dynamic> _headerPayload(InsGarduHeader h) => {
-    'localId': h.localId, 'ulp': h.ulp, 'tanggal': h.tanggal,
-    'koordinatAwal': h.koordinatAwal, 'koordinatAkhir': h.koordinatAkhir,
-    'kmAwal': h.kmAwal, 'kmAkhir': h.kmAkhir, 'kendala': h.kendala,
-  };
+  Map<String, dynamic> _headerPayload(InsGarduHeader header) => {
+        'localId': header.localId,
+        'ulp': header.ulp,
+        'tanggal': header.tanggal,
+        'koordinatAwal': header.koordinatAwal,
+        'koordinatAkhir': header.koordinatAkhir,
+        'kmAwal': header.kmAwal,
+        'kmAkhir': header.kmAkhir,
+        'kendala': header.kendala,
+      };
 
-  Future<Map<String, dynamic>> _send(String token, Map<String, dynamic> paket) async {
-    final r = await http.post(Uri.parse('${ApiService.baseUrl}?mobile=1'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'action': 'getMasterGarduMobile', 'token': token,
-        'ulp': 'INSPEKSI:${jsonEncode(paket)}'}),
-    ).timeout(const Duration(seconds: 90));
-    final res = Map<String, dynamic>.from(jsonDecode(r.body));
-    if (res['success'] != true) throw Exception(res['message'] ?? 'Server menolak paket');
-    return res;
-  }
+  Future<Map<String, dynamic>> _send(
+    String token,
+    Map<String, dynamic> package,
+  ) =>
+      _post(token, 'INSPEKSI:${jsonEncode(package)}');
 
   Future<Map<String, dynamic>> syncSemua(String token) async {
-    final hs = await dao.antrean();
-    var ok = 0, fail = 0;
-    for (final h in hs) {
+    final headers = await dao.antrean();
+    var ok = 0;
+    var failed = 0;
+    for (final header in headers) {
       try {
-        await dao.setHeaderSync(h.localId, h.kodeHeader, 'mengirim');
-
-        // Tahap 1: header saja. Retry akan mengembalikan Kode Header yang sama.
-        var res = await _send(token, {'header': _headerPayload(h), 'gardus': []});
-        final kodeHeader = '${res['kodeHeader']}';
-        await dao.setHeaderSync(h.localId, kodeHeader, 'mengirim');
-
-        // Tahap 2: satu Gardu per request. Tahap 3: satu temuan (dua foto) per request.
-        for (final g in await dao.realisasi(h.localId)) {
-          if (g.tier.isEmpty) continue;
-          final ts = await dao.temuan(g.localId);
-          if (ts.isEmpty) {
-            res = await _send(token, {'header': _headerPayload(h), 'gardus': [
-              {'localId': g.localId, 'nomorGardu': g.nomorGardu,
-                'tier': g.tier, 'temuan': []}
-            ]});
-            final rg = Map<String, dynamic>.from((res['gardus'] as List).first);
-            await dao.setRealisasiSync(g.localId, '${rg['kodePekerjaanGardu']}');
+        await dao.setHeaderSync(header.localId, header.kodeHeader, 'mengirim');
+        var result = await _send(token, {
+          'header': _headerPayload(header),
+          'gardus': [],
+        });
+        final kodeHeader = '${result['kodeHeader']}';
+        await dao.setHeaderSync(header.localId, kodeHeader, 'mengirim');
+        for (final gardu in await dao.realisasi(header.localId)) {
+          if (gardu.tier.isEmpty) continue;
+          final findings = await dao.temuan(gardu.localId);
+          if (findings.isEmpty) {
+            result = await _send(token, {
+              'header': _headerPayload(header),
+              'gardus': [
+                {
+                  'localId': gardu.localId,
+                  'nomorGardu': gardu.nomorGardu,
+                  'tier': gardu.tier,
+                  'temuan': [],
+                }
+              ],
+            });
+            final saved =
+                Map<String, dynamic>.from((result['gardus'] as List).first);
+            await dao.setRealisasiSync(
+              gardu.localId,
+              '${saved['kodePekerjaanGardu']}',
+            );
             continue;
           }
-
-          for (final t in ts) {
-            final ft = await _b64(t.fotoTemuanPath), fg = await _b64(t.fotoGarduPath);
-            if (ft.isEmpty || fg.isEmpty) throw Exception('Dua foto belum lengkap: ${t.temuan}');
-            res = await _send(token, {'header': _headerPayload(h), 'gardus': [
-              {'localId': g.localId, 'nomorGardu': g.nomorGardu, 'tier': g.tier,
-                'temuan': [{'localId': t.localId, 'temuan': t.temuan,
-                  'deskripsi': t.deskripsi, 'fotoTemuanB64': ft,
-                  'fotoGarduB64': fg, 'fotoTemuanMime': 'image/jpeg',
-                  'fotoGarduMime': 'image/jpeg'}]}
-            ]});
-            final rg = Map<String, dynamic>.from((res['gardus'] as List).first);
-            await dao.setRealisasiSync(g.localId, '${rg['kodePekerjaanGardu']}');
-            final rt = Map<String, dynamic>.from((rg['temuan'] as List).first);
-            await dao.setTemuanSync(t.localId, '${rt['kodeTemuan']}');
+          for (final finding in findings) {
+            final fotoTemuan = await _b64(finding.fotoTemuanPath);
+            final fotoGardu = await _b64(finding.fotoGarduPath);
+            if (fotoTemuan.isEmpty || fotoGardu.isEmpty) {
+              throw Exception('Dua foto belum lengkap: ${finding.temuan}');
+            }
+            result = await _send(token, {
+              'header': _headerPayload(header),
+              'gardus': [
+                {
+                  'localId': gardu.localId,
+                  'nomorGardu': gardu.nomorGardu,
+                  'tier': gardu.tier,
+                  'temuan': [
+                    {
+                      'localId': finding.localId,
+                      'temuan': finding.temuan,
+                      'deskripsi': finding.deskripsi,
+                      'fotoTemuanB64': fotoTemuan,
+                      'fotoGarduB64': fotoGardu,
+                      'fotoTemuanMime': 'image/jpeg',
+                      'fotoGarduMime': 'image/jpeg',
+                    }
+                  ],
+                }
+              ],
+            });
+            final saved =
+                Map<String, dynamic>.from((result['gardus'] as List).first);
+            await dao.setRealisasiSync(
+              gardu.localId,
+              '${saved['kodePekerjaanGardu']}',
+            );
+            final savedFinding =
+                Map<String, dynamic>.from((saved['temuan'] as List).first);
+            await dao.setTemuanSync(
+              finding.localId,
+              '${savedFinding['kodeTemuan']}',
+            );
           }
         }
-        await dao.setHeaderSync(h.localId, kodeHeader, 'tersinkron');
+        await dao.setHeaderSync(header.localId, kodeHeader, 'tersinkron');
         ok++;
-      } catch (e) {
-        fail++;
-        await dao.setHeaderSync(h.localId, h.kodeHeader, 'gagal', pesan: '$e');
+      } catch (error) {
+        failed++;
+        await dao.setHeaderSync(
+          header.localId,
+          header.kodeHeader,
+          'gagal',
+          pesan: '$error',
+        );
       }
     }
-    return {'ok': fail == 0, 'terkirim': ok, 'gagal': fail,
-      'message': '$ok laporan terkirim, $fail gagal.'};
+    return {
+      'ok': failed == 0,
+      'terkirim': ok,
+      'gagal': failed,
+      'message': '$ok laporan terkirim, $failed gagal.',
+    };
   }
 
-  Future<String> _b64(String p) async {
-    if (p.isEmpty) return '';
-    final f = File(p);
-    return await f.exists() ? base64Encode(await f.readAsBytes()) : '';
+  Future<String> _b64(String path) async {
+    if (path.isEmpty) return '';
+    final file = File(path);
+    return await file.exists() ? base64Encode(await file.readAsBytes()) : '';
   }
 }

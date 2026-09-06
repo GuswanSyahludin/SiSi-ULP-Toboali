@@ -1,4 +1,4 @@
-/* Mobile gateway for the existing Jadwal Padam domain flow. */
+/* Authenticated mobile gateway for Jadwal Padam and legacy report routes. */
 var JADWAL_PADAM_MOBILE_ACTIONS = [
   "getMobileJadwalPadamMaster",
   "getMobileJadwalPadamList",
@@ -7,6 +7,8 @@ var JADWAL_PADAM_MOBILE_ACTIONS = [
   "updateMobileJadwalPadam",
   "updateMobileStatusJadwalPadam",
   "getMobileJadwalPadamWaText",
+  "getMobileLaporanUp3Uiw",
+  "simpanMobileLaporanC4A",
 ];
 
 function jadwalPadamMobileRouter_(e, body) {
@@ -17,12 +19,18 @@ function jadwalPadamMobileRouter_(e, body) {
 
   var token = String(data.token || p.token || "").trim();
   var sesi = typeof getSesiByToken === "function" ? getSesiByToken(token) : null;
-  if (!sesi) return { success: false, ok: false, message: "Sesi habis, silakan login ulang." };
+  if (!sesi)
+    return {
+      success: false,
+      ok: false,
+      message: "Sesi habis, silakan login ulang.",
+    };
 
   var params = {};
   for (var key in p) params[key] = p[key];
   if (body) for (var bodyKey in body) params[bodyKey] = body[bodyKey];
-  if (!params.ulp && String(sesi.role || "").trim() !== "Super User") params.ulp = sesi.ulp || "";
+  if (!params.ulp && String(sesi.role || "").trim() !== "Super User")
+    params.ulp = sesi.ulp || "";
   params.token = token;
 
   switch (action) {
@@ -40,6 +48,14 @@ function jadwalPadamMobileRouter_(e, body) {
       return updateStatusJadwalPadam(params);
     case "getMobileJadwalPadamWaText":
       return getJadwalPadamWaText(params);
+    case "getMobileLaporanUp3Uiw":
+      return typeof getMobileLaporanUp3Uiw === "function"
+        ? getMobileLaporanUp3Uiw(params)
+        : { success: false, ok: false, message: "Laporan UP3/UIW tidak tersedia." };
+    case "simpanMobileLaporanC4A":
+      return typeof simpanMobileLaporanC4A === "function"
+        ? simpanMobileLaporanC4A(params)
+        : { success: false, ok: false, message: "Simpan laporan C4A tidak tersedia." };
     default:
       return null;
   }

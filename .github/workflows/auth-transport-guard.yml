@@ -1,0 +1,40 @@
+name: Auth Transport Guard
+
+on:
+  push:
+    branches: [main, 'fix/**']
+    paths:
+      - 'SiSi_Mobile/lib/**'
+      - 'scripts/audit_auth_transport.py'
+      - 'scripts/test_audit_auth_transport.py'
+      - '.github/workflows/auth-transport-guard.yml'
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  reject-token-in-url:
+    name: Reject auth tokens in query strings
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Self-test the guard
+        working-directory: scripts
+        run: python -m unittest -v test_audit_auth_transport.py
+      - name: Audit all Flutter source
+        run: python scripts/audit_auth_transport.py --root SiSi_Mobile/lib
+      - name: Verify migrated services use POST JSON
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in \
+            SiSi_Mobile/lib/services/jadwal_padam_service.dart \
+            SiSi_Mobile/lib/services/gangguan_beranda_service.dart; do
+            grep -q 'http.*post\|\.post(' "$file"
+            grep -q "Content-Type.*application/json" "$file"
+          done

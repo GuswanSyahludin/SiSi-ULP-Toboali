@@ -27,19 +27,22 @@ class DeltaSyncRepository {
     String token,
     Map<String, dynamic> payload,
   ) async {
-    final query = <String, String>{
-      'mobile': '1',
-      'action': 'getMasterGarduMobile',
-      'token': token,
-      'ulp': 'DELTA_SYNC:${jsonEncode(payload)}',
-    };
-    final uri = Uri.parse(ApiService.baseUrl).replace(queryParameters: query);
-
+    final uri = Uri.parse('${ApiService.baseUrl}?mobile=1');
     http.Response? response;
     Object? lastError;
     for (var attempt = 1; attempt <= 2; attempt++) {
       try {
-        response = await http.get(uri).timeout(const Duration(seconds: 90));
+        response = await http
+            .post(
+              uri,
+              headers: const {'Content-Type': 'application/json'},
+              body: jsonEncode({
+                'action': 'getMasterGarduMobile',
+                'token': token,
+                'ulp': 'DELTA_SYNC:${jsonEncode(payload)}',
+              }),
+            )
+            .timeout(const Duration(seconds: 90));
         if (response.body.trim().isNotEmpty) break;
         lastError = 'respons kosong (HTTP ${response.statusCode})';
       } catch (error) {
@@ -98,7 +101,8 @@ class DeltaSyncRepository {
       changed.add(name);
     }
     final warnings = List.from(manifest['warnings'] ?? const []);
-    final warningText = warnings.isEmpty ? '' : ' · ${warnings.length} dataset dilewati';
+    final warningText =
+        warnings.isEmpty ? '' : ' · ${warnings.length} dataset dilewati';
     return DeltaSyncResult(
       ok: true,
       initial: local.isEmpty,

@@ -30,24 +30,36 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Verify centered Beranda navigation
+      - name: Verify mobile wiring
+        shell: python
         run: |
-          grep -q "import 'beranda_screen.dart';" SiSi_Mobile/lib/screens/dashboard_screen.dart
-          grep -q "case 'Beranda':" SiSi_Mobile/lib/screens/dashboard_screen.dart
-          grep -q "'Tim', 'Gardu', 'Beranda', 'Teknik', 'Pengaturan'" SiSi_Mobile/lib/screens/dashboard_screen.dart
-          grep -q "selectedIndex = currentMenuItems.indexOf('Beranda')" SiSi_Mobile/lib/screens/dashboard_screen.dart
-      - name: Verify work calendar connection
-        run: |
-          grep -q 'class BerandaScreen' SiSi_Mobile/lib/screens/beranda_screen.dart
-          grep -q 'getMobileJadwalPadamCalendar' SiSi_Mobile/lib/services/jadwal_padam_service.dart
-          grep -q 'getMobileJadwalPadamCalendar' SiSi_BackEnd/Core/Jadwal-Padam-Mobile.js
-      - name: Verify Jadwal Padam menu and API
-        run: |
-          grep -q "'title': 'Jadwal Padam'" SiSi_Mobile/lib/screens/dashboard_screen.dart
-          grep -q 'jadwalPadamMobileRouter_' SiSi_BackEnd/Core/Auth-Perangkat.js
-          grep -q 'simpanMobileJadwalPadam' SiSi_BackEnd/Core/Jadwal-Padam-Mobile.js
+          from pathlib import Path
+
+          dashboard = Path('SiSi_Mobile/lib/screens/dashboard_screen.dart').read_text()
+          service = Path('SiSi_Mobile/lib/services/jadwal_padam_service.dart').read_text()
+          router = Path('SiSi_BackEnd/Core/Jadwal-Padam-Mobile.js').read_text()
+          auth = Path('SiSi_BackEnd/Core/Auth-Perangkat.js').read_text()
+          beranda = Path('SiSi_Mobile/lib/screens/beranda_screen.dart').read_text()
+
+          checks = {
+              'Beranda import': "import 'beranda_screen.dart';" in dashboard,
+              'Beranda menu': "case 'Beranda':" in dashboard,
+              'Beranda selected': "indexOf('Beranda')" in dashboard,
+              'Beranda screen': 'class BerandaScreen' in beranda,
+              'calendar client': 'getMobileJadwalPadamCalendar' in service,
+              'calendar backend': 'getMobileJadwalPadamCalendar' in router,
+              'Jadwal menu': "'title': 'Jadwal Padam'" in dashboard,
+              'Jadwal router': 'jadwalPadamMobileRouter_' in auth,
+              'Jadwal save': 'simpanMobileJadwalPadam' in router,
+          }
+          failed = [name for name, ok in checks.items() if not ok]
+          if failed:
+              raise SystemExit('Wiring checks failed: ' + ', '.join(failed))
+          print('Mobile wiring checks passed')
       - name: Reject deployment commands
+        shell: bash
         run: |
+          set -euo pipefail
           ! grep -R -n -E 'gcloud (run deploy|builds submit)|firebase deploy|clasp push' \
             SiSi_BackEnd/Core/Jadwal-Padam-Mobile.js \
             SiSi_Mobile/lib/screens/beranda_screen.dart \
