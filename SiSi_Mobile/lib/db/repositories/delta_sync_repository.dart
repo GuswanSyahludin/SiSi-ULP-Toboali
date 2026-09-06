@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
-import 'package:flutter/foundation.dart';
 import '../../services/apps_script_http.dart' as http;
 import '../../services/api_service.dart';
 import '../db_provider.dart';
@@ -15,7 +14,23 @@ class DeltaSyncResult {
   const DeltaSyncResult({required this.ok, required this.initial, required this.changed, required this.message});
 }
 
-typedef DeltaSyncProgress = void Function(String dataset, int index, int total, int rows);
+class DeltaTransferProgress {
+  final String dataset;
+  final int datasetTransferred;
+  final int datasetTotal;
+  final int overallTransferred;
+  final int overallTotal;
+
+  const DeltaTransferProgress({
+    required this.dataset,
+    required this.datasetTransferred,
+    required this.datasetTotal,
+    required this.overallTransferred,
+    required this.overallTotal,
+  });
+}
+
+typedef DeltaSyncProgress = void Function(DeltaTransferProgress progress);
 
 class DeltaSyncRepository {
   final db = DbProvider.instance;
@@ -63,26 +78,48 @@ class DeltaSyncRepository {
   Future<DeltaSyncResult> sync(String token, {bool force = false, DeltaSyncProgress? onProgress}) async {
     final local = await _versions();
     final manifest = await _send(token, {'cmd': 'manifest', 'force': force});
-    final datasets = List.from(manifest['datasets'] ?? const []);
+    final datasets = List.from(manifest['datasets'] ?? const [])
+        .map((raw) => Map<String, dynamic>.from(raw as Map))
+        .where((item) => force || local[item['name'].toString()] != item['version'].toString())
+        .toList();
+    final overallTotal = datasets.fold<int>(0, (sum, item) => sum + (num.tryParse('${item['count']}')?.toInt() ?? 0));
     final changed = <String>[];
-    for (var datasetIndex = 0; datasetIndex < datasets.length; datasetIndex++) {
-      final raw = datasets[datasetIndex];
-      final item = Map<String, dynamic>.from(raw as Map);
+    var finishedRows = 0;
+
+    for (final item in datasets) {
       final name = item['name'].toString();
       final version = item['version'].toString();
-      if (!force && local[name] == version) continue;
-      onProgress?.call(name, datasetIndex, datasets.length, 0);
-      await _download(token, name, version, item['kind'].toString(), onRows: (rows) {
-        onProgress?.call(name, datasetIndex, datasets.length, rows);
-      });
+      final datasetTotal = num.tryParse('${item['count']}')?.toInt() ?? 0;
+      onProgress?.call(DeltaTransferProgress(
+        dataset: name,
+        datasetTransferred: 0,
+        datasetTotal: datasetTotal,
+        overallTransferred: finishedRows,
+        overallTotal: overallTotal,
+      ));
+      final downloaded = await _download(
+        token,
+        name,
+        version,
+        item['kind'].toString(),
+        onRows: (rows) => onProgress?.call(DeltaTransferProgress(
+          dataset: name,
+          datasetTransferred: rows,
+          datasetTotal: datasetTotal,
+          overallTransferred: finishedRows + rows,
+          overallTotal: overallTotal,
+        )),
+      );
+      finishedRows += downloaded;
       changed.add(name);
     }
+
     final warnings = List.from(manifest['warnings'] ?? const []);
     final warningText = warnings.isEmpty ? '' : ' · ${warnings.length} dataset dilewati';
     return DeltaSyncResult(ok: true, initial: local.isEmpty, changed: changed, message: changed.isEmpty ? 'Tidak ada perubahan server$warningText.' : '${changed.length} tabel diperbarui$warningText.');
   }
 
-  Future<void> _download(String token, String name, String expected, String kind, {ValueChanged<int>? onRows}) async {
+  Future<int> _download(String token, String name, String expected, String kind, {ValueChanged<int>? onRows}) async {
     var offset = 0;
     final all = <dynamic>[];
     var version = expected;
@@ -101,6 +138,7 @@ class DeltaSyncRepository {
       }
       await db.customStatement('INSERT OR REPLACE INTO local_dataset_state(dataset,version,updated_at,row_count,kind) VALUES(?,?,?,?,?)', [name, version, DateTime.now().toIso8601String(), all.length, kind]);
     });
+    return all.length;
   }
 
   Future<List<dynamic>> rows(String dataset) async {
