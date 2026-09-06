@@ -8,7 +8,10 @@ class SyncProgressState {
   final String? dataset;
   final int completed;
   final int total;
-  final int rows;
+  final int transferredRows;
+  final int totalRows;
+  final int datasetTransferredRows;
+  final int datasetTotalRows;
   final String? message;
 
   const SyncProgressState({
@@ -18,12 +21,26 @@ class SyncProgressState {
     this.dataset,
     this.completed = 0,
     this.total = 1,
-    this.rows = 0,
+    this.transferredRows = 0,
+    this.totalRows = 0,
+    this.datasetTransferredRows = 0,
+    this.datasetTotalRows = 0,
     this.message,
   });
 
-  double get fraction => total <= 0 ? 0 : (completed / total).clamp(0, 1);
+  double get fraction {
+    if (totalRows > 0) {
+      return (transferredRows / totalRows).clamp(0, 1);
+    }
+    return total <= 0 ? 0 : (completed / total).clamp(0, 1);
+  }
+
   int get percent => (fraction * 100).round();
+
+  int get datasetPercent => datasetTotalRows <= 0
+      ? 0
+      : ((datasetTransferredRows / datasetTotalRows).clamp(0, 1) * 100)
+          .round();
 }
 
 class SyncProgressService {
@@ -42,7 +59,10 @@ class SyncProgressService {
     String? dataset,
     required int completed,
     required int total,
-    int rows = 0,
+    int transferredRows = 0,
+    int totalRows = 0,
+    int datasetTransferredRows = 0,
+    int datasetTotalRows = 0,
   }) {
     state.value = SyncProgressState(
       running: true,
@@ -50,7 +70,10 @@ class SyncProgressService {
       dataset: dataset,
       completed: completed,
       total: total,
-      rows: rows,
+      transferredRows: transferredRows,
+      totalRows: totalRows,
+      datasetTransferredRows: datasetTransferredRows,
+      datasetTotalRows: datasetTotalRows,
     );
   }
 
