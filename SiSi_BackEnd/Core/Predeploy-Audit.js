@@ -39,6 +39,10 @@ function auditPredeployMobile_() {
     add(c.name, c.ok, c.detail);
   });
 
+  _auditMasterP0Predeploy_().forEach(function (c) {
+    add(c.name, c.ok, c.detail);
+  });
+
   try {
     var cfg = typeof MASTER_GARDU_MOBILE !== "undefined" ? MASTER_GARDU_MOBILE : null;
     var sh = cfg && SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(cfg.tab);
@@ -127,6 +131,37 @@ function _auditPetugasYandalPredeploy_() {
         : rows.length !== count ? "Hasil pembaca mobile mengandung nama duplikat"
         : count + " petugas unik siap dibaca sinkronisasi APK; nama tidak dicetak di log");
   } catch (e) { add("dataset mobile " + label, false, e.message); }
+  return checks;
+}
+
+
+/** Read-only audit for the mobile P0 edit dropdown source. */
+function _auditMasterP0Predeploy_() {
+  var checks = [];
+  function add(name, ok, detail) {
+    checks.push({ name: name, ok: !!ok, detail: String(detail || "") });
+  }
+  var label = "db_Yandal_List_P0";
+  try {
+    var sh = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(label);
+    add("sheet " + label, !!sh, sh ? "Ditemukan di spreadsheet utama" : "Tidak ditemukan");
+    if (!sh) return checks;
+    var width = sh.getLastColumn();
+    var headers = width ? sh.getRange(1, 1, 1, width).getValues()[0] : [];
+    var nama = headers.map(function (v) { return String(v || "").trim().toLowerCase(); }).indexOf("nama pekerjaan");
+    add("kolom Nama Pekerjaan " + label, nama >= 0, nama >= 0 ? "kolom " + (nama + 1) : "Header wajib tidak ditemukan");
+    var count = 0, seen = Object.create(null);
+    if (nama >= 0 && sh.getLastRow() > 1) {
+      sh.getRange(2, nama + 1, sh.getLastRow() - 1, 1).getValues().forEach(function (row) {
+        var value = String(row[0] || "").trim().toLowerCase();
+        if (value && !seen[value]) { seen[value] = true; count++; }
+      });
+    }
+    add("isi dropdown " + label, count > 0, count + " jenis pekerjaan unik tersedia");
+    add("function getListPekerjaanP0", typeof getListPekerjaanP0 === "function", typeof getListPekerjaanP0 === "function" ? "tersedia" : "TIDAK DITEMUKAN");
+  } catch (e) {
+    add("audit " + label, false, e.message);
+  }
   return checks;
 }
 

@@ -21,7 +21,7 @@ class _P0State extends State<VerifikasiP0Screen> {
   String? editCode;
   String? selectedType;
   Map<String, dynamic> master = {};
-  final reason = TextEditingController(), weight = TextEditingController();
+  final weight = TextEditingController();
   bool masterLoading = false;
   String editError = '';
   final expanded = <String>{};
@@ -34,7 +34,7 @@ class _P0State extends State<VerifikasiP0Screen> {
   String label(String s) => {'Approved':'Disetujui','Rejected':'Ditolak'}[s] ?? s;
   String dateText(dynamic value) { final d = DateTime.tryParse('$value'); return d == null ? '$value' : '${d.day.toString().padLeft(2,'0')}/${d.month.toString().padLeft(2,'0')}/${d.year}'; }
   @override void initState() { super.initState(); subscription = repo.pantauJumlahAntrean().listen((n) { if (mounted) setState(() => queued = n); }); }
-  @override void dispose() { subscription?.cancel(); reason.dispose(); weight.dispose(); super.dispose(); }
+  @override void dispose() { subscription?.cancel(); weight.dispose(); super.dispose(); }
   void message(String s) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(s))); }
   Future<void> fetch({bool local = false}) async {
     final id = ++request;
@@ -81,7 +81,7 @@ class _P0State extends State<VerifikasiP0Screen> {
     if (!admin || saving) return;
     if (x['koreksiPending']==true) { message('Koreksi sebelumnya belum terkirim. Buka Pengaturan untuk mengirimnya.'); return; }
     final code=text(x,'kodeP0');
-    setState(() { editCode=code;masterLoading=true;editError='';selectedType=null;reason.clear();weight.text=text(x,'bobotManual'); });
+    setState(() { editCode=code;masterLoading=true;editError='';selectedType=null;weight.text=text(x,'bobotManual'); });
     try {
       final r=await repo.masterJenis();
       if(!mounted||editCode!=code)return;
@@ -96,7 +96,7 @@ class _P0State extends State<VerifikasiP0Screen> {
     final n=num.tryParse(weight.text.replaceAll(',','.'));
     setState((){saving=true;editError='';});
     try{
-      await repo.catatKoreksi(item:x,nama:selectedType!,alasan:reason.text,bobot:n);
+      await repo.catatKoreksi(item:x,nama:selectedType!,alasan:'Koreksi jenis pekerjaan melalui mobile',bobot:n);
       if(!mounted)return;
       attachments.remove(text(x,'kodeP0'));
       await fetch(local:true);message('Koreksi tersimpan di HP. Kirim lewat Pengaturan → Sinkron Semua Data.');
@@ -117,7 +117,6 @@ class _P0State extends State<VerifikasiP0Screen> {
           TextField(controller:weight,enabled:!saving,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'Bobot pekerjaan (1–5)',helperText:'Isi angka 1 sampai 5, bukan poin akhir.',border:OutlineInputBorder())),const SizedBox(height:16),
         ] else Text('Bobot pekerjaan: ${((master['bobotByNama'] as Map?)?[selectedType?.toLowerCase()]) ?? 'mengikuti master'}',style:const TextStyle(fontSize:13,color:muted)),
         const Padding(padding:EdgeInsets.symmetric(vertical:12),child:Text('Skor waktu tetap otomatis. Poin = skor waktu + (bobot pekerjaan × pengali lama).',style:TextStyle(fontSize:13,color:muted))),
-        TextField(controller:reason,enabled:!saving,maxLines:2,maxLength:500,decoration:const InputDecoration(labelText:'Alasan koreksi (wajib)',border:OutlineInputBorder())),
       ],
       if(editError.isNotEmpty)Text(editError,style:const TextStyle(color:Color(0xFFBA3030))),
       const SizedBox(height:12),Wrap(spacing:8,children:[TextButton(onPressed:saving?null:()=>setState(()=>editCode=null),child:const Text('Batal')),FilledButton(onPressed:saving||masterLoading||selectedType==null?null:()=>saveEdit(x),child:Text(saving?'Menyimpan…':'Simpan koreksi'))]),

@@ -447,42 +447,38 @@ class _LoginSheetState extends State<_LoginSheet> {
     bool obscure = false,
     Widget? suffix,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: accentColor.withOpacity(0.06),
-        borderRadius: BorderRadius.circular(11),
-        border: Border.all(color: accentColor.withOpacity(0.35), width: 1.5),
-      ),
-      // PERBAIKAN RATA & TENGAH: tinggi kolom mengikuti isi (tanpa height fix)
-      // + padding atas-bawah sama besar → teks & icon selalu tepat di tengah
-      // vertikal, baik kolom polos maupun yang ada tombol mata
-      child: TextField(
-        controller: controller,
-        obscureText: obscure,
-        onChanged: (_) => setState(() {}),
-        textAlignVertical: TextAlignVertical.center,
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: TextStyle(color: AppColors.neutral500, fontSize: 13),
-          prefixIcon: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Icon(icon, size: 17, color: accentColor),
-          ),
-          prefixIconConstraints:
-              const BoxConstraints(minWidth: 40, minHeight: 24),
-          suffixIcon: suffix,
-          suffixIconConstraints:
-              const BoxConstraints(minWidth: 40, minHeight: 24),
-          isDense: true,
-          border: InputBorder.none,
-          enabledBorder: InputBorder.none,
-          focusedBorder: InputBorder.none,
-          disabledBorder: InputBorder.none,
-          errorBorder: InputBorder.none,
-          focusedErrorBorder: InputBorder.none,
-          // Border hanya digambar oleh Container luar.
-          contentPadding: const EdgeInsets.symmetric(vertical: 13),
+    final radius = BorderRadius.circular(11);
+    final border = OutlineInputBorder(
+      borderRadius: radius,
+      borderSide: BorderSide(color: accentColor.withOpacity(0.35), width: 1.5),
+    );
+    final focused = OutlineInputBorder(
+      borderRadius: radius,
+      borderSide: BorderSide(color: accentColor, width: 1.8),
+    );
+    return TextField(
+      controller: controller,
+      obscureText: obscure,
+      onChanged: (_) => setState(() {}),
+      textAlignVertical: TextAlignVertical.center,
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: TextStyle(color: AppColors.neutral500, fontSize: 13),
+        prefixIcon: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Icon(icon, size: 17, color: accentColor),
         ),
+        prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 24),
+        suffixIcon: suffix,
+        suffixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 24),
+        isDense: true,
+        filled: true,
+        fillColor: accentColor.withOpacity(0.06),
+        border: border,
+        enabledBorder: border,
+        focusedBorder: focused,
+        disabledBorder: border,
+        contentPadding: const EdgeInsets.symmetric(vertical: 13),
       ),
     );
   }

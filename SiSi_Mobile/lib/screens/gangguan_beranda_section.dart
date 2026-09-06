@@ -66,8 +66,6 @@ class _GangguanState extends State<GangguanBerandaSection> {
   static const line = Color(0xFFDDE6EF), surface = Color(0xFFFCFDFF);
   static const blue = Color(0xFF225FC2), cyan = Color(0xFF176B82), gold = Color(0xFF846018);
   static const order = {'gangguan': 0, 'ar': 1, 'pickup': 2};
-  static const names = {'gangguan': 'Gangguan', 'ar': 'AR', 'pickup': 'Pick Up'};
-  static const sources = {'gangguan': 'Tarikan_SiMonLang', 'ar': 'Tarikan_AR', 'pickup': 'Tarikan_PickUp_UP3'};
   late DateTime from, to;
   String preset = 'month', activeKey = '', selectedDate = '';
   bool loading = true, all = false;
@@ -167,14 +165,7 @@ class _GangguanState extends State<GangguanBerandaSection> {
         else if (error != null) _empty('Data belum dapat dimuat', '$error\nGagal memuat bukan berarti tidak ada gangguan.', retry: true)
         else if (sets.isEmpty) _empty('Sumber belum tersedia', 'Backend belum mengirim dataset gangguan. Coba muat ulang.', retry: true)
         else ...[
-          Padding(padding: const EdgeInsets.symmetric(horizontal:8), child: Wrap(spacing:4, children: [
-            for (final s in sets) TextButton(key:ValueKey('source-${s['key']}'), onPressed: () => setState(() { activeKey = '${s['key']}'; all = false; visibleRows = 20; }),
-              style:TextButton.styleFrom(foregroundColor: '${s['key']}' == activeKey ? accent : muted, backgroundColor: '${s['key']}' == activeKey ? const Color(0xFFEDF3FA) : null, minimumSize:const Size(44,48)),
-              child:Text('${names['${s['key']}'] ?? s['title'] ?? 'Sumber'}  ${s['total'] ?? '·'}',style:const TextStyle(fontSize:12,fontWeight:FontWeight.w700))),
-          ])),
-          const Divider(height:1,color:line),
           if (dataset != null) _plot(dataset!),
-          Padding(padding:const EdgeInsets.all(16),child:Text('Sumber: ${sources[activeKey] ?? dataset?['title'] ?? activeKey}\nJumlah antar sumber tidak dijumlahkan. Data dapat berasal dari cache server, bukan indikator jaringan langsung.',style:const TextStyle(fontSize:11,height:1.5,color:muted))),
         ],
       ])),
       if (!loading && error == null && dataset != null) _details(dataset!),
