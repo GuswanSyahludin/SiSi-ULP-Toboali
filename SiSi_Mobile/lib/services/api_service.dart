@@ -155,7 +155,7 @@ class ApiService {
         timeout: const Duration(seconds: 15),
       );
       if (result['success'] != true && _belumAdaEndpoint(result)) {
-        return _call(
+        return await _call(
           'logout',
           {'token': token},
           timeout: const Duration(seconds: 15),
