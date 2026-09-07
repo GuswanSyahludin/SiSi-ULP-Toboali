@@ -5,25 +5,38 @@ import 'package:workmanager/workmanager.dart';
 
 import '../db/repositories/sync_repository.dart';
 import 'sesi_store.dart';
+import 'sync_progress_service.dart';
 
-const _taskName = 'sisi.sync.periodik';
-const _uniqueName = 'sisi-background-sync';
+const _periodicTaskName = 'sisi.sync.periodik';
+const _periodicUniqueName = 'sisi-background-sync';
+const _manualTaskName = 'sisi.sync.manual.resume';
+const _manualUniqueName = 'sisi-manual-master-sync';
 const _enabledKey = 'autoSyncEnabled';
+const _manualPendingKey = 'manualSyncPending';
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
-  Workmanager().executeTask((_, __) async {
+  Workmanager().executeTask((task, _) async {
+    final manual = task == _manualTaskName;
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.reload();
-      if (prefs.getBool(_enabledKey) != true) return true;
+      if (!manual && prefs.getBool(_enabledKey) != true) return true;
+      await SyncProgressService.instance.restore();
       final sesi = await SesiStore.muat();
       final token = (sesi?['token'] ?? '').toString();
-      if (token.isEmpty) return true;
+      if (token.isEmpty) {
+        if (manual) await prefs.setBool(_manualPendingKey, false);
+        return true;
+      }
       final result = await SyncRepository().sinkronSemua(token);
-      return result['ok'] == true;
+      final ok = result['ok'] == true;
+      if (manual && ok) {
+        await prefs.setBool(_manualPendingKey, false);
+        await prefs.setBool(_enabledKey, true);
+      }
+      return ok;
     } catch (_) {
-      // false meminta WorkManager menjadwalkan retry sesuai backoff.
       return false;
     }
   });
@@ -34,8 +47,13 @@ class AutoSyncService {
   static bool _running = false;
 
   static Future<void> initialize() async {
+    await SyncProgressService.instance.restore();
     await Workmanager().initialize(callbackDispatcher);
-    if (await enabled()) await _register();
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_manualPendingKey) == true) {
+      await _registerManual();
+    }
+    if (await enabled()) await _registerPeriodic();
   }
 
   static Future<bool> enabled() async {
@@ -43,17 +61,38 @@ class AutoSyncService {
     return prefs.getBool(_enabledKey) == true;
   }
 
-  /// Dipanggil hanya setelah sinkron manual pertama berhasil.
+  static Future<Map<String, dynamic>> startManualSync() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_manualPendingKey, true);
+    SyncProgressService.instance.begin(stage: 'Menunggu worker latar belakang');
+    await _registerManual();
+    return {
+      'ok': true,
+      'message': 'Download dijadwalkan dan akan dilanjutkan otomatis.',
+    };
+  }
+
+  static Future<void> _registerManual() {
+    return Workmanager().registerOneOffTask(
+      _manualUniqueName,
+      _manualTaskName,
+      existingWorkPolicy: ExistingWorkPolicy.replace,
+      constraints: Constraints(networkType: NetworkType.connected),
+      backoffPolicy: BackoffPolicy.exponential,
+      backoffPolicyDelay: const Duration(minutes: 1),
+    );
+  }
+
   static Future<void> activate() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_enabledKey, true);
-    await _register();
+    await _registerPeriodic();
   }
 
-  static Future<void> _register() {
+  static Future<void> _registerPeriodic() {
     return Workmanager().registerPeriodicTask(
-      _uniqueName,
-      _taskName,
+      _periodicUniqueName,
+      _periodicTaskName,
       frequency: const Duration(minutes: 15),
       existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
       constraints: Constraints(networkType: NetworkType.connected),
@@ -62,7 +101,6 @@ class AutoSyncService {
     );
   }
 
-  /// Sinkron cepat saat aplikasi dibuka/kembali aktif. No-op sebelum sinkron pertama.
   static Future<void> syncNow(Map<String, dynamic> sesi) async {
     if (_running || !await enabled()) return;
     final token = (sesi['token'] ?? '').toString();
@@ -78,6 +116,8 @@ class AutoSyncService {
   static Future<void> deactivate() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_enabledKey);
-    await Workmanager().cancelByUniqueName(_uniqueName);
+    await prefs.remove(_manualPendingKey);
+    await Workmanager().cancelByUniqueName(_periodicUniqueName);
+    await Workmanager().cancelByUniqueName(_manualUniqueName);
   }
 }

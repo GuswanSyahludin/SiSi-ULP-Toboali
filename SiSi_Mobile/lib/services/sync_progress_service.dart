@@ -1,4 +1,8 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 const syncDatasetLabels = <String, String>{
   'db_Global_Header': 'Master Laporan Utama',
@@ -61,31 +65,91 @@ class SyncProgressState {
   });
 
   String get datasetLabel => syncDatasetLabel(dataset);
-
-  double get fraction {
-    if (totalRows > 0) {
-      return (transferredRows / totalRows).clamp(0, 1);
-    }
-    return total <= 0 ? 0 : (completed / total).clamp(0, 1);
-  }
-
+  double get fraction => totalRows > 0
+      ? (transferredRows / totalRows).clamp(0, 1)
+      : (total <= 0 ? 0 : (completed / total).clamp(0, 1));
   int get percent => (fraction * 100).round();
-
   int get datasetPercent => datasetTotalRows <= 0
       ? 0
-      : ((datasetTransferredRows / datasetTotalRows).clamp(0, 1) * 100)
-          .round();
+      : ((datasetTransferredRows / datasetTotalRows).clamp(0, 1) * 100).round();
+
+  Map<String, dynamic> toJson() => {
+        'running': running,
+        'failed': failed,
+        'stage': stage,
+        'dataset': dataset,
+        'completed': completed,
+        'total': total,
+        'transferredRows': transferredRows,
+        'totalRows': totalRows,
+        'datasetTransferredRows': datasetTransferredRows,
+        'datasetTotalRows': datasetTotalRows,
+        'message': message,
+      };
+
+  factory SyncProgressState.fromJson(Map<String, dynamic> json) =>
+      SyncProgressState(
+        running: json['running'] == true,
+        failed: json['failed'] == true,
+        stage: '${json['stage'] ?? 'Siap sinkron'}',
+        dataset: json['dataset']?.toString(),
+        completed: (json['completed'] as num?)?.toInt() ?? 0,
+        total: (json['total'] as num?)?.toInt() ?? 1,
+        transferredRows: (json['transferredRows'] as num?)?.toInt() ?? 0,
+        totalRows: (json['totalRows'] as num?)?.toInt() ?? 0,
+        datasetTransferredRows:
+            (json['datasetTransferredRows'] as num?)?.toInt() ?? 0,
+        datasetTotalRows: (json['datasetTotalRows'] as num?)?.toInt() ?? 0,
+        message: json['message']?.toString(),
+      );
 }
 
 class SyncProgressService {
-  SyncProgressService._();
+  SyncProgressService._() {
+    _poller = Timer.periodic(const Duration(milliseconds: 700), (_) => restore());
+  }
   static final instance = SyncProgressService._();
+  static const _key = 'syncProgressStateV2';
+  late final Timer _poller;
+  String _lastEncoded = '';
 
   final ValueNotifier<SyncProgressState> state =
       ValueNotifier(const SyncProgressState());
 
+  Future<void> restore() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.reload();
+    final encoded = prefs.getString(_key) ?? '';
+    if (encoded.isEmpty || encoded == _lastEncoded) return;
+    try {
+      state.value = SyncProgressState.fromJson(
+        Map<String, dynamic>.from(jsonDecode(encoded) as Map),
+      );
+      _lastEncoded = encoded;
+    } catch (_) {}
+  }
+
+  void _set(SyncProgressState next) {
+    state.value = next;
+    final encoded = jsonEncode(next.toJson());
+    _lastEncoded = encoded;
+    unawaited(_persist(encoded));
+  }
+
+  Future<void> _persist(String encoded) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_key, encoded);
+  }
+
   void begin({String stage = 'Menyiapkan sinkronisasi', int total = 10}) {
-    state.value = SyncProgressState(running: true, stage: stage, total: total);
+    final previous = state.value;
+    _set(SyncProgressState(
+      running: true,
+      stage: stage,
+      total: total,
+      transferredRows: previous.running ? previous.transferredRows : 0,
+      totalRows: previous.running ? previous.totalRows : 0,
+    ));
   }
 
   void update(
@@ -98,33 +162,35 @@ class SyncProgressService {
     int datasetTransferredRows = 0,
     int datasetTotalRows = 0,
   }) {
-    state.value = SyncProgressState(
+    final previous = state.value;
+    final candidatePercent = totalRows > 0 ? transferredRows / totalRows : 0.0;
+    final keepPrevious = previous.running &&
+        previous.totalRows > 0 &&
+        candidatePercent < previous.fraction;
+    _set(SyncProgressState(
       running: true,
       stage: stage,
       dataset: dataset,
       completed: completed,
       total: total,
-      transferredRows: transferredRows,
-      totalRows: totalRows,
+      transferredRows:
+          keepPrevious ? previous.transferredRows : transferredRows,
+      totalRows: keepPrevious ? previous.totalRows : totalRows,
       datasetTransferredRows: datasetTransferredRows,
       datasetTotalRows: datasetTotalRows,
-    );
+    ));
   }
 
-  void success(String message) {
-    state.value = SyncProgressState(
-      stage: 'Sinkronisasi selesai',
-      completed: 1,
-      total: 1,
-      message: message,
-    );
-  }
+  void success(String message) => _set(SyncProgressState(
+        stage: 'Sinkronisasi selesai',
+        completed: 1,
+        total: 1,
+        message: message,
+      ));
 
-  void failure(String message) {
-    state.value = SyncProgressState(
-      failed: true,
-      stage: 'Sinkronisasi gagal',
-      message: message,
-    );
-  }
+  void failure(String message) => _set(SyncProgressState(
+        failed: true,
+        stage: 'Sinkronisasi dijadwalkan ulang',
+        message: message,
+      ));
 }
