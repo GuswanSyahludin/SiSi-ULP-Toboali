@@ -2,7 +2,23 @@
 # Uses .gitignore syntax. Secrets, node_modules, build output and .env files
 # are ALWAYS blocked by the CLI regardless of what is listed here.
 
-# Examples:
-# docs/internal/
-# *.snap
-# fixtures/
+# Local credentials and machine-specific configuration
+**/key.properties
+**/local.properties
+**/*.env
+**/*.env.*
+
+# Generated Flutter, Dart, Android, Apple, and IDE state
+**/.dart_tool/
+**/.gradle/
+**/.idea/
+**/Flutter/ephemeral/
+**/Generated.xcconfig
+**/flutter_export_environment.sh
+**/.flutter-plugins-dependencies
+
+# Compiled and generated build output
+**/build/
+**/*.dill
+**/*.stamp
+**/*.lock
