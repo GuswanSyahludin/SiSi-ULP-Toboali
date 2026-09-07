@@ -1,6 +1,6 @@
 {
   "repo": "Syahludin/SiSi--Sistem-Integrasi-",
-  "generatedForCommit": "afb3f11ff54d949bf11e3c7b7f87a32eec0f88ea",
+  "generatedForCommit": "c63a8d0673c0e0a6aca3ae1983e82f0642ab1180",
   "files": [
     {
       "path": ".claude/skills/ngodingpakeai/SKILL.md",
@@ -364,7 +364,7 @@
     },
     {
       "path": ".ngodingpakeaiignore",
-      "reason": "changed",
+      "reason": "needs_summary",
       "language": null,
       "size": 641
     },
@@ -1348,7 +1348,7 @@
     },
     {
       "path": "SiSi_Mobile/lib/db/repositories/delta_sync_repository.dart",
-      "reason": "changed",
+      "reason": "needs_summary",
       "language": null,
       "size": 6908
     },
@@ -1408,7 +1408,7 @@
     },
     {
       "path": "SiSi_Mobile/lib/db/repositories/sync_repository.dart",
-      "reason": "changed",
+      "reason": "needs_summary",
       "language": null,
       "size": 5125
     },
@@ -1654,7 +1654,7 @@
     },
     {
       "path": "SiSi_Mobile/lib/services/auto_sync_service.dart",
-      "reason": "changed",
+      "reason": "needs_summary",
       "language": null,
       "size": 3633
     },
@@ -1708,13 +1708,13 @@
     },
     {
       "path": "SiSi_Mobile/lib/services/sync_error_message.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 1217
     },
     {
       "path": "SiSi_Mobile/lib/services/sync_progress_service.dart",
-      "reason": "changed",
+      "reason": "needs_summary",
       "language": null,
       "size": 5067
     },
@@ -1786,7 +1786,7 @@
     },
     {
       "path": "SiSi_Mobile/lib/widgets/sync_section_pengaturan.dart",
-      "reason": "changed",
+      "reason": "needs_summary",
       "language": null,
       "size": 9791
     },
@@ -2020,7 +2020,7 @@
     },
     {
       "path": "SiSi_Mobile/test/module_sync_contract_test.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 1354
     },
@@ -2032,13 +2032,13 @@
     },
     {
       "path": "SiSi_Mobile/test/resumable_background_sync_test.dart",
-      "reason": "changed",
+      "reason": "needs_summary",
       "language": null,
       "size": 2066
     },
     {
       "path": "SiSi_Mobile/test/sync_error_message_test.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 910
     },
