@@ -1,2770 +1,2242 @@
 {
   "repo": "Syahludin/SiSi--Sistem-Integrasi-",
-  "generatedForCommit": "2931da116922929c6a52d2bff25db5b35c159622",
+  "generatedForCommit": "afb3f11ff54d949bf11e3c7b7f87a32eec0f88ea",
   "files": [
     {
       "path": ".claude/skills/ngodingpakeai/SKILL.md",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "markdown",
       "size": 17863
     },
     {
       "path": ".codex/skills/ngodingpakeai/SKILL.md",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "markdown",
       "size": 17863
     },
     {
       "path": ".github/jadwal-padam-access-audit.trigger",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 15
     },
     {
       "path": ".github/scripts/fix_jadwal_padam_access.py",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "python",
       "size": 1202
     },
     {
       "path": ".github/scripts/fix_jadwal_padam_client_access.py",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "python",
       "size": 487
     },
     {
       "path": ".github/scripts/fix_jadwal_padam_client_access_resolved.py",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "python",
       "size": 909
     },
     {
       "path": ".github/scripts/fix_teknik_to_casts.py",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "python",
       "size": 357
     },
     {
       "path": ".github/scripts/patch_sync_empty_response.py",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "python",
       "size": 2015
     },
     {
       "path": ".github/scripts/patch_yandal_gardu_filter.py",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "python",
       "size": 3312
     },
     {
       "path": ".github/scripts/patch_yandal_shift_detail_crew.py",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "python",
       "size": 4953
     },
     {
       "path": ".github/scripts/wire_jadwal_padam_menu.py",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "python",
       "size": 6152
     },
     {
       "path": ".github/scripts/wire_teknik_to_back.py",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "python",
       "size": 728
     },
     {
       "path": ".github/scripts/wire_teknik_to_menus.py",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "python",
       "size": 2097
     },
     {
       "path": ".github/scripts/wire_yandal_mobile.py",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "python",
       "size": 844
     },
     {
       "path": ".github/skills/prompt-master-main/LICENSE",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 1077
     },
     {
       "path": ".github/skills/prompt-master-main/README.md",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "markdown",
       "size": 22279
     },
     {
       "path": ".github/skills/prompt-master-main/references/patterns.md",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "markdown",
       "size": 6112
     },
     {
       "path": ".github/skills/prompt-master-main/references/templates.md",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "markdown",
       "size": 16440
     },
     {
       "path": ".github/skills/prompt-master-main/SKILL.md",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "markdown",
       "size": 32138
     },
     {
       "path": ".github/workflows/add-yandal-audit-once.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 1843
     },
     {
       "path": ".github/workflows/apply-calendar-login-fix.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 7501
     },
     {
       "path": ".github/workflows/apply-inspeksi-card.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 4446
     },
     {
       "path": ".github/workflows/apply-mobile-jadwal-padam.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 2927
     },
     {
       "path": ".github/workflows/apply-mobile-nav-v2.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 7481
     },
     {
       "path": ".github/workflows/apply-yandal-dual-wire-push.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 879
     },
     {
       "path": ".github/workflows/audit-engine-dashboard.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 845
     },
     {
       "path": ".github/workflows/audit-engine-guards.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 1260
     },
     {
       "path": ".github/workflows/audit-engine-secret-rotation.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 1951
     },
     {
       "path": ".github/workflows/audit-engines.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 2886
     },
     {
       "path": ".github/workflows/audit-jadwal-padam-access.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 1154
     },
     {
       "path": ".github/workflows/audit-jadwal-padam-client-access-resolved.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 1216
     },
     {
       "path": ".github/workflows/audit-jadwal-padam-client-access.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 1096
     },
     {
       "path": ".github/workflows/audit-pr70-flutter.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 944
     },
     {
       "path": ".github/workflows/audit-sync-empty-response.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 1197
     },
     {
       "path": ".github/workflows/audit-wire-jadwal-padam.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 1053
     },
     {
       "path": ".github/workflows/audit-yandal-gardu-filter.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 1482
     },
     {
       "path": ".github/workflows/audit-yandal-mobile.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 1454
     },
     {
       "path": ".github/workflows/audit-yandal-shift-detail-crew.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 1192
     },
     {
       "path": ".github/workflows/auth-transport-guard.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 1243
     },
     {
       "path": ".github/workflows/capture-flutter-audit.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 1267
     },
     {
       "path": ".github/workflows/cleanup-jadwal-pagination-regressions.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 730
     },
     {
       "path": ".github/workflows/finalize-jadwal-wa-report.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 721
     },
     {
       "path": ".github/workflows/fix-laporan-harian-retry.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 123
     },
     {
       "path": ".github/workflows/fix-mobile-flow-blockers.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 9996
     },
     {
       "path": ".github/workflows/fix-p0-approval-token-once.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 909
     },
     {
       "path": ".github/workflows/fix-page-loader-direct-once.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 1187
     },
     {
       "path": ".github/workflows/fix-sisirun-chain-once.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 1031
     },
     {
       "path": ".github/workflows/fix-sisirun-wrapper-once.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 1088
     },
     {
       "path": ".github/workflows/fix-teknik-to-casts.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 1049
     },
     {
       "path": ".github/workflows/patch-jadwal-wa-report.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 756
     },
     {
       "path": ".github/workflows/patch-laporan-teknik-dual-read.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 1456
     },
     {
       "path": ".github/workflows/patch-trigger-audit-log.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 644
     },
     {
       "path": ".github/workflows/release-quality-gate.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 5380
     },
     {
       "path": ".github/workflows/restore-real-report-cards-once.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 11465
     },
     {
       "path": ".github/workflows/restore-real-report-cards-v2.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 9061
     },
     {
       "path": ".github/workflows/run-mobile-blocker-fix-on-pr.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 2955
     },
     {
       "path": ".github/workflows/wire-jadwal-calendar-once.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 4378
     },
     {
       "path": ".github/workflows/wire-teknik-to-back.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 738
     },
     {
       "path": ".github/workflows/wire-teknik-to-menus.yml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 778
     },
     {
       "path": ".gitignore",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 146
     },
     {
       "path": ".ngodingpakeaiignore",
-      "reason": "new",
+      "reason": "changed",
       "language": null,
-      "size": 269
+      "size": 641
     },
     {
       "path": "AGENTS.md",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "markdown",
       "size": 17617
     },
     {
       "path": "docs/LOCAL-WATERMARK.md",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "markdown",
       "size": 4687
     },
     {
       "path": "docs/P0-CORRECTION.md",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "markdown",
       "size": 5272
     },
     {
       "path": "docs/YANDAL-PHOTO-INTEGRATION.md",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "markdown",
       "size": 2797
     },
     {
       "path": "engines/ba-pdf-engine/ba_layout_fix.py",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "python",
       "size": 3308
     },
     {
       "path": "engines/ba-pdf-engine/Dockerfile",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 323
     },
     {
       "path": "engines/ba-pdf-engine/guarded_app.py",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "python",
       "size": 4501
     },
     {
       "path": "engines/ba-pdf-engine/main.py",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "python",
       "size": 69440
     },
     {
       "path": "engines/ba-pdf-engine/requirements.txt",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 83
     },
     {
       "path": "engines/ops/artifact-cleanup-policy.json",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "json",
       "size": 304
     },
     {
       "path": "engines/ops/cloudbuild-bucket-lifecycle.json",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "json",
       "size": 206
     },
     {
       "path": "engines/ops/README.md",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "markdown",
       "size": 3551
     },
     {
       "path": "engines/ops/setup-hemat-biaya.sh",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "shell",
       "size": 3412
     },
     {
       "path": "engines/README.md",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "markdown",
       "size": 598
     },
     {
       "path": "engines/row-pdf-engine/Dockerfile",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 323
     },
     {
       "path": "engines/row-pdf-engine/guarded_app.py",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "python",
       "size": 3424
     },
     {
       "path": "engines/row-pdf-engine/main.py",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "python",
       "size": 40035
     },
     {
       "path": "engines/row-pdf-engine/requirements.txt",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 83
     },
     {
       "path": "engines/wm-engine/Dockerfile",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 323
     },
     {
       "path": "engines/wm-engine/guarded_app.py",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "python",
       "size": 3439
     },
     {
       "path": "engines/wm-engine/hybrid_v1.py",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "python",
       "size": 8286
     },
     {
       "path": "engines/wm-engine/main.py",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "python",
       "size": 19964
     },
     {
       "path": "engines/wm-engine/Procfile",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 34
     },
     {
       "path": "engines/wm-engine/README.md",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "markdown",
       "size": 3140
     },
     {
       "path": "engines/wm-engine/requirements.txt",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 64
     },
     {
       "path": "flutter-audit.txt",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 26397
     },
     {
       "path": "scripts/audit-google-maps-zero-cost.sh",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "shell",
       "size": 2042
     },
     {
       "path": "scripts/audit_auth_transport.py",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "python",
       "size": 1756
     },
     {
       "path": "scripts/fix_p0_approval_token.py",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "python",
       "size": 431
     },
     {
       "path": "scripts/fix_page_loader_direct.py",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "python",
       "size": 513
     },
     {
       "path": "scripts/fix_sisirun_chain.py",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "python",
       "size": 1008
     },
     {
       "path": "scripts/fix_sisirun_wrapper.py",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "python",
       "size": 3013
     },
     {
       "path": "scripts/patch_laporan_teknik_dual_read.py",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "python",
       "size": 2845
     },
     {
       "path": "scripts/patch_trigger_audit_log.py",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "python",
       "size": 1136
     },
     {
       "path": "scripts/test_audit_auth_transport.py",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "python",
       "size": 1181
     },
     {
       "path": "SiSi_BackEnd/.clasp.json",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "json",
       "size": 276
     },
     {
       "path": "SiSi_BackEnd/.gitignore",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 46
     },
     {
       "path": "SiSi_BackEnd/appsscript.json",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "json",
       "size": 349
     },
     {
       "path": "SiSi_BackEnd/Core/Audit-Guard.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 9759
     },
     {
       "path": "SiSi_BackEnd/Core/Auth-Perangkat.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 12911
     },
     {
       "path": "SiSi_BackEnd/Core/Code.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 93595
     },
     {
       "path": "SiSi_BackEnd/Core/Delta-Sync-Mobile.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 10844
     },
     {
       "path": "SiSi_BackEnd/Core/Engine-Secrets.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 2276
     },
     {
       "path": "SiSi_BackEnd/Core/Foto-Url.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 4966
     },
     {
       "path": "SiSi_BackEnd/Core/Guard.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 36632
     },
     {
       "path": "SiSi_BackEnd/Core/Inspeksi-Gardu-Mobile.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 8222
     },
     {
       "path": "SiSi_BackEnd/Core/Jadwal-Padam-Mobile.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 2289
     },
     {
       "path": "SiSi_BackEnd/Core/login-page.html",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "html",
       "size": 22166
     },
     {
       "path": "SiSi_BackEnd/Core/Main.html",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "html",
       "size": 141713
     },
     {
       "path": "SiSi_BackEnd/Core/Master-Gardu-Mobile.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 8047
     },
     {
       "path": "SiSi_BackEnd/Core/Master-Gardu-Sync-Mobile.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 3515
     },
     {
       "path": "SiSi_BackEnd/Core/Migrasi-Password.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 6872
     },
     {
       "path": "SiSi_BackEnd/Core/PageLoader-Compat.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 3251
     },
     {
       "path": "SiSi_BackEnd/Core/Predeploy-Audit.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 7971
     },
     {
       "path": "SiSi_BackEnd/Core/SIE-BA-Code.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 145465
     },
     {
       "path": "SiSi_BackEnd/Core/SIE-BeritaAcara-WebFix.html",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "html",
       "size": 8651
     },
     {
       "path": "SiSi_BackEnd/Core/Tek-Dashboard.html",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "html",
       "size": 56229
     },
     {
       "path": "SiSi_BackEnd/Core/Tek-Migrasi.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 205971
     },
     {
       "path": "SiSi_BackEnd/Core/Tek-MobileDual.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 12859
     },
     {
       "path": "SiSi_BackEnd/Core/Tek-Temuan-Code.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 62184
     },
     {
       "path": "SiSi_BackEnd/Core/Tek-WAEngine.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 7638
     },
     {
       "path": "SiSi_BackEnd/Core/Teknik-TO-Mobile.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 5881
     },
     {
       "path": "SiSi_BackEnd/Core/Temuan-Inspeksi.html",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "html",
       "size": 52564
     },
     {
       "path": "SiSi_BackEnd/Core/Trigger-Manager.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 10677
     },
     {
       "path": "SiSi_BackEnd/Core/WO-ROW-Mobile.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 11405
     },
     {
       "path": "SiSi_BackEnd/Core/ZZ-BA-Jadwal-Master-Compat.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 17915
     },
     {
       "path": "SiSi_BackEnd/Core/ZZ-P0-Correction.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 10514
     },
     {
       "path": "SiSi_BackEnd/Hartek/Tek-Hartek-Code.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 49998
     },
     {
       "path": "SiSi_BackEnd/Hartek/Tek-Hartek.html",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "html",
       "size": 18181
     },
     {
       "path": "SiSi_BackEnd/Inspeksi_Gardu/Tek-InsDu-Code.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 75065
     },
     {
       "path": "SiSi_BackEnd/Inspeksi_Gardu/Tek-InsDu.html",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "html",
       "size": 66994
     },
     {
       "path": "SiSi_BackEnd/Inspeksi_Gardu/Tek-PengukuranGardu.html",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "html",
       "size": 91667
     },
     {
       "path": "SiSi_BackEnd/Inspeksi_Jaringan/Tek-InsJar-Code.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 49606
     },
     {
       "path": "SiSi_BackEnd/Inspeksi_Jaringan/Tek-InsJar.html",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "html",
       "size": 102731
     },
     {
       "path": "SiSi_BackEnd/K3-Dashboard.html",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "html",
       "size": 209
     },
     {
       "path": "SiSi_BackEnd/PP-Dashboard.html",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "html",
       "size": 212
     },
     {
       "path": "SiSi_BackEnd/PREDEPLOY_AUDIT_PASSED.txt",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 63
     },
     {
       "path": "SiSi_BackEnd/ROW/Tek-ROW-Code.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 199585
     },
     {
       "path": "SiSi_BackEnd/ROW/Tek-ROW.html",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "html",
       "size": 112080
     },
     {
       "path": "SiSi_BackEnd/SIE-BeritaAcara.html",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "html",
       "size": 144862
     },
     {
       "path": "SiSi_BackEnd/TE-Dashboard.html",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "html",
       "size": 205
     },
     {
       "path": "SiSi_BackEnd/Teknik/Gangguan-Beranda-Mobile.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 4316
     },
     {
       "path": "SiSi_BackEnd/Teknik/Jadwal-Padam-Code.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 29602
     },
     {
       "path": "SiSi_BackEnd/Teknik/Jadwal-Padam.html",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "html",
       "size": 38761
     },
     {
       "path": "SiSi_BackEnd/Teknik/SIE-Teknik-Code.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 33270
     },
     {
       "path": "SiSi_BackEnd/Teknik/SIE-Teknik.html",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "html",
       "size": 192921
     },
     {
       "path": "SiSi_BackEnd/Teknik/Tek-Data-Chechpoint-Code.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 22681
     },
     {
       "path": "SiSi_BackEnd/Teknik/Tek-Data-Checkpoint.html",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "html",
       "size": 64024
     },
     {
       "path": "SiSi_BackEnd/Teknik/Tek-Gangguan.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 4857
     },
     {
       "path": "SiSi_BackEnd/Teknik/Tek-LapUP3UIWHarian.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 59249
     },
     {
       "path": "SiSi_BackEnd/Teknik/ZZ-Gaspol-DualRead.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 4863
     },
     {
       "path": "SiSi_BackEnd/Teknik/ZZ-Laporan-Harian-Retry-Fix.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 3343
     },
     {
       "path": "SiSi_BackEnd/Yandal/Tek-Watermark.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 5185
     },
     {
       "path": "SiSi_BackEnd/Yandal/Tek-Yandal-Code.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 181413
     },
     {
       "path": "SiSi_BackEnd/Yandal/Tek-Yandal.html",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "html",
       "size": 38723
     },
     {
-      "path": "SiSi_Mobile/.dart_tool/dartpad/web_plugin_registrant.dart",
-      "reason": "new",
-      "language": null,
-      "size": 998
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/.filecache",
-      "reason": "new",
-      "language": null,
-      "size": 307645
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/android_aot_bundle_release_android-arm.stamp",
-      "reason": "new",
-      "language": null,
-      "size": 298
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/android_aot_bundle_release_android-arm64.stamp",
-      "reason": "new",
-      "language": null,
-      "size": 294
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/android_aot_bundle_release_android-x64.stamp",
-      "reason": "new",
-      "language": null,
-      "size": 288
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/android_aot_release_android-arm.stamp",
-      "reason": "new",
-      "language": null,
-      "size": 509
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/android_aot_release_android-arm64.stamp",
-      "reason": "new",
-      "language": null,
-      "size": 507
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/android_aot_release_android-x64.stamp",
-      "reason": "new",
-      "language": null,
-      "size": 504
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/aot_android_asset_bundle.stamp",
-      "reason": "new",
-      "language": null,
-      "size": 13394
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/app.dill",
-      "reason": "new",
-      "language": null,
-      "size": 53027480
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/build_hooks.d",
-      "reason": "new",
-      "language": null,
-      "size": 471
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/build_hooks.stamp",
-      "reason": "new",
-      "language": null,
-      "size": 824
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/build_hooks_result.json",
-      "reason": "new",
-      "language": "json",
-      "size": 1299
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/flutter_android_aot_bundle_release_android-arm.d",
-      "reason": "new",
-      "language": null,
-      "size": 2
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/flutter_android_aot_bundle_release_android-arm64.d",
-      "reason": "new",
-      "language": null,
-      "size": 2
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/flutter_android_aot_bundle_release_android-x64.d",
-      "reason": "new",
-      "language": null,
-      "size": 2
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/flutter_android_aot_release_android-arm.d",
-      "reason": "new",
-      "language": null,
-      "size": 2
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/flutter_android_aot_release_android-arm64.d",
-      "reason": "new",
-      "language": null,
-      "size": 2
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/flutter_android_aot_release_android-x64.d",
-      "reason": "new",
-      "language": null,
-      "size": 2
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/flutter_assets.d",
-      "reason": "new",
-      "language": null,
-      "size": 12653
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/gen_dart_plugin_registrant.stamp",
-      "reason": "new",
-      "language": null,
-      "size": 239
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/gen_localizations.stamp",
-      "reason": "new",
-      "language": null,
-      "size": 26
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/install_code_assets.d",
-      "reason": "new",
-      "language": null,
-      "size": 148
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/install_code_assets.stamp",
-      "reason": "new",
-      "language": null,
-      "size": 648
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/kernel_snapshot_program.d",
-      "reason": "new",
-      "language": null,
-      "size": 176840
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/kernel_snapshot_program.stamp",
-      "reason": "new",
-      "language": null,
-      "size": 181166
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/link_hooks.d",
-      "reason": "new",
-      "language": null,
-      "size": 152
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/link_hooks.stamp",
-      "reason": "new",
-      "language": null,
-      "size": 613
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/link_hooks_result.json",
-      "reason": "new",
-      "language": "json",
-      "size": 487
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/native_assets.json",
-      "reason": "new",
-      "language": "json",
-      "size": 45
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/outputs.json",
-      "reason": "new",
-      "language": "json",
-      "size": 2031
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/recorded_uses.json",
-      "reason": "new",
-      "language": "json",
-      "size": 2
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/0a89f06f744360235684513333e10ea4/_composite.stamp",
-      "reason": "new",
-      "language": null,
-      "size": 26
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/flutter_build/dart_plugin_registrant.dart",
-      "reason": "new",
-      "language": null,
-      "size": 11178
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/hooks_runner/objective_c/0e9dd36a4b/.lock",
-      "reason": "new",
-      "language": null,
-      "size": 162
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/hooks_runner/objective_c/0e9dd36a4b/dependencies.dependencies_hash_file.json",
-      "reason": "new",
-      "language": "json",
-      "size": 603
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/hooks_runner/objective_c/0e9dd36a4b/hook.dependencies_hash_file.json",
-      "reason": "new",
-      "language": "json",
-      "size": 382
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/hooks_runner/objective_c/0e9dd36a4b/hook.dill",
-      "reason": "new",
-      "language": null,
-      "size": 11154160
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/hooks_runner/objective_c/0e9dd36a4b/hook.dill.d",
-      "reason": "new",
-      "language": null,
-      "size": 11680
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/hooks_runner/objective_c/0e9dd36a4b/input.json",
-      "reason": "new",
-      "language": "json",
-      "size": 1160
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/hooks_runner/objective_c/0e9dd36a4b/output.json",
-      "reason": "new",
-      "language": "json",
-      "size": 95
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/hooks_runner/objective_c/0e9dd36a4b/stderr.txt",
-      "reason": "new",
-      "language": null,
-      "size": 0
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/hooks_runner/objective_c/0e9dd36a4b/stdout.txt",
-      "reason": "new",
-      "language": null,
-      "size": 2873
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/hooks_runner/objective_c/74b9685c23/.lock",
-      "reason": "new",
-      "language": null,
-      "size": 162
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/hooks_runner/objective_c/74b9685c23/dependencies.dependencies_hash_file.json",
-      "reason": "new",
-      "language": "json",
-      "size": 603
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/hooks_runner/objective_c/74b9685c23/hook.dependencies_hash_file.json",
-      "reason": "new",
-      "language": "json",
-      "size": 382
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/hooks_runner/objective_c/74b9685c23/hook.dill",
-      "reason": "new",
-      "language": null,
-      "size": 11154160
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/hooks_runner/objective_c/74b9685c23/hook.dill.d",
-      "reason": "new",
-      "language": null,
-      "size": 11680
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/hooks_runner/objective_c/74b9685c23/input.json",
-      "reason": "new",
-      "language": "json",
-      "size": 1162
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/hooks_runner/objective_c/74b9685c23/output.json",
-      "reason": "new",
-      "language": "json",
-      "size": 95
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/hooks_runner/objective_c/74b9685c23/stderr.txt",
-      "reason": "new",
-      "language": null,
-      "size": 0
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/hooks_runner/objective_c/74b9685c23/stdout.txt",
-      "reason": "new",
-      "language": null,
-      "size": 2873
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/hooks_runner/objective_c/af70a4d4ea/.lock",
-      "reason": "new",
-      "language": null,
-      "size": 162
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/hooks_runner/objective_c/af70a4d4ea/dependencies.dependencies_hash_file.json",
-      "reason": "new",
-      "language": "json",
-      "size": 603
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/hooks_runner/objective_c/af70a4d4ea/hook.dependencies_hash_file.json",
-      "reason": "new",
-      "language": "json",
-      "size": 382
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/hooks_runner/objective_c/af70a4d4ea/hook.dill",
-      "reason": "new",
-      "language": null,
-      "size": 11154160
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/hooks_runner/objective_c/af70a4d4ea/hook.dill.d",
-      "reason": "new",
-      "language": null,
-      "size": 11680
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/hooks_runner/objective_c/af70a4d4ea/input.json",
-      "reason": "new",
-      "language": "json",
-      "size": 1160
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/hooks_runner/objective_c/af70a4d4ea/output.json",
-      "reason": "new",
-      "language": "json",
-      "size": 95
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/hooks_runner/objective_c/af70a4d4ea/stderr.txt",
-      "reason": "new",
-      "language": null,
-      "size": 0
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/hooks_runner/objective_c/af70a4d4ea/stdout.txt",
-      "reason": "new",
-      "language": null,
-      "size": 2873
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/hooks_runner/shared/objective_c/.lock",
-      "reason": "new",
-      "language": null,
-      "size": 162
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/package_config.json",
-      "reason": "new",
-      "language": "json",
-      "size": 28120
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/package_graph.json",
-      "reason": "new",
-      "language": "json",
-      "size": 27790
-    },
-    {
-      "path": "SiSi_Mobile/.dart_tool/version",
-      "reason": "new",
-      "language": null,
-      "size": 6
-    },
-    {
-      "path": "SiSi_Mobile/.flutter-plugins-dependencies",
-      "reason": "new",
-      "language": null,
-      "size": 12383
-    },
-    {
       "path": "SiSi_Mobile/.gitignore",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 794
     },
     {
-      "path": "SiSi_Mobile/.idea/libraries/Dart_SDK.xml",
-      "reason": "new",
-      "language": null,
-      "size": 926
-    },
-    {
-      "path": "SiSi_Mobile/.idea/libraries/KotlinJavaRuntime.xml",
-      "reason": "new",
-      "language": null,
-      "size": 614
-    },
-    {
-      "path": "SiSi_Mobile/.idea/modules.xml",
-      "reason": "new",
-      "language": null,
-      "size": 401
-    },
-    {
-      "path": "SiSi_Mobile/.idea/runConfigurations/main_dart.xml",
-      "reason": "new",
-      "language": null,
-      "size": 276
-    },
-    {
-      "path": "SiSi_Mobile/.idea/workspace.xml",
-      "reason": "new",
-      "language": null,
-      "size": 1553
-    },
-    {
       "path": "SiSi_Mobile/.metadata",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 1706
     },
     {
       "path": "SiSi_Mobile/analysis_options.yaml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 1585
     },
     {
       "path": "SiSi_Mobile/android/.gitignore",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 267
     },
     {
-      "path": "SiSi_Mobile/android/.gradle/9.3.1/gc.properties",
-      "reason": "new",
-      "language": null,
-      "size": 0
-    },
-    {
-      "path": "SiSi_Mobile/android/.gradle/buildOutputCleanup/cache.properties",
-      "reason": "new",
-      "language": null,
-      "size": 53
-    },
-    {
-      "path": "SiSi_Mobile/android/.gradle/vcs-1/gc.properties",
-      "reason": "new",
-      "language": null,
-      "size": 0
-    },
-    {
       "path": "SiSi_Mobile/android/app/build.gradle.kts",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 1937
     },
     {
       "path": "SiSi_Mobile/android/app/src/debug/AndroidManifest.xml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 385
     },
     {
       "path": "SiSi_Mobile/android/app/src/main/AndroidManifest.xml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 2650
     },
     {
       "path": "SiSi_Mobile/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "java",
       "size": 3164
     },
     {
       "path": "SiSi_Mobile/android/app/src/main/kotlin/com/example/coba_sisi/MainActivity.kt",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "kotlin",
       "size": 128
     },
     {
       "path": "SiSi_Mobile/android/app/src/main/kotlin/id/co/ulptoboali/sisi/MainActivity.kt",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "kotlin",
       "size": 4204
     },
     {
       "path": "SiSi_Mobile/android/app/src/main/res/drawable/launch_background.xml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 446
     },
     {
       "path": "SiSi_Mobile/android/app/src/main/res/drawable-v21/launch_background.xml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 450
     },
     {
       "path": "SiSi_Mobile/android/app/src/main/res/values/styles.xml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 1014
     },
     {
       "path": "SiSi_Mobile/android/app/src/main/res/values-night/styles.xml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 1013
     },
     {
       "path": "SiSi_Mobile/android/app/src/profile/AndroidManifest.xml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 385
     },
     {
       "path": "SiSi_Mobile/android/build.gradle.kts",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 561
     },
     {
       "path": "SiSi_Mobile/android/coba_sisi_android.iml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 1630
     },
     {
       "path": "SiSi_Mobile/android/gradle/wrapper/gradle-wrapper.properties",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 207
     },
     {
       "path": "SiSi_Mobile/android/gradle.properties",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 334
     },
     {
       "path": "SiSi_Mobile/android/gradlew",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 4971
     },
     {
       "path": "SiSi_Mobile/android/gradlew.bat",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 2404
     },
     {
-      "path": "SiSi_Mobile/android/key.properties",
-      "reason": "new",
-      "language": null,
-      "size": 96
-    },
-    {
-      "path": "SiSi_Mobile/android/local.properties",
-      "reason": "new",
-      "language": null,
-      "size": 122
-    },
-    {
       "path": "SiSi_Mobile/android/settings.gradle.kts",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 796
     },
     {
       "path": "SiSi_Mobile/coba_sisi.iml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 859
     },
     {
       "path": "SiSi_Mobile/devtools_options.yaml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 184
     },
     {
       "path": "SiSi_Mobile/flutter_launcher_icons.yaml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 1051
     },
     {
       "path": "SiSi_Mobile/INSPEKSI_CARD_TRIGGER.txt",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 36
     },
     {
       "path": "SiSi_Mobile/ios/.gitignore",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 603
     },
     {
       "path": "SiSi_Mobile/ios/Flutter/AppFrameworkInfo.plist",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 744
     },
     {
       "path": "SiSi_Mobile/ios/Flutter/Debug.xcconfig",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 31
     },
     {
-      "path": "SiSi_Mobile/ios/Flutter/ephemeral/.swift_pm.lock",
-      "reason": "new",
-      "language": null,
-      "size": 0
-    },
-    {
-      "path": "SiSi_Mobile/ios/Flutter/ephemeral/flutter_lldbinit",
-      "reason": "new",
-      "language": null,
-      "size": 108
-    },
-    {
-      "path": "SiSi_Mobile/ios/Flutter/ephemeral/flutter_lldb_helper.py",
-      "reason": "new",
-      "language": "python",
-      "size": 1276
-    },
-    {
-      "path": "SiSi_Mobile/ios/Flutter/ephemeral/flutter_native_integration.env",
-      "reason": "new",
-      "language": null,
-      "size": 514
-    },
-    {
-      "path": "SiSi_Mobile/ios/Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage/Package.swift",
-      "reason": "new",
-      "language": "swift",
-      "size": 596
-    },
-    {
-      "path": "SiSi_Mobile/ios/Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage/Sources/FlutterGeneratedPluginSwiftPackage/FlutterGeneratedPluginSwiftPackage.swift",
-      "reason": "new",
-      "language": "swift",
-      "size": 38
-    },
-    {
-      "path": "SiSi_Mobile/ios/Flutter/flutter_export_environment.sh",
-      "reason": "new",
-      "language": "shell",
-      "size": 703
-    },
-    {
-      "path": "SiSi_Mobile/ios/Flutter/Generated.xcconfig",
-      "reason": "new",
-      "language": null,
-      "size": 664
-    },
-    {
       "path": "SiSi_Mobile/ios/Flutter/Release.xcconfig",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 31
     },
     {
       "path": "SiSi_Mobile/ios/Runner/AppDelegate.swift",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "swift",
       "size": 555
     },
     {
       "path": "SiSi_Mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "json",
       "size": 2097
     },
     {
       "path": "SiSi_Mobile/ios/Runner/Assets.xcassets/LaunchImage.imageset/Contents.json",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "json",
       "size": 414
     },
     {
       "path": "SiSi_Mobile/ios/Runner/Assets.xcassets/LaunchImage.imageset/README.md",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "markdown",
       "size": 340
     },
     {
       "path": "SiSi_Mobile/ios/Runner/Base.lproj/LaunchScreen.storyboard",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 2414
     },
     {
       "path": "SiSi_Mobile/ios/Runner/Base.lproj/Main.storyboard",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 1631
     },
     {
       "path": "SiSi_Mobile/ios/Runner/GeneratedPluginRegistrant.h",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "c",
       "size": 378
     },
     {
       "path": "SiSi_Mobile/ios/Runner/GeneratedPluginRegistrant.m",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 2055
     },
     {
       "path": "SiSi_Mobile/ios/Runner/Info.plist",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 2286
     },
     {
       "path": "SiSi_Mobile/ios/Runner/Runner-Bridging-Header.h",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "c",
       "size": 39
     },
     {
       "path": "SiSi_Mobile/ios/Runner/SceneDelegate.swift",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "swift",
       "size": 82
     },
     {
       "path": "SiSi_Mobile/ios/Runner.xcodeproj/project.pbxproj",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 25745
     },
     {
       "path": "SiSi_Mobile/ios/Runner.xcodeproj/project.xcworkspace/contents.xcworkspacedata",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 142
     },
     {
       "path": "SiSi_Mobile/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 246
     },
     {
       "path": "SiSi_Mobile/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 234
     },
     {
       "path": "SiSi_Mobile/ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 4836
     },
     {
       "path": "SiSi_Mobile/ios/Runner.xcworkspace/contents.xcworkspacedata",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 159
     },
     {
       "path": "SiSi_Mobile/ios/Runner.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 246
     },
     {
       "path": "SiSi_Mobile/ios/Runner.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 234
     },
     {
       "path": "SiSi_Mobile/ios/RunnerTests/RunnerTests.swift",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "swift",
       "size": 297
     },
     {
       "path": "SiSi_Mobile/lib/db/.gitkeep",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 167
     },
     {
       "path": "SiSi_Mobile/lib/db/app_database.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 6156
     },
     {
       "path": "SiSi_Mobile/lib/db/app_database.g.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 386897
     },
     {
       "path": "SiSi_Mobile/lib/db/daos/header_dao.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 1894
     },
     {
       "path": "SiSi_Mobile/lib/db/daos/header_dao.g.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 520
     },
     {
       "path": "SiSi_Mobile/lib/db/daos/inspeksi_gardu_dao.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 2597
     },
     {
       "path": "SiSi_Mobile/lib/db/daos/inspeksi_gardu_dao.g.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 1294
     },
     {
       "path": "SiSi_Mobile/lib/db/daos/laporan_dao.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 1295
     },
     {
       "path": "SiSi_Mobile/lib/db/daos/laporan_dao.g.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 545
     },
     {
       "path": "SiSi_Mobile/lib/db/daos/master_dao.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 2286
     },
     {
       "path": "SiSi_Mobile/lib/db/daos/master_dao.g.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 558
     },
     {
       "path": "SiSi_Mobile/lib/db/daos/master_gardu_dao.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 2488
     },
     {
       "path": "SiSi_Mobile/lib/db/daos/master_gardu_dao.g.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 761
     },
     {
       "path": "SiSi_Mobile/lib/db/daos/p0_dao.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 4372
     },
     {
       "path": "SiSi_Mobile/lib/db/daos/p0_dao.g.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 648
     },
     {
       "path": "SiSi_Mobile/lib/db/daos/sync_dao.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 2346
     },
     {
       "path": "SiSi_Mobile/lib/db/daos/sync_dao.g.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 478
     },
     {
       "path": "SiSi_Mobile/lib/db/db_provider.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 714
     },
     {
       "path": "SiSi_Mobile/lib/db/repositories/delta_sync_repository.dart",
-      "reason": "new",
+      "reason": "changed",
       "language": null,
-      "size": 7814
+      "size": 6908
     },
     {
       "path": "SiSi_Mobile/lib/db/repositories/engine_usage_repository.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 1795
     },
     {
       "path": "SiSi_Mobile/lib/db/repositories/gardu_sync_repository.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 1476
     },
     {
       "path": "SiSi_Mobile/lib/db/repositories/header_repository.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 4466
     },
     {
       "path": "SiSi_Mobile/lib/db/repositories/inspeksi_gardu_repository.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 9629
     },
     {
       "path": "SiSi_Mobile/lib/db/repositories/laporan_repository.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 3041
     },
     {
       "path": "SiSi_Mobile/lib/db/repositories/local_master_materializer.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 3773
     },
     {
       "path": "SiSi_Mobile/lib/db/repositories/master_gardu_repository.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 4334
     },
     {
       "path": "SiSi_Mobile/lib/db/repositories/master_repository.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 2324
     },
     {
       "path": "SiSi_Mobile/lib/db/repositories/p0_repository.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 16001
     },
     {
       "path": "SiSi_Mobile/lib/db/repositories/sync_repository.dart",
-      "reason": "new",
+      "reason": "changed",
       "language": null,
-      "size": 5771
+      "size": 5125
     },
     {
       "path": "SiSi_Mobile/lib/db/repositories/teknik_to_repository.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 6291
     },
     {
       "path": "SiSi_Mobile/lib/db/repositories/temuan_teknik_repository.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 1957
     },
     {
       "path": "SiSi_Mobile/lib/db/repositories/work_order_row_repository.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 1463
     },
     {
       "path": "SiSi_Mobile/lib/db/repositories/yandal_local_repository.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 3267
     },
     {
       "path": "SiSi_Mobile/lib/db/tables/gardu_outbox.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 780
     },
     {
       "path": "SiSi_Mobile/lib/db/tables/global_header.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 3481
     },
     {
       "path": "SiSi_Mobile/lib/db/tables/inspeksi_gardu_lokal.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 2759
     },
     {
       "path": "SiSi_Mobile/lib/db/tables/laporan_harian.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 2065
     },
     {
       "path": "SiSi_Mobile/lib/db/tables/master_gardu.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 3618
     },
     {
       "path": "SiSi_Mobile/lib/db/tables/master_penyulang.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 2096
     },
     {
       "path": "SiSi_Mobile/lib/db/tables/p0_lokal.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 2203
     },
     {
       "path": "SiSi_Mobile/lib/db/tables/p0_outbox.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 2715
     },
     {
       "path": "SiSi_Mobile/lib/db/tables/sync_info.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 1374
     },
     {
       "path": "SiSi_Mobile/lib/main.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 1053
     },
     {
       "path": "SiSi_Mobile/lib/screens/beranda_screen.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 16499
     },
     {
       "path": "SiSi_Mobile/lib/screens/dashboard_screen.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 45658
     },
     {
       "path": "SiSi_Mobile/lib/screens/eksekusi_row_screen.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 16469
     },
     {
       "path": "SiSi_Mobile/lib/screens/engine_usage_screen.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 5532
     },
     {
       "path": "SiSi_Mobile/lib/screens/form_header_laporan_screen.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 16353
     },
     {
       "path": "SiSi_Mobile/lib/screens/gangguan_beranda_section.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 18764
     },
     {
       "path": "SiSi_Mobile/lib/screens/gardu_screen.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 19010
     },
     {
       "path": "SiSi_Mobile/lib/screens/input_temuan_teknik_screen.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 12141
     },
     {
       "path": "SiSi_Mobile/lib/screens/inspeksi_jaringan_screen.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 17202
     },
     {
       "path": "SiSi_Mobile/lib/screens/jadwal_padam_screen.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 27305
     },
     {
       "path": "SiSi_Mobile/lib/screens/kalender_jadwal_editor.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 8980
     },
     {
       "path": "SiSi_Mobile/lib/screens/laporan_harian_screen.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 14335
     },
     {
       "path": "SiSi_Mobile/lib/screens/laporan_hartek_screen.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 16932
     },
     {
       "path": "SiSi_Mobile/lib/screens/laporan_row_screen.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 14753
     },
     {
       "path": "SiSi_Mobile/lib/screens/laporan_up3_uiw_screen.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 25653
     },
     {
       "path": "SiSi_Mobile/lib/screens/local_watermark_preview_screen.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 3966
     },
     {
       "path": "SiSi_Mobile/lib/screens/login_screen.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 22793
     },
     {
       "path": "SiSi_Mobile/lib/screens/splash_gate.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 4962
     },
     {
       "path": "SiSi_Mobile/lib/screens/teknik_to_screen.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 30671
     },
     {
       "path": "SiSi_Mobile/lib/screens/verifikasi_p0_screen.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 22812
     },
     {
       "path": "SiSi_Mobile/lib/screens/work_order_row_screen.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 28414
     },
     {
       "path": "SiSi_Mobile/lib/screens/yandal_photo_screen.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 6310
     },
     {
       "path": "SiSi_Mobile/lib/screens/yandal_screen.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 16861
     },
     {
       "path": "SiSi_Mobile/lib/services/accurate_location_service.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 3378
     },
     {
       "path": "SiSi_Mobile/lib/services/api_service.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 10567
     },
     {
       "path": "SiSi_Mobile/lib/services/apps_script_http.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 2060
     },
     {
       "path": "SiSi_Mobile/lib/services/auto_sync_service.dart",
-      "reason": "new",
+      "reason": "changed",
       "language": null,
-      "size": 4153
+      "size": 3633
     },
     {
       "path": "SiSi_Mobile/lib/services/gangguan_beranda_service.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 825
     },
     {
       "path": "SiSi_Mobile/lib/services/jadwal_padam_service.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 2456
     },
     {
       "path": "SiSi_Mobile/lib/services/local_watermark_data.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 5019
     },
     {
       "path": "SiSi_Mobile/lib/services/local_watermark_renderer.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 8903
     },
     {
       "path": "SiSi_Mobile/lib/services/p0_correction_api.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 1059
     },
     {
       "path": "SiSi_Mobile/lib/services/petugas_photo_flow.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 6389
     },
     {
       "path": "SiSi_Mobile/lib/services/petugas_photo_store.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 5417
     },
     {
       "path": "SiSi_Mobile/lib/services/sesi_store.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 4258
     },
     {
-      "path": "SiSi_Mobile/lib/services/sync_progress_service.dart",
+      "path": "SiSi_Mobile/lib/services/sync_error_message.dart",
       "reason": "new",
       "language": null,
-      "size": 6567
+      "size": 1217
+    },
+    {
+      "path": "SiSi_Mobile/lib/services/sync_progress_service.dart",
+      "reason": "changed",
+      "language": null,
+      "size": 5067
     },
     {
       "path": "SiSi_Mobile/lib/services/watermark_photo_export.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 5616
     },
     {
       "path": "SiSi_Mobile/lib/services/wm_v1_service.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 6623
     },
     {
       "path": "SiSi_Mobile/lib/theme/app_colors.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 2531
     },
     {
       "path": "SiSi_Mobile/lib/theme/app_theme.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 12589
     },
     {
       "path": "SiSi_Mobile/lib/widgets/accurate_gps_button.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 3378
     },
     {
       "path": "SiSi_Mobile/lib/widgets/custom_loading_widget.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 1082
     },
     {
       "path": "SiSi_Mobile/lib/widgets/gardu_card_widgets.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 23525
     },
     {
       "path": "SiSi_Mobile/lib/widgets/ins_gardu_report_card.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 7904
     },
     {
       "path": "SiSi_Mobile/lib/widgets/jadwal_padam_calendar.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 5463
     },
     {
       "path": "SiSi_Mobile/lib/widgets/laporan_header_card.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 7522
     },
     {
       "path": "SiSi_Mobile/lib/widgets/mock_gps_warning_dialog.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 4351
     },
     {
       "path": "SiSi_Mobile/lib/widgets/sync_section_pengaturan.dart",
-      "reason": "new",
+      "reason": "changed",
       "language": null,
-      "size": 5744
+      "size": 9791
     },
     {
       "path": "SiSi_Mobile/linux/.gitignore",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 19
     },
     {
       "path": "SiSi_Mobile/linux/CMakeLists.txt",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 4885
     },
     {
       "path": "SiSi_Mobile/linux/flutter/CMakeLists.txt",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 2903
     },
     {
       "path": "SiSi_Mobile/linux/flutter/generated_plugins.cmake",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 811
     },
     {
       "path": "SiSi_Mobile/linux/flutter/generated_plugin_registrant.cc",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "cpp",
       "size": 1015
     },
     {
       "path": "SiSi_Mobile/linux/flutter/generated_plugin_registrant.h",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "c",
       "size": 303
     },
     {
       "path": "SiSi_Mobile/linux/runner/CMakeLists.txt",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 1000
     },
     {
       "path": "SiSi_Mobile/linux/runner/main.cc",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "cpp",
       "size": 186
     },
     {
       "path": "SiSi_Mobile/linux/runner/my_application.cc",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "cpp",
       "size": 5605
     },
     {
       "path": "SiSi_Mobile/linux/runner/my_application.h",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "c",
       "size": 472
     },
     {
       "path": "SiSi_Mobile/macos/.gitignore",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 96
     },
     {
-      "path": "SiSi_Mobile/macos/Flutter/ephemeral/.swift_pm.lock",
-      "reason": "new",
-      "language": null,
-      "size": 0
-    },
-    {
-      "path": "SiSi_Mobile/macos/Flutter/ephemeral/Flutter-Generated.xcconfig",
-      "reason": "new",
-      "language": null,
-      "size": 559
-    },
-    {
-      "path": "SiSi_Mobile/macos/Flutter/ephemeral/flutter_export_environment.sh",
-      "reason": "new",
-      "language": "shell",
-      "size": 667
-    },
-    {
-      "path": "SiSi_Mobile/macos/Flutter/ephemeral/flutter_native_integration.env",
-      "reason": "new",
-      "language": null,
-      "size": 487
-    },
-    {
-      "path": "SiSi_Mobile/macos/Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage/Package.swift",
-      "reason": "new",
-      "language": "swift",
-      "size": 598
-    },
-    {
-      "path": "SiSi_Mobile/macos/Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage/Sources/FlutterGeneratedPluginSwiftPackage/FlutterGeneratedPluginSwiftPackage.swift",
-      "reason": "new",
-      "language": "swift",
-      "size": 38
-    },
-    {
       "path": "SiSi_Mobile/macos/Flutter/Flutter-Debug.xcconfig",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 49
     },
     {
       "path": "SiSi_Mobile/macos/Flutter/Flutter-Release.xcconfig",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 49
     },
     {
       "path": "SiSi_Mobile/macos/Flutter/GeneratedPluginRegistrant.swift",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "swift",
       "size": 862
     },
     {
       "path": "SiSi_Mobile/macos/Runner/AppDelegate.swift",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "swift",
       "size": 324
     },
     {
       "path": "SiSi_Mobile/macos/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "json",
       "size": 1359
     },
     {
       "path": "SiSi_Mobile/macos/Runner/Base.lproj/MainMenu.xib",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 24072
     },
     {
       "path": "SiSi_Mobile/macos/Runner/Configs/AppInfo.xcconfig",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 618
     },
     {
       "path": "SiSi_Mobile/macos/Runner/Configs/Debug.xcconfig",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 79
     },
     {
       "path": "SiSi_Mobile/macos/Runner/Configs/Release.xcconfig",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 81
     },
     {
       "path": "SiSi_Mobile/macos/Runner/Configs/Warnings.xcconfig",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 593
     },
     {
       "path": "SiSi_Mobile/macos/Runner/DebugProfile.entitlements",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 360
     },
     {
       "path": "SiSi_Mobile/macos/Runner/Info.plist",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 1092
     },
     {
       "path": "SiSi_Mobile/macos/Runner/MainFlutterWindow.swift",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "swift",
       "size": 403
     },
     {
       "path": "SiSi_Mobile/macos/Runner/Release.entitlements",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 248
     },
     {
       "path": "SiSi_Mobile/macos/Runner.xcodeproj/project.pbxproj",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 28593
     },
     {
       "path": "SiSi_Mobile/macos/Runner.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 246
     },
     {
       "path": "SiSi_Mobile/macos/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 4692
     },
     {
       "path": "SiSi_Mobile/macos/Runner.xcworkspace/contents.xcworkspacedata",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 159
     },
     {
       "path": "SiSi_Mobile/macos/Runner.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 246
     },
     {
       "path": "SiSi_Mobile/macos/RunnerTests/RunnerTests.swift",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "swift",
       "size": 302
     },
     {
-      "path": "SiSi_Mobile/pubspec.lock",
-      "reason": "new",
-      "language": null,
-      "size": 36006
-    },
-    {
       "path": "SiSi_Mobile/pubspec.yaml",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "yaml",
       "size": 1096
     },
     {
       "path": "SiSi_Mobile/README.md",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "markdown",
       "size": 648
     },
     {
       "path": "SiSi_Mobile/ROW_CARD_TRIGGER.txt",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 39
     },
     {
       "path": "SiSi_Mobile/test/gangguan_beranda_section_test.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 5307
     },
     {
       "path": "SiSi_Mobile/test/ins_gardu_report_card_test.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 3174
     },
     {
       "path": "SiSi_Mobile/test/local_watermark_test.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 3854
     },
     {
       "path": "SiSi_Mobile/test/mock_gps_warning_dialog_test.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 2355
     },
     {
-      "path": "SiSi_Mobile/test/petugas_photo_flow_test.dart",
+      "path": "SiSi_Mobile/test/module_sync_contract_test.dart",
       "reason": "new",
+      "language": null,
+      "size": 1354
+    },
+    {
+      "path": "SiSi_Mobile/test/petugas_photo_flow_test.dart",
+      "reason": "needs_summary",
       "language": null,
       "size": 2623
     },
     {
       "path": "SiSi_Mobile/test/resumable_background_sync_test.dart",
+      "reason": "changed",
+      "language": null,
+      "size": 2066
+    },
+    {
+      "path": "SiSi_Mobile/test/sync_error_message_test.dart",
       "reason": "new",
       "language": null,
-      "size": 1833
+      "size": 910
     },
     {
       "path": "SiSi_Mobile/test/watermark_photo_export_test.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 5642
     },
     {
       "path": "SiSi_Mobile/test/yandal_photo_metadata_test.dart",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 1810
     },
     {
       "path": "SiSi_Mobile/web/index.html",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "html",
       "size": 1569
     },
     {
       "path": "SiSi_Mobile/web/manifest.json",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "json",
       "size": 949
     },
     {
       "path": "SiSi_Mobile/windows/.gitignore",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 308
     },
     {
       "path": "SiSi_Mobile/windows/CMakeLists.txt",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 4262
     },
     {
       "path": "SiSi_Mobile/windows/flutter/CMakeLists.txt",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 3851
     },
     {
       "path": "SiSi_Mobile/windows/flutter/generated_plugins.cmake",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 840
     },
     {
       "path": "SiSi_Mobile/windows/flutter/generated_plugin_registrant.cc",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "cpp",
       "size": 821
     },
     {
       "path": "SiSi_Mobile/windows/flutter/generated_plugin_registrant.h",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "c",
       "size": 302
     },
     {
       "path": "SiSi_Mobile/windows/runner/CMakeLists.txt",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 1836
     },
     {
       "path": "SiSi_Mobile/windows/runner/flutter_window.cpp",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "cpp",
       "size": 2193
     },
     {
       "path": "SiSi_Mobile/windows/runner/flutter_window.h",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "c",
       "size": 961
     },
     {
       "path": "SiSi_Mobile/windows/runner/main.cpp",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "cpp",
       "size": 1305
     },
     {
       "path": "SiSi_Mobile/windows/runner/resource.h",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "c",
       "size": 448
     },
     {
       "path": "SiSi_Mobile/windows/runner/runner.exe.manifest",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 616
     },
     {
       "path": "SiSi_Mobile/windows/runner/Runner.rc",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": null,
       "size": 3154
     },
     {
       "path": "SiSi_Mobile/windows/runner/utils.cpp",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "cpp",
       "size": 2237
     },
     {
       "path": "SiSi_Mobile/windows/runner/utils.h",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "c",
       "size": 691
     },
     {
       "path": "SiSi_Mobile/windows/runner/win32_window.cpp",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "cpp",
       "size": 8822
     },
     {
       "path": "SiSi_Mobile/windows/runner/win32_window.h",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "c",
       "size": 3624
     },
     {
       "path": "tests/fixtures/seed.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 3240
     },
     {
       "path": "tests/harness/apps-script-shim.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 23572
     },
     {
       "path": "tests/harness/loader.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 4096
     },
     {
       "path": "tests/harness/sqlite-store.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 10109
     },
     {
       "path": "tests/p0-correction.test.cjs",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 7164
     },
     {
       "path": "tests/package.json",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "json",
       "size": 523
     },
     {
       "path": "tests/predeploy-yandal.test.cjs",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 3413
     },
     {
       "path": "tests/server.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 6757
     },
     {
       "path": "tests/suite.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 37037
     },
     {
       "path": "tests/tools/cek-encoding.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 2275
     },
     {
       "path": "tests/tools/encoding.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 1707
     },
     {
       "path": "tests/tools/suntik-token-html.js",
-      "reason": "new",
+      "reason": "needs_summary",
       "language": "javascript",
       "size": 10174
     }
