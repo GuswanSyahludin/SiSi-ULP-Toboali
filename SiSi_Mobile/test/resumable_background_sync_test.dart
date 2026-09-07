@@ -20,7 +20,7 @@ void main() {
     expect(source, contains('sync_download_staging'));
     expect(source, contains('downloaded_rows'));
     expect(
-      RegExp(r"['\"]offset['\"]\s*:\s*offset").hasMatch(source),
+      RegExp(r'''["']offset["']\s*:\s*offset''').hasMatch(source),
       isTrue,
     );
   });
@@ -40,15 +40,15 @@ void main() {
     final source =
         File('lib/db/repositories/sync_repository.dart').readAsStringSync();
     expect(
-      RegExp(r"\.rows\(['\"]db_Penyulang['\"]\)").hasMatch(source),
+      RegExp(r'''\.rows\(["']db_Penyulang["']\)''').hasMatch(source),
       isTrue,
     );
     expect(
-      RegExp(r"\.rows\(['\"]Master_Gardu['\"]\)").hasMatch(source),
+      RegExp(r'''\.rows\(["']Master_Gardu["']\)''').hasMatch(source),
       isTrue,
     );
     expect(
-      RegExp(r"\.rows\(['\"]db_List_Temuan['\"]\)").hasMatch(source),
+      RegExp(r'''\.rows\(["']db_List_Temuan["']\)''').hasMatch(source),
       isTrue,
     );
     expect(source, isNot(contains('MasterGarduRepository().download')));
