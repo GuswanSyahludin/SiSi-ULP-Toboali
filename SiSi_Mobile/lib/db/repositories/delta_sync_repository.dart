@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 import '../../services/apps_script_http.dart' as http;
 import '../../services/api_service.dart';
+import '../../services/sync_progress_service.dart';
 import '../db_provider.dart';
 
 class DeltaSyncResult {
@@ -43,12 +44,11 @@ class DeltaSyncRepository {
     if (body.isEmpty) throw Exception('Server tidak mengirim respons setelah 2 percobaan: $lastError');
     dynamic decoded;
     try { decoded = jsonDecode(body); } on FormatException {
-      final preview = body.length > 140 ? '${body.substring(0, 140)}…' : body;
-      throw Exception('Respons sinkron bukan JSON valid (HTTP ${response?.statusCode}): $preview');
+      throw Exception('Respons server untuk sinkronisasi tidak valid.');
     }
-    if (decoded is! Map) throw Exception('Respons delta sync tidak valid.');
+    if (decoded is! Map) throw Exception('Respons sinkronisasi tidak valid.');
     final out = Map<String, dynamic>.from(decoded);
-    if (out['success'] != true) throw Exception(out['message'] ?? 'Delta sync gagal.');
+    if (out['success'] != true) throw Exception(out['message'] ?? 'Sinkronisasi gagal.');
     return out;
   }
 
@@ -65,7 +65,6 @@ class DeltaSyncRepository {
     final overallTotal = datasets.fold<int>(0, (sum, item) => sum + (num.tryParse('${item['count']}')?.toInt() ?? 0));
     final changed = <String>[];
     var finishedRows = 0;
-
     for (final item in datasets) {
       final name = item['name'].toString();
       final version = item['version'].toString();
@@ -76,10 +75,9 @@ class DeltaSyncRepository {
       finishedRows += downloaded;
       changed.add(name);
     }
-
     final warnings = List.from(manifest['warnings'] ?? const []);
-    final warningText = warnings.isEmpty ? '' : ' · ${warnings.length} dataset dilewati';
-    return DeltaSyncResult(ok: true, initial: local.isEmpty, changed: changed, message: changed.isEmpty ? 'Tidak ada perubahan server$warningText.' : '${changed.length} tabel diperbarui$warningText.');
+    final warningText = warnings.isEmpty ? '' : ' · ${warnings.length} sumber dilewati';
+    return DeltaSyncResult(ok: true, initial: local.isEmpty, changed: changed, message: changed.isEmpty ? 'Tidak ada perubahan server$warningText.' : '${changed.length} data master diperbarui$warningText.');
   }
 
   Future<int> _resumeOffset(String name, String version, int total, String kind) async {
@@ -98,7 +96,7 @@ class DeltaSyncRepository {
       final page = await _send(token, {'cmd': 'fetch', 'dataset': name, 'offset': offset, 'limit': 250});
       if ('${page['version']}' != expected) {
         await db.customStatement('DELETE FROM sync_download_checkpoint WHERE dataset=?', [name]);
-        throw Exception('Dataset $name berubah saat diunduh. Menjadwalkan ulang dari versi terbaru.');
+        throw Exception('${syncDatasetLabel(name)} diperbarui di server saat proses download. Proses akan dilanjutkan otomatis dari versi terbaru.');
       }
       final pageRows = List.from(page['rows'] ?? const []);
       await db.transaction(() async {
@@ -110,7 +108,7 @@ class DeltaSyncRepository {
       });
       onRows?.call(offset);
       if (page['hasMore'] != true) break;
-      if (pageRows.isEmpty) throw Exception('Server tidak memajukan halaman $name.');
+      if (pageRows.isEmpty) throw Exception('Download data belum dapat dilanjutkan. Sistem akan mencoba kembali otomatis.');
     }
     await db.transaction(() async {
       await db.customStatement('DELETE FROM local_dataset_rows WHERE dataset=?', [name]);
