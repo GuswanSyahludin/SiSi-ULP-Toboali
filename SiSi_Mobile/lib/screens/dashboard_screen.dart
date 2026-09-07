@@ -17,6 +17,7 @@ import 'laporan_row_screen.dart';
 import 'work_order_row_screen.dart';
 import 'laporan_hartek_screen.dart';
 import 'input_temuan_teknik_screen.dart';
+import 'peta_temuan_screen.dart';
 import 'teknik_to_screen.dart';
 import 'verifikasi_p0_screen.dart';
 import 'laporan_up3_uiw_screen.dart';
@@ -965,6 +966,12 @@ class _DashboardScreenState extends State<DashboardScreen>
         'iconColor': AppColors.cyan600,
       },
       {
+        'title': 'Peta Temuan',
+        'icon': Icons.map_outlined,
+        'desc': 'Peta temuan inspeksi dari data aktif dan arsip',
+        'iconColor': AppColors.success700,
+      },
+      {
         'title': 'Penugasan Tim',
         'icon': Icons.group_add_outlined,
         'desc': 'Pilih Tim Eksekusi untuk TO yang menunggu penugasan',
@@ -1084,6 +1091,11 @@ class _DashboardScreenState extends State<DashboardScreen>
           );
         } else if (title == 'Input Temuan') {
                     tujuan = InputTemuanTeknikScreen(sesi: widget.sesi);
+                  } else if (title == 'Peta Temuan') {
+                    tujuan = PetaTemuanScreen(
+                      sesi: widget.sesi,
+                      onBack: () => setState(() => _activeSubScreen = null),
+                    );
                   } else if (title == 'Penugasan Tim') {
                     tujuan = TeknikToScreen(
                       sesi: widget.sesi,
