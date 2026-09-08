@@ -43,6 +43,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   bool _isOnline = true;
   Timer? _onlineTimer;
+  final ValueNotifier<int> _settingsRefresh = ValueNotifier<int>(0);
 
   Widget? _activeSubScreen;
   Map<String, dynamic>? _selectedTeamDetail;
@@ -142,6 +143,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _onlineTimer?.cancel();
+    _settingsRefresh.dispose();
     _bubbleController.dispose();
     super.dispose();
   }
@@ -1159,9 +1161,16 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
+      body: RefreshIndicator(
+        onRefresh: () async {
+          _settingsRefresh.value++;
+          await Future<void>.delayed(const Duration(milliseconds: 350));
+          if (mounted) setState(() {});
+        },
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          children: [
           Card(
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -1174,7 +1183,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             ),
           ),
           const SizedBox(height: 16),
-          SyncSectionPengaturan(sesi: widget.sesi),
+          SyncSectionPengaturan(sesi: widget.sesi, refreshListenable: _settingsRefresh),
           const SizedBox(height: 16),
           Card(
             shape:
@@ -1188,7 +1197,8 @@ class _DashboardScreenState extends State<DashboardScreen>
               onTap: _handleLogout,
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
