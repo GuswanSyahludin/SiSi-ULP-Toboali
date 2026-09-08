@@ -13,7 +13,12 @@ import '../theme/app_colors.dart';
 
 class SyncSectionPengaturan extends StatefulWidget {
   final Map<String, dynamic> sesi;
-  const SyncSectionPengaturan({super.key, required this.sesi});
+  final Listenable? refreshListenable;
+  const SyncSectionPengaturan({
+    super.key,
+    required this.sesi,
+    this.refreshListenable,
+  });
 
   @override
   State<SyncSectionPengaturan> createState() => _State();
@@ -24,10 +29,12 @@ class _State extends State<SyncSectionPengaturan> {
   StreamSubscription<List<SyncInfo>>? _syncSub;
   StreamSubscription<int>? _p0Sub;
   StreamSubscription<List<GarduOutbox>>? _garduSub;
+  Timer? _statusPoll;
   Map<String, SyncInfo> status = {};
   int p0 = 0;
   List<GarduOutbox> gardu = [];
   String device = '…';
+  bool _wasRunning = false;
 
   @override
   void initState() {
@@ -44,7 +51,34 @@ class _State extends State<SyncSectionPengaturan> {
     repo.perangkatId().then((value) {
       if (mounted) setState(() => device = value);
     });
+    SyncProgressService.instance.state.addListener(_onProgress);
+    widget.refreshListenable?.addListener(_reloadStatus);
+    _statusPoll = Timer.periodic(const Duration(seconds: 2), (_) {
+      if (SyncProgressService.instance.state.value.running) _reloadStatus();
+    });
     SyncProgressService.instance.restore();
+    _reloadStatus();
+  }
+
+  @override
+  void didUpdateWidget(covariant SyncSectionPengaturan oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.refreshListenable != widget.refreshListenable) {
+      oldWidget.refreshListenable?.removeListener(_reloadStatus);
+      widget.refreshListenable?.addListener(_reloadStatus);
+    }
+  }
+
+  void _onProgress() {
+    final running = SyncProgressService.instance.state.value.running;
+    if (_wasRunning && !running) _reloadStatus();
+    _wasRunning = running;
+  }
+
+  Future<void> _reloadStatus() async {
+    await SyncProgressService.instance.restore();
+    final rows = await DbProvider.instance.syncDao.pantauSemua().first;
+    if (mounted) setState(() => status = {for (final x in rows) x.key: x});
   }
 
   @override
@@ -52,6 +86,9 @@ class _State extends State<SyncSectionPengaturan> {
     _syncSub?.cancel();
     _p0Sub?.cancel();
     _garduSub?.cancel();
+    _statusPoll?.cancel();
+    SyncProgressService.instance.state.removeListener(_onProgress);
+    widget.refreshListenable?.removeListener(_reloadStatus);
     super.dispose();
   }
 
@@ -101,108 +138,68 @@ class _State extends State<SyncSectionPengaturan> {
     );
   }
 
-  Widget _summary(SyncProgressState progress) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.neutral200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
+  Widget _summary(SyncProgressState progress) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.neutral200),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
               if (progress.running)
                 const _Spin()
               else
                 const Icon(Icons.cloud_done_outlined, color: AppColors.navy700),
               const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      progress.running ? 'Download Data Master' : 'Data Master',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      progress.running
-                          ? progress.stage
-                          : 'Pilih modul untuk download',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.neutral500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (progress.running)
-                Text(
-                  '${progress.percent}%',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.navy700,
+              Expanded(child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    progress.running ? 'Download Data Master' : 'Data Master',
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                   ),
-                ),
+                  Text(
+                    progress.running ? progress.stage : 'Pilih modul untuk download',
+                    style: const TextStyle(fontSize: 12, color: AppColors.neutral500),
+                  ),
+                ],
+              )),
+              if (progress.running)
+                Text('${progress.percent}%', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.navy700)),
+            ]),
+            if (progress.running) ...[
+              const SizedBox(height: 12),
+              LinearProgressIndicator(value: progress.fraction, minHeight: 7),
+              if (progress.datasetLabel.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(progress.datasetLabel, style: const TextStyle(fontSize: 11, color: AppColors.neutral500)),
+              ],
             ],
-          ),
-          if (progress.running) ...[
-            const SizedBox(height: 12),
-            LinearProgressIndicator(value: progress.fraction, minHeight: 7),
-            if (progress.datasetLabel.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                progress.datasetLabel,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: AppColors.neutral500,
+            if (!progress.running && progress.message != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  progress.message!,
+                  style: TextStyle(fontSize: 11, color: progress.failed ? AppColors.red600 : AppColors.success700),
                 ),
               ),
-            ],
           ],
-          if (!progress.running && progress.message != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                progress.message!,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: progress.failed
-                      ? AppColors.red600
-                      : AppColors.success700,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
+        ),
+      );
 
-  Widget _moduleTile(
-    String key,
-    String label,
-    SyncProgressState progress,
-  ) {
+  Widget _moduleTile(String key, String label, SyncProgressState progress) {
     final active = progress.running && progress.module == key;
     final info = status['master:$key'];
     final last = DateTime.tryParse(info?.lastSyncAt ?? '')?.toLocal();
     final subtitle = active
-        ? (progress.datasetLabel.isEmpty
-            ? progress.stage
-            : progress.datasetLabel)
+        ? (progress.datasetLabel.isEmpty ? progress.stage : progress.datasetLabel)
         : last == null
             ? 'Belum didownload'
-            : 'Terakhir ${last.day}/${last.month} '
-                '${last.hour.toString().padLeft(2, '0')}:'
-                '${last.minute.toString().padLeft(2, '0')}';
-
+            : 'Terakhir ${last.day}/${last.month} ${last.hour.toString().padLeft(2, '0')}:${last.minute.toString().padLeft(2, '0')}';
     return Material(
       color: active ? AppColors.navy100 : Colors.white,
       borderRadius: BorderRadius.circular(14),
@@ -211,59 +208,21 @@ class _State extends State<SyncSectionPengaturan> {
         borderRadius: BorderRadius.circular(14),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    active
-                        ? Icons.downloading_rounded
-                        : Icons.folder_copy_outlined,
-                    color: AppColors.navy700,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          label,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        Text(
-                          subtitle,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: AppColors.neutral500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (active)
-                    Text(
-                      '${progress.percent}%',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.navy700,
-                      ),
-                    )
-                  else
-                    const Icon(Icons.download_rounded, color: AppColors.navy700),
-                ],
-              ),
-              if (active) ...[
-                const SizedBox(height: 10),
-                LinearProgressIndicator(
-                  value: progress.fraction,
-                  minHeight: 5,
-                ),
+          child: Row(children: [
+            Icon(active ? Icons.downloading_rounded : Icons.folder_copy_outlined, color: AppColors.navy700),
+            const SizedBox(width: 12),
+            Expanded(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                Text(subtitle, style: const TextStyle(fontSize: 11, color: AppColors.neutral500)),
               ],
-            ],
-          ),
+            )),
+            if (active)
+              Text('${progress.percent}%', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.navy700))
+            else
+              const Icon(Icons.download_rounded, color: AppColors.navy700),
+          ]),
         ),
       ),
     );
@@ -272,30 +231,19 @@ class _State extends State<SyncSectionPengaturan> {
 
 class _Spin extends StatefulWidget {
   const _Spin();
-
   @override
   State<_Spin> createState() => _SpinState();
 }
 
-class _SpinState extends State<_Spin>
-    with SingleTickerProviderStateMixin {
+class _SpinState extends State<_Spin> with SingleTickerProviderStateMixin {
   late final AnimationController controller;
-
   @override
   void initState() {
     super.initState();
-    controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 950),
-    )..repeat();
+    controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 950))..repeat();
   }
-
   @override
-  void dispose() {
-    controller.dispose();
-    super.dispose();
-  }
-
+  void dispose() { controller.dispose(); super.dispose(); }
   @override
   Widget build(BuildContext context) => RotationTransition(
         turns: controller,
