@@ -51,6 +51,7 @@ class DeltaSyncRepository {
     Map<String, dynamic> payload,
   ) async {
     final uri = Uri.parse('${ApiService.baseUrl}?mobile=1');
+    final timeoutSeconds = payload['cmd'] == 'snapshotCreate' ? 330 : 90;
     http.Response? response;
     Object? lastError;
     for (var attempt = 1; attempt <= 2; attempt++) {
@@ -65,7 +66,7 @@ class DeltaSyncRepository {
                 'ulp': 'DELTA_SYNC:${jsonEncode(payload)}',
               }),
             )
-            .timeout(const Duration(seconds: 90));
+            .timeout(Duration(seconds: timeoutSeconds));
         if (response.body.trim().isNotEmpty) break;
         lastError = 'respons kosong (HTTP ${response.statusCode})';
       } catch (error) {
@@ -121,7 +122,7 @@ class DeltaSyncRepository {
         onProgress: onProgress,
       );
     } on _SnapshotExpired {
-      await _clearExpiredSnapshots(datasetNames);
+      await _clearExpiredSnapshots();
       return _syncSnapshot(
         token,
         force: force,
@@ -267,7 +268,7 @@ class DeltaSyncRepository {
     }
   }
 
-  Future<void> _clearExpiredSnapshots(Set<String>? datasetNames) async {
+  Future<void> _clearExpiredSnapshots() async {
     final rows = await db.customSelect(
       "SELECT snapshot_id FROM sync_download_checkpoint "
       "WHERE snapshot_id IS NOT NULL AND snapshot_id <> ''",
@@ -306,7 +307,7 @@ class DeltaSyncRepository {
     if (rows.isNotEmpty &&
         rows.first.data['version'] == version &&
         rows.first.data['snapshot_id'] == snapshotId) {
-      return (rows.first.data['downloaded_rows'] as int).clamp(0, total);
+      return (rows.first.data['downloaded_rows'] as int).clamp(0, total).toInt();
     }
     await db.transaction(() async {
       await db.customStatement(
