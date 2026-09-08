@@ -25,17 +25,17 @@ jobs:
         shell: bash
         run: |
           set +e
-          : > snapshot-ci-debug.log
+          : > snapshot-ci-debug.txt
           for command in \
             "flutter pub get" \
             "dart run build_runner build --delete-conflicting-outputs" \
             "flutter analyze --no-fatal-infos --no-fatal-warnings" \
             "flutter test --reporter expanded --concurrency=1" \
             "flutter build apk --debug"; do
-            echo "===== $command =====" >> snapshot-ci-debug.log
-            bash -lc "$command" >> snapshot-ci-debug.log 2>&1
+            echo "===== $command =====" >> snapshot-ci-debug.txt
+            bash -lc "$command" >> snapshot-ci-debug.txt 2>&1
             code=$?
-            echo "EXIT=$code" >> snapshot-ci-debug.log
+            echo "EXIT=$code" >> snapshot-ci-debug.txt
             [ "$code" -eq 0 ] || break
           done
           exit 0
@@ -43,6 +43,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add SiSi_Mobile/snapshot-ci-debug.log
+          git add SiSi_Mobile/snapshot-ci-debug.txt
           git commit -m "ci: capture snapshot sync failure details"
           git push origin HEAD:fix/immutable-delta-snapshots
