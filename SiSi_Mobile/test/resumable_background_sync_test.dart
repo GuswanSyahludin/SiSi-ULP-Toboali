@@ -30,10 +30,13 @@ void main() {
         File('lib/db/repositories/delta_sync_repository.dart').readAsStringSync();
     final deleteLive =
         source.indexOf('DELETE FROM local_dataset_rows WHERE dataset=?');
-    final copyStaging = source.indexOf(
-        'INSERT INTO local_dataset_rows(dataset,row_key,payload) SELECT');
+    final copyMatch = RegExp(
+      r"INSERT INTO local_dataset_rows\(dataset,row_key,payload\) '\s*"
+      r"'SELECT dataset,row_key,payload FROM sync_download_staging",
+    ).firstMatch(source);
     expect(deleteLive, greaterThan(0));
-    expect(copyStaging, greaterThan(deleteLive));
+    expect(copyMatch, isNotNull);
+    expect(copyMatch!.start, greaterThan(deleteLive));
   });
 
   test('initial master data is materialized from resumable mirror', () {

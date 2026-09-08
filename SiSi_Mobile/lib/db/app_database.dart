@@ -47,7 +47,11 @@ class AppDatabase extends _$AppDatabase {
     await customStatement('CREATE TABLE IF NOT EXISTS local_dataset_state (dataset TEXT PRIMARY KEY NOT NULL, version TEXT NOT NULL, updated_at TEXT NOT NULL, row_count INTEGER NOT NULL DEFAULT 0, kind TEXT NOT NULL DEFAULT "main")');
     await customStatement('CREATE TABLE IF NOT EXISTS local_dataset_rows (dataset TEXT NOT NULL, row_key TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(dataset,row_key))');
     await customStatement('CREATE INDEX IF NOT EXISTS idx_local_dataset ON local_dataset_rows(dataset)');
-    await customStatement('CREATE TABLE IF NOT EXISTS sync_download_checkpoint (dataset TEXT PRIMARY KEY NOT NULL, version TEXT NOT NULL, total_rows INTEGER NOT NULL DEFAULT 0, downloaded_rows INTEGER NOT NULL DEFAULT 0, kind TEXT NOT NULL DEFAULT "main", updated_at TEXT NOT NULL)');
+    await customStatement('CREATE TABLE IF NOT EXISTS sync_download_checkpoint (dataset TEXT PRIMARY KEY NOT NULL, version TEXT NOT NULL, snapshot_id TEXT NOT NULL DEFAULT "", total_rows INTEGER NOT NULL DEFAULT 0, downloaded_rows INTEGER NOT NULL DEFAULT 0, kind TEXT NOT NULL DEFAULT "main", updated_at TEXT NOT NULL)');
+    final checkpointColumns = await _columns('sync_download_checkpoint');
+    if (!checkpointColumns.contains('snapshot_id')) {
+      await customStatement('ALTER TABLE sync_download_checkpoint ADD COLUMN snapshot_id TEXT NOT NULL DEFAULT ""');
+    }
     await customStatement('CREATE TABLE IF NOT EXISTS sync_download_staging (dataset TEXT NOT NULL, row_key TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(dataset,row_key))');
     await customStatement('CREATE INDEX IF NOT EXISTS idx_sync_staging_dataset ON sync_download_staging(dataset)');
   }

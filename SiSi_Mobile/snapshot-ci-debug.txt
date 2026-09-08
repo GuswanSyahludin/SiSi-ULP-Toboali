@@ -1,0 +1,545 @@
+===== flutter pub get =====
+Resolving dependencies...
+Downloading packages...
+  _fe_analyzer_shared 96.0.0 (107.0.0 available)
+  analyzer 10.2.0 (14.3.0 available)
+  archive 4.1.0 (4.2.0 available)
+  build 4.0.7 (4.0.11 available)
+  build_config 1.3.2 (1.3.3 available)
+  build_daemon 4.1.5 (4.1.6 available)
+  build_runner 2.15.1 (2.16.1 available)
+  built_value 8.12.7 (8.13.0 available)
+  cli_util 0.4.2 (0.6.0 available)
+  clock 1.1.2 (1.1.3 available)
+  code_assets 1.2.1 (2.0.0 available)
+  cross_file 0.3.5+4 (0.3.5+5 available)
+  dart_style 3.1.7 (3.1.13 available)
+  drift 2.31.0 (2.34.4 available)
+  drift_dev 2.31.0 (2.34.6 available)
+  drift_flutter 0.2.8 (0.3.1 available)
+  file_selector_linux 0.9.4 (0.9.4+1 available)
+  file_selector_macos 0.9.5 (0.9.5+1 available)
+  file_selector_windows 0.9.3+5 (0.9.3+6 available)
+  flutter_lints 3.0.2 (6.0.0 available)
+  geolocator 12.0.0 (14.0.3 available)
+  geolocator_android 4.6.2 (5.0.3 available)
+  geolocator_platform_interface 4.2.8 (4.3.0 available)
+  glob 2.1.3 (2.2.0 available)
+  google_maps_flutter_android 2.19.12 (2.19.13 available)
+  google_maps_flutter_ios 2.18.4 (2.18.6 available)
+  hooks 2.0.2 (2.2.0 available)
+  html 0.15.6 (0.15.7 available)
+  image_picker_android 0.8.13+19 (0.8.13+22 available)
+  image_picker_ios 0.8.13+6 (0.8.13+7 available)
+  io 1.0.5 (1.1.0 available)
+  jni_flutter 1.0.2 (1.0.3 available)
+  latlong2 0.9.1 (0.10.1 available)
+  lints 3.0.0 (6.1.0 available)
+  material_color_utilities 0.13.0 (0.13.1 available)
+  meta 1.18.3 (1.19.0 available)
+  mime 2.0.0 (2.1.0 available)
+  objective_c 9.5.0 (9.6.0 available)
+  package_config 2.2.0 (3.0.0 available)
+  platform 3.1.6 (3.2.0 available)
+  pool 1.5.2 (1.5.3 available)
+  pub_semver 2.2.0 (2.2.1 available)
+  pubspec_parse 1.5.0 (1.6.0 available)
+  record_use 0.6.0 (1.1.1 available)
+  shared_preferences_android 2.4.27 (2.4.28 available)
+  shared_preferences_foundation 2.5.6 (2.5.7 available)
+  source_gen 4.2.4 (4.3.0 available)
+  sqlite3 2.9.4 (3.5.2 available)
+  sqlite3_flutter_libs 0.5.42 (0.6.0+eol available)
+  sqlparser 0.43.1 (0.45.0 available)
+  stack_trace 1.12.1 (1.12.2 available)
+  stream_transform 2.1.1 (2.1.2 available)
+  test_api 0.7.12 (0.7.14 available)
+  url_launcher_android 6.3.32 (6.3.33 available)
+  url_launcher_ios 6.4.1 (6.4.2 available)
+  url_launcher_linux 3.2.2 (3.2.3 available)
+  url_launcher_macos 3.2.5 (3.2.6 available)
+  url_launcher_windows 3.1.5 (3.1.6 available)
+  vector_math 2.4.0 (2.4.2 available)
+  vm_service 15.2.0 (15.3.0 available)
+  workmanager 0.10.9 (0.10.10 available)
+  workmanager_android 0.10.8 (0.10.9 available)
+  workmanager_apple 0.9.10 (0.9.11 available)
+  workmanager_platform_interface 0.10.4 (0.10.5 available)
+  yaml 3.1.3 (3.1.4 available)
+Got dependencies!
+65 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+EXIT=0
+===== dart run build_runner build --delete-conflicting-outputs =====
+  1s compiling builders/aot
+  2s compiling builders/aot
+  3s compiling builders/aot
+  4s compiling builders/aot
+  5s compiling builders/aot
+  6s compiling builders/aot
+  7s compiling builders/aot
+  8s compiling builders/aot
+  9s compiling builders/aot
+  10s compiling builders/aot
+  11s compiling builders/aot
+  12s compiling builders/aot
+  13s compiling builders/aot
+  14s compiling builders/aot
+  15s compiling builders/aot
+  16s compiling builders/aot
+  17s compiling builders/aot
+  18s compiling builders/aot
+  19s compiling builders/aot
+  20s compiling builders/aot
+  21s compiling builders/aot
+  23s compiling builders/aot
+  24s compiling builders/aot
+  25s compiling builders/aot
+  26s compiling builders/aot
+  27s compiling builders/aot
+  28s compiling builders/aot
+  29s compiling builders/aot
+  30s compiling builders/aot
+  31s compiling builders/aot
+  32s compiling builders/aot
+  33s compiling builders/aot
+  34s compiling builders/aot
+W These options have been removed and were ignored: --delete-conflicting-outputs
+  0s drift_dev on 388 inputs; lib/db/app_database.dart
+W SDK language version 3.13.0 is newer than `analyzer` language version 3.12.0. Run `flutter packages upgrade`.
+  2s drift_dev on 388 inputs: 1 output; spent 2s sdk; lib/db/daos/header_dao.dart
+  12s drift_dev on 388 inputs: 35 output; spent 8s analyzing, 2s resolving, 2s sdk; lib/screens/beranda_screen.dart
+  13s drift_dev on 388 inputs: 98 output; spent 9s analyzing, 2s resolving, 2s sdk; lib/db/daos/header_dao.dart
+  14s drift_dev on 388 inputs: 138 output; spent 10s analyzing, 2s resolving, 2s sdk; lib/screens/gardu_screen.dart
+  14s drift_dev on 388 inputs: 97 skipped, 201 output, 90 no-op; spent 10s analyzing, 2s resolving, 2s sdk
+  0s source_gen:combining_builder on 194 inputs; lib/db/app_database.dart
+  0s source_gen:combining_builder on 194 inputs: 97 skipped, 8 output, 89 no-op
+  Built with build_runner/aot in 49s; wrote 209 outputs.
+EXIT=0
+===== flutter analyze --no-fatal-infos --no-fatal-warnings =====
+Resolving dependencies...
+Downloading packages...
+  _fe_analyzer_shared 96.0.0 (107.0.0 available)
+  analyzer 10.2.0 (14.3.0 available)
+  archive 4.1.0 (4.2.0 available)
+  build 4.0.7 (4.0.11 available)
+  build_config 1.3.2 (1.3.3 available)
+  build_daemon 4.1.5 (4.1.6 available)
+  build_runner 2.15.1 (2.16.1 available)
+  built_value 8.12.7 (8.13.0 available)
+  cli_util 0.4.2 (0.6.0 available)
+  clock 1.1.2 (1.1.3 available)
+  code_assets 1.2.1 (2.0.0 available)
+  cross_file 0.3.5+4 (0.3.5+5 available)
+  dart_style 3.1.7 (3.1.13 available)
+  drift 2.31.0 (2.34.4 available)
+  drift_dev 2.31.0 (2.34.6 available)
+  drift_flutter 0.2.8 (0.3.1 available)
+  file_selector_linux 0.9.4 (0.9.4+1 available)
+  file_selector_macos 0.9.5 (0.9.5+1 available)
+  file_selector_windows 0.9.3+5 (0.9.3+6 available)
+  flutter_lints 3.0.2 (6.0.0 available)
+  geolocator 12.0.0 (14.0.3 available)
+  geolocator_android 4.6.2 (5.0.3 available)
+  geolocator_platform_interface 4.2.8 (4.3.0 available)
+  glob 2.1.3 (2.2.0 available)
+  google_maps_flutter_android 2.19.12 (2.19.13 available)
+  google_maps_flutter_ios 2.18.4 (2.18.6 available)
+  hooks 2.0.2 (2.2.0 available)
+  html 0.15.6 (0.15.7 available)
+  image_picker_android 0.8.13+19 (0.8.13+22 available)
+  image_picker_ios 0.8.13+6 (0.8.13+7 available)
+  io 1.0.5 (1.1.0 available)
+  jni_flutter 1.0.2 (1.0.3 available)
+  latlong2 0.9.1 (0.10.1 available)
+  lints 3.0.0 (6.1.0 available)
+  material_color_utilities 0.13.0 (0.13.1 available)
+  meta 1.18.3 (1.19.0 available)
+  mime 2.0.0 (2.1.0 available)
+  objective_c 9.5.0 (9.6.0 available)
+  package_config 2.2.0 (3.0.0 available)
+  platform 3.1.6 (3.2.0 available)
+  pool 1.5.2 (1.5.3 available)
+  pub_semver 2.2.0 (2.2.1 available)
+  pubspec_parse 1.5.0 (1.6.0 available)
+  record_use 0.6.0 (1.1.1 available)
+  shared_preferences_android 2.4.27 (2.4.28 available)
+  shared_preferences_foundation 2.5.6 (2.5.7 available)
+  source_gen 4.2.4 (4.3.0 available)
+  sqlite3 2.9.4 (3.5.2 available)
+  sqlite3_flutter_libs 0.5.42 (0.6.0+eol available)
+  sqlparser 0.43.1 (0.45.0 available)
+  stack_trace 1.12.1 (1.12.2 available)
+  stream_transform 2.1.1 (2.1.2 available)
+  test_api 0.7.12 (0.7.14 available)
+  url_launcher_android 6.3.32 (6.3.33 available)
+  url_launcher_ios 6.4.1 (6.4.2 available)
+  url_launcher_linux 3.2.2 (3.2.3 available)
+  url_launcher_macos 3.2.5 (3.2.6 available)
+  url_launcher_windows 3.1.5 (3.1.6 available)
+  vector_math 2.4.0 (2.4.2 available)
+  vm_service 15.2.0 (15.3.0 available)
+  workmanager 0.10.9 (0.10.10 available)
+  workmanager_android 0.10.8 (0.10.9 available)
+  workmanager_apple 0.9.10 (0.9.11 available)
+  workmanager_platform_interface 0.10.4 (0.10.5 available)
+  yaml 3.1.3 (3.1.4 available)
+Got dependencies!
+65 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+Analyzing SiSi_Mobile...                                        
+
+warning • Unused import: '../../services/sync_progress_service.dart'. Try removing the import directive • lib/db/repositories/delta_sync_repository.dart:8:8 • unused_import
+   info • Statements in an if should be enclosed in a block. Try wrapping the statement in a block • lib/db/repositories/sync_repository.dart:17:1030 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block. Try wrapping the statement in a block • lib/db/repositories/sync_repository.dart:17:1061 • curly_braces_in_flow_control_structures
+   info • 'WillPopScope' is deprecated and shouldn't be used. Use PopScope instead. The Android predictive back feature will not work with WillPopScope. This feature was deprecated after v3.12.0-1.0.pre. Try replacing the use of the deprecated member with the replacement • lib/screens/dashboard_screen.dart:299:12 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/screens/dashboard_screen.dart:393:58 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/screens/dashboard_screen.dart:425:60 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/screens/dashboard_screen.dart:438:59 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/screens/dashboard_screen.dart:490:44 • deprecated_member_use
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/dashboard_screen.dart:620:9 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/dashboard_screen.dart:622:18 • prefer_const_constructors
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/screens/dashboard_screen.dart:650:50 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/screens/dashboard_screen.dart:662:43 • deprecated_member_use
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/dashboard_screen.dart:679:34 • prefer_const_constructors
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/screens/dashboard_screen.dart:827:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/screens/dashboard_screen.dart:838:41 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/screens/dashboard_screen.dart:860:63 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/screens/dashboard_screen.dart:890:48 • deprecated_member_use
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/dashboard_screen.dart:905:28 • prefer_const_constructors
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/screens/dashboard_screen.dart:1068:34 • deprecated_member_use
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/dashboard_screen.dart:1082:26 • prefer_const_constructors
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre. Try replacing the use of the deprecated member with the replacement • lib/screens/eksekusi_row_screen.dart:210:15 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre. Try replacing the use of the deprecated member with the replacement • lib/screens/eksekusi_row_screen.dart:217:15 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/screens/engine_usage_screen.dart:24:255 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/screens/form_header_laporan_screen.dart:118:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/screens/form_header_laporan_screen.dart:130:46 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/screens/form_header_laporan_screen.dart:236:35 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/screens/form_header_laporan_screen.dart:279:38 • deprecated_member_use
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/gangguan_beranda_section.dart:213:21 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/gangguan_beranda_section.dart:213:43 • prefer_const_constructors
+   info • Statements in a for should be enclosed in a block. Try wrapping the statement in a block • lib/screens/input_temuan_teknik_screen.dart:35:91 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block. Try wrapping the statement in a block • lib/screens/input_temuan_teknik_screen.dart:48:47 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block. Try wrapping the statement in a block • lib/screens/input_temuan_teknik_screen.dart:48:65 • curly_braces_in_flow_control_structures
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre. Try replacing the use of the deprecated member with the replacement • lib/screens/input_temuan_teknik_screen.dart:59:186 • deprecated_member_use
+   info • Statements in an if should be enclosed in a block. Try wrapping the statement in a block • lib/screens/input_temuan_teknik_screen.dart:60:431 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block. Try wrapping the statement in a block • lib/screens/input_temuan_teknik_screen.dart:60:466 • curly_braces_in_flow_control_structures
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/screens/jadwal_padam_screen.dart:299:48 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre. Try replacing the use of the deprecated member with the replacement • lib/screens/jadwal_padam_screen.dart:483:7 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre. Try replacing the use of the deprecated member with the replacement • lib/screens/kalender_jadwal_editor.dart:120:9 • deprecated_member_use
+   info • Statements in an if should be enclosed in a block. Try wrapping the statement in a block • lib/screens/laporan_harian_screen.dart:63:23 • curly_braces_in_flow_control_structures
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre. Try replacing the use of the deprecated member with the replacement • lib/screens/laporan_harian_screen.dart:169:37 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps. Try rewriting the code to not use the 'BuildContext', or guard the use with a 'mounted' check • lib/screens/laporan_up3_uiw_screen.dart:127:30 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps. Try rewriting the code to not use the 'BuildContext', or guard the use with a 'mounted' check • lib/screens/laporan_up3_uiw_screen.dart:132:28 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/screens/laporan_up3_uiw_screen.dart:290:33 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/screens/laporan_up3_uiw_screen.dart:316:46 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre. Try replacing the use of the deprecated member with the replacement • lib/screens/laporan_up3_uiw_screen.dart:681:15 • deprecated_member_use
+   info • Use a 'SizedBox' to add whitespace to a layout. Try using a 'SizedBox' rather than a 'Container' • lib/screens/login_screen.dart:31:21 • sized_box_for_whitespace
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/login_screen.dart:53:21 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/login_screen.dart:55:30 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/login_screen.dart:67:30 • prefer_const_constructors
+   info • Use 'const' literals as arguments to constructors of '@immutable' classes. Try adding 'const' before the literal • lib/screens/login_screen.dart:69:35 • prefer_const_literals_to_create_immutables
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/login_screen.dart:76:27 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/login_screen.dart:78:36 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/login_screen.dart:116:13 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/login_screen.dart:120:22 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/login_screen.dart:123:24 • prefer_const_constructors
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/screens/login_screen.dart:149:39 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/screens/login_screen.dart:177:33 • deprecated_member_use
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/login_screen.dart:315:15 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/login_screen.dart:317:24 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/login_screen.dart:417:15 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/login_screen.dart:418:24 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/login_screen.dart:421:26 • prefer_const_constructors
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/screens/login_screen.dart:453:49 • deprecated_member_use
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/login_screen.dart:466:20 • prefer_const_constructors
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/screens/login_screen.dart:476:32 • deprecated_member_use
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/login_screen.dart:537:27 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/login_screen.dart:539:27 • prefer_const_constructors
+   info • Use 'const' literals as arguments to constructors of '@immutable' classes. Try adding 'const' before the literal • lib/screens/login_screen.dart:542:27 • prefer_const_literals_to_create_immutables
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/login_screen.dart:548:13 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/login_screen.dart:550:22 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/login_screen.dart:567:13 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/login_screen.dart:570:22 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/login_screen.dart:612:34 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/login_screen.dart:633:13 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/login_screen.dart:635:22 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/splash_gate.dart:133:15 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/splash_gate.dart:135:24 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/splash_gate.dart:147:15 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation • lib/screens/splash_gate.dart:149:24 • prefer_const_constructors
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/screens/teknik_to_screen.dart:407:54 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre. Try replacing the use of the deprecated member with the replacement • lib/screens/teknik_to_screen.dart:479:19 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/screens/teknik_to_screen.dart:590:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/screens/teknik_to_screen.dart:606:41 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/screens/teknik_to_screen.dart:683:39 • deprecated_member_use
+   info • 'scale' is deprecated and shouldn't be used. Use scaleByVector3, scaleByVector4, or scaleByDouble instead. Try replacing the use of the deprecated member with the replacement • lib/screens/verifikasi_p0_screen.dart:75:208 • deprecated_member_use
+   info • 'scale' is deprecated and shouldn't be used. Use scaleByVector3, scaleByVector4, or scaleByDouble instead. Try replacing the use of the deprecated member with the replacement • lib/screens/verifikasi_p0_screen.dart:75:510 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre. Try replacing the use of the deprecated member with the replacement • lib/screens/verifikasi_p0_screen.dart:114:41 • deprecated_member_use
+   info • Statements in an if should be enclosed in a block. Try wrapping the statement in a block • lib/screens/work_order_row_screen.dart:74:32 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block. Try wrapping the statement in a block • lib/screens/work_order_row_screen.dart:137:65 • curly_braces_in_flow_control_structures
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre. Try replacing the use of the deprecated member with the replacement • lib/screens/work_order_row_screen.dart:206:17 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre. Try replacing the use of the deprecated member with the replacement • lib/screens/yandal_screen.dart:99:39 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre. Try replacing the use of the deprecated member with the replacement • lib/screens/yandal_screen.dart:101:65 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre. Try replacing the use of the deprecated member with the replacement • lib/screens/yandal_screen.dart:102:65 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre. Try replacing the use of the deprecated member with the replacement • lib/screens/yandal_screen.dart:103:86 • deprecated_member_use
+   info • The import of 'dart:typed_data' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/services.dart'. Try removing the import directive • lib/services/local_watermark_renderer.dart:4:8 • unnecessary_import
+   info • The import of 'dart:typed_data' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/foundation.dart'. Try removing the import directive • lib/services/watermark_photo_export.dart:1:8 • unnecessary_import
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement • lib/widgets/gardu_card_widgets.dart:259:26 • deprecated_member_use
+   info • Can't use a relative path to import a library in 'lib'. Try fixing the relative path or changing the import to a 'package:' import • test/gangguan_beranda_section_test.dart:4:8 • avoid_relative_lib_imports
+   info • Can't use a relative path to import a library in 'lib'. Try fixing the relative path or changing the import to a 'package:' import • test/ins_gardu_report_card_test.dart:3:8 • avoid_relative_lib_imports
+   info • Can't use a relative path to import a library in 'lib'. Try fixing the relative path or changing the import to a 'package:' import • test/ins_gardu_report_card_test.dart:4:8 • avoid_relative_lib_imports
+   info • Can't use a relative path to import a library in 'lib'. Try fixing the relative path or changing the import to a 'package:' import • test/local_watermark_test.dart:4:8 • avoid_relative_lib_imports
+   info • Can't use a relative path to import a library in 'lib'. Try fixing the relative path or changing the import to a 'package:' import • test/local_watermark_test.dart:5:8 • avoid_relative_lib_imports
+   info • Can't use a relative path to import a library in 'lib'. Try fixing the relative path or changing the import to a 'package:' import • test/mock_gps_warning_dialog_test.dart:3:8 • avoid_relative_lib_imports
+   info • Can't use a relative path to import a library in 'lib'. Try fixing the relative path or changing the import to a 'package:' import • test/mock_gps_warning_dialog_test.dart:4:8 • avoid_relative_lib_imports
+   info • Statements in a for should be enclosed in a block. Try wrapping the statement in a block • test/module_sync_contract_test.dart:2:230 • curly_braces_in_flow_control_structures
+   info • Statements in a for should be enclosed in a block. Try wrapping the statement in a block • test/module_sync_contract_test.dart:2:759 • curly_braces_in_flow_control_structures
+   info • Can't use a relative path to import a library in 'lib'. Try fixing the relative path or changing the import to a 'package:' import • test/petugas_photo_flow_test.dart:2:8 • avoid_relative_lib_imports
+   info • Can't use a relative path to import a library in 'lib'. Try fixing the relative path or changing the import to a 'package:' import • test/petugas_photo_flow_test.dart:3:8 • avoid_relative_lib_imports
+   info • Statements in a for should be enclosed in a block. Try wrapping the statement in a block • test/petugas_photo_flow_test.dart:11:54 • curly_braces_in_flow_control_structures
+   info • Statements in a for should be enclosed in a block. Try wrapping the statement in a block • test/petugas_photo_flow_test.dart:27:50 • curly_braces_in_flow_control_structures
+   info • The import of 'dart:typed_data' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/foundation.dart'. Try removing the import directive • test/watermark_photo_export_test.dart:1:8 • unnecessary_import
+   info • Can't use a relative path to import a library in 'lib'. Try fixing the relative path or changing the import to a 'package:' import • test/watermark_photo_export_test.dart:6:8 • avoid_relative_lib_imports
+   info • Can't use a relative path to import a library in 'lib'. Try fixing the relative path or changing the import to a 'package:' import • test/watermark_photo_export_test.dart:7:8 • avoid_relative_lib_imports
+   info • Can't use a relative path to import a library in 'lib'. Try fixing the relative path or changing the import to a 'package:' import • test/watermark_photo_export_test.dart:8:8 • avoid_relative_lib_imports
+   info • Statements in a for should be enclosed in a block. Try wrapping the statement in a block • test/watermark_photo_export_test.dart:26:41 • curly_braces_in_flow_control_structures
+   info • Statements in a for should be enclosed in a block. Try wrapping the statement in a block • test/watermark_photo_export_test.dart:43:60 • curly_braces_in_flow_control_structures
+   info • Statements in a for should be enclosed in a block. Try wrapping the statement in a block • test/watermark_photo_export_test.dart:44:61 • curly_braces_in_flow_control_structures
+   info • Can't use a relative path to import a library in 'lib'. Try fixing the relative path or changing the import to a 'package:' import • test/yandal_photo_metadata_test.dart:2:8 • avoid_relative_lib_imports
+
+118 issues found. (ran in 13.5s)
+EXIT=0
+===== flutter test --reporter expanded --concurrency=1 =====
+Resolving dependencies...
+Downloading packages...
+  _fe_analyzer_shared 96.0.0 (107.0.0 available)
+  analyzer 10.2.0 (14.3.0 available)
+  archive 4.1.0 (4.2.0 available)
+  build 4.0.7 (4.0.11 available)
+  build_config 1.3.2 (1.3.3 available)
+  build_daemon 4.1.5 (4.1.6 available)
+  build_runner 2.15.1 (2.16.1 available)
+  built_value 8.12.7 (8.13.0 available)
+  cli_util 0.4.2 (0.6.0 available)
+  clock 1.1.2 (1.1.3 available)
+  code_assets 1.2.1 (2.0.0 available)
+  cross_file 0.3.5+4 (0.3.5+5 available)
+  dart_style 3.1.7 (3.1.13 available)
+  drift 2.31.0 (2.34.4 available)
+  drift_dev 2.31.0 (2.34.6 available)
+  drift_flutter 0.2.8 (0.3.1 available)
+  file_selector_linux 0.9.4 (0.9.4+1 available)
+  file_selector_macos 0.9.5 (0.9.5+1 available)
+  file_selector_windows 0.9.3+5 (0.9.3+6 available)
+  flutter_lints 3.0.2 (6.0.0 available)
+  geolocator 12.0.0 (14.0.3 available)
+  geolocator_android 4.6.2 (5.0.3 available)
+  geolocator_platform_interface 4.2.8 (4.3.0 available)
+  glob 2.1.3 (2.2.0 available)
+  google_maps_flutter_android 2.19.12 (2.19.13 available)
+  google_maps_flutter_ios 2.18.4 (2.18.6 available)
+  hooks 2.0.2 (2.2.0 available)
+  html 0.15.6 (0.15.7 available)
+  image_picker_android 0.8.13+19 (0.8.13+22 available)
+  image_picker_ios 0.8.13+6 (0.8.13+7 available)
+  io 1.0.5 (1.1.0 available)
+  jni_flutter 1.0.2 (1.0.3 available)
+  latlong2 0.9.1 (0.10.1 available)
+  lints 3.0.0 (6.1.0 available)
+  material_color_utilities 0.13.0 (0.13.1 available)
+  meta 1.18.3 (1.19.0 available)
+  mime 2.0.0 (2.1.0 available)
+  objective_c 9.5.0 (9.6.0 available)
+  package_config 2.2.0 (3.0.0 available)
+  platform 3.1.6 (3.2.0 available)
+  pool 1.5.2 (1.5.3 available)
+  pub_semver 2.2.0 (2.2.1 available)
+  pubspec_parse 1.5.0 (1.6.0 available)
+  record_use 0.6.0 (1.1.1 available)
+  shared_preferences_android 2.4.27 (2.4.28 available)
+  shared_preferences_foundation 2.5.6 (2.5.7 available)
+  source_gen 4.2.4 (4.3.0 available)
+  sqlite3 2.9.4 (3.5.2 available)
+  sqlite3_flutter_libs 0.5.42 (0.6.0+eol available)
+  sqlparser 0.43.1 (0.45.0 available)
+  stack_trace 1.12.1 (1.12.2 available)
+  stream_transform 2.1.1 (2.1.2 available)
+  test_api 0.7.12 (0.7.14 available)
+  url_launcher_android 6.3.32 (6.3.33 available)
+  url_launcher_ios 6.4.1 (6.4.2 available)
+  url_launcher_linux 3.2.2 (3.2.3 available)
+  url_launcher_macos 3.2.5 (3.2.6 available)
+  url_launcher_windows 3.1.5 (3.1.6 available)
+  vector_math 2.4.0 (2.4.2 available)
+  vm_service 15.2.0 (15.3.0 available)
+  workmanager 0.10.9 (0.10.10 available)
+  workmanager_android 0.10.8 (0.10.9 available)
+  workmanager_apple 0.9.10 (0.9.11 available)
+  workmanager_platform_interface 0.10.4 (0.10.5 available)
+  yaml 3.1.3 (3.1.4 available)
+Got dependencies!
+65 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+00:00 +0: loading /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/module_sync_contract_test.dart
+00:00 +0: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/module_sync_contract_test.dart: six modules partition every configured master dataset
+00:00 +1: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/module_sync_contract_test.dart: manual worker carries selected module
+00:00 +2: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/module_sync_contract_test.dart: delta sync filters manifest by selected module
+00:00 +3: loading /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/local_watermark_test.dart
+00:01 +3: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/local_watermark_test.dart: inspection uses finding IDs; ROW and Yandal use their own IDs
+00:01 +4: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/local_watermark_test.dart: team-specific fields and creation timestamp are preserved
+00:01 +5: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/local_watermark_test.dart: WIB display handles midnight without using sync time
+00:01 +6: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/local_watermark_test.dart: mocked coordinates are rejected
+00:01 +7: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/local_watermark_test.dart: renders all four formats as new JPEG bytes and preserves originals
+00:03 +8: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/local_watermark_test.dart: portrait render stays in bounds
+00:03 +9: loading /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/resumable_background_sync_test.dart
+00:04 +9: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/resumable_background_sync_test.dart: module sync is scheduled as constrained one-off work
+00:04 +10: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/resumable_background_sync_test.dart: download pages are checkpointed before the next request
+00:04 +11: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/resumable_background_sync_test.dart: live mirror is replaced only after staging completes
+00:04 +12: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/resumable_background_sync_test.dart: initial master data is materialized from resumable mirror
+00:04 +13: loading /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/yandal_photo_metadata_test.dart
+00:04 +13: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/yandal_photo_metadata_test.dart: complete official record can prepare watermark
+00:04 +14: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/yandal_photo_metadata_test.dart: local IDs are never substituted for official P0
+00:04 +15: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/yandal_photo_metadata_test.dart: historical drafts cannot invent capture time, GPS or crew
+00:04 +16: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/yandal_photo_metadata_test.dart: metadata is slot-specific and frozen
+00:04 +17: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/yandal_photo_metadata_test.dart: mock GPS blocks export path
+00:04 +18: loading /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/ins_gardu_report_card_test.dart
+00:06 +18: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/ins_gardu_report_card_test.dart: report dates use Indonesian day/month order
+00:06 +19: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/ins_gardu_report_card_test.dart: local card shows real fill progress and opens original detail action
+00:07 +20: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/ins_gardu_report_card_test.dart: loading and failed summaries do not report fake zero counts
+00:07 +21: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/ins_gardu_report_card_test.dart: long report codes fit a narrow screen
+00:07 +22: loading /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/petugas_photo_flow_test.dart
+00:07 +22: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/petugas_photo_flow_test.dart: official receipt fills only the record code
+00:07 +23: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/petugas_photo_flow_test.dart: each domain keeps its own code label
+00:07 +24: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/petugas_photo_flow_test.dart: gallery import and legacy metadata never gain artificial capture values
+00:07 +25: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/petugas_photo_flow_test.dart: empty and provisional official codes stay blocked
+00:07 +26: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/petugas_photo_flow_test.dart: account and reference keys do not share paths
+00:07 +27: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/petugas_photo_flow_test.dart: required finding and segment remain mandatory
+00:07 +28: loading /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/gangguan_beranda_section_test.dart
+00:08 +28: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/gangguan_beranda_section_test.dart: presets use calendar days across months
+00:08 +29: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/gangguan_beranda_section_test.dart: counts handle numeric strings and reject invalid negatives
+00:08 +30: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/gangguan_beranda_section_test.dart: bar selection shows inline detail without source chips
+00:09 +31: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/gangguan_beranda_section_test.dart: late request cannot overwrite a newer period
+00:09 +32: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/gangguan_beranda_section_test.dart: failed fetch is not presented as zero events
+00:09 +33: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/gangguan_beranda_section_test.dart: missing source total is not manufactured as zero
+00:10 +34: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/gangguan_beranda_section_test.dart: narrow mobile layout has no render overflow
+00:10 +35: loading /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/mock_gps_warning_dialog_test.dart
+00:11 +35: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/mock_gps_warning_dialog_test.dart: mock locations have a distinct error with exact requested message
+00:11 +36: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/mock_gps_warning_dialog_test.dart: warning shows cross, exact copy, and explicit dismiss action
+00:11 +37: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/mock_gps_warning_dialog_test.dart: concurrent warnings share one dialog and allow a later attempt
+00:12 +38: loading /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/immutable_snapshot_sync_test.dart
+00:12 +38: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/immutable_snapshot_sync_test.dart: backend freezes selected datasets into chunk files
+00:12 +39: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/immutable_snapshot_sync_test.dart: snapshot fetch never rereads or rehashes source rows
+00:12 +40: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/immutable_snapshot_sync_test.dart: mobile persists and resumes the immutable snapshot id
+00:12 +41: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/immutable_snapshot_sync_test.dart: expired snapshots are cleared and retried once
+00:12 +42: loading /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/watermark_photo_export_test.dart
+00:13 +42: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/watermark_photo_export_test.dart: all requested team formats pass when complete
+00:13 +43: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/watermark_photo_export_test.dart: all common required values block when absent
+00:13 +44: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/watermark_photo_export_test.dart: only the relevant team indicators are required
+00:13 +45: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/watermark_photo_export_test.dart: placeholders, local IDs and mock locations are not complete
+00:13 +46: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/watermark_photo_export_test.dart: zero coordinates allowed, invalid coordinates and naive dates blocked
+00:13 +47: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/watermark_photo_export_test.dart: incomplete metadata never opens native export
+00:13 +48: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/watermark_photo_export_test.dart: save sends watermark bytes only after checks
+00:13 +49: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/watermark_photo_export_test.dart: cancel is not reported as download success
+00:13 +50: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/watermark_photo_export_test.dart: invalid JPEG and mismatched render hash are blocked
+00:13 +51: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/watermark_photo_export_test.dart: native failure allows retry
+00:13 +52: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/watermark_photo_export_test.dart: filename sanitization
+00:13 +53: loading /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/sync_error_message_test.dart
+00:13 +53: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/sync_error_message_test.dart: technical dataset name becomes friendly label
+00:13 +54: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/sync_error_message_test.dart: socket diagnostics are hidden from users
+00:13 +55: loading /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/temuan_map_repository_test.dart
+00:14 +55: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/temuan_map_repository_test.dart: parses valid db_INS_Temuan row
+00:14 +56: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/temuan_map_repository_test.dart: rejects invalid coordinates
+00:14 +57: /home/runner/work/SiSi--Sistem-Integrasi-/SiSi--Sistem-Integrasi-/SiSi_Mobile/test/temuan_map_repository_test.dart: falls back to combined coordinate column
+00:14 +58: All tests passed!
+EXIT=0
+===== flutter build apk --debug =====
+Resolving dependencies...
+Downloading packages...
+  _fe_analyzer_shared 96.0.0 (107.0.0 available)
+  analyzer 10.2.0 (14.3.0 available)
+  archive 4.1.0 (4.2.0 available)
+  build 4.0.7 (4.0.11 available)
+  build_config 1.3.2 (1.3.3 available)
+  build_daemon 4.1.5 (4.1.6 available)
+  build_runner 2.15.1 (2.16.1 available)
+  built_value 8.12.7 (8.13.0 available)
+  cli_util 0.4.2 (0.6.0 available)
+  clock 1.1.2 (1.1.3 available)
+  code_assets 1.2.1 (2.0.0 available)
+  cross_file 0.3.5+4 (0.3.5+5 available)
+  dart_style 3.1.7 (3.1.13 available)
+  drift 2.31.0 (2.34.4 available)
+  drift_dev 2.31.0 (2.34.6 available)
+  drift_flutter 0.2.8 (0.3.1 available)
+  file_selector_linux 0.9.4 (0.9.4+1 available)
+  file_selector_macos 0.9.5 (0.9.5+1 available)
+  file_selector_windows 0.9.3+5 (0.9.3+6 available)
+  flutter_lints 3.0.2 (6.0.0 available)
+  geolocator 12.0.0 (14.0.3 available)
+  geolocator_android 4.6.2 (5.0.3 available)
+  geolocator_platform_interface 4.2.8 (4.3.0 available)
+  glob 2.1.3 (2.2.0 available)
+  google_maps_flutter_android 2.19.12 (2.19.13 available)
+  google_maps_flutter_ios 2.18.4 (2.18.6 available)
+  hooks 2.0.2 (2.2.0 available)
+  html 0.15.6 (0.15.7 available)
+  image_picker_android 0.8.13+19 (0.8.13+22 available)
+  image_picker_ios 0.8.13+6 (0.8.13+7 available)
+  io 1.0.5 (1.1.0 available)
+  jni_flutter 1.0.2 (1.0.3 available)
+  latlong2 0.9.1 (0.10.1 available)
+  lints 3.0.0 (6.1.0 available)
+  material_color_utilities 0.13.0 (0.13.1 available)
+  meta 1.18.3 (1.19.0 available)
+  mime 2.0.0 (2.1.0 available)
+  objective_c 9.5.0 (9.6.0 available)
+  package_config 2.2.0 (3.0.0 available)
+  platform 3.1.6 (3.2.0 available)
+  pool 1.5.2 (1.5.3 available)
+  pub_semver 2.2.0 (2.2.1 available)
+  pubspec_parse 1.5.0 (1.6.0 available)
+  record_use 0.6.0 (1.1.1 available)
+  shared_preferences_android 2.4.27 (2.4.28 available)
+  shared_preferences_foundation 2.5.6 (2.5.7 available)
+  source_gen 4.2.4 (4.3.0 available)
+  sqlite3 2.9.4 (3.5.2 available)
+  sqlite3_flutter_libs 0.5.42 (0.6.0+eol available)
+  sqlparser 0.43.1 (0.45.0 available)
+  stack_trace 1.12.1 (1.12.2 available)
+  stream_transform 2.1.1 (2.1.2 available)
+  test_api 0.7.12 (0.7.14 available)
+  url_launcher_android 6.3.32 (6.3.33 available)
+  url_launcher_ios 6.4.1 (6.4.2 available)
+  url_launcher_linux 3.2.2 (3.2.3 available)
+  url_launcher_macos 3.2.5 (3.2.6 available)
+  url_launcher_windows 3.1.5 (3.1.6 available)
+  vector_math 2.4.0 (2.4.2 available)
+  vm_service 15.2.0 (15.3.0 available)
+  workmanager 0.10.9 (0.10.10 available)
+  workmanager_android 0.10.8 (0.10.9 available)
+  workmanager_apple 0.9.10 (0.9.11 available)
+  workmanager_platform_interface 0.10.4 (0.10.5 available)
+  yaml 3.1.3 (3.1.4 available)
+Got dependencies!
+65 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+Running Gradle task 'assembleDebug'...                          
+WARNING: Your app uses the following plugins that apply Kotlin Gradle Plugin (KGP): workmanager_android
+Future versions of Flutter will fail to build if your app uses plugins that apply KGP.
+
+Please check the changelogs of these plugins and upgrade to a version that supports Built-in Kotlin.
+If no such version exists, report the issue to the plugin. If necessary, here is a guide on filing
+an issue against a plugin: https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-app-developers#report-incompatible-kotlin-gradle-plugin-usage-to-plugin-authors
+
+If you are a plugin author, please migrate your plugin to Built-in Kotlin using this guide: https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-plugin-authors
+Checking the license for package CMake 3.22.1 in /usr/local/lib/android/sdk/licenses
+License for package CMake 3.22.1 accepted.
+Preparing "Install CMake 3.22.1 v.3.22.1".
+"Install CMake 3.22.1 v.3.22.1" ready.
+Installing CMake 3.22.1 in /usr/local/lib/android/sdk/cmake/3.22.1
+"Install CMake 3.22.1 v.3.22.1" complete.
+"Install CMake 3.22.1 v.3.22.1" finished.
+Running Gradle task 'assembleDebug'...                            414.6s
+✓ Built build/app/outputs/flutter-apk/app-debug.apk
+EXIT=0
