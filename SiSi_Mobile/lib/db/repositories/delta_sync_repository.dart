@@ -76,7 +76,8 @@ class DeltaSyncRepository {
     }
     final body = response?.body.trim() ?? '';
     if (body.isEmpty) {
-      throw Exception('Server tidak mengirim respons setelah 2 percobaan: $lastError');
+      throw Exception(
+          'Server tidak mengirim respons setelah 2 percobaan: $lastError');
     }
     dynamic decoded;
     try {
@@ -97,9 +98,11 @@ class DeltaSyncRepository {
   }
 
   Future<Map<String, String>> _versions() async {
-    final rows = await db.customSelect(
-      'SELECT dataset, version FROM local_dataset_state',
-    ).get();
+    final rows = await db
+        .customSelect(
+          'SELECT dataset, version FROM local_dataset_state',
+        )
+        .get();
     return {
       for (final row in rows)
         row.data['dataset'].toString(): row.data['version'].toString(),
@@ -150,11 +153,10 @@ class DeltaSyncRepository {
     final datasets = List.from(manifest['datasets'] ?? const [])
         .map((raw) => Map<String, dynamic>.from(raw as Map))
         .where((item) {
-          final name = item['name'].toString();
-          return (datasetNames == null || datasetNames.contains(name)) &&
-              (force || local[name] != item['version'].toString());
-        })
-        .toList();
+      final name = item['name'].toString();
+      return (datasetNames == null || datasetNames.contains(name)) &&
+          (force || local[name] != item['version'].toString());
+    }).toList();
     final overallTotal = datasets.fold<int>(
       0,
       (sum, item) => sum + (num.tryParse('${item['count']}')?.toInt() ?? 0),
@@ -209,7 +211,8 @@ class DeltaSyncRepository {
       rethrow;
     }
     final warnings = List.from(manifest['warnings'] ?? const []);
-    final warningText = warnings.isEmpty ? '' : ' · ${warnings.length} sumber dilewati';
+    final warningText =
+        warnings.isEmpty ? '' : ' · ${warnings.length} sumber dilewati';
     return DeltaSyncResult(
       ok: true,
       initial: local.isEmpty,
@@ -226,11 +229,13 @@ class DeltaSyncRepository {
     required bool allowResume,
   }) async {
     if (allowResume) {
-      final ids = await db.customSelect(
-        "SELECT snapshot_id FROM sync_download_checkpoint "
-        "WHERE snapshot_id IS NOT NULL AND snapshot_id <> '' "
-        'ORDER BY updated_at DESC',
-      ).get();
+      final ids = await db
+          .customSelect(
+            "SELECT snapshot_id FROM sync_download_checkpoint "
+            "WHERE snapshot_id IS NOT NULL AND snapshot_id <> '' "
+            'ORDER BY updated_at DESC',
+          )
+          .get();
       for (final row in ids) {
         final id = row.data['snapshot_id']?.toString() ?? '';
         if (id.isEmpty) continue;
@@ -269,10 +274,12 @@ class DeltaSyncRepository {
   }
 
   Future<void> _clearExpiredSnapshots() async {
-    final rows = await db.customSelect(
-      "SELECT snapshot_id FROM sync_download_checkpoint "
-      "WHERE snapshot_id IS NOT NULL AND snapshot_id <> ''",
-    ).get();
+    final rows = await db
+        .customSelect(
+          "SELECT snapshot_id FROM sync_download_checkpoint "
+          "WHERE snapshot_id IS NOT NULL AND snapshot_id <> ''",
+        )
+        .get();
     for (final row in rows) {
       await _clearSnapshot(row.data['snapshot_id'].toString());
     }
@@ -307,7 +314,9 @@ class DeltaSyncRepository {
     if (rows.isNotEmpty &&
         rows.first.data['version'] == version &&
         rows.first.data['snapshot_id'] == snapshotId) {
-      return (rows.first.data['downloaded_rows'] as int).clamp(0, total).toInt();
+      return (rows.first.data['downloaded_rows'] as int)
+          .clamp(0, total)
+          .toInt();
     }
     await db.transaction(() async {
       await db.customStatement(
@@ -351,8 +360,10 @@ class DeltaSyncRepository {
         'offset': offset,
         'limit': 250,
       });
-      if ('${page['version']}' != expected || '${page['snapshotId']}' != snapshotId) {
-        throw const _SnapshotExpired('Snapshot download berubah dan harus dibuat ulang.');
+      if ('${page['version']}' != expected ||
+          '${page['snapshotId']}' != snapshotId) {
+        throw const _SnapshotExpired(
+            'Snapshot download berubah dan harus dibuat ulang.');
       }
       final pageRows = List.from(page['rows'] ?? const []);
       await db.transaction(() async {
@@ -373,7 +384,8 @@ class DeltaSyncRepository {
       onRows?.call(offset);
       if (page['hasMore'] != true) break;
       if (pageRows.isEmpty) {
-        throw Exception('Download data belum dapat dilanjutkan. Sistem akan mencoba kembali otomatis.');
+        throw Exception(
+            'Download data belum dapat dilanjutkan. Sistem akan mencoba kembali otomatis.');
       }
     }
     await db.transaction(() async {
