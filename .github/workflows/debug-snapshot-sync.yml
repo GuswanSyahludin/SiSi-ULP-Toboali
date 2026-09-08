@@ -1,0 +1,48 @@
+name: Debug snapshot sync
+on:
+  push:
+    branches: [fix/immutable-delta-snapshots]
+permissions:
+  contents: write
+jobs:
+  capture:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/immutable-delta-snapshots
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Capture exact quality gate
+        working-directory: SiSi_Mobile
+        shell: bash
+        run: |
+          set +e
+          : > snapshot-ci-debug.log
+          for command in \
+            "flutter pub get" \
+            "dart run build_runner build --delete-conflicting-outputs" \
+            "flutter analyze --no-fatal-infos --no-fatal-warnings" \
+            "flutter test --reporter expanded --concurrency=1" \
+            "flutter build apk --debug"; do
+            echo "===== $command =====" >> snapshot-ci-debug.log
+            bash -lc "$command" >> snapshot-ci-debug.log 2>&1
+            code=$?
+            echo "EXIT=$code" >> snapshot-ci-debug.log
+            [ "$code" -eq 0 ] || break
+          done
+          exit 0
+      - name: Commit diagnostic
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add SiSi_Mobile/snapshot-ci-debug.log
+          git commit -m "ci: capture snapshot sync failure details"
+          git push origin HEAD:fix/immutable-delta-snapshots
