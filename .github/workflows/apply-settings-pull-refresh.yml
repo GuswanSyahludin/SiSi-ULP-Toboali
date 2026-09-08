@@ -1,0 +1,26 @@
+name: Apply Settings Pull Refresh
+on:
+  push:
+    branches: [fix/map-ux-sync-refresh-forward]
+    paths:
+      - '.github/scripts/apply_settings_pull_refresh.py'
+      - '.github/workflows/apply-settings-pull-refresh.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/map-ux-sync-refresh-forward
+      - run: python .github/scripts/apply_settings_pull_refresh.py
+      - run: |
+          grep -q 'RefreshIndicator' SiSi_Mobile/lib/screens/dashboard_screen.dart
+          grep -q 'refreshListenable: _settingsRefresh' SiSi_Mobile/lib/screens/dashboard_screen.dart
+      - run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add SiSi_Mobile/lib/screens/dashboard_screen.dart
+          git commit -m "feat(settings): add pull-to-refresh for Data Master"
+          git push origin HEAD:fix/map-ux-sync-refresh-forward
