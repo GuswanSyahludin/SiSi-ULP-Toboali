@@ -2,20 +2,38 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 
-const source = fs.readFileSync(
+const backend = fs.readFileSync(
   'SiSi_BackEnd/Core/ZZ-Temuan-Filter-Compat.js',
   'utf8',
 );
+const page = fs.readFileSync(
+  'SiSi_BackEnd/Core/Temuan-Inspeksi.html',
+  'utf8',
+);
 
-test('Temuan filter reads ULP after the injected session token', () => {
-  assert.match(source, /function getListTemuanTerpakaiIns\(token, ulp\)/);
-  assert.match(source, /aksi: "getListTemuanTerpakaiIns"/);
-  assert.match(source, /ulpScope_\(g, ulp\) \|\| g\.ulp/);
+test('dropdown reads ULP after the injected session token', () => {
+  assert.match(backend, /function getListTemuanTerpakaiIns\(token, ulp\)/);
+  assert.match(backend, /ulpScope_\(g, ulp\) \|\| g\.ulp/);
+  assert.match(backend, /_readSheetDual_/);
 });
 
-test('Temuan filter keeps dual-read and returns a stable list', () => {
-  assert.match(source, /_readSheetDual_/);
-  assert.match(source, /C\.temuan \+ 1/);
-  assert.match(source, /list\.sort/);
-  assert.match(source, /list: \[\]/);
+test('main query validates session, ULP, and date range', () => {
+  assert.match(backend, /aksi: "getTitikPetaTemuanIns"/);
+  assert.match(backend, /Tanggal Dari tidak boleh melewati Tanggal Sampai/);
+  assert.match(backend, /_insInRange\(tanggal, fDari, fSampai\)/);
+});
+
+test('all visible filters are wired to data rendering', () => {
+  for (const id of [
+    'tiTglDari', 'tiTglSampai', 'tiPenyulang', 'tiTemuanMsList',
+    'tiTier1', 'tiTier2', 'tiStatus',
+  ]) assert.match(page, new RegExp(id));
+  assert.match(page, /getTitikPetaTemuanIns\(filter\)/);
+  assert.match(page, /TI\.temuanSel/);
+  assert.match(page, /TI\.tierSel/);
+});
+
+test('detail lookup reads code after token and checks ownership', () => {
+  assert.match(backend, /function getMonitoringTemuanDetailIns\(token, kodePekerjaan\)/);
+  assert.match(backend, /barisUlpCocok_\(scoped\.g, row\[C\.ulp\]\)/);
 });
