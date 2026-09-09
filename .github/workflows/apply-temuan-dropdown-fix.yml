@@ -1,0 +1,105 @@
+name: Apply Temuan Inspeksi dropdown fix
+on:
+  push:
+    branches: [fix/temuan-inspeksi-dropdown]
+    paths: [.github/workflows/apply-temuan-dropdown-fix.yml]
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/temuan-inspeksi-dropdown
+      - name: Patch token-aware Temuan endpoints
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('SiSi_BackEnd/Core/Tek-Temuan-Code.js')
+          s=p.read_text()
+          old="""function getListTemuanTerpakaiIns(ulp){
+  try{
+    var u = String(ulp || '').trim().toLowerCase();"""
+          new="""function getListTemuanTerpakaiIns(token, ulp){
+  try{
+    var g = guard_(arguments, { ulp:true, aksi:'getListTemuanTerpakaiIns' });
+    var scope = ulpScope_(g, ulp) || g.ulp;
+    var u = String(scope || '').trim().toLowerCase();"""
+          if old not in s: raise SystemExit('getListTemuanTerpakaiIns marker missing')
+          s=s.replace(old,new,1)
+          old2="""function getMonitoringTemuanDetailIns(kodePekerjaan) {
+  try {
+    var C = COL_INS.TEMUAN;
+    var key = String(kodePekerjaan || '').trim();"""
+          new2="""function getMonitoringTemuanDetailIns(token, kodePekerjaan) {
+  try {
+    var g = guard_(arguments, { ulp:true, aksi:'getMonitoringTemuanDetailIns' });
+    var C = COL_INS.TEMUAN;
+    var key = String(kodePekerjaan || '').trim();"""
+          if old2 not in s: raise SystemExit('detail marker missing')
+          s=s.replace(old2,new2,1)
+          old3="""      return {
+        ok: true,
+        data: {
+          kodePekerjaan:    key,"""
+          new3="""      if (!barisUlpCocok_(g, r[C.ulp]))
+        return { ok:false, error:'Temuan bukan milik ULP Anda.' };
+      return {
+        ok: true,
+        data: {
+          kodePekerjaan:    key,"""
+          if old3 not in s: raise SystemExit('detail ownership marker missing')
+          s=s.replace(old3,new3,1)
+          p.write_text(s)
+
+          p=Path('SiSi_BackEnd/Inspeksi_Jaringan/Tek-InsJar-Code.js')
+          s=p.read_text()
+          old="""function getListTimByUlp(ulp) {
+  return _cacheIns('ins_tim_' + (ulp || 'ALL'), 600, function () {
+    const rows = _readSheetIns(SHEET_INS.TIM).filter(function (r) {
+      if (!ulp) return true;
+      return String(r[1]).trim() === String(ulp).trim();"""
+          new="""function getListTimByUlp(token, ulp) {
+  var g = guard_(arguments, { ulp:true, aksi:'getListTimByUlp' });
+  var scope = ulpScope_(g, ulp) || g.ulp;
+  return _cacheIns('ins_tim_' + (scope || 'ALL'), 600, function () {
+    const rows = _readSheetIns(SHEET_INS.TIM).filter(function (r) {
+      if (!scope) return true;
+      return String(r[1]).trim() === String(scope).trim();"""
+          if old not in s: raise SystemExit('getListTimByUlp marker missing')
+          s=s.replace(old,new,1)
+          p.write_text(s)
+          PY
+      - name: Add regression contract
+        shell: bash
+        run: |
+          cat > tests/temuan-inspeksi-dropdown-token.test.cjs <<'EOF'
+          const test = require('node:test');
+          const assert = require('node:assert/strict');
+          const fs = require('node:fs');
+          const temuan = fs.readFileSync('SiSi_BackEnd/Core/Tek-Temuan-Code.js','utf8');
+          const inspeksi = fs.readFileSync('SiSi_BackEnd/Inspeksi_Jaringan/Tek-InsJar-Code.js','utf8');
+          test('Temuan filter accepts injected token before ULP',()=>{
+            assert.match(temuan,/function getListTemuanTerpakaiIns\(token, ulp\)/);
+            assert.match(temuan,/aksi:'getListTemuanTerpakaiIns'/);
+            assert.match(temuan,/var scope = ulpScope_\(g, ulp\) \|\| g\.ulp/);
+          });
+          test('detail and assignment helpers keep primitive arguments after token',()=>{
+            assert.match(temuan,/function getMonitoringTemuanDetailIns\(token, kodePekerjaan\)/);
+            assert.match(temuan,/barisUlpCocok_\(g, r\[C\.ulp\]\)/);
+            assert.match(inspeksi,/function getListTimByUlp\(token, ulp\)/);
+          });
+          EOF
+      - name: Validate and commit
+        shell: bash
+        run: |
+          node --check SiSi_BackEnd/Core/Tek-Temuan-Code.js
+          node --check SiSi_BackEnd/Inspeksi_Jaringan/Tek-InsJar-Code.js
+          node --test tests/temuan-inspeksi-dropdown-token.test.cjs
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add SiSi_BackEnd/Core/Tek-Temuan-Code.js SiSi_BackEnd/Inspeksi_Jaringan/Tek-InsJar-Code.js tests/temuan-inspeksi-dropdown-token.test.cjs
+          git commit -m "fix(temuan): restore filter and detail data"
+          git push origin HEAD:fix/temuan-inspeksi-dropdown
