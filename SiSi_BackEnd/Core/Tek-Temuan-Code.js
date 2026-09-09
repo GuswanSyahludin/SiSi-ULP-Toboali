@@ -289,8 +289,9 @@ function getListTemuanTerpakaiIns(ulp){
 
 /* ---------- Dropdown Temuan (db_List_Temuan: C=Objek Inspeksi, D=Temuan) ----------
    Temuan difilter berdasar Objek Inspeksi (kolom C); daftar nama temuan diambil dari kolom D. */
-function getListTemuanByObjek(objek){
+function getListTemuanByObjek(token, objek){
   try{
+    guard_(arguments, { ulp:true, aksi:'getListTemuanByObjek' });
     var key = String(objek||'').trim().toLowerCase();
     var ck = 'ins_listtemuan_obj_' + (key || 'all');
     var cache = CacheService.getScriptCache();
@@ -318,12 +319,14 @@ function getListTemuanByObjek(objek){
   }catch(e){ return { ok:false, error:String(e) }; }
 }
 // Alias kompatibilitas: argumen kini diperlakukan sebagai Objek Inspeksi.
-function getListTemuanByTier(objek){ return getListTemuanByObjek(objek); }
+function getListTemuanByTier(token, objek){ return getListTemuanByObjek(token, objek); }
 
 /* ---------- Dropdown Penyulang (db_Penyulang: B=ULP, C=Nama, E=Section) ---------- */
-function getDataPenyulangByUlp(ulp){
+function getDataPenyulangByUlp(token, ulp){
   try{
-    var u = String(ulp||'').trim().toLowerCase();
+    var g = guard_(arguments, { ulp:true, aksi:'getDataPenyulangByUlp' });
+    var scope = ulpScope_(g, ulp) || g.ulp;
+    var u = String(scope||'').trim().toLowerCase();
     var ck = 'ins_peny_data_' + (u || 'all');
     var cache = CacheService.getScriptCache();
     var hit = cache.get(ck);
@@ -344,15 +347,16 @@ function getDataPenyulangByUlp(ulp){
     }
     list.sort(function(a,b){ return a.nama.localeCompare(b.nama); });
 
-    var res = { ok:true, ulp:ulp, list:list };
+    var res = { ok:true, ulp:scope, list:list };
     cache.put(ck, JSON.stringify(res), 600);
     return res;
-  }catch(e){ return { ok:false, error:String(e) }; }
+  }catch(e){ return { ok:false, error:String(e), list:[] }; }
 }
 
 /* ---------- Section per Penyulang (db_Penyulang: C=Nama, E=Section) ---------- */
-function getSectionByPenyulang(penyulang){
+function getSectionByPenyulang(token, penyulang){
   try{
+    guard_(arguments, { ulp:true, aksi:'getSectionByPenyulang' });
     var p = String(penyulang||'').trim().toLowerCase();
     if(!p) return { ok:true, penyulang:penyulang, list:[] };
     var ck = 'ins_section_peny_' + p;
@@ -383,9 +387,10 @@ function getSectionByPenyulang(penyulang){
    Label section master berformat "Induk - Anak"; fungsi ini memecah jadi daftar TITIK
    (induk + anak) unik, lalu mengurutkannya sesuai topologi (GI -> ujung), bukan alfabet.
    Dipakai dropdown Section Awal/Akhir pada form Realisasi Inspeksi Jaringan. */
-function getTitikByPenyulang(penyulang){
+function getTitikByPenyulang(token, penyulang){
   try{
-    var sec = getSectionByPenyulang(penyulang);
+    guard_(arguments, { ulp:true, aksi:'getTitikByPenyulang' });
+    var sec = getSectionByPenyulang(token, penyulang);
     if(!sec || !sec.ok) return sec || { ok:false, error:'Gagal memuat section.' };
     var topo = _buildPenyulangTopologi(penyulang);
     var seen = {}, titik = [];
