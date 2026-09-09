@@ -1,0 +1,32 @@
+name: Wire section volume recap UI
+on:
+  push:
+    branches: [fix/checkpoint-rekap-section-volume-ui]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/checkpoint-rekap-section-volume-ui
+      - name: Patch page to use section-volume endpoint and render table
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('SiSi_BackEnd/Teknik/Tek-Data-Checkpoint.html')
+          s=p.read_text()
+          s=s.replace(".getDpgRekapTemuan({ penyulang:penyulang, tahun:tahun, ulp:ulp, section:section });", ".getDpgRekapTemuanSectionVolume({ penyulang:penyulang, tahun:tahun, ulp:ulp, section:section });", 1)
+          start=s.index('  function dpgRenderRekapTemuan(res){')
+          end=s.index('\n  function _dpgRekapBadge', start)
+          replacement='''  function dpgRenderRekapTemuan(res){ DPG._rekapRes=res; dpgRekapRender(); }\n  function dpgRekapFilter(){ dpgRekapRender(); }\n  function dpgRekapGoPage(){ dpgRekapRender(); }\n  function dpgRekapRender(){\n    var wrap=_el('dpgRekapWrap'); if(!wrap) return; var res=DPG._rekapRes;\n    if(!res||!res.ok){ wrap.innerHTML='<div class="dpg-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>'+((res&&res.message)||'Gagal memuat data.')+'</p></div>'; return; }\n    var sections=res.sections||[], rows=res.rows||[];\n    var head='<tr><th>No</th><th>Temuan</th><th>Volume</th><th>Satuan</th><th>Tier 1</th><th>Tier 2</th>'+sections.map(function(x){return '<th>'+_esc(x)+'</th>';}).join('')+'</tr>';\n    var body=rows.length?rows.map(function(r,i){return '<tr><td>'+(i+1)+'</td><td class="dpg-left">'+_esc(r.temuan)+'</td><td style="text-align:center"><b>'+r.volume+'</b></td><td style="text-align:center">'+_esc(r.unit)+'</td><td style="text-align:center">'+(r.tier1||'-')+'</td><td style="text-align:center">'+(r.tier2||'-')+'</td>'+sections.map(function(x){return '<td style="text-align:center">'+(r.bySection[x]||'-')+'</td>';}).join('')+'</tr>';}).join(''):'<tr><td colspan="'+(6+sections.length)+'"><div class="dpg-empty"><i class="fa-solid fa-inbox"></i><p>Tidak ada temuan pada tahun '+res.tahun+'.</p></div></td></tr>';\n    var chips='<div class="dpg-chips"><span class="dpg-chip">Temuan: <b>'+rows.length+'</b></span><span class="dpg-chip">Volume Total: <b>'+res.totalVolume+'</b></span><span class="dpg-chip">Section: <b>'+sections.length+'</b></span></div>';\n    wrap.innerHTML=chips+'<div class="tbl-wrap" style="overflow:auto"><table class="dpg-table" style="min-width:max-content"><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>';\n  }\n'''
+          p.write_text(s[:start]+replacement+s[end:])
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add SiSi_BackEnd/Tek-Data-Checkpoint.html
+          git commit -m "fix(checkpoint): render section volume recap"
+          git push origin HEAD:fix/checkpoint-rekap-section-volume-ui
