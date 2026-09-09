@@ -822,7 +822,7 @@
     SisiRun
       .withSuccessHandler(dpgRenderRekapTemuan)
       .withFailureHandler(function(err){ wrap.innerHTML='<div class="dpg-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>'+((err&&err.message)||err)+'</p></div>'; })
-      .getDpgRekapTemuan({ penyulang:penyulang, tahun:tahun, ulp:ulp, section:section });
+      .getDpgRekapTemuanSectionVolume({ penyulang:penyulang, tahun:tahun, ulp:ulp, section:section });
   }
   function dpgLoadRekapTemuanList(){
     var sel=_el('dpgRekapTemuan');
@@ -838,58 +838,21 @@
       .withFailureHandler(function(){})
       .getListTemuanByObjek('');
   }
-  function dpgRenderRekapTemuan(res){ DPG._rekapRes=res; DPG._rekapPage=1; dpgRekapRender(); }
-  function dpgRekapFilter(){ DPG._rekapPage=1; dpgRekapRender(); }
-  function dpgRekapGoPage(p){ DPG._rekapPage=p; dpgRekapRender(); var w=_el('dpgRekapWrap'); if(w&&w.scrollIntoView){ try{ w.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){} } }
+  function dpgRenderRekapTemuan(res){ DPG._rekapRes=res; dpgRekapRender(); }
+  function dpgRekapFilter(){ dpgRekapRender(); }
+  function dpgRekapGoPage(){ dpgRekapRender(); }
   function dpgRekapRender(){
-    var wrap=_el('dpgRekapWrap'); if(!wrap) return;
-    var res=DPG._rekapRes;
+    var wrap=_el('dpgRekapWrap'); if(!wrap) return; var res=DPG._rekapRes;
     if(!res||!res.ok){ wrap.innerHTML='<div class="dpg-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>'+((res&&res.message)||'Gagal memuat data.')+'</p></div>'; return; }
-    var tahun=res.tahun||(DPG._rekapCtx&&DPG._rekapCtx.tahun)||(new Date()).getFullYear();
-    var selT=_el('dpgRekapTemuan')?_el('dpgRekapTemuan').value:'';
-    var all=res.rows||[];
-    var rows=selT?all.filter(function(r){ return String(r.temuan||'').trim()===selT; }):all;
-    // Grouping per temuan: Jumlah, Selesai (status 'Selesai'), Belum Tindak Lanjut (selain 'Selesai').
-    var gmap={}, gorder=[];
-    rows.forEach(function(r){
-      var tem=(String(r.temuan||'').trim())||'-';
-      if(!gmap[tem]){ gmap[tem]={ temuan:tem, jumlah:0, selesai:0, belum:0, items:[], itemsSelesai:[], itemsBelum:[] }; gorder.push(tem); }
-      gmap[tem].jumlah++; gmap[tem].items.push(r);
-      if(String(r.status||'').trim()==='Selesai'){ gmap[tem].selesai++; gmap[tem].itemsSelesai.push(r); } else { gmap[tem].belum++; gmap[tem].itemsBelum.push(r); }
-    });
-    gorder.sort(function(a,b){ return a.localeCompare(b); });
-    DPG._rekapGroups=gmap; DPG._rekapOrder=gorder;
-    var totJ=rows.length, totS=0, totB=0;
-    gorder.forEach(function(t){ totS+=gmap[t].selesai; totB+=gmap[t].belum; });
-    var chips='<div class="dpg-chips"><span class="dpg-chip">Jenis Temuan: <b>'+gorder.length+'</b></span><span class="dpg-chip">Jumlah: <b>'+totJ+'</b></span><span class="dpg-chip">Selesai: <b>'+totS+'</b></span><span class="dpg-chip">Belum Tindak Lanjut: <b>'+totB+'</b></span>'+(selT?'<span class="dpg-chip">Temuan: <b>'+_esc(selT)+'</b></span>':'')+'</div>';
-    var tableHtml, pager='';
-    if(!gorder.length){
-      DPG._rekapPage=1;
-      tableHtml='<div class="dpg-empty"><i class="fa-solid fa-inbox"></i><p>Tidak ada temuan pada tahun '+tahun+'.</p></div>';
-    } else {
-      var PER=20;
-      var totalPages=Math.ceil(gorder.length/PER);
-      if(!DPG._rekapPage||DPG._rekapPage<1) DPG._rekapPage=1;
-      if(DPG._rekapPage>totalPages) DPG._rekapPage=totalPages;
-      var pg=DPG._rekapPage, startIdx=(pg-1)*PER;
-      var pageItems=gorder.slice(startIdx, startIdx+PER);
-      var b=pageItems.map(function(t,i){
-        var g=gmap[t]; var absIdx=startIdx+i;
-        var cJ=g.jumlah?('<button type="button" class="dpg-count" onclick="dpgRekapDetail('+absIdx+',&quot;all&quot;)">'+g.jumlah+'</button>'):'<span class="dpg-count zero">0</span>';
-        var cS=g.selesai?('<button type="button" class="dpg-count dpg-count-full" onclick="dpgRekapDetail('+absIdx+',&quot;selesai&quot;)">'+g.selesai+'</button>'):'<span class="dpg-count zero">0</span>';
-        var cB=g.belum?('<button type="button" class="dpg-count dpg-count-pmt" onclick="dpgRekapDetail('+absIdx+',&quot;belum&quot;)">'+g.belum+'</button>'):'<span class="dpg-count zero">0</span>';
-        return '<tr><td style="text-align:center">'+(absIdx+1)+'</td><td class="dpg-left">'+_esc(g.temuan)+'</td><td style="text-align:center">'+cJ+'</td><td style="text-align:center">'+cS+'</td><td style="text-align:center">'+cB+'</td></tr>';
-      }).join('');
-      tableHtml='<div class="tbl-wrap"><table><thead><tr><th style="text-align:center">No</th><th>Temuan</th><th style="text-align:center">Jumlah</th><th style="text-align:center">Selesai</th><th style="text-align:center">Belum Tindak Lanjut</th></tr></thead><tbody>'+b+'</tbody></table></div>';
-      if(totalPages>1){
-        var prev='<button class="dpg-pg-btn" '+(pg<=1?'disabled':'')+' onclick="dpgRekapGoPage('+(pg-1)+')"><i class="fa-solid fa-chevron-left"></i> Sebelumnya</button>';
-        var next='<button class="dpg-pg-btn" '+(pg>=totalPages?'disabled':'')+' onclick="dpgRekapGoPage('+(pg+1)+')">Berikutnya <i class="fa-solid fa-chevron-right"></i></button>';
-        var endIdx=startIdx+pageItems.length;
-        pager='<div class="dpg-pager">'+prev+'<span class="dpg-pg-info">'+(startIdx+1)+'&ndash;'+endIdx+' dari '+gorder.length+' &middot; Hal '+pg+'/'+totalPages+'</span>'+next+'</div>';
-      }
-    }
-    wrap.innerHTML=chips+tableHtml+pager;
+    var sections=res.sections||[], all=res.rows||[], selected=_el('dpgRekapTemuan')?_el('dpgRekapTemuan').value:'';
+    var rows=selected?all.filter(function(r){return String(r.temuan||'')===selected;}):all;
+    var head='<tr><th>No</th><th>Temuan</th><th>Volume</th><th>Satuan</th><th>Tier 1</th><th>Tier 2</th>'+sections.map(function(x){return '<th>'+_esc(x)+'</th>';}).join('')+'</tr>';
+    var volume=0; rows.forEach(function(r){volume+=Number(r.volume)||0;});
+    var body=rows.length?rows.map(function(r,i){return '<tr><td>'+(i+1)+'</td><td class="dpg-left">'+_esc(r.temuan)+'</td><td style="text-align:center"><b>'+r.volume+'</b></td><td style="text-align:center">'+_esc(r.unit)+'</td><td style="text-align:center">'+(r.tier1||'-')+'</td><td style="text-align:center">'+(r.tier2||'-')+'</td>'+sections.map(function(x){return '<td style="text-align:center">'+(r.bySection[x]||'-')+'</td>';}).join('')+'</tr>';}).join(''):'<tr><td colspan="'+(6+sections.length)+'"><div class="dpg-empty"><i class="fa-solid fa-inbox"></i><p>Tidak ada temuan pada tahun '+res.tahun+'.</p></div></td></tr>';
+    var chips='<div class="dpg-chips"><span class="dpg-chip">Jenis Temuan: <b>'+rows.length+'</b></span><span class="dpg-chip">Volume Total: <b>'+volume+'</b></span><span class="dpg-chip">Section: <b>'+sections.length+'</b></span></div>';
+    wrap.innerHTML=chips+'<div class="dpg-wrap"><table class="dpg-table"><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>';
   }
+
   function _dpgRekapBadge(st){
     st=String(st||'').trim()||'Belum Ada Tim';
     var c=(st==='Selesai')?'full':((st==='Progress Pekerjaan')?'sec':'pmt');
