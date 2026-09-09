@@ -95,6 +95,17 @@
   .dpg-month-alt{background:linear-gradient(rgba(91,140,255,.06),rgba(91,140,255,.06)),var(--surface-2);}
   .dpg-table tbody tr:hover td{background:var(--surface-2);}
   .dpg-table tbody tr.dpg-grp-start td{border-top:2px solid var(--border);}
+  /* Rekap Temuan: seluruh matriks muat satu layar tanpa scroll horizontal. */
+  #dpgRekapWrap .dpg-wrap{width:100%;max-height:none;overflow:visible;}
+  #dpgRekapWrap .dpg-table{width:100%;table-layout:fixed;white-space:normal;font-size:clamp(8px,.58vw,11px);}
+  #dpgRekapWrap .dpg-table th,#dpgRekapWrap .dpg-table td{padding:clamp(3px,.35vw,7px);overflow-wrap:anywhere;line-height:1.2;}
+  #dpgRekapWrap .dpg-table th{font-size:clamp(7px,.52vw,10px);vertical-align:middle;}
+  #dpgRekapWrap .dpg-table th:nth-child(1){width:3%;}
+  #dpgRekapWrap .dpg-table th:nth-child(2){width:7%;}
+  #dpgRekapWrap .dpg-table th:nth-child(3){width:18%;text-align:left;}
+  #dpgRekapWrap .dpg-table th:nth-child(4){width:6%;}
+  #dpgRekapWrap .dpg-table th:nth-child(5){width:6%;}
+  #dpgRekapWrap .dpg-left{min-width:0;}
   /* Cover Gardu (2 tabel + drill-down) */
   .dpg-cover-ttl{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--text);margin:6px 0 10px;}
   .dpg-cover-ttl i{color:var(--primary);}
@@ -846,9 +857,9 @@
     if(!res||!res.ok){ wrap.innerHTML='<div class="dpg-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>'+((res&&res.message)||'Gagal memuat data.')+'</p></div>'; return; }
     var sections=res.sections||[], all=res.rows||[], selected=_el('dpgRekapTemuan')?_el('dpgRekapTemuan').value:'';
     var rows=selected?all.filter(function(r){return String(r.temuan||'')===selected;}):all;
-    var head='<tr><th>No</th><th>Temuan</th><th>Volume</th><th>Satuan</th><th>Tier 1</th><th>Tier 2</th>'+sections.map(function(x){return '<th>'+_esc(x)+'</th>';}).join('')+'</tr>';
+    var head='<tr><th>No</th><th>Tier</th><th>Temuan</th><th>Volume</th><th>Satuan</th>'+sections.map(function(x){return '<th>'+_esc(x)+'</th>';}).join('')+'</tr>';
     var volume=0; rows.forEach(function(r){volume+=Number(r.volume)||0;});
-    var body=rows.length?rows.map(function(r,i){return '<tr><td>'+(i+1)+'</td><td class="dpg-left">'+_esc(r.temuan)+'</td><td style="text-align:center"><b>'+r.volume+'</b></td><td style="text-align:center">'+_esc(r.unit)+'</td><td style="text-align:center">'+(r.tier1||'-')+'</td><td style="text-align:center">'+(r.tier2||'-')+'</td>'+sections.map(function(x){return '<td style="text-align:center">'+(r.bySection[x]||'-')+'</td>';}).join('')+'</tr>';}).join(''):'<tr><td colspan="'+(6+sections.length)+'"><div class="dpg-empty"><i class="fa-solid fa-inbox"></i><p>Tidak ada temuan pada tahun '+res.tahun+'.</p></div></td></tr>';
+    var body=rows.length?rows.map(function(r,i){return '<tr><td>'+(i+1)+'</td><td style="text-align:center"><b>'+_esc(r.tier||'-')+'</b></td><td class="dpg-left">'+_esc(r.temuan)+'</td><td style="text-align:center"><b>'+r.volume+'</b></td><td style="text-align:center">'+_esc(r.unit)+'</td>'+sections.map(function(x){return '<td style="text-align:center">'+(r.bySection[x]||'-')+'</td>';}).join('')+'</tr>';}).join(''):'<tr><td colspan="'+(5+sections.length)+'"><div class="dpg-empty"><i class="fa-solid fa-inbox"></i><p>Tidak ada temuan pada tahun '+res.tahun+'.</p></div></td></tr>';
     var chips='<div class="dpg-chips"><span class="dpg-chip">Jenis Temuan: <b>'+rows.length+'</b></span><span class="dpg-chip">Volume Total: <b>'+volume+'</b></span><span class="dpg-chip">Section: <b>'+sections.length+'</b></span></div>';
     wrap.innerHTML=chips+'<div class="dpg-wrap"><table class="dpg-table"><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>';
   }
