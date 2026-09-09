@@ -1,0 +1,58 @@
+name: Apply compact Tier matrix
+on:
+  push:
+    branches: [fix/checkpoint-tier-single-screen]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/checkpoint-tier-single-screen
+      - name: Merge Tier columns and fit matrix to viewport
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('SiSi_BackEnd/Teknik/Tek-Data-Checkpoint.html')
+          s=p.read_text()
+          anchor='  /* Cover Gardu (2 tabel + drill-down) */'
+          css='''  /* Rekap Temuan: seluruh matriks muat satu layar tanpa scroll horizontal. */\n  #dpgRekapWrap .dpg-wrap{width:100%;max-height:none;overflow:visible;}\n  #dpgRekapWrap .dpg-table{width:100%;table-layout:fixed;white-space:normal;font-size:clamp(8px,.58vw,11px);}\n  #dpgRekapWrap .dpg-table th,#dpgRekapWrap .dpg-table td{padding:clamp(3px,.35vw,7px);overflow-wrap:anywhere;line-height:1.2;}\n  #dpgRekapWrap .dpg-table th{font-size:clamp(7px,.52vw,10px);vertical-align:middle;}\n  #dpgRekapWrap .dpg-table th:nth-child(1){width:3%;}\n  #dpgRekapWrap .dpg-table th:nth-child(2){width:7%;}\n  #dpgRekapWrap .dpg-table th:nth-child(3){width:18%;text-align:left;}\n  #dpgRekapWrap .dpg-table th:nth-child(4){width:6%;}\n  #dpgRekapWrap .dpg-table th:nth-child(5){width:6%;}\n  #dpgRekapWrap .dpg-left{min-width:0;}\n'''
+          if css not in s:
+            if anchor not in s: raise SystemExit('CSS anchor missing')
+            s=s.replace(anchor,css+anchor,1)
+          old="var head='<tr><th>No</th><th>Temuan</th><th>Volume</th><th>Satuan</th><th>Tier 1</th><th>Tier 2</th>'+sections.map"
+          new="var head='<tr><th>No</th><th>Tier</th><th>Temuan</th><th>Volume</th><th>Satuan</th>'+sections.map"
+          if old not in s: raise SystemExit('table header marker missing')
+          s=s.replace(old,new,1)
+          old2="return '<tr><td>'+(i+1)+'</td><td class=\"dpg-left\">'+_esc(r.temuan)+'</td><td style=\"text-align:center\"><b>'+r.volume+'</b></td><td style=\"text-align:center\">'+_esc(r.unit)+'</td><td style=\"text-align:center\">'+(r.tier1||'-')+'</td><td style=\"text-align:center\">'+(r.tier2||'-')+'</td>'+sections.map"
+          new2="return '<tr><td>'+(i+1)+'</td><td style=\"text-align:center\"><b>'+_esc(r.tier||'-')+'</b></td><td class=\"dpg-left\">'+_esc(r.temuan)+'</td><td style=\"text-align:center\"><b>'+r.volume+'</b></td><td style=\"text-align:center\">'+_esc(r.unit)+'</td>'+sections.map"
+          if old2 not in s: raise SystemExit('table row marker missing')
+          s=s.replace(old2,new2,1)
+          s=s.replace("(6+sections.length)","(5+sections.length)",1)
+          p.write_text(s)
+          PY
+      - name: Add regression coverage
+        shell: bash
+        run: |
+          cat > tests/checkpoint-tier-single-screen.test.cjs <<'EOF'
+          const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');
+          const b=fs.readFileSync('SiSi_BackEnd/Teknik/ZZ-Data-Checkpoint-Section-Volume.js','utf8');
+          const h=fs.readFileSync('SiSi_BackEnd/Teknik/Tek-Data-Checkpoint.html','utf8');
+          test('Tier comes from finding master',()=>{assert.match(b,/_dpgTemuanTierMaster_/);assert.match(b,/db_List_Temuan/);assert.match(b,/tierMaster\[key\]/);});
+          test('one Tier column replaces Tier 1 and Tier 2',()=>{assert.match(h,/<th>Tier<\/th>/);assert.doesNotMatch(h,/<th>Tier 1<\/th><th>Tier 2<\/th>/);assert.match(h,/r\.tier/);});
+          test('matrix fits viewport without horizontal scrolling',()=>{assert.match(h,/table-layout:fixed/);assert.match(h,/width:100%/);assert.match(h,/overflow:visible/);});
+          EOF
+          node --check SiSi_BackEnd/Teknik/ZZ-Data-Checkpoint-Section-Volume.js
+          node --test tests/checkpoint-tier-single-screen.test.cjs
+      - name: Commit UI
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add SiSi_BackEnd/Teknik/Tek-Data-Checkpoint.html tests/checkpoint-tier-single-screen.test.cjs
+          git commit -m "fix(checkpoint): merge Tier and fit matrix to screen"
+          git push origin HEAD:fix/checkpoint-tier-single-screen
