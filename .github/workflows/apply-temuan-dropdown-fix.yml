@@ -103,3 +103,4 @@ jobs:
           git add SiSi_BackEnd/Core/Tek-Temuan-Code.js SiSi_BackEnd/Inspeksi_Jaringan/Tek-InsJar-Code.js tests/temuan-inspeksi-dropdown-token.test.cjs
           git commit -m "fix(temuan): restore filter and detail data"
           git push origin HEAD:fix/temuan-inspeksi-dropdown
+# retry trigger
