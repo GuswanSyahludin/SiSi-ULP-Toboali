@@ -53,6 +53,17 @@
   .dpg-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
   .dpg-chip{font-size:12.5px;font-weight:600;padding:5px 12px;border-radius:999px;background:var(--surface-2);border:1px solid var(--border);color:var(--text);}
   .dpg-chip b{color:var(--primary);}
+  .dpg-ms{position:relative;min-width:280px;}
+  .dpg-ms-btn{width:100%;min-height:36px;display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--border);border-radius:7px;padding:7px 10px;background:var(--surface);color:var(--text);cursor:pointer;text-align:left;}
+  .dpg-ms-btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px;}
+  .dpg-ms-menu{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:1200;min-width:320px;max-width:420px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow-lg);padding:8px;}
+  .dpg-ms.open .dpg-ms-menu{display:block;}
+  .dpg-ms-actions{display:flex;gap:6px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+  .dpg-ms-actions button{flex:1;border:1px solid var(--border);border-radius:6px;padding:6px;background:var(--surface-2);color:var(--text);cursor:pointer;}
+  .dpg-ms-list{display:flex;flex-direction:column;gap:3px;max-height:260px;overflow:auto;padding-top:7px;}
+  .dpg-ms-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;color:var(--text);cursor:pointer;}
+  .dpg-ms-item:hover{background:var(--surface-2);}
+  .dpg-ms-item input{width:16px;height:16px;accent-color:var(--primary);}
   /* KPI cards (Total / PMT / Section) */
   .dpg-kpis{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:14px;}
   .dpg-kpi{flex:1 1 180px;display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow-md);}
@@ -239,7 +250,13 @@
       <div class="filter-bar" style="margin-bottom:12px">
         <div class="filter-group">
           <label>Temuan</label>
-          <select id="dpgRekapTemuan" onchange="dpgRekapFilter()"><option value="">Semua Temuan</option></select>
+          <div class="dpg-ms" id="dpgRekapTemuanMs">
+            <button type="button" class="dpg-ms-btn" onclick="dpgRekapTemuanToggle(event)" aria-expanded="false"><span id="dpgRekapTemuanLabel">Semua Temuan</span><i class="fa-solid fa-chevron-down"></i></button>
+            <div class="dpg-ms-menu">
+              <div class="dpg-ms-actions"><button type="button" onclick="dpgRekapTemuanSelectAll(true)">Pilih Semua</button><button type="button" onclick="dpgRekapTemuanSelectAll(false)">Kosongkan</button></div>
+              <div class="dpg-ms-list" id="dpgRekapTemuanList"><div class="dpg-empty" style="padding:12px">Memuat...</div></div>
+            </div>
+          </div>
         </div>
       </div>
       <div id="dpgRekapWrap">
@@ -274,7 +291,7 @@
 <!-- ====== SCRIPT: DATA PENDUKUNG CHECKPOINT (dipindah dari SIE-Teknik.html, Rev 11 Agu 2026) ====== -->
 <script>
 (function(){
-  var DPG = { sesi:null, ulp:'', isSuper:false, tab:'har' };
+  var DPG = { sesi:null, ulp:'', isSuper:false, tab:'har', rekapTemuan:[] };
   function _el(id){ return document.getElementById(id); }
   function _sesi(){ return (typeof window!=='undefined' && window.__SISI_SESI__) ? window.__SISI_SESI__ : (DPG.sesi||{}); }
   function _esc(s){ s=(s==null)?'':String(s); return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -836,27 +853,27 @@
       .getDpgRekapTemuanSectionVolume({ penyulang:penyulang, tahun:tahun, ulp:ulp, section:section });
   }
   function dpgLoadRekapTemuanList(){
-    var sel=_el('dpgRekapTemuan');
-    if(!sel || sel.getAttribute('data-loaded')==='1' || typeof google==='undefined') return;
-    SisiRun
-      .withSuccessHandler(function(res){
-        var list=(res&&res.list)?res.list:[];
-        var cur=sel.value;
-        sel.innerHTML='<option value="">Semua Temuan</option>'+list.map(function(n){ return '<option value="'+_esc(n)+'">'+_esc(n)+'</option>'; }).join('');
-        if(cur) sel.value=cur;
-        sel.setAttribute('data-loaded','1');
-      })
-      .withFailureHandler(function(){})
-      .getListTemuanByObjek('');
+    var listEl=_el('dpgRekapTemuanList'); if(!listEl||typeof google==='undefined') return;
+    SisiRun.withSuccessHandler(function(res){
+      var list=(res&&res.list)?res.list:[]; DPG.rekapTemuan=[];
+      listEl.innerHTML=list.length?list.map(function(n){return '<label class="dpg-ms-item"><input type="checkbox" value="'+_esc(n)+'" onchange="dpgRekapTemuanChange()"><span>'+_esc(n)+'</span></label>';}).join(''):'<div class="dpg-empty" style="padding:12px">Belum ada temuan</div>';
+      dpgRekapTemuanUpdateLabel();
+    }).withFailureHandler(function(){listEl.innerHTML='<div class="dpg-empty" style="padding:12px">Gagal memuat</div>';}).getListTemuanByObjek('');
   }
+  function dpgRekapTemuanToggle(ev){if(ev)ev.stopPropagation();var ms=_el('dpgRekapTemuanMs');if(!ms)return;var open=ms.classList.toggle('open');var btn=ms.querySelector('.dpg-ms-btn');if(btn)btn.setAttribute('aria-expanded',open?'true':'false');}
+  function dpgRekapTemuanChange(){var list=_el('dpgRekapTemuanList'),out=[];if(list){list.querySelectorAll('input[type=checkbox]').forEach(function(c){if(c.checked)out.push(c.value);});}DPG.rekapTemuan=out;dpgRekapTemuanUpdateLabel();dpgRekapRender();}
+  function dpgRekapTemuanSelectAll(on){var list=_el('dpgRekapTemuanList'),out=[];if(list){list.querySelectorAll('input[type=checkbox]').forEach(function(c){c.checked=!!on;if(on)out.push(c.value);});}DPG.rekapTemuan=out;dpgRekapTemuanUpdateLabel();dpgRekapRender();}
+  function dpgRekapTemuanUpdateLabel(){var label=_el('dpgRekapTemuanLabel'),n=DPG.rekapTemuan.length;if(label)label.textContent=n===0?'Semua Temuan':(n===1?DPG.rekapTemuan[0]:n+' temuan dipilih');}
+
   function dpgRenderRekapTemuan(res){ DPG._rekapRes=res; dpgRekapRender(); }
   function dpgRekapFilter(){ dpgRekapRender(); }
   function dpgRekapGoPage(){ dpgRekapRender(); }
   function dpgRekapRender(){
     var wrap=_el('dpgRekapWrap'); if(!wrap) return; var res=DPG._rekapRes;
     if(!res||!res.ok){ wrap.innerHTML='<div class="dpg-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>'+((res&&res.message)||'Gagal memuat data.')+'</p></div>'; return; }
-    var sections=res.sections||[], all=res.rows||[], selected=_el('dpgRekapTemuan')?_el('dpgRekapTemuan').value:'';
-    var rows=selected?all.filter(function(r){return String(r.temuan||'')===selected;}):all;
+    var sections=res.sections||[], all=res.rows||[], selected=DPG.rekapTemuan||[], selectedMap={};
+    selected.forEach(function(x){selectedMap[String(x).toLowerCase()]=true;});
+    var rows=selected.length?all.filter(function(r){return selectedMap[String(r.temuan||'').toLowerCase()];}):all;
     var head='<tr><th>No</th><th>Tier</th><th>Temuan</th><th>Volume</th><th>Satuan</th>'+sections.map(function(x){return '<th>'+_esc(x)+'</th>';}).join('')+'</tr>';
     var volume=0; rows.forEach(function(r){volume+=Number(r.volume)||0;});
     var body=rows.length?rows.map(function(r,i){return '<tr><td>'+(i+1)+'</td><td style="text-align:center"><b>'+_esc(r.tier||'-')+'</b></td><td class="dpg-left">'+_esc(r.temuan)+'</td><td style="text-align:center"><b>'+r.volume+'</b></td><td style="text-align:center">'+_esc(r.unit)+'</td>'+sections.map(function(x){return '<td style="text-align:center">'+(r.bySection[x]||'-')+'</td>';}).join('')+'</tr>';}).join(''):'<tr><td colspan="'+(5+sections.length)+'"><div class="dpg-empty"><i class="fa-solid fa-inbox"></i><p>Tidak ada temuan pada tahun '+res.tahun+'.</p></div></td></tr>';
@@ -916,12 +933,17 @@
   window.dpgSwitchInner=dpgSwitchInner;
   window.dpgFgtmVar=dpgFgtmVar;
   window.dpgRekapFilter=dpgRekapFilter;
+  window.dpgRekapTemuanToggle=dpgRekapTemuanToggle;
+  window.dpgRekapTemuanChange=dpgRekapTemuanChange;
+  window.dpgRekapTemuanSelectAll=dpgRekapTemuanSelectAll;
   window.dpgRekapGoPage=dpgRekapGoPage;
   window.dpgOnPenyulangChange=dpgOnPenyulangChange;
   window.dpgCoverDetail=dpgCoverDetail;
   window.dpgCoverCloseModal=dpgCoverCloseModal;
   window.dpgRekapDetail=dpgRekapDetail;
   window.dpgRekapCloseModal=dpgRekapCloseModal;
+
+  document.addEventListener('click',function(ev){var ms=_el('dpgRekapTemuanMs');if(ms&&ms.classList.contains('open')&&!ms.contains(ev.target)){ms.classList.remove('open');var btn=ms.querySelector('.dpg-ms-btn');if(btn)btn.setAttribute('aria-expanded','false');}});
 
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', dpgBoot);
   else dpgBoot();
