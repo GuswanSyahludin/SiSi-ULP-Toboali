@@ -2,11 +2,11 @@ name: Apply Temuan Inspeksi dropdown fix
 on:
   push:
     branches: [fix/temuan-inspeksi-dropdown]
-    paths: [.github/workflows/apply-temuan-dropdown-fix.yml]
 permissions:
   contents: write
 jobs:
   patch:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -103,4 +103,3 @@ jobs:
           git add SiSi_BackEnd/Core/Tek-Temuan-Code.js SiSi_BackEnd/Inspeksi_Jaringan/Tek-InsJar-Code.js tests/temuan-inspeksi-dropdown-token.test.cjs
           git commit -m "fix(temuan): restore filter and detail data"
           git push origin HEAD:fix/temuan-inspeksi-dropdown
-# retry trigger
