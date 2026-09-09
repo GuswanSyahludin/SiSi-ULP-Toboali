@@ -1,0 +1,122 @@
+name: Apply section volume report
+on:
+  push:
+    branches: [feat/checkpoint-rekap-section-volume]
+    paths: [.github/workflows/apply-section-volume-report.yml]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/checkpoint-rekap-section-volume
+      - name: Patch backend and table renderer
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          backend=Path('SiSi_BackEnd/Teknik/Tek-Data-Chechpoint-Code.js')
+          s=backend.read_text()
+          start=s.index('function getDpgRekapTemuan(opts){')
+          end=s.index('\n/* 6) DAFTAR SECTION', start)
+          replacement=r'''function getDpgRekapTemuan(opts){
+  try{
+    opts = opts || {};
+    var penyF = String(opts.penyulang||'').trim().toLowerCase();
+    var temF  = String(opts.temuan||'').trim().toLowerCase();
+    var ulpF  = String(opts.ulp||'').trim().toLowerCase();
+    var secF  = String(opts.section||'').trim().toLowerCase();
+    var tahun = parseInt(opts.tahun,10) || (new Date()).getFullYear();
+    var C = COL_INS.TEMUAN;
+    var rows = (typeof _readSheetDual_ === 'function')
+      ? _readSheetDual_(SHEET_INS.TEMUAN, C.kodePekerjaan, C.status + 1)
+      : [];
+    var sections = {}, grouped = {}, total = 0;
+    function unitFor(name){
+      var n = String(name||'').toLowerCase();
+      if(/tebang/.test(n)) return 'Btg';
+      if(/pohon|rabas|pangkas|vegetasi/.test(n)) return 'Gwg';
+      return 'Titik';
+    }
+    for(var i=0;i<rows.length;i++){
+      var r=rows[i], kode=String(r[C.kodePekerjaan]||'').trim();
+      if(!kode) continue;
+      var tgl=_normTgl(r[C.tanggal]);
+      if(!tgl || String(tgl).substring(0,4)!==String(tahun)) continue;
+      var peny=String(r[C.penyulang]||'').trim();
+      var tem=String(r[C.temuan]||'').trim();
+      var sec=String(r[C.section]||'').trim();
+      var ulp=String(r[C.ulp]||'').trim();
+      if(penyF && peny.toLowerCase()!==penyF) continue;
+      if(temF && tem.toLowerCase()!==temF) continue;
+      if(ulpF && ulp.toLowerCase()!==ulpF) continue;
+      if(secF && sec.toLowerCase()!==secF) continue;
+      if(!tem || !sec) continue;
+      sections[sec]=true;
+      var key=tem.toLowerCase();
+      if(!grouped[key]) grouped[key]={temuan:tem,unit:unitFor(tem),total:0,bySection:{},tier1:0,tier2:0};
+      grouped[key].total++;
+      grouped[key].bySection[sec]=(grouped[key].bySection[sec]||0)+1;
+      var tier=String(r[C.tier]||'').toLowerCase();
+      if(tier.indexOf('1')>=0) grouped[key].tier1++;
+      if(tier.indexOf('2')>=0) grouped[key].tier2++;
+      total++;
+    }
+    var sectionList=Object.keys(sections).sort(function(a,b){return a.localeCompare(b);});
+    var out=Object.keys(grouped).map(function(k){return grouped[k];});
+    out.sort(function(a,b){return a.temuan.localeCompare(b.temuan);});
+    return {ok:true,tahun:tahun,total:total,sections:sectionList,rows:out};
+  }catch(e){return {ok:false,message:e.message,sections:[],rows:[],total:0};}
+}'''
+          backend.write_text(s[:start]+replacement+s[end:])
+
+          page=Path('SiSi_BackEnd/Tek-Data-Checkpoint.html')
+          h=page.read_text()
+          start=h.index('  function dpgRenderRekapTemuan(res){')
+          end=h.index('\n  function dpgRekapDetail', start)
+          replacement=r'''  function dpgRenderRekapTemuan(res){
+    DPG._rekapRes=res; dpgRekapRender();
+  }
+  function dpgRekapFilter(){ dpgRekapRender(); }
+  function dpgRekapRender(){
+    var wrap=_el('dpgRekapWrap'); if(!wrap) return;
+    var res=DPG._rekapRes;
+    if(!res||!res.ok){ wrap.innerHTML='<div class="dpg-empty"><i class="fa-solid fa-triangle-exclamation"></i><p>'+((res&&res.message)||'Gagal memuat data.')+'</p></div>'; return; }
+    var sections=res.sections||[], rows=res.rows||[];
+    var head='<tr><th>No</th><th>Temuan</th><th>Volume</th><th>Satuan</th><th>Tier 1</th><th>Tier 2</th>'+sections.map(function(s){return '<th>'+_esc(s)+'</th>';}).join('')+'</tr>';
+    var body=rows.length?rows.map(function(r,i){
+      return '<tr><td>'+(i+1)+'</td><td class="dpg-left">'+_esc(r.temuan)+'</td><td style="text-align:center"><b>'+r.total+'</b></td><td style="text-align:center">'+_esc(r.unit)+'</td><td style="text-align:center">'+(r.tier1||'-')+'</td><td style="text-align:center">'+(r.tier2||'-')+'</td>'+sections.map(function(s){return '<td style="text-align:center">'+(r.bySection[s]||'-')+'</td>';}).join('')+'</tr>';
+    }).join(''):'<tr><td colspan="'+(6+sections.length)+'"><div class="dpg-empty"><i class="fa-solid fa-inbox"></i><p>Tidak ada temuan pada tahun '+res.tahun+'.</p></div></td></tr>';
+    var chips='<div class="dpg-chips"><span class="dpg-chip">Temuan: <b>'+rows.length+'</b></span><span class="dpg-chip">Volume Total: <b>'+res.total+'</b></span><span class="dpg-chip">Section: <b>'+sections.length+'</b></span></div>';
+    wrap.innerHTML=chips+'<div class="tbl-wrap" style="overflow:auto"><table class="dpg-table" style="min-width:max-content"><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>';
+  }
+'''
+          page.write_text(h[:start]+replacement+h[end:])
+          PY
+      - name: Add regression test
+        shell: bash
+        run: |
+          cat > tests/checkpoint-section-volume.test.cjs <<'EOF'
+          const test=require('node:test'); const assert=require('node:assert/strict'); const fs=require('node:fs');
+          const b=fs.readFileSync('SiSi_BackEnd/Teknik/Tek-Data-Chechpoint-Code.js','utf8');
+          const h=fs.readFileSync('SiSi_BackEnd/Teknik/Tek-Data-Checkpoint.html','utf8');
+          test('section volume report groups findings and maps units',()=>{
+            assert.match(b,/sections\[sec\]=true/); assert.match(b,/unitFor/); assert.match(b,/Btg/); assert.match(b,/Gwg/); assert.match(b,/Titik/); assert.match(b,/bySection/);
+          });
+          test('checkpoint page renders section columns and volume',()=>{
+            assert.match(h,/Volume Total/); assert.match(h,/sections\.map/); assert.match(h,/r\.bySection\[s\]/); assert.match(h,/Satuan/);
+          });
+          EOF
+          node --check SiSi_BackEnd/Teknik/Tek-Data-Chechpoint-Code.js
+          node --test tests/checkpoint-section-volume.test.cjs
+      - name: Commit patch
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add SiSi_BackEnd/Teknik/Tek-Data-Chechpoint-Code.js SiSi_BackEnd/Teknik/Tek-Data-Checkpoint.html tests/checkpoint-section-volume.test.cjs
+          git commit -m "feat(checkpoint): group finding volume by section"
+          git push origin HEAD:feat/checkpoint-rekap-section-volume
