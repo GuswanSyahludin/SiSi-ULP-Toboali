@@ -35,6 +35,7 @@ class _State extends State<SyncSectionPengaturan> {
   List<GarduOutbox> gardu = [];
   String device = '…';
   bool _wasRunning = false;
+  final Set<String> _selectedModules = {};
 
   @override
   void initState() {
@@ -92,10 +93,11 @@ class _State extends State<SyncSectionPengaturan> {
     super.dispose();
   }
 
-  Future<void> _download(String module) async {
+  Future<void> _downloadSelected() async {
     if (SyncProgressService.instance.state.value.running) return;
-    final result = await AutoSyncService.startModuleSync(module);
+    final result = await AutoSyncService.startModulesSync(_selectedModules);
     if (!mounted) return;
+    if (result['ok'] == true) setState(_selectedModules.clear);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('${result['message']}')),
     );
@@ -126,11 +128,49 @@ class _State extends State<SyncSectionPengaturan> {
             children: [
               _summary(progress),
               const SizedBox(height: 12),
+              Row(children: [
+                Expanded(
+                    child: Text(
+                  'Pilih Data Master yang ingin disimpan offline.',
+                  style: const TextStyle(
+                      fontSize: 12, color: AppColors.neutral500),
+                )),
+                TextButton(
+                  onPressed: progress.running
+                      ? null
+                      : () => setState(() {
+                            if (_selectedModules.length ==
+                                SyncRepository.moduleLabels.length) {
+                              _selectedModules.clear();
+                            } else {
+                              _selectedModules
+                                ..clear()
+                                ..addAll(SyncRepository.moduleLabels.keys);
+                            }
+                          }),
+                  child: Text(_selectedModules.length ==
+                          SyncRepository.moduleLabels.length
+                      ? 'Batal semua'
+                      : 'Pilih semua'),
+                ),
+              ]),
               for (final entry in SyncRepository.moduleLabels.entries)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: _moduleTile(entry.key, entry.value, progress),
                 ),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: progress.running || _selectedModules.isEmpty
+                      ? null
+                      : _downloadSelected,
+                  icon: const Icon(Icons.download_rounded),
+                  label: Text(_selectedModules.isEmpty
+                      ? 'Pilih Data Master'
+                      : 'Download ${_selectedModules.length} pilihan'),
+                ),
+              ),
             ],
           ),
         ),
@@ -155,28 +195,37 @@ class _State extends State<SyncSectionPengaturan> {
               else
                 const Icon(Icons.cloud_done_outlined, color: AppColors.navy700),
               const SizedBox(width: 12),
-              Expanded(child: Column(
+              Expanded(
+                  child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     progress.running ? 'Download Data Master' : 'Data Master',
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    progress.running ? progress.stage : 'Pilih modul untuk download',
-                    style: const TextStyle(fontSize: 12, color: AppColors.neutral500),
+                    progress.running
+                        ? progress.stage
+                        : 'Pilih modul untuk download',
+                    style: const TextStyle(
+                        fontSize: 12, color: AppColors.neutral500),
                   ),
                 ],
               )),
               if (progress.running)
-                Text('${progress.percent}%', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.navy700)),
+                Text('${progress.percent}%',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, color: AppColors.navy700)),
             ]),
             if (progress.running) ...[
               const SizedBox(height: 12),
               LinearProgressIndicator(value: progress.fraction, minHeight: 7),
               if (progress.datasetLabel.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                Text(progress.datasetLabel, style: const TextStyle(fontSize: 11, color: AppColors.neutral500)),
+                Text(progress.datasetLabel,
+                    style: const TextStyle(
+                        fontSize: 11, color: AppColors.neutral500)),
               ],
             ],
             if (!progress.running && progress.message != null)
@@ -184,7 +233,11 @@ class _State extends State<SyncSectionPengaturan> {
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
                   progress.message!,
-                  style: TextStyle(fontSize: 11, color: progress.failed ? AppColors.red600 : AppColors.success700),
+                  style: TextStyle(
+                      fontSize: 11,
+                      color: progress.failed
+                          ? AppColors.red600
+                          : AppColors.success700),
                 ),
               ),
           ],
@@ -196,32 +249,62 @@ class _State extends State<SyncSectionPengaturan> {
     final info = status['master:$key'];
     final last = DateTime.tryParse(info?.lastSyncAt ?? '')?.toLocal();
     final subtitle = active
-        ? (progress.datasetLabel.isEmpty ? progress.stage : progress.datasetLabel)
+        ? (progress.datasetLabel.isEmpty
+            ? progress.stage
+            : progress.datasetLabel)
         : last == null
             ? 'Belum didownload'
-            : 'Terakhir ${last.day}/${last.month} ${last.hour.toString().padLeft(2, '0')}:${last.minute.toString().padLeft(2, '0')}';
+            : 'Terakhir disinkron pukul ${last.hour.toString().padLeft(2, '0')}:${last.minute.toString().padLeft(2, '0')}';
     return Material(
       color: active ? AppColors.navy100 : Colors.white,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
-        onTap: progress.running ? null : () => _download(key),
+        onTap: progress.running
+            ? null
+            : () => setState(() {
+                  if (!_selectedModules.add(key)) _selectedModules.remove(key);
+                }),
         borderRadius: BorderRadius.circular(14),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
           child: Row(children: [
-            Icon(active ? Icons.downloading_rounded : Icons.folder_copy_outlined, color: AppColors.navy700),
+            Checkbox(
+              value: _selectedModules.contains(key),
+              onChanged: progress.running
+                  ? null
+                  : (selected) => setState(() {
+                        if (selected == true) {
+                          _selectedModules.add(key);
+                        } else {
+                          _selectedModules.remove(key);
+                        }
+                      }),
+            ),
             const SizedBox(width: 12),
-            Expanded(child: Column(
+            Expanded(
+                child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-                Text(subtitle, style: const TextStyle(fontSize: 11, color: AppColors.neutral500)),
+                Text(label,
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w700)),
+                Text(subtitle,
+                    style: const TextStyle(
+                        fontSize: 11, color: AppColors.neutral500)),
+                const SizedBox(height: 3),
+                Text(
+                  SyncRepository.moduleDescriptions[key] ?? '',
+                  style: const TextStyle(
+                      fontSize: 10, color: AppColors.neutral500),
+                ),
               ],
             )),
             if (active)
-              Text('${progress.percent}%', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.navy700))
+              Text('${progress.percent}%',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, color: AppColors.navy700))
             else
-              const Icon(Icons.download_rounded, color: AppColors.navy700),
+              const Icon(Icons.folder_copy_outlined, color: AppColors.navy700),
           ]),
         ),
       ),
@@ -240,10 +323,17 @@ class _SpinState extends State<_Spin> with SingleTickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 950))..repeat();
+    controller = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 950))
+      ..repeat();
   }
+
   @override
-  void dispose() { controller.dispose(); super.dispose(); }
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => RotationTransition(
         turns: controller,

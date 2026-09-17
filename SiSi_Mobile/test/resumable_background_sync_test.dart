@@ -9,13 +9,15 @@ void main() {
     expect(source, contains('registerOneOffTask'));
     expect(source, contains('NetworkType.connected'));
     expect(source, contains('manualSyncPending'));
-    expect(source, contains('ExistingWorkPolicy.replace'));
-    expect(source, contains("inputData:{'module':module}"));
+    expect(source, contains('ExistingWorkPolicy.keep'));
+    expect(source, contains("inputData: {'module': module}"));
+    expect(source, contains('manualSyncModules'));
+    expect(source, contains('ForegroundServiceConfig'));
   });
 
   test('download pages are checkpointed before the next request', () {
-    final source =
-        File('lib/db/repositories/delta_sync_repository.dart').readAsStringSync();
+    final source = File('lib/db/repositories/delta_sync_repository.dart')
+        .readAsStringSync();
     expect(source, contains('sync_download_checkpoint'));
     expect(source, contains('sync_download_staging'));
     expect(source, contains('downloaded_rows'));
@@ -25,9 +27,20 @@ void main() {
     );
   });
 
+  test(
+      'empty or oversized pages stop instead of making an endless request loop',
+      () {
+    final source = File('lib/db/repositories/delta_sync_repository.dart')
+        .readAsStringSync();
+    expect(source, contains('while (offset < total)'));
+    expect(source,
+        contains('Server mengirim halaman kosong sebelum download selesai'));
+    expect(source, contains('offset + pageRows.length > total'));
+  });
+
   test('live mirror is replaced only after staging completes', () {
-    final source =
-        File('lib/db/repositories/delta_sync_repository.dart').readAsStringSync();
+    final source = File('lib/db/repositories/delta_sync_repository.dart')
+        .readAsStringSync();
     final deleteLive =
         source.indexOf('DELETE FROM local_dataset_rows WHERE dataset=?');
     final copyMatch = RegExp(

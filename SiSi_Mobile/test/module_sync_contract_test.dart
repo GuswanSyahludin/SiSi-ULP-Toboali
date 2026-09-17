@@ -1,2 +1,62 @@
-import 'dart:io';import 'package:flutter_test/flutter_test.dart';
-void main(){test('six modules partition every configured master dataset',(){final source=File('lib/db/repositories/sync_repository.dart').readAsStringSync();for(final key in ['dasar','row','hartek','inspeksi','yandal','laporan'])expect(source,contains("'$key':{"));for(final dataset in ['db_Global_Header','db_ROW_Realisasi','db_ROW_Eksekusi','db_Hartek_PenyulangGardu','db_Hartek_Pekerjaan','db_Hartek_Material','db_InsJar_Realisasi','db_InsDu_Realisasi','db_INS_Temuan','db_Yandal_Shift','db_Yandal_P0','db_Yandal_Pengecekan_Switching','db_Yandal_Pengukuran_Gardu','Teknik_Laporan_Harian','db_Users','db_Tim','db_Penyulang','db_List_Temuan','db_Hartek_List_Pekerjaan','db_Material','db_Yandal_List_P0','db_List_Petugas_Yandal','db_Section','Master_Gardu'])expect(source,contains("'$dataset'"));});test('manual worker carries selected module',(){final source=File('lib/services/auto_sync_service.dart').readAsStringSync();expect(source,contains("inputData:{'module':module}"));expect(source,contains('sinkronModul(token,module)'));});test('delta sync filters manifest by selected module',(){final source=File('lib/db/repositories/delta_sync_repository.dart').readAsStringSync();expect(source,contains('Set<String>? datasetNames'));expect(source,contains('datasetNames.contains'));});}
+import 'dart:io';
+
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  test('six modules partition every configured master dataset', () {
+    final source =
+        File('lib/db/repositories/sync_repository.dart').readAsStringSync();
+    for (final key in [
+      'dasar',
+      'row',
+      'hartek',
+      'inspeksi',
+      'yandal',
+      'laporan'
+    ]) {
+      expect(RegExp("'$key':\\s*\\{").hasMatch(source), isTrue);
+    }
+    for (final dataset in [
+      'db_Global_Header',
+      'db_ROW_Realisasi',
+      'db_ROW_Eksekusi',
+      'db_Hartek_PenyulangGardu',
+      'db_Hartek_Pekerjaan',
+      'db_Hartek_Material',
+      'db_InsJar_Realisasi',
+      'db_InsDu_Realisasi',
+      'db_INS_Temuan',
+      'db_Yandal_Shift',
+      'db_Yandal_P0',
+      'db_Yandal_Pengecekan_Switching',
+      'db_Yandal_Pengukuran_Gardu',
+      'Teknik_Laporan_Harian',
+      'db_Users',
+      'db_Tim',
+      'db_Penyulang',
+      'db_List_Temuan',
+      'db_Hartek_List_Pekerjaan',
+      'db_Material',
+      'db_Yandal_List_P0',
+      'db_List_Petugas_Yandal',
+      'db_Section',
+      'Master_Gardu'
+    ]) {
+      expect(source, contains("'$dataset'"));
+    }
+  });
+  test('manual worker carries the persistent selected-module queue', () {
+    final source =
+        File('lib/services/auto_sync_service.dart').readAsStringSync();
+    expect(source, contains("inputData: {'module': module}"));
+    expect(source, contains('sinkronModul(token, module)'));
+    expect(source, contains('manualSyncModules'));
+    expect(source, contains('startModulesSync'));
+  });
+  test('delta sync filters manifest by selected module', () {
+    final source = File('lib/db/repositories/delta_sync_repository.dart')
+        .readAsStringSync();
+    expect(source, contains('Set<String>? datasetNames'));
+    expect(source, contains('datasetNames.contains'));
+  });
+}

@@ -5,7 +5,6 @@ import 'package:drift/drift.dart';
 
 import '../../services/api_service.dart';
 import '../../services/apps_script_http.dart' as http;
-import '../../services/sync_progress_service.dart';
 import '../db_provider.dart';
 
 class DeltaSyncResult {
@@ -352,7 +351,7 @@ class DeltaSyncRepository {
     RowProgress? onRows,
   }) async {
     var offset = start;
-    while (offset < total || (total == 0 && offset == 0)) {
+    while (offset < total) {
       final page = await _send(token, {
         'cmd': 'snapshotFetch',
         'snapshotId': snapshotId,
@@ -365,7 +364,19 @@ class DeltaSyncRepository {
         throw const _SnapshotExpired(
             'Snapshot download berubah dan harus dibuat ulang.');
       }
+      if (int.tryParse('${page['total']}') != total) {
+        throw const _SnapshotExpired(
+            'Jumlah data snapshot berubah dan harus dibuat ulang.');
+      }
       final pageRows = List.from(page['rows'] ?? const []);
+      if (pageRows.isEmpty) {
+        throw Exception(
+            'Server mengirim halaman kosong sebelum download selesai. Data lokal sebelumnya tetap digunakan.');
+      }
+      if (offset + pageRows.length > total) {
+        throw const _SnapshotExpired(
+            'Jumlah baris snapshot tidak konsisten dan harus dibuat ulang.');
+      }
       await db.transaction(() async {
         for (var i = 0; i < pageRows.length; i++) {
           await db.customStatement(
@@ -382,11 +393,10 @@ class DeltaSyncRepository {
         );
       });
       onRows?.call(offset);
-      if (page['hasMore'] != true) break;
-      if (pageRows.isEmpty) {
-        throw Exception(
-            'Download data belum dapat dilanjutkan. Sistem akan mencoba kembali otomatis.');
-      }
+    }
+    if (offset != total) {
+      throw Exception(
+          'Download snapshot tidak lengkap. Data lokal sebelumnya tetap digunakan.');
     }
     await db.transaction(() async {
       await db.customStatement(
