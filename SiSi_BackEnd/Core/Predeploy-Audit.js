@@ -43,6 +43,10 @@ function auditPredeployMobile_() {
     add(c.name, c.ok, c.detail);
   });
 
+  _auditP0CorrectionPredeploy_().forEach(function (c) {
+    add(c.name, c.ok, c.detail);
+  });
+
   try {
     var cfg = typeof MASTER_GARDU_MOBILE !== "undefined" ? MASTER_GARDU_MOBILE : null;
     var sh = cfg && SpreadsheetApp.openById(cfg.spreadsheetId).getSheetByName(cfg.tab);
@@ -162,6 +166,41 @@ function _auditMasterP0Predeploy_() {
   } catch (e) {
     add("audit " + label, false, e.message);
   }
+  return checks;
+}
+
+/** Read-only: pastikan wrapper koreksi P0 ikut termuat pada versi yang akan dideploy. */
+function _auditP0CorrectionPredeploy_() {
+  var checks = [];
+  function add(name, ok, detail) {
+    checks.push({ name: name, ok: !!ok, detail: String(detail || "") });
+  }
+  var version =
+    typeof P0_CORRECTION_VERSION === "undefined"
+      ? null
+      : Number(P0_CORRECTION_VERSION);
+  add(
+    "P0 correction version",
+    version === 2,
+    version == null ? "ZZ-P0-Correction.js tidak termuat" : "versi " + version,
+  );
+  add(
+    "P0 correction wrapper",
+    typeof _p0CorrectionInstalled_ !== "undefined" &&
+      _p0CorrectionInstalled_ === true,
+    typeof _p0CorrectionInstalled_ === "undefined"
+      ? "ZZ-P0-Correction.js tidak termuat"
+      : _p0CorrectionInstalled_ === true
+        ? "wrapper aktif"
+        : "wrapper gagal diinisialisasi",
+  );
+  add(
+    "P0 correction endpoint",
+    typeof updateNamaPekerjaanP0 === "function",
+    typeof updateNamaPekerjaanP0 === "function"
+      ? "tersedia"
+      : "updateNamaPekerjaanP0 tidak tersedia",
+  );
   return checks;
 }
 

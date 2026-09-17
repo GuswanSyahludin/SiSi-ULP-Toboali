@@ -7,6 +7,7 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const legacy = fs.readFileSync(path.join(root, 'SiSi_BackEnd/Yandal/Tek-Yandal-Code.js'), 'utf8');
 const extension = fs.readFileSync(path.join(root, 'SiSi_BackEnd/Core/ZZ-P0-Correction.js'), 'utf8');
+const predeployAudit = fs.readFileSync(path.join(root, 'SiSi_BackEnd/Core/Predeploy-Audit.js'), 'utf8');
 function fixture() {
   const columns = ['kodeP0', 'ulp', 'namaPekerjaan', 'statusApproval', 'durasi', 'timestampPembuatan', 'point'];
   const C = Object.fromEntries(columns.map((k,i)=>[k,i]));
@@ -58,3 +59,4 @@ test('correction does not approve a waiting job',()=>{const f=fixture();f.rows[1
 test('unweighted normal category clears old approved points',()=>{const f=fixture();const r=f.ctx.updateNamaPekerjaanP0(f.payload({namaPekerjaan:'Tanpa Bobot'}));assert.equal(r.ok,true);assert.equal(r.point,'');assert.ok(r.warning);});
 test('approval requires manual weight for Other and is ULP scoped',()=>{const f=fixture();f.rows[1][2]='Lain - Lain';assert.equal(f.ctx.setApprovalP0({token:'valid',kodeP0:'P0-1',keputusan:'Approved'}).ok,false);f.rows[1][1]='Other';assert.throws(()=>f.ctx.setApprovalP0({token:'valid',kodeP0:'P0-1',keputusan:'Rejected'}));assert.equal(f.approvals(),0);});
 test('list and master advertise correction metadata',()=>{const f=fixture();assert.equal(f.ctx.getListPekerjaanP0({token:'valid'}).correctionVersion,2);const r=f.ctx.getApprovalP0List({token:'valid',status:''});assert.equal(r.list[0].status,' ');assert.equal(r.list[0].koreksiRevision,0);});
+test('predeploy audit rejects a deployment without the P0 correction wrapper',()=>{assert.match(predeployAudit,/_auditP0CorrectionPredeploy_\(\)/);assert.match(predeployAudit,/P0_CORRECTION_VERSION/);assert.match(predeployAudit,/_p0CorrectionInstalled_/);});

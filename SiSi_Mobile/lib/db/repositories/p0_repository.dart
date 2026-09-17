@@ -196,6 +196,9 @@ class P0Repository {
         final p = Map<String, dynamic>.from(jsonDecode(c['payload'] as String));
         try {
           final capability = await P0CorrectionApi.call('getListPekerjaanP0', {});
+          if (capability['ok'] != true) {
+            throw StateError('${capability['error'] ?? capability['message'] ?? 'Master P0 tidak tersedia.'}');
+          }
           if (capability['correctionVersion'] != 2) throw StateError('Backend koreksi P0 belum di-deploy.');
           await renew();
           final r = await P0CorrectionApi.call('updateNamaPekerjaanP0', p);
