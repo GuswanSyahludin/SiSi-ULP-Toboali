@@ -308,9 +308,8 @@ function getSemuaLaporan(tglMulai, tglAkhir, tim, penyulang) {
     // _readSheetDual_() (Tek-Migrasi.gs) agar rekap & total bulanan tidak putus di batas H-2.
     var RL = COL_ROW_RLZ;
     var data = _readSheetDual_('db_ROW_Realisasi', RL.kodePekerjaan, COL_ROW_RLZ_N);
-
-    var fDari   = tglMulai ? _normTanggal(tglMulai) : '';
-    var fSampai = tglAkhir ? _normTanggal(tglAkhir) : '';
+    var fDari   = tglMulai ? _normTgl(tglMulai) : '';
+    var fSampai = tglAkhir ? _normTgl(tglAkhir) : '';
     var fTim    = tim       ? String(tim).trim().toLowerCase()       : '';
     var fPeny   = penyulang ? String(penyulang).trim().toLowerCase() : '';
 
@@ -319,7 +318,7 @@ function getSemuaLaporan(tglMulai, tglAkhir, tim, penyulang) {
     for (var b = 0; b < data.length; b++) {
       var rb = data[b];
       if (!String(rb[RL.kodePekerjaan]||'').trim() && !String(rb[RL.kodeHeader]||'').trim()) continue;
-      var tB = _normTanggal(rb[RL.tanggal]);
+      var tB = _normTgl(rb[RL.tanggal]);
       if (!tB) continue;
       var k = String(rb[RL.tim]||'').trim().toLowerCase() + '|' + tB.substring(0, 7);
       if (!totBul[k]) totBul[k] = { r: 0, s: 0, b: 0 };
@@ -334,7 +333,7 @@ function getSemuaLaporan(tglMulai, tglAkhir, tim, penyulang) {
       var r = data[i];
       if (!String(r[RL.kodePekerjaan]||'').trim() && !String(r[RL.kodeHeader]||'').trim()) continue;
 
-      var tglStr = _normTanggal(r[RL.tanggal]);
+      var tglStr = _normTgl(r[RL.tanggal]);
       var timR   = String(r[RL.tim] || '').trim();
       var penyR  = String(r[RL.penyulang] || '').trim();
 
