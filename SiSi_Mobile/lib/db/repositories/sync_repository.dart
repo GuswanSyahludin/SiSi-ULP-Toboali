@@ -125,12 +125,12 @@ class SyncRepository {
     _kunci.add(key);
     final progress = SyncProgressService.instance,
         lease = DateTime.now().microsecondsSinceEpoch.toString();
-    progress.begin(
+    await progress.begin(
         stage: 'Menyiapkan ${moduleLabels[module]}', module: module, total: 1);
     try {
       if (!await _ambilLeaseMaster(lease)) {
         const message = 'Sinkron data sedang berjalan di proses lain.';
-        progress.failure(message);
+        await progress.failure(message);
         return {'ok': false, 'message': message};
       }
       final active = await _tokenAktif(token),
@@ -151,14 +151,14 @@ class SyncRepository {
       await _materialize(result.changed.toSet(), initial, delta);
       await DbProvider.instance.syncDao.tandaiTersinkron('master:$module',
           jumlah: result.changed.length, keterangan: result.message);
-      progress.success('${moduleLabels[module]} selesai diperbarui.');
+      await progress.success('${moduleLabels[module]} selesai diperbarui.');
       return {
         'ok': true,
         'message': '${moduleLabels[module]} selesai diperbarui.'
       };
     } catch (e) {
       final message = friendlySyncMessage(e);
-      progress.failure(message);
+      await progress.failure(message);
       return {'ok': false, 'message': message};
     } finally {
       await _lepasLeaseMaster(lease);
@@ -174,12 +174,12 @@ class SyncRepository {
     _kunci.add(key);
     final progress = SyncProgressService.instance,
         lease = DateTime.now().microsecondsSinceEpoch.toString();
-    progress.begin(
+    await progress.begin(
         stage: 'Menyiapkan semua Data Master', module: 'semua', total: 1);
     try {
       if (!await _ambilLeaseMaster(lease)) {
         const message = 'Sinkron data sedang berjalan di proses lain.';
-        progress.failure(message);
+        await progress.failure(message);
         return {'ok': false, 'message': message};
       }
       final active = await _tokenAktif(token),
@@ -205,14 +205,14 @@ class SyncRepository {
       final ok =
           p0['ok'] == true && gardu['ok'] == true && inspeksi['ok'] == true;
       if (ok) {
-        progress.success(result.message);
+        await progress.success(result.message);
       } else {
-        progress.failure(result.message);
+        await progress.failure(result.message);
       }
       return {'ok': ok, 'message': result.message};
     } catch (e) {
       final message = friendlySyncMessage(e);
-      progress.failure(message);
+      await progress.failure(message);
       return {'ok': false, 'message': message};
     } finally {
       await _lepasLeaseMaster(lease);

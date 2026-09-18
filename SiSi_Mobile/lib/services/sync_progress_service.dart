@@ -31,8 +31,9 @@ const syncDatasetLabels = <String, String>{
   'Master_Gardu': 'Master Data Gardu',
 };
 
-String syncDatasetLabel(String? dataset) =>
-    dataset == null || dataset.isEmpty ? '' : syncDatasetLabels[dataset] ?? dataset;
+String syncDatasetLabel(String? dataset) => dataset == null || dataset.isEmpty
+    ? ''
+    : syncDatasetLabels[dataset] ?? dataset;
 
 @immutable
 class SyncProgressState {
@@ -48,25 +49,130 @@ class SyncProgressState {
   final int datasetTransferredRows;
   final int datasetTotalRows;
   final String? message;
-  const SyncProgressState({this.running=false,this.failed=false,this.stage='Siap sinkron',this.module,this.dataset,this.completed=0,this.total=1,this.transferredRows=0,this.totalRows=0,this.datasetTransferredRows=0,this.datasetTotalRows=0,this.message});
+  const SyncProgressState(
+      {this.running = false,
+      this.failed = false,
+      this.stage = 'Siap sinkron',
+      this.module,
+      this.dataset,
+      this.completed = 0,
+      this.total = 1,
+      this.transferredRows = 0,
+      this.totalRows = 0,
+      this.datasetTransferredRows = 0,
+      this.datasetTotalRows = 0,
+      this.message});
   String get datasetLabel => syncDatasetLabel(dataset);
-  double get fraction => totalRows>0?(transferredRows/totalRows).clamp(0,1):(total<=0?0:(completed/total).clamp(0,1));
-  int get percent => (fraction*100).round();
-  int get datasetPercent => datasetTotalRows<=0?0:((datasetTransferredRows/datasetTotalRows).clamp(0,1)*100).round();
-  Map<String,dynamic> toJson()=>{'running':running,'failed':failed,'stage':stage,'module':module,'dataset':dataset,'completed':completed,'total':total,'transferredRows':transferredRows,'totalRows':totalRows,'datasetTransferredRows':datasetTransferredRows,'datasetTotalRows':datasetTotalRows,'message':message};
-  factory SyncProgressState.fromJson(Map<String,dynamic> j)=>SyncProgressState(running:j['running']==true,failed:j['failed']==true,stage:'${j['stage']??'Siap sinkron'}',module:j['module']?.toString(),dataset:j['dataset']?.toString(),completed:(j['completed']as num?)?.toInt()??0,total:(j['total']as num?)?.toInt()??1,transferredRows:(j['transferredRows']as num?)?.toInt()??0,totalRows:(j['totalRows']as num?)?.toInt()??0,datasetTransferredRows:(j['datasetTransferredRows']as num?)?.toInt()??0,datasetTotalRows:(j['datasetTotalRows']as num?)?.toInt()??0,message:j['message']?.toString());
+  double get fraction => totalRows > 0
+      ? (transferredRows / totalRows).clamp(0, 1)
+      : (total <= 0 ? 0 : (completed / total).clamp(0, 1));
+  int get percent => (fraction * 100).round();
+  int get datasetPercent => datasetTotalRows <= 0
+      ? 0
+      : ((datasetTransferredRows / datasetTotalRows).clamp(0, 1) * 100).round();
+  Map<String, dynamic> toJson() => {
+        'running': running,
+        'failed': failed,
+        'stage': stage,
+        'module': module,
+        'dataset': dataset,
+        'completed': completed,
+        'total': total,
+        'transferredRows': transferredRows,
+        'totalRows': totalRows,
+        'datasetTransferredRows': datasetTransferredRows,
+        'datasetTotalRows': datasetTotalRows,
+        'message': message
+      };
+  factory SyncProgressState.fromJson(Map<String, dynamic> j) =>
+      SyncProgressState(
+          running: j['running'] == true,
+          failed: j['failed'] == true,
+          stage: '${j['stage'] ?? 'Siap sinkron'}',
+          module: j['module']?.toString(),
+          dataset: j['dataset']?.toString(),
+          completed: (j['completed'] as num?)?.toInt() ?? 0,
+          total: (j['total'] as num?)?.toInt() ?? 1,
+          transferredRows: (j['transferredRows'] as num?)?.toInt() ?? 0,
+          totalRows: (j['totalRows'] as num?)?.toInt() ?? 0,
+          datasetTransferredRows:
+              (j['datasetTransferredRows'] as num?)?.toInt() ?? 0,
+          datasetTotalRows: (j['datasetTotalRows'] as num?)?.toInt() ?? 0,
+          message: j['message']?.toString());
 }
 
 class SyncProgressService {
-  SyncProgressService._(){Timer.periodic(const Duration(milliseconds:700),(_)=>restore());}
-  static final instance=SyncProgressService._();
-  static const _key='syncProgressStateV3';
-  String _last='';
-  final ValueNotifier<SyncProgressState> state=ValueNotifier(const SyncProgressState());
-  Future<void> restore()async{final p=await SharedPreferences.getInstance();await p.reload();final raw=p.getString(_key)??'';if(raw.isEmpty||raw==_last)return;try{state.value=SyncProgressState.fromJson(Map<String,dynamic>.from(jsonDecode(raw)as Map));_last=raw;}catch(_){}}
-  void _set(SyncProgressState next){state.value=next;final raw=jsonEncode(next.toJson());_last=raw;unawaited(SharedPreferences.getInstance().then((p)=>p.setString(_key,raw)));}
-  void begin({String stage='Menyiapkan sinkronisasi',String? module,int total=10})=>_set(SyncProgressState(running:true,stage:stage,module:module,total:total));
-  void update(String stage,{String? module,String? dataset,required int completed,required int total,int transferredRows=0,int totalRows=0,int datasetTransferredRows=0,int datasetTotalRows=0}){final old=state.value;_set(SyncProgressState(running:true,stage:stage,module:module??old.module,dataset:dataset,completed:completed,total:total,transferredRows:transferredRows,totalRows:totalRows,datasetTransferredRows:datasetTransferredRows,datasetTotalRows:datasetTotalRows));}
-  void success(String message)=>_set(SyncProgressState(stage:'Sinkronisasi selesai',module:state.value.module,completed:1,total:1,message:message));
-  void failure(String message)=>_set(SyncProgressState(failed:true,stage:'Sinkronisasi dijadwalkan ulang',module:state.value.module,message:message));
+  SyncProgressService._() {
+    Timer.periodic(const Duration(milliseconds: 700), (_) => restore());
+  }
+  static final instance = SyncProgressService._();
+  static const _key = 'syncProgressStateV3';
+  String _last = '';
+  Future<void> _pendingWrite = Future.value();
+  final ValueNotifier<SyncProgressState> state =
+      ValueNotifier(const SyncProgressState());
+  Future<void> restore() async {
+    final p = await SharedPreferences.getInstance();
+    await p.reload();
+    final raw = p.getString(_key) ?? '';
+    if (raw.isEmpty || raw == _last) return;
+    try {
+      state.value = SyncProgressState.fromJson(
+          Map<String, dynamic>.from(jsonDecode(raw) as Map));
+      _last = raw;
+    } catch (_) {}
+  }
+
+  Future<void> _set(SyncProgressState next) {
+    state.value = next;
+    final raw = jsonEncode(next.toJson());
+    _last = raw;
+    final write = _pendingWrite.then((_) async {
+      final p = await SharedPreferences.getInstance();
+      await p.setString(_key, raw);
+    }).catchError((_) {});
+    _pendingWrite = write;
+    return write;
+  }
+
+  Future<void> begin(
+          {String stage = 'Menyiapkan sinkronisasi',
+          String? module,
+          int total = 10}) =>
+      _set(SyncProgressState(
+          running: true, stage: stage, module: module, total: total));
+  void update(String stage,
+      {String? module,
+      String? dataset,
+      required int completed,
+      required int total,
+      int transferredRows = 0,
+      int totalRows = 0,
+      int datasetTransferredRows = 0,
+      int datasetTotalRows = 0}) {
+    final old = state.value;
+    unawaited(_set(SyncProgressState(
+        running: true,
+        stage: stage,
+        module: module ?? old.module,
+        dataset: dataset,
+        completed: completed,
+        total: total,
+        transferredRows: transferredRows,
+        totalRows: totalRows,
+        datasetTransferredRows: datasetTransferredRows,
+        datasetTotalRows: datasetTotalRows)));
+  }
+
+  Future<void> success(String message) => _set(SyncProgressState(
+      stage: 'Sinkronisasi selesai',
+      module: state.value.module,
+      completed: 1,
+      total: 1,
+      message: message));
+  Future<void> failure(String message) => _set(SyncProgressState(
+      failed: true,
+      stage: 'Sinkronisasi dijadwalkan ulang',
+      module: state.value.module,
+      message: message));
 }

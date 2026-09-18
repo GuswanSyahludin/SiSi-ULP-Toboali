@@ -35,6 +35,7 @@ class _State extends State<SyncSectionPengaturan> {
   List<GarduOutbox> gardu = [];
   String device = '…';
   bool _wasRunning = false;
+  bool _reloadingStatus = false;
   final Set<String> _selectedModules = {};
 
   @override
@@ -77,9 +78,15 @@ class _State extends State<SyncSectionPengaturan> {
   }
 
   Future<void> _reloadStatus() async {
-    await SyncProgressService.instance.restore();
-    final rows = await DbProvider.instance.syncDao.pantauSemua().first;
-    if (mounted) setState(() => status = {for (final x in rows) x.key: x});
+    if (_reloadingStatus) return;
+    _reloadingStatus = true;
+    try {
+      await SyncProgressService.instance.restore();
+      final rows = await DbProvider.instance.syncDao.pantauSemua().first;
+      if (mounted) setState(() => status = {for (final x in rows) x.key: x});
+    } finally {
+      _reloadingStatus = false;
+    }
   }
 
   @override

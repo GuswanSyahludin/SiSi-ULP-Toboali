@@ -114,7 +114,7 @@ class AutoSyncService {
         _queuedModules(prefs, fallback: prefs.getString(_manualModuleKey));
     final modules = <String>{...queued, ...requested}.toList();
     await _saveQueuedModules(prefs, modules);
-    SyncProgressService.instance.begin(
+    await SyncProgressService.instance.begin(
         stage: '${modules.length} kelompok Data Master menunggu download',
         module: modules.first,
         total: modules.length);
