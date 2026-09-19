@@ -1,9 +1,5 @@
-/*
- * Adapter final OwnerId/External Reference untuk SisiRun.
- * UI memanggil getOwnerIdDanExternalReference(filter), lalu SisiRun mengubahnya
- * menjadi (token, filter). Implementasi satu-argumen sebelumnya membaca token
- * sebagai filter sehingga Penyulang selalu dianggap kosong.
- */
+/* Adapter final OwnerId/External Reference untuk SisiRun.
+   Kontrak tunggal: getOwnerIdDanExternalReference(token, filter). */
 function _baOwnerKosongCompat_(message) {
   return {
     ok: true, found: false, ownerId: '', externalReference: '', referralId: '',
@@ -11,16 +7,9 @@ function _baOwnerKosongCompat_(message) {
   };
 }
 
-function getOwnerIdDanExternalReference(tokenOrFilter, filterArg) {
+function getOwnerIdDanExternalReference(token, filter) {
   try {
-    var pola = typeof TOKEN_POLA !== 'undefined'
-      ? TOKEN_POLA
-      : /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    var pakaiToken = typeof tokenOrFilter === 'string' && pola.test(String(tokenOrFilter).trim());
-    if (pakaiToken && typeof guard_ === 'function') {
-      guard_(arguments, { aksi: 'getOwnerIdDanExternalReference' });
-    }
-    var filter = pakaiToken ? filterArg : tokenOrFilter;
+    guard_(arguments, { aksi: 'getOwnerIdDanExternalReference' });
     filter = filter && typeof filter === 'object' ? filter : {};
     var penyulang = String(filter.penyulang || '').trim();
     var section = String(filter.section || '').trim();
@@ -77,20 +66,19 @@ function getOwnerIdDanExternalReference(tokenOrFilter, filterArg) {
 
     function pad2_(v) { var s=String(v==null?'':v).trim(); while(s.length<2) s='0'+s; return s; }
     var ownerId = pad2_(idGI)+pad2_(idULP)+pad2_(idFeeder)+pad2_(idSection);
-
     var sUp=section.toUpperCase();
-    var token=sUp.indexOf('GI')===0?'PMT':sUp.indexOf('DS')===0?'DSC':'';
+    var pemutusToken=sUp.indexOf('GI')===0?'PMT':sUp.indexOf('DS')===0?'DSC':'';
     var cocok=null, cocokToken=null, tokenSaja=null;
     for(r=0; r<values.length; r++) {
       var jVal=_baText_(values[r],J);
       if(!jVal) continue;
       var jk=_baKey_(awal_(jVal));
-      var punyaToken=token && jVal.toUpperCase().indexOf(token)>=0;
+      var punyaToken=pemutusToken && jVal.toUpperCase().indexOf(pemutusToken)>=0;
       var sama=jk===secKey || jk.indexOf(secKey)>=0 || secKey.indexOf(jk)>=0;
       if(sama){ if(!cocok) cocok=values[r]; if(punyaToken){ cocokToken=values[r]; break; } }
       if(punyaToken && !tokenSaja) tokenSaja=values[r];
     }
-    var barisPemutus=cocokToken || cocok || (token?tokenSaja:null) || barisSection;
+    var barisPemutus=cocokToken || cocok || (pemutusToken?tokenSaja:null) || barisSection;
     var jenisPemutus=barisPemutus?_baText_(barisPemutus,L):'';
     var namaPemutus=barisPemutus?_baText_(barisPemutus,M):'';
     var externalReference='SECTION';
@@ -103,6 +91,7 @@ function getOwnerIdDanExternalReference(tokenOrFilter, filterArg) {
       message:'OwnerId dan referralId ditemukan.'
     };
   } catch (error) {
+    if (typeof _guardErrorAkses_ === 'function' && _guardErrorAkses_(error)) throw error;
     return _baOwnerKosongCompat_('Error lookup OwnerId: '+error.message);
   }
 }
