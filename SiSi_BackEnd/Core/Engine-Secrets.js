@@ -14,39 +14,31 @@ function _engineSecret_(key) {
   return value;
 }
 
-/* Called from Cloud Shell through `clasp run`. It intentionally returns only
-   booleans, never the supplied secrets. BA_PDF_SECRET is kept as a temporary
-   compatibility alias because existing BA bridges still read it first. */
-function simpanSecretEngineSiSi(wmSecret, pdfSecret) {
-  wmSecret = String(wmSecret || "").trim();
-  pdfSecret = String(pdfSecret || "").trim();
-  if (wmSecret.length < 32 || pdfSecret.length < 32)
-    throw new Error("Secret engine minimal 32 karakter.");
-  PropertiesService.getScriptProperties().setProperties(
-    {
-      WM_ENGINE_SECRET: wmSecret,
-      PDF_ENGINE_SECRET: pdfSecret,
-      BA_PDF_SECRET: pdfSecret,
-    },
-    false,
+/* SECURITY: secret tidak boleh lagi diubah melalui fungsi global web app.
+   Konfigurasi/rotasi dilakukan langsung oleh operator pada Script Properties
+   deployment, di luar google.script.run dan di luar payload pengguna. Fungsi
+   lama dipertahankan sementara agar caller lama gagal secara eksplisit dan
+   tidak berubah menjadi error "function not found" yang sulit didiagnosis. */
+function simpanSecretEngineSiSi() {
+  throw new Error(
+    "Operasi dinonaktifkan. Secret engine hanya boleh diatur operator melalui Script Properties.",
   );
-  return { ok: true, wmConfigured: true, pdfConfigured: true };
 }
 
-/* Store the AppSheet webhook secret without ever returning or logging it.
-   Use a new random value, then set the exact same value in every active bot. */
-function simpanSecretWebhookSiSi(webhookSecret) {
-  webhookSecret = String(webhookSecret || "").trim();
-  if (webhookSecret.length < 32)
-    throw new Error("Secret webhook minimal 32 karakter.");
-  PropertiesService.getScriptProperties().setProperty(
-    ENGINE_SECRET_KEYS.webhook,
-    webhookSecret,
+function simpanSecretWebhookSiSi() {
+  throw new Error(
+    "Operasi dinonaktifkan. Secret webhook hanya boleh diatur operator melalui Script Properties.",
   );
-  return { ok: true, webhookConfigured: true };
 }
 
-function auditSecretEngineSiSi() {
+/* Audit status konfigurasi hanya untuk Super User. Nilai secret tidak pernah
+   dikembalikan; respons hanya memuat boolean keberadaan property. */
+function auditSecretEngineSiSi(token) {
+  guard_(arguments, {
+    role: [ROLE_SUPER],
+    superTidakBypass: true,
+    aksi: "auditSecretEngineSiSi",
+  });
   var p = PropertiesService.getScriptProperties();
   var wm = !!p.getProperty(ENGINE_SECRET_KEYS.wm);
   var pdf = !!p.getProperty(ENGINE_SECRET_KEYS.pdf);
