@@ -8,7 +8,7 @@
     "node": ">=22.5.0"
   },
   "scripts": {
-    "test": "node suite.js && node --test engine-secrets-security.test.cjs gangguan-reader-security.test.cjs",
+    "test": "node suite.js && node --test engine-secrets-security.test.cjs gangguan-reader-security.test.cjs row-token-adapter.test.cjs",
     "serve": "node server.js --serve",
     "load": "node server.js load",
     "seed": "node server.js seed",

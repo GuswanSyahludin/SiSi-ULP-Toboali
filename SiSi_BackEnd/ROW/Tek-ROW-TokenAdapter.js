@@ -1,27 +1,14 @@
 /*
- * Kontrak stabil getSemuaLaporan untuk SisiRun.
- * SisiRun menyisipkan token sesi sebagai argumen pertama. Implementasi lama
- * membungkus fungsi lewat (this), tetapi global Apps Script bukan object biasa,
- * sehingga wrapper dapat tidak pernah terpasang. Definisi top-level ini sengaja
- * menjadi implementasi final dan menerima dua bentuk:
- *   UI     : getSemuaLaporan(token, dari, sampai, tim, penyulang)
- *   internal/test: getSemuaLaporan(dari, sampai, tim, penyulang)
+ * Kontrak final getSemuaLaporan untuk SisiRun.
+ * Bentuk satu-satunya yang diizinkan:
+ *   getSemuaLaporan(token, dari, sampai, tim, penyulang)
+ *
+ * Bentuk legacy empat argumen sengaja ditolak. Apps Script berjalan sebagai
+ * deployer dan bentuk tersebut sebelumnya membaca db_ROW_Realisasi tanpa sesi.
  */
-function getSemuaLaporan(tokenOrDari, dariOrSampai, sampaiOrTim, timOrPenyulang, penyulangArg) {
+function getSemuaLaporan(token, tglMulai, tglAkhir, tim, penyulang) {
   try {
-    var pola = typeof TOKEN_POLA !== 'undefined'
-      ? TOKEN_POLA
-      : /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    var pakaiToken = typeof tokenOrDari === 'string' && pola.test(String(tokenOrDari).trim());
-
-    if (pakaiToken && typeof guard_ === 'function') {
-      guard_(arguments, { aksi: 'getSemuaLaporan' });
-    }
-
-    var tglMulai = pakaiToken ? dariOrSampai : tokenOrDari;
-    var tglAkhir = pakaiToken ? sampaiOrTim : dariOrSampai;
-    var tim = pakaiToken ? timOrPenyulang : sampaiOrTim;
-    var penyulang = pakaiToken ? penyulangArg : timOrPenyulang;
+    guard_(arguments, { aksi: 'getSemuaLaporan' });
 
     var RL = COL_ROW_RLZ;
     var data = _readSheetDual_('db_ROW_Realisasi', RL.kodePekerjaan, COL_ROW_RLZ_N) || [];
@@ -69,6 +56,7 @@ function getSemuaLaporan(tokenOrDari, dariOrSampai, sampaiOrTim, timOrPenyulang,
     }
     return { success: true, rows: rows };
   } catch (e) {
+    if (typeof _guardErrorAkses_ === 'function' && _guardErrorAkses_(e)) throw e;
     return { success: false, rows: [], message: e.message };
   }
 }
