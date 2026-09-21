@@ -30,10 +30,12 @@ function _dpgTemuanTierMaster_() {
 
 function getDpgRekapTemuanSectionVolume(opts) {
   try {
+    var g = guard_(arguments, {ulp:true, aksi:'getDpgRekapTemuanSectionVolume'});
+    var sessionUlp = String(g && g.ulp || '').trim();
+    if (!sessionUlp) throw new Error('Akun belum terhubung ke ULP.');
     opts = opts || {};
     var penyF = String(opts.penyulang || '').trim().toLowerCase();
     var temF = String(opts.temuan || '').trim().toLowerCase();
-    var ulpF = String(opts.ulp || '').trim().toLowerCase();
     var secF = String(opts.section || '').trim().toLowerCase();
     var tahun = parseInt(opts.tahun, 10) || new Date().getFullYear();
     var C = COL_INS.TEMUAN;
@@ -54,10 +56,10 @@ function getDpgRekapTemuanSectionVolume(opts) {
       var penyulang = String(row[C.penyulang] || '').trim();
       var temuan = String(row[C.temuan] || '').trim();
       var section = String(row[C.section] || '').trim();
-      var ulp = String(row[C.ulp] || '').trim();
+      var rowUlp = String(row[C.ulp] || '').trim();
       if (penyF && penyulang.toLowerCase() !== penyF) continue;
       if (temF && temuan.toLowerCase() !== temF) continue;
-      if (ulpF && ulp.toLowerCase() !== ulpF) continue;
+      if (rowUlp.toLowerCase() !== sessionUlp.toLowerCase()) continue;
       if (secF && section.toLowerCase() !== secF) continue;
       if (!temuan || !section) continue;
       sections[section] = true;
@@ -89,6 +91,7 @@ function getDpgRekapTemuanSectionVolume(opts) {
       }),
     };
   } catch (e) {
+    if (typeof _guardErrorAkses_ === 'function' && _guardErrorAkses_(e)) throw e;
     return {
       ok: false,
       message: e.message,
@@ -98,3 +101,4 @@ function getDpgRekapTemuanSectionVolume(opts) {
     };
   }
 }
+

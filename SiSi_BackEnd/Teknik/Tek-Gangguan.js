@@ -24,19 +24,16 @@ var GANGGUAN_SS_ID = '1LQJP5WIc1vBSyBrd8ai0Y8549VBi0qjD-2nwRT-Nhp4';
 var GANGGUAN_SHEET = 'Tarikan_SiMonLang';
 var COL_GGN = { ulp:5, penyulang:6, kategori:8, waktuPadam:9, temuan:25, tanggal:29 };
 
-// Proper Case: "TUNGKAL" -> "Tungkal"; "tanjung sari" -> "Tanjung Sari".
 function _glProper_(s){
   return String(s==null?'':s).toLowerCase().split(/\s+/).map(function(w){
     return w ? (w.charAt(0).toUpperCase() + w.slice(1)) : w;
   }).join(' ').trim();
 }
 
-// Normalisasi ULP utk pencocokan longgar (abaikan prefix "ULP" & kapital).
 function _glNormUlp_(s){
   return String(s==null?'':s).toUpperCase().replace(/^ULP\s+/,'').replace(/\s+/g,' ').trim();
 }
 
-// Parse sel waktu padam -> Date. Dukung Date atau string "DD/MM/YYYY H:mm[:ss]".
 function _glParseWaktu_(v){
   if(v instanceof Date) return isNaN(v.getTime()) ? null : v;
   var s = String(v==null?'':v).trim();
@@ -47,21 +44,18 @@ function _glParseWaktu_(v){
   return isNaN(d.getTime()) ? null : d;
 }
 
-// Tanggal laporan (date-only) utk satu waktu padam; null bila harus diabaikan.
 function _glReportDate_(t){
   if(!t) return null;
   var d = new Date(t.getFullYear(), t.getMonth(), t.getDate());
   if(t.getHours() >= 19){
     d.setDate(d.getDate() + 1);
-    if(d.getDate() === 1) return null; // akhir bulan: 19:00-24:00 tidak dihitung
+    if(d.getDate() === 1) return null;
   }
   return d;
 }
 
 function _glIso_(d){ return Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM-dd'); }
 
-// Pindai sheet gangguan utk satu ULP & tanggal laporan (ISO yyyy-MM-dd).
-// -> { daily:{pmt,section,list:[{penyulang,temuan}]}, komulatif:{pmt,section} }
 function _glScan_(ulp, tglIso){
   var out = { daily:{ pmt:0, section:0, list:[] }, komulatif:{ pmt:0, section:0 } };
   var ss;
@@ -92,21 +86,27 @@ function _glScan_(ulp, tglIso){
   return out;
 }
 
-/* ===== ENDPOINT (dipakai popup Gangguan di SIE-Teknik) ===== */
-// params: { tanggal, ulp } -> { ok, daily:{pmt,section,list}, komulatif:{pmt,section} }
+/* ===== ENDPOINT (dipakai popup Gangguan di SIE-Teknik) =====
+   SisiRun menyisipkan token ke object params. ULP bersifat single-ULP dan
+   WAJIB berasal dari sesi server; params.ulp dari client sengaja diabaikan. */
 function getGangguanList(params){
   try{
+    var g = guard_(arguments, { ulp:true, aksi:'getGangguanList' });
     params = params || {};
-    var ulp = String(params.ulp||'').trim();
+    var ulp = String(g.ulp || '').trim();
     var tanggal = params.tanggal || '';
-    if(!ulp)     return { ok:false, message:'ULP wajib dipilih.' };
+    if(!ulp) return { ok:false, message:'Akun belum terhubung ke ULP.' };
     if(!tanggal) return { ok:false, message:'Tanggal wajib dipilih.' };
     var s = _glScan_(ulp, _normTgl(tanggal));
     return { ok:true, daily:s.daily, komulatif:s.komulatif };
-  }catch(e){ return { ok:false, message:e.message }; }
+  }catch(e){
+    if(typeof _guardErrorAkses_ === 'function' && _guardErrorAkses_(e)) throw e;
+    return { ok:false, message:e.message };
+  }
 }
 
-// Uji cepat dari editor Apps Script.
+/* Uji cepat editor: helper internal membaca canonical ULP secara eksplisit dan
+   tidak membuka endpoint user tanpa sesi. */
 function debugGangguan(){
-  Logger.log(JSON.stringify(getGangguanList({ tanggal:_normTgl(new Date()), ulp:'Toboali' })));
+  Logger.log(JSON.stringify(_glScan_('ULP Toboali', _normTgl(new Date()))));
 }
