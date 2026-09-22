@@ -1,64 +1,59 @@
-# SiSi ULP Toboali: Security Audit, Remediation Status, and P0 PRD
+# SiSi ULP Toboali: Security Audit and Remediation Status
 
 _Last updated: 22 September 2026_
 
 ## Executive status
 
-**P0 Audit-Guard: FIXED and merged.** PR #6 was squash-merged to `main` in commit `22c4f59df585949653a97ab8d10df1c98a61793b` after all four required checks passed: audit gate, backend syntax/security tests, Flutter analyze/compile, and auth-token query rejection.
+Stages 0 through 3 are implemented and merged. The next work is Stage 4 hardening plus deployed-runtime validation. CI is necessary, but not sufficient for production sign-off.
 
-Work proceeds strictly in order. Stages 0, 1, and 2 are implemented and merged. **Stage 3 is now in PR #7 and remains pending CI, review, and runtime validation.**
-
-## Ordered findings and remediation sequence
+## Ordered remediation
 
 ### Stage 0: P0 Audit-Guard deployment gate, FIXED
 
-Fail-closed static audit gate, mandatory CI enforcement, regression tests, explicit internal exceptions, and late-loaded wrappers for public BA/mobile endpoints are merged. The full `Audit-Guard.js` runtime implementation was restored without reducing existing behavior.
+The fail-closed static Audit Gate, mandatory CI enforcement, regression tests, explicit internal exceptions, and late-loaded wrappers for protected BA/mobile boundaries are merged. The original `Audit-Guard.js` runtime behavior was preserved.
 
-Evidence: PR #6, merge commit `22c4f59df585949653a97ab8d10df1c98a61793b`; all four checks passed.
+Evidence: PR #6, squash merge `22c4f59df585949653a97ab8d10df1c98a61793b`. Required CI checks passed.
 
 ### Stage 1: P1 BA atomicity, FIXED
 
-BA number generation and row append are protected by the shared script lock with a 30-second timeout. Lock failure prevents the save side effect, with regression coverage for lock use and failure behavior.
+BA number generation and row append use the shared script lock with a 30-second timeout. Lock failure prevents the write side effect, with regression coverage for lock use and failure behavior.
 
 Evidence: PR #3, merge commit `c6999ba82d25236efc670d5da36dd0f86848f17d`.
 
-### Stage 2: P2 same-ULP authorization, FIXED for the covered boundary layer
+### Stage 2: P2 same-ULP authorization, FIXED for the covered boundary
 
-The existing BA boundary protects listing, file download, PDF generation, final upload, and Master Gardu synchronization. Missing, blank, foreign, or unresolved caller ULP fails closed.
+BA listing, download, PDF generation, final upload, and Master Gardu synchronization reject missing, blank, foreign, or unresolved caller ULP values. Client-supplied payload tokens are not forwarded into the underlying upload implementation.
 
-Evidence: PR #4, merged before the P0 gate; regression coverage is in `tests/ba-same-ulp-auth.test.cjs`. Runtime Apps Script validation remains required.
+Evidence: PR #4. Regression coverage is in `tests/ba-same-ulp-auth.test.cjs`; deployed Apps Script validation remains required.
 
-### Stage 3: Residual BA row ownership, ACTIVE in PR #7
+### Stage 3: BA row ownership, FIXED in PR #7
 
-**Finding:** The existing wrappers validated the caller ULP but did not resolve the requested BA row before side effects.
+BA operations now resolve exactly one `idBA` row in the configured Toboali BA source before PDF generation, upload, Master synchronization, or download. The resolved row must belong to ULP Toboali. Duplicate, missing, foreign, blank, and unresolved ownership fails closed. Downloads require `idBA + fileId`, and the file must be present on that row.
 
-**Implementation:** `ZZZZZZZZZZZ-BA-Row-Ownership.js` resolves a unique `idBA` in the fixed Toboali BA source before PDF generation, final upload, download, or Master sync. Unknown or duplicate ids fail closed. `idBA` is used only as the row key, never as an ownership value. Downloaded files must also be present in the known BA file set.
+The web client no longer falls back to a direct Drive URL when the server rejects or cannot complete a download.
 
-**Tests:** `tests/ba-row-ownership.test.cjs` covers own-ULP access, foreign/blank ULP denial, missing rows, duplicate ids, and no side effects before validation.
+Evidence: PR #7, squash merge `43370e240501f3f607ff78793ffad7564df26a15`. CI passed; deployed-runtime validation remains required.
 
-**Exit condition:** PR #7 CI is green, the diff is reviewed, Apps Script load order is validated, and deployed-runtime tests confirm Gardu/Switching behavior.
+### Stage 4: Compatibility and data-write hardening, ACTIVE
 
-### Stage 4: Compatibility and data-write hardening
-
-After Stage 3 approval:
-
-1. Identify and remove overlapping compatibility/auth wrappers without changing Apps Script load-order behavior.
-2. Verify formula/CSV-injection sanitization for every user-controlled value written to Sheets.
+1. Preserve legacy BA contracts only where required, while routing new callers through guarded adapters. Legacy single-argument compatibility paths are not approved for new integrations.
+2. Audit every user-controlled value written to Sheets for formula/CSV injection and enforce safe cell-value handling.
 3. Validate cache, local SQLite, outbox, and sync isolation across account switches.
+4. Remove or consolidate overlapping compatibility wrappers only after Apps Script load-order and caller coverage are documented.
 
-### Stage 5: Deployment and production acceptance
+Each item requires focused regression coverage and green CI before merge.
 
-Only after all earlier stages are approved:
+### Stage 5: Deployment and production acceptance, BLOCKED until Stage 4 exits
 
-- Deploy to the existing Apps Script deployment ID using the established procedure.
-- Run backend and P0 regression suites.
-- Run Flutter analysis and signed APK validation.
-- Validate authenticated BA save, lock contention, row numbering, own-ULP access, Petugas denial, foreign/blank ULP denial, and Super User scope in the deployed runtime.
-- Preserve photos, original codes, audit history, and outbox data during correction and sync flows.
+- Deploy through the established Apps Script procedure.
+- Validate authenticated BA save, lock contention, row numbering, own-ULP access, foreign/blank ULP denial, and Super User scope.
+- Validate Gardu and Switching PDF generation, upload, Master sync, and `idBA + fileId` download behavior.
+- Run mobile offline save, retry, account switching, queue isolation, P0 correction, and real-device photo checks.
+- Preserve photos, original codes, audit history, and outbox data.
 
 ## Authorization policy
 
-BA data and BA-linked files are internal to the caller's ULP. No role, including Super User, may read or mutate BA data across ULP boundaries through operational endpoints. Missing, blank, foreign, or unresolved row ownership must fail closed.
+BA data and BA-linked files are internal to the caller's ULP. No role, including Super User, may read or mutate BA data across ULP boundaries through operational endpoints. Missing, blank, foreign, duplicate, or unresolved row ownership fails closed before spreadsheet, Drive, PDF, or write side effects.
 
 ## P0 product requirements and acceptance criteria
 
@@ -72,12 +67,22 @@ BA data and BA-linked files are internal to the caller's ULP. No role, including
 
 ## Completed remediation history
 
-- **SISI-REAUDIT-001:** BA Gardu creation requires a valid session. Implemented in PR #1.
-- **SISI-REAUDIT-021:** Source-mutating automated workflows were disabled. Implemented in PR #2.
-- **SISI-REAUDIT-050:** BA sequence generation and row append are serialized through the shared script lock. Implemented in PR #3, merged as `c6999ba82d25236efc670d5da36dd0f86848f17d`.
+- **SISI-REAUDIT-001:** BA Gardu creation requires a valid session and non-empty ULP. Implemented in PR #1.
+- **SISI-REAUDIT-021:** Source-mutating automated workflows were disabled and moved under `.github/workflows-disabled`. Implemented in PR #2.
+- **SISI-REAUDIT-050:** BA `idBA` and `NO BA Full` sequence generation plus row append are serialized through the shared script lock. Implemented in PR #3, merged as `c6999ba82d25236efc670d5da36dd0f86848f17d`.
 - **SISI-REAUDIT-003/004:** Same-ULP BA boundary enforcement implemented in PR #4, merged before the P0 gate.
 - **P0 Audit-Guard deployment gate:** Static fail-closed scanner, CI enforcement, regression tests, explicit internal exceptions, and public endpoint wrappers implemented in PR #6 and merged as `22c4f59df585949653a97ab8d10df1c98a61793b`.
+- **Stage 3 BA row ownership:** Unique `idBA` resolution, ULP row validation, file-to-row binding, and fail-closed download behavior implemented in PR #7 and merged as `43370e240501f3f607ff78793ffad7564df26a15`.
+
+## Release acceptance
+
+- The checked-in backend passes the mandatory Audit Gate.
+- Protected endpoints reject invalid sessions before side effects.
+- `getSesiByToken` is not treated as full authorization.
+- Internal exceptions remain short, explicit, reviewable, and separate from public route allowlists.
+- Required CI checks are green.
+- Deployed-runtime and real-device evidence is recorded before production sign-off.
 
 ## Known limitations
 
-A green static gate and CI run are not proof of an authenticated live save or signed APK in production. Real-device and deployed-runtime validation remain required before production sign-off. Failed or conflicting corrections must remain retained for administrator-assisted resolution; do not delete local SQLite to resolve them.
+A green static gate and CI run do not prove authenticated live behavior or signed APK behavior in production. Failed or conflicting corrections remain retained for administrator-assisted resolution. Do not delete local SQLite to resolve sync conflicts.
