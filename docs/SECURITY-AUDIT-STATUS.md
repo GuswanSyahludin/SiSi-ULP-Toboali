@@ -6,13 +6,7 @@ _Last updated: 22 September 2026_
 
 **P0 Audit-Guard: FIXED and merged.** PR #6 was squash-merged to `main` in commit `22c4f59df585949653a97ab8d10df1c98a61793b` after all four required checks passed: audit gate, backend syntax/security tests, Flutter analyze/compile, and auth-token query rejection.
 
-The mandatory deployment gate is wired into `.github/workflows/release-quality-gate.yml` and runs:
-
-```bash
-python3 scripts/audit_gate.py SiSi_BackEnd
-```
-
-Work proceeds strictly in the order below. The next stage starts only after the previous stage is approved, its CI checks are green, and no blocker remains.
+Work proceeds strictly in order. Stages 0, 1, and 2 are implemented and merged. The next active work is Stage 3, which closes residual BA boundary validation and must pass focused tests and CI before Stage 4 begins.
 
 ## Ordered findings and remediation sequence
 
@@ -24,27 +18,31 @@ Work proceeds strictly in the order below. The next stage starts only after the 
 
 **Evidence:** PR #6 merged as `22c4f59df585949653a97ab8d10df1c98a61793b`; all four required checks passed.
 
-**Exit condition:** Complete. P1 may proceed.
+**Exit condition:** Complete.
 
-### Stage 1: P1 BA atomicity, next
+### Stage 1: P1 BA atomicity, FIXED
 
-**Finding:** BA number generation and row append must remain atomic under concurrent requests to prevent duplicate or inconsistent BA identifiers.
+**Finding:** BA number generation and row append could race under concurrent requests.
 
-**Required fix:** Serialize `idBA`, `NO BA Full`, and row append through the shared script lock with a 30-second timeout. Lock failure must prevent the save side effect. Preserve retry safety and add regression coverage for contention and duplicate prevention.
+**Fix:** Shared script-lock wrapping with a 30-second timeout now protects BA save execution. Lock failure prevents the save side effect, with regression coverage for lock usage and failure behavior.
 
-**Exit condition:** Backend tests, atomicity regression tests, and CI are green; implementation is reviewed and approved.
+**Evidence:** PR #3, `fix/reaudit-050-ba-atomicity`, merged as `c6999ba82d25236efc670d5da36dd0f86848f17d`; atomicity tests are included in the backend suite.
 
-### Stage 2: P2 same-ULP authorization
+**Exit condition:** Complete.
 
-**Finding:** Several BA boundaries authenticate the caller but do not consistently prove that the requested row belongs to the caller's ULP.
+### Stage 2: P2 same-ULP authorization, FIXED
 
-**Required fix:** Resolve the requested BA row and owning ULP first, normalize both values, require an exact match, and fail closed for foreign, blank, or unresolved ownership. Super User must not receive a cross-ULP bypass for operational BA endpoints.
+**Finding:** BA boundaries authenticated callers without consistently enforcing the ULP boundary.
 
-**Exit condition:** Same-ULP tests cover own ULP, Petugas denial, foreign ULP denial, blank ownership, unresolved ownership, and Super User scope; CI is green and the stage is approved.
+**Fix:** A final same-ULP boundary now protects BA listing, file download, PDF generation, final upload, and Master Gardu synchronization. Missing, blank, foreign, or unresolved ULP access fails closed; client payload tokens are not forwarded into the underlying upload implementation.
 
-### Stage 3: Residual BA boundary closure
+**Evidence:** PR #4, `fix/reaudit-003-004-same-ulp`, merged before the P0 gate; regression coverage is in `tests/ba-same-ulp-auth.test.cjs`.
 
-Close the same-ULP contract consistently across these boundaries:
+**Exit condition:** Complete for the covered boundary layer. Runtime Apps Script validation remains required.
+
+### Stage 3: Residual BA boundary closure, ACTIVE NEXT
+
+Close and verify row-level ownership consistently across:
 
 - `getDataBeritaAcara`
 - `unduhFileBa`
@@ -53,7 +51,9 @@ Close the same-ULP contract consistently across these boundaries:
 - `uploadBaFinal`
 - `updateMasterGarduDariBA`
 
-No read, Drive operation, PDF generation, or write may occur before ownership validation.
+**Required fix shape:** Resolve the requested BA row and its owning ULP first, normalize both values, require an exact match with the caller's ULP, and fail closed for foreign, blank, or unresolved ownership before any read, Drive operation, PDF generation, or write. Do not add a Super User cross-ULP bypass.
+
+**Exit condition:** Focused tests prove own-ULP access, Petugas denial, foreign/blank/unresolved ownership denial, and no side effects before validation; full CI is green; runtime Apps Script validation is documented.
 
 ### Stage 4: Compatibility and data-write hardening
 
@@ -93,9 +93,10 @@ The P0 security gate is complete only when:
 
 ## Completed remediation history
 
-- **SISI-REAUDIT-001:** BA Gardu creation requires a valid session and non-empty ULP. Transport tokens are stripped before the underlying save function runs. Implemented in PR #1.
-- **SISI-REAUDIT-021:** Source-mutating automated workflows were disabled and moved under `.github/workflows-disabled`; the workflow policy scanner is read-only. Implemented in PR #2.
-- **SISI-REAUDIT-050:** BA `idBA` and `NO BA Full` sequence generation plus row append are serialized through the shared script lock with a 30-second timeout. Lock failure prevents the save side effect. Implemented in PR #3, merged as `c6999ba82d25236efc670d5da36dd0f86848f17d`.
+- **SISI-REAUDIT-001:** BA Gardu creation requires a valid session and non-empty ULP. Implemented in PR #1.
+- **SISI-REAUDIT-021:** Source-mutating automated workflows were disabled and moved under `.github/workflows-disabled`. Implemented in PR #2.
+- **SISI-REAUDIT-050:** BA `idBA` and `NO BA Full` sequence generation plus row append are serialized through the shared script lock. Implemented in PR #3, merged as `c6999ba82d25236efc670d5da36dd0f86848f17d`.
+- **SISI-REAUDIT-003/004:** Same-ULP BA boundary enforcement implemented in PR #4, merged before the P0 gate.
 - **P0 Audit-Guard deployment gate:** Static fail-closed scanner, CI enforcement, regression tests, explicit internal exceptions, and public endpoint wrappers implemented in PR #6 and merged as `22c4f59df585949653a97ab8d10df1c98a61793b`.
 
 ## Known limitations
