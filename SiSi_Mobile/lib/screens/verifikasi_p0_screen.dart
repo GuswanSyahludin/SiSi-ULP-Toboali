@@ -2,6 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../db/repositories/p0_repository.dart';
 import '../services/api_service.dart';
+import '../services/p0_job_type_change.dart';
+import '../services/p0_sync_action.dart';
+import '../widgets/p0_auto_save_job_type_picker.dart';
+import '../widgets/p0_sync_button.dart';
 
 class VerifikasiP0Screen extends StatefulWidget {
   final Map<String, dynamic> sesi;
@@ -10,6 +14,7 @@ class VerifikasiP0Screen extends StatefulWidget {
 }
 class _P0State extends State<VerifikasiP0Screen> {
   final repo = P0Repository();
+  late final P0SyncAction p0Sync = P0SyncAction(repo);
   static const ink = Color(0xFF18334D), blue = Color(0xFF225FC2), muted = Color(0xFF52687C);
   DateTime date = DateTime.now();
   String status = 'Menunggu', search = '', error = '';
@@ -21,7 +26,6 @@ class _P0State extends State<VerifikasiP0Screen> {
   String? editCode;
   String? selectedType;
   Map<String, dynamic> master = {};
-  final weight = TextEditingController();
   bool masterLoading = false;
   String editError = '';
   final expanded = <String>{};
@@ -34,7 +38,7 @@ class _P0State extends State<VerifikasiP0Screen> {
   String label(String s) => {'Approved':'Disetujui','Rejected':'Ditolak'}[s] ?? s;
   String dateText(dynamic value) { final d = DateTime.tryParse('$value'); return d == null ? '$value' : '${d.day.toString().padLeft(2,'0')}/${d.month.toString().padLeft(2,'0')}/${d.year}'; }
   @override void initState() { super.initState(); subscription = repo.pantauJumlahAntrean().listen((n) { if (mounted) setState(() => queued = n); }); }
-  @override void dispose() { subscription?.cancel(); weight.dispose(); super.dispose(); }
+  @override void dispose() { subscription?.cancel(); super.dispose(); }
   void message(String s) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(s))); }
   Future<void> fetch({bool local = false}) async {
     final id = ++request;
@@ -81,7 +85,7 @@ class _P0State extends State<VerifikasiP0Screen> {
     if (!admin || saving) return;
     if (x['koreksiPending']==true) { message('Koreksi sebelumnya belum terkirim. Buka Pengaturan untuk mengirimnya.'); return; }
     final code=text(x,'kodeP0');
-    setState(() { editCode=code;masterLoading=true;editError='';selectedType=null;weight.text=text(x,'bobotManual'); });
+    setState(() { editCode=code;masterLoading=true;editError='';selectedType=null; });
     try {
       final r=await repo.masterJenis();
       if(!mounted||editCode!=code)return;
@@ -91,18 +95,6 @@ class _P0State extends State<VerifikasiP0Screen> {
     } catch(e){if(mounted&&editCode==code)setState(()=>editError=e.toString());}
     finally{if(mounted&&editCode==code)setState(()=>masterLoading=false);}
   }
-  Future<void> saveEdit(Map<String,dynamic> x) async {
-    if(saving||selectedType==null)return;
-    final n=num.tryParse(weight.text.replaceAll(',','.'));
-    setState((){saving=true;editError='';});
-    try{
-      await repo.catatKoreksi(item:x,nama:selectedType!,alasan:'Koreksi jenis pekerjaan melalui mobile',bobot:n);
-      if(!mounted)return;
-      attachments.remove(text(x,'kodeP0'));
-      await fetch(local:true);message('Koreksi tersimpan di HP. Kirim lewat Pengaturan → Sinkron Semua Data.');
-    }catch(e){if(mounted)setState(()=>editError=e.toString());}
-    finally{if(mounted)setState(()=>saving=false);}
-  }
   Widget editor(Map<String,dynamic>x){
     if(editCode!=text(x,'kodeP0'))return const SizedBox.shrink();
     final list=(master['list'] as List? ?? []).map((e)=>e.toString()).toSet().toList();
@@ -111,22 +103,30 @@ class _P0State extends State<VerifikasiP0Screen> {
       const Text('Foto, tanggal, petugas, dan kode P0 tidak berubah. Poin dihitung ulang oleh server setelah koreksi dikirim.',style:TextStyle(fontSize:13,color:muted)),const SizedBox(height:16),
       if(masterLoading)const LinearProgressIndicator() else ...[
         if(master['offline']==true)notice('Menggunakan master tersimpan. Pilihan divalidasi ulang saat pengiriman.'),
-        DropdownButtonFormField<String>(value:selectedType,isExpanded:true,decoration:const InputDecoration(labelText:'Jenis pekerjaan',border:OutlineInputBorder()),items:list.map((s)=>DropdownMenuItem(value:s,child:Text(s,overflow:TextOverflow.ellipsis))).toList(),onChanged:saving?null:(s)=>setState(()=>selectedType=s)),
+        P0AutoSaveJobTypePicker(
+          item: x,
+          options: list,
+          repository: P0JobTypeChange(repo),
+          initialValue: selectedType,
+          onSaved: () async {
+            attachments.remove(text(x, 'kodeP0'));
+            await fetch(local: true);
+            message('Jenis pekerjaan tersimpan di HP. Tekan Sinkron sekarang untuk mengirim.');
+          },
+        ),
         const SizedBox(height:16),
-        if(P0Repository.other(selectedType??'')) ...[
-          TextField(controller:weight,enabled:!saving,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'Bobot pekerjaan (1–5)',helperText:'Isi angka 1 sampai 5, bukan poin akhir.',border:OutlineInputBorder())),const SizedBox(height:16),
-        ] else Text('Bobot pekerjaan: ${((master['bobotByNama'] as Map?)?[selectedType?.toLowerCase()]) ?? 'mengikuti master'}',style:const TextStyle(fontSize:13,color:muted)),
+        Text('Bobot pekerjaan: ${((master['bobotByNama'] as Map?)?[selectedType?.toLowerCase()]) ?? 'mengikuti master'}',style:const TextStyle(fontSize:13,color:muted)),
         const Padding(padding:EdgeInsets.symmetric(vertical:12),child:Text('Skor waktu tetap otomatis. Poin = skor waktu + (bobot pekerjaan × pengali lama).',style:TextStyle(fontSize:13,color:muted))),
       ],
       if(editError.isNotEmpty)Text(editError,style:const TextStyle(color:Color(0xFFBA3030))),
-      const SizedBox(height:12),Wrap(spacing:8,children:[TextButton(onPressed:saving?null:()=>setState(()=>editCode=null),child:const Text('Batal')),FilledButton(onPressed:saving||masterLoading||selectedType==null?null:()=>saveEdit(x),child:Text(saving?'Menyimpan…':'Simpan koreksi'))]),
+      const SizedBox(height:12),TextButton(onPressed:saving?null:()=>setState(()=>editCode=null),child:const Text('Tutup')),
     ]));
   }
   Future<void> decide(Map<String,dynamic>x,String decision)async{
     if(!admin||saving)return;
     final ctrl=TextEditingController();
     final form=GlobalKey<FormState>();
-    final yes=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:Text(decision=='Approved'?'Setujui P0 ini?':'Alasan penolakan'),content:Form(key:form,child:Column(mainAxisSize:MainAxisSize.min,children:[const Text('Keputusan disimpan di HP. Kirim melalui Pengaturan; koreksi jenis dikirim lebih dahulu.'),if(decision=='Rejected')TextFormField(controller:ctrl,maxLines:3,decoration:const InputDecoration(labelText:'Alasan wajib diisi'),validator:(s)=>s==null||s.trim().isEmpty?'Isi alasan penolakan.':null)])),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('Batal')),FilledButton(onPressed:(){if(form.currentState!.validate())Navigator.pop(ctx,true);},child:const Text('Simpan keputusan'))]));
+    final yes=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:Text(decision=='Approved'?'Setujui P0 ini?':'Alasan penolakan'),content:Form(key:form,child:Column(mainAxisSize:MainAxisSize.min,children:[const Text('Keputusan disimpan di HP. Kirim lewat Sinkron sekarang; koreksi jenis dikirim lebih dahulu.'),if(decision=='Rejected')TextFormField(controller:ctrl,maxLines:3,decoration:const InputDecoration(labelText:'Alasan wajib diisi'),validator:(s)=>s==null||s.trim().isEmpty?'Isi alasan penolakan.':null)])),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('Batal')),FilledButton(onPressed:(){if(form.currentState!.validate())Navigator.pop(ctx,true);},child:const Text('Simpan keputusan'))]));
     final why=ctrl.text;ctrl.dispose();if(yes!=true||!mounted)return;
     setState(()=>saving=true);
     try{final r=await repo.catatKeputusan(kodeP0:text(x,'kodeP0'),keputusan:decision,username:(widget.sesi['username']??'').toString(),alasan:why,tanggal:day);if(r['ok']!=true)throw StateError('${r['message']}');await fetch(local:true);message('Keputusan tersimpan lokal, belum terkirim.');}catch(e){message(e.toString());}finally{if(mounted)setState(()=>saving=false);}
@@ -175,7 +175,17 @@ class _P0State extends State<VerifikasiP0Screen> {
     final filtered=items.where((x)=>'${text(x,'namaPekerjaan')} ${text(x,'penyulang')} ${text(x,'kodeP0')}'.toLowerCase().contains(search.toLowerCase())).toList();
     return PopScope(canPop:!saving,child:Theme(data:Theme.of(context).copyWith(colorScheme:Theme.of(context).colorScheme.copyWith(primary:blue)),child:Scaffold(backgroundColor:const Color(0xFFF5F8FC),appBar:AppBar(title:const Text('Verifikasi P0'),actions:[IconButton(tooltip:'Muat ulang',onPressed:saving||loading?null:()=>fetch(),icon:const Icon(Icons.refresh))]),body:Center(child:ConstrainedBox(constraints:const BoxConstraints(maxWidth:760),child:Column(children:[
       Padding(padding:const EdgeInsets.fromLTRB(16,12,16,0),child:Column(children:[
-        if(queued>0)notice('$queued perubahan lokal belum terkirim. Buka Pengaturan → Sinkron Semua Data.'),if(offline)notice('Mode offline: menggunakan data tersimpan. Foto yang belum tersimpan membutuhkan koneksi.'),
+        if(queued>0)
+          P0SyncButton(
+            pending: queued,
+            action: p0Sync,
+            onComplete: (result) async {
+              await fetch(local: true);
+              if (mounted && result['ok'] != true) {
+                message(P0SyncAction.message(result));
+              }
+            },
+          ),if(offline)notice('Mode offline: menggunakan data tersimpan. Foto yang belum tersimpan membutuhkan koneksi.'),
         Row(children:[Expanded(child:OutlinedButton.icon(onPressed:saving||loading?null:pickDate,icon:const Icon(Icons.calendar_today_outlined,size:16),label:Text(dateText(day)))),const SizedBox(width:8),FilledButton(onPressed:saving||loading?null:()=>fetch(),child:const Text('Cari P0'))]),
         const SizedBox(height:8),Row(children:['Menunggu','Approved','Rejected'].map((s)=>Expanded(child:TextButton(onPressed:saving||loading?null:(){setState(()=>status=s);if(loaded)fetch(local:true);},style:TextButton.styleFrom(backgroundColor:s==status?const Color(0xFFE2EEFC):null),child:Text('${label(s)} ${counts[s]??''}',style:TextStyle(fontSize:11,fontWeight:s==status?FontWeight.w700:FontWeight.w400))))).toList()),
         const SizedBox(height:8),TextField(enabled:!saving,onChanged:(s)=>setState(()=>search=s),decoration:const InputDecoration(hintText:'Cari pekerjaan atau penyulang',prefixIcon:Icon(Icons.search),isDense:true,border:OutlineInputBorder())),const SizedBox(height:12),
