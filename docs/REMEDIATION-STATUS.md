@@ -10,9 +10,21 @@ Last updated: 22 September 2026
 
 PR #3 was merged after green backend, Flutter analyze/compile, and auth-transport CI checks. Merge commit: `c6999ba82d25236efc670d5da36dd0f86848f17d`.
 
+## Current audit: SISI-REAUDIT-003/004 residual BA authorization
+
+The following boundaries have session checks in place, but the audit is **not closed** because row-level ULP ownership is not yet enforced consistently:
+
+- `getDataBeritaAcara`: authenticated and requires a non-empty ULP, but the underlying Gardu and Switching readers still need explicit row-level ULP filtering.
+- `unduhFileBa`: validates that a Drive file is referenced by BA data, but the allow-list is global across BA sheets and is not yet restricted to rows owned by the caller's ULP.
+- `generatePdfBaPengoperasian` and `generatePdfBaSwitching`: authenticated with ULP presence, but the requested `idBA` still needs an ownership check before PDF generation.
+- `uploadBaFinal`: authenticated with ULP presence, but the target `idBA` and destination row need ownership validation before Drive creation and sheet write.
+- `updateMasterGarduDariBA`: authenticated with ULP presence, but the source BA row needs ownership validation before updating each Master target.
+
+Required fix shape: resolve the requested BA row first, compare its ULP or owning header to `ulpScope_(g, requestedUlp)`, reject foreign or unresolved ownership, then perform the underlying read/write. Keep Super User cross-ULP behavior explicit and fail closed for missing ownership.
+
 ## Next audit sequence
 
-1. **SISI-REAUDIT-003/004 residual BA authorization**: verify every BA reader, download, upload, PDF, edit, and master-sync entry point has authentication, row-level ULP authorization, and fail-closed error handling.
+1. Implement and test row-level ULP authorization for the five BA boundaries above.
 2. **Duplicate wrapper cleanup**: identify overlapping compatibility/auth wrappers and confirm load-order behavior in the Apps Script runtime.
 3. **Writer sanitization**: verify all user-controlled values written to Sheets pass formula/CSV-injection sanitization.
 4. **Account isolation**: validate cache, local SQLite, outbox, and sync behavior across account switches.
