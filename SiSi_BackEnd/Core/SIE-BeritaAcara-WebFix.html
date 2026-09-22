@@ -42,58 +42,51 @@
     var m=String(url||'').match(/\/d\/([a-zA-Z0-9_-]+)/)||String(url||'').match(/[?&]id=([a-zA-Z0-9_-]+)/);
     return m?m[1]:'';
   }
-  function fallbackDrive(id){
-    if(!id)return;
-    var a=document.createElement('a');
-    a.href='https://drive.usercontent.google.com/download?id='+encodeURIComponent(id)+'&export=download&confirm=t';
-    a.target='_blank';a.rel='noopener';a.style.display='none';
-    document.body.appendChild(a);a.click();
-    setTimeout(function(){if(a.parentNode)a.parentNode.removeChild(a);},2000);
-  }
 
-  // Unduh langsung berkas BA TTD (PDF 2 lembar / gambar asli) via backend / Drive
+  // Unduh langsung berkas BA TTD (PDF 2 lembar / gambar asli) via backend.
   window.baUnduhBaTtd=function(index, el){
     var row=(_BA.rows||[])[index];
     if(!row||!row.baTtd){
       if(typeof showToast==='function') showToast('Berkas BA TTD belum tersedia.','warning');
       return;
     }
+    var idBA=String(row.idBA||'').trim();
     var id=driveId(row.baTtd);
     var fileName='BA-'+(row.namaPeralatan||row.idBA||'TTD')+'.pdf';
     var oldText=el?el.innerHTML:'';
     if(el){ el.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Mengunduh'; }
     function pulih(){ if(el){ el.innerHTML=oldText; } }
 
-    if(!id){
+    if(!idBA||!id){
       pulih();
-      window.open(row.baTtd,'_blank');
+      if(typeof showToast==='function') showToast('idBA atau file BA tidak tersedia.','warning');
       return;
     }
 
     SisiRun.withSuccessHandler(function(res){
       pulih();
       if(!res||!res.ok){
-        fallbackDrive(id);
-        if(typeof showToast==='function') showToast((res&&res.message)||'Mengunduh dari Google Drive.','info');
+        if(typeof showToast==='function') showToast((res&&res.message)||'Unduhan ditolak oleh server.','warning');
         return;
       }
       try{
         simpanBlob(base64KeBlob(res.base64,res.mimeType),res.fileName||fileName);
         if(typeof showToast==='function') showToast('Berkas BA TTD mulai diunduh.','success');
       }catch(err){
-        fallbackDrive(id);
+        if(typeof showToast==='function') showToast('Unduhan gagal. Tidak ada fallback Drive yang diizinkan.','error');
       }
     }).withFailureHandler(function(){
       pulih();
-      fallbackDrive(id);
-    }).unduhFileBa(id);
+      if(typeof showToast==='function') showToast('Unduh server gagal. Tidak ada fallback Drive yang diizinkan.','error');
+    }).unduhFileBa(idBA,id);
   };
 
   // Override tombol Download pada modal detail: periksa row._pdfId, row._pdfUrl, row.filePdfUrl, atau row.baTtd
   window.baDetailDownload=function(){
     var row=window._baDetailRow;if(!row)return;
+    var idBA=String(row.idBA||'').trim();
     var id=row._pdfId||driveId(row._pdfUrl||row.filePdfUrl||row.baTtd||'');
-    if(!id){if(typeof showToast==='function')showToast('File PDF belum tersedia.','warning');return;}
+    if(!idBA||!id){if(typeof showToast==='function')showToast('idBA atau file PDF belum tersedia.','warning');return;}
     var btn=document.getElementById('baDetailDownload');
     var old=btn?btn.innerHTML:'';
     if(btn){btn.disabled=true;btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Mengunduh';}
@@ -101,26 +94,24 @@
     SisiRun.withSuccessHandler(function(res){
       done();
       if(!res||!res.ok){
-        fallbackDrive(id);
-        if(typeof showToast==='function')showToast((res&&res.message)||'Menggunakan unduhan Google Drive.','warning');
+        if(typeof showToast==='function')showToast((res&&res.message)||'Unduhan ditolak oleh server.','warning');
         return;
       }
       try{
         simpanBlob(base64KeBlob(res.base64,res.mimeType),res.fileName||'BeritaAcara.pdf');
         if(typeof showToast==='function')showToast('File Berita Acara mulai diunduh.','success');
       }catch(error){
-        fallbackDrive(id);
-        if(typeof showToast==='function')showToast('Browser memakai unduhan Google Drive.','warning');
+        if(typeof showToast==='function')showToast('Unduhan gagal. Tidak ada fallback Drive yang diizinkan.','error');
       }
-    }).withFailureHandler(function(err){
-      done();fallbackDrive(id);
-      if(typeof showToast==='function')showToast('Unduh server gagal, memakai Google Drive.','warning');
-    }).unduhFileBa(id);
+    }).withFailureHandler(function(){
+      done();
+      if(typeof showToast==='function')showToast('Unduh server gagal. Tidak ada fallback Drive yang diizinkan.','error');
+    }).unduhFileBa(idBA,id);
   };
 
   // Override tombol Generate Ulang PDF pada modal detail agar deteksi jenis Switching akurat
   window.baDetailGeneratePdf=function(){
-    var row=window._baDetailRow; if(!row) return;
+    var row=window._baDetailRow; if(!row)return;
     var idBA=row.idBA||'';
     if(!idBA){ if(typeof showToast==='function') showToast('idBA tidak ditemukan. Pastikan BA sudah tersimpan.','warning'); return; }
     var isSwitching=(String(row.peralatan||'').toLowerCase()==='switching') || (String(row.jenisPekerjaan||'').toLowerCase().indexOf('switching')>=0);

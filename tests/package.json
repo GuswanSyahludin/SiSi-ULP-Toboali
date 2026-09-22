@@ -6,7 +6,7 @@
   "description": "Local SQLite-backed test harness that emulates the Google Apps Script runtime for SiSi_BackEnd. No dependencies - uses node:sqlite built into Node 22.5+.",
   "engines": { "node": ">=22.5.0" },
   "scripts": {
-    "test": "node suite.js && node --test engine-secrets-security.test.cjs gangguan-reader-security.test.cjs row-token-adapter.test.cjs ba-owner-referral-token.test.cjs checkpoint-volume-reader-security.test.cjs gis-reader-security.test.cjs gardu-reader-security.test.cjs detail-realisasi-gardu-security.test.cjs data-header-ins-gardu-security.test.cjs ba-download-contract.test.cjs ba-list-auth.test.cjs ba-pdf-auth.test.cjs ba-final-upload-auth.test.cjs ba-master-sync-auth.test.cjs ba-save-auth.test.cjs ba-atomicity.test.cjs ba-same-ulp-auth.test.cjs audit-gate.test.cjs",
+    "test": "node suite.js && node --test engine-secrets-security.test.cjs gangguan-reader-security.test.cjs row-token-adapter.test.cjs ba-owner-referral-token.test.cjs checkpoint-volume-reader-security.test.cjs gis-reader-security.test.cjs gardu-reader-security.test.cjs detail-realisasi-gardu-security.test.cjs data-header-ins-gardu-security.test.cjs ba-download-contract.test.cjs ba-list-auth.test.cjs ba-pdf-auth.test.cjs ba-final-upload-auth.test.cjs ba-master-sync-auth.test.cjs ba-save-auth.test.cjs ba-atomicity.test.cjs ba-same-ulp-auth.test.cjs audit-gate.test.cjs ba-row-ownership.test.cjs",
     "serve": "node server.js --serve",
     "load": "node server.js load",
     "seed": "node server.js seed",
