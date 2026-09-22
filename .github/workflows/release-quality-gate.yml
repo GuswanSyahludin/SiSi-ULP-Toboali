@@ -34,6 +34,8 @@ jobs:
         run: |
           mkdir -p ci-logs
           { git rev-parse HEAD; node --version; } | tee ci-logs/backend-version.log
+      - name: Mandatory P0 audit deployment gate
+        run: python3 scripts/audit_gate.py SiSi_BackEnd
       - name: Check Apps Script JavaScript syntax
         shell: bash
         run: |
@@ -149,3 +151,4 @@ jobs:
           path: SiSi_Mobile/ci-logs/
           if-no-files-found: warn
           retention-days: 7
+
