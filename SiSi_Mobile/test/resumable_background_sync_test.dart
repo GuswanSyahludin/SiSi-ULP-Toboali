@@ -10,7 +10,8 @@ void main() {
     expect(source, contains('NetworkType.connected'));
     expect(source, contains('manualSyncPending'));
     expect(source, contains('ExistingWorkPolicy.keep'));
-    expect(source, contains("inputData: {'module': module}"));
+    expect(source, contains("final inputData = {'module': module};"));
+    expect(source, contains('inputData[_accountKey]'));
     expect(source, contains('manualSyncModules'));
     expect(source, contains('ForegroundServiceConfig'));
   });

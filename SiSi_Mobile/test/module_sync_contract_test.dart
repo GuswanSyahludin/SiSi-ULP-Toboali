@@ -48,7 +48,8 @@ void main() {
   test('manual worker carries the persistent selected-module queue', () {
     final source =
         File('lib/services/auto_sync_service.dart').readAsStringSync();
-    expect(source, contains("inputData: {'module': module}"));
+    expect(source, contains("final inputData = {'module': module};"));
+    expect(source, contains('inputData[_accountKey]'));
     expect(source, contains('sinkronModul(token, module)'));
     expect(source, contains('manualSyncModules'));
     expect(source, contains('startModulesSync'));

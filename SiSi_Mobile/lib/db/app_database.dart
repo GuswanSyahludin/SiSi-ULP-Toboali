@@ -54,10 +54,10 @@ void _configureNativeDatabase(dynamic database) {
   ],
 )
 class AppDatabase extends _$AppDatabase {
-  AppDatabase()
+  AppDatabase({required String name})
       : super(
           driftDatabase(
-            name: 'sisi_db',
+            name: name,
             native: const DriftNativeOptions(
               shareAcrossIsolates: true,
               setup: _configureNativeDatabase,
