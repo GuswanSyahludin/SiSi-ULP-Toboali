@@ -1,6 +1,7 @@
 /* Stage 3: BA ownership is resolved by idBA in the fixed Toboali BA sources.
  * idBA is the row key, not an ownership value. A missing, foreign, or ambiguous row fails closed.
- * This file is intentionally late-loaded, after the existing BA auth wrappers. */
+ * This file is intentionally late-loaded, after the existing BA auth wrappers.
+ */
 (function installBaRowOwnership_(root) {
   var INTERNAL_ULP = "ulp toboali";
   var FILE_ALIASES = [
@@ -92,6 +93,9 @@
     }
     return { guard: g, row: row };
   }
+  root._stage3RequireBaRow_ = function (args, idBA, action) {
+    return requireRow_(args, idBA, action || "BA_ROW_OWNERSHIP");
+  };
   function fileBelongsToRow_(row, fileId) {
     var wanted = driveId_(fileId);
     if (!wanted || !row || !row.headers || !row.values) return false;

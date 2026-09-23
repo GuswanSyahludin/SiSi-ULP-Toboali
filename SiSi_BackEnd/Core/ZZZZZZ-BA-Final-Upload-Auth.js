@@ -16,6 +16,7 @@
     request=request||{};
     var secured={};
     Object.keys(request).forEach(function(key){if(key!=='token') secured[key]=request[key];});
+    if(typeof _stage4SafePayload_==='function') secured=_stage4SafePayload_(secured);
     return originalUpload.call(this,secured);
   };
 })();

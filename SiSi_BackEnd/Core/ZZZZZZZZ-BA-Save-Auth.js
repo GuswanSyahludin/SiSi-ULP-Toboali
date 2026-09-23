@@ -16,6 +16,7 @@
     payload=payload||{};
     var secured={};
     Object.keys(payload).forEach(function(key){if(key!=='token') secured[key]=payload[key];});
+    if(typeof _stage4SafePayload_==='function') secured=_stage4SafePayload_(secured);
     return originalSave.call(this,secured);
   };
 })();
