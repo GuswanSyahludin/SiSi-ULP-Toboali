@@ -4,7 +4,7 @@ _Last updated: 23 September 2026_
 
 ## Executive status
 
-Stages 0 through 5 Task 1 are implemented and merged. Stage 5 Task 1 established account-scoped mobile local storage and quarantines the pre-Stage-5 shared SQLite database. CI and real-device validation for the account-switch flow are complete. The next work is the remaining Stage 5 hardening backlog.
+Stages 0 through 5 Task 2 are implemented and merged. Stage 5 Task 1 established account-scoped mobile local storage and quarantines the pre-Stage-5 shared SQLite database. Stage 5 Task 2 removed legacy device-auth fallback paths that could reuse stale sessions or tokens. The next work is secure mobile credential storage and migration.
 
 ## Ordered remediation
 
@@ -40,16 +40,21 @@ The legacy `sisi_db` database is never opened or copied automatically. The guard
 
 Evidence: PR #10, squash merge `84d1b5148f2f179b8836c38e4fb918fbfcfd2bcb`. CI passed. Real-device validation confirmed upgrade, legacy quarantine, account A logout, account B login, restart, offline queue isolation, retry behavior, and stale-worker rejection.
 
+### Stage 5 Task 2: Legacy auth fallback cleanup, FIXED
+
+Device authentication now uses only `loginPerangkat`, `cekPerangkat`, and `logoutPerangkat`. Unknown or unavailable device-auth endpoints fail closed. The client no longer falls back to legacy `login`, `cekSesi`, or `logout`, and legacy token values are not sent during device logout. Contract tests cover the absence of fallback behavior and explicit rejection of legacy session checks.
+
+Evidence: PR #11, squash merge `4269d3aa2899896b0e436d78c80a14395086e91a`. All four CI checks passed.
+
 ## Next Stage 5 backlog
 
-1. Remove legacy auth fallback paths that can reuse stale sessions.
-2. Audit and migrate mobile session/token storage to secure storage.
-3. Verify migration of legacy credentials on upgraded installations.
-4. Document secure-storage real-device validation.
-5. Verify token redaction across URLs, logs, errors, and redirects.
-6. Add deployed Apps Script authorization and safe-write smoke tests.
-7. Verify branch protection requires every security and release gate.
-8. Add Flutter integration coverage for offline sync, retry, and duplicate delivery.
+1. Audit and migrate mobile session/token storage to secure storage.
+2. Verify migration of legacy credentials on upgraded installations.
+3. Document secure-storage real-device validation.
+4. Verify token redaction across URLs, logs, errors, and redirects.
+5. Add deployed Apps Script authorization and safe-write smoke tests.
+6. Verify branch protection requires every security and release gate.
+7. Add Flutter integration coverage for offline sync, retry, and duplicate delivery.
 
 ## Authorization policy
 
