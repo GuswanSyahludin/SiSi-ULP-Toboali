@@ -29,6 +29,9 @@ The mobile client supports authenticated offline-first field workflows, durable 
 - SISI operational access is ULP Toboali only; Super User does not automatically gain cross-ULP BA access.
 - BA downloads require `idBA + fileId`, and the file must be present on the resolved BA row.
 - Tokens are not accepted through insecure query-string contracts.
+- Device authentication uses `loginPerangkat`, `cekPerangkat`, and `logoutPerangkat` only.
+- Unknown or unavailable device-auth endpoints fail closed; they must not fall back to legacy `login`, `cekSesi`, or `logout` flows.
+- Legacy session tokens are not reused to restore or migrate a device session, and logout sends only the device token.
 - Mobile local database names are derived from normalized `username + ulp`.
 - `AppDatabase` requires an account-scoped name; the legacy shared `sisi_db` name is never a default.
 - Access to local database state fails closed before session activation.
@@ -42,7 +45,7 @@ The mobile client supports authenticated offline-first field workflows, durable 
 
 ### Authentication and session
 
-The approved login path creates the active session. Session restoration validates the persisted session and activates exactly one account namespace. Logout cancels workers, clears session access, and closes the account database.
+The approved device-auth login path creates the active session. Session restoration validates the persisted session and activates exactly one account namespace. If device authentication is unavailable, the client reports failure instead of reusing a stale legacy session. Logout cancels workers, clears session access, and closes the account database.
 
 ### Offline synchronization
 
@@ -67,7 +70,8 @@ Corrections are durable and retryable. `Lain-lain` requires manual weight from 1
 - **FR-07:** Pending corrections, approvals, uploads, and downloads remain retryable.
 - **FR-08:** Account switching cannot expose another account's local data, queue, cache, staged data, photos, or worker execution.
 - **FR-09:** BA PDF, upload, Master sync, and download require a uniquely resolved owned row.
-- **FR-10:** Required CI, deployed-runtime, and real-device acceptance evidence is recorded before production sign-off.
+- **FR-10:** Device-auth endpoint failure cannot trigger legacy token/session fallback.
+- **FR-11:** Required CI, deployed-runtime, and real-device acceptance evidence is recorded before production sign-off.
 
 ## 6. Security and reliability requirements
 
@@ -75,9 +79,9 @@ Fail closed by default. Do not trust client-supplied ULP, role, ownership, file 
 
 ## 7. Testing and definition of done
 
-Automated acceptance includes the Audit Gate, backend security tests, Flutter analysis/tests/build, token-query rejection, BA ownership/download coverage, account namespace tests, legacy database quarantine tests, worker contract tests, and offline queue coverage.
+Automated acceptance includes the Audit Gate, backend security tests, Flutter analysis/tests/build, token-query rejection, BA ownership/download coverage, account namespace tests, legacy database quarantine tests, worker contract tests, offline queue coverage, and auth-fallback contract tests.
 
-Runtime acceptance must cover deployed Apps Script authorization and safe writes, plus real-device upgrade from the old shared database, legacy quarantine, account A to logout to account B, restart, offline queue/retry, duplicate delivery handling, photo isolation, and stale-worker rejection.
+Runtime acceptance must cover deployed Apps Script authorization and safe writes, plus real-device upgrade from the old shared database, legacy quarantine, account A to logout to account B, restart, offline queue/retry, duplicate delivery handling, photo isolation, stale-worker rejection, revoked device token, malformed device-auth response, and unavailable device-auth endpoint behavior.
 
 A change is done only when implementation and documentation are updated, focused and full tests pass, CI is green, deployed-runtime and real-device evidence is recorded, and no pending data, photo, audit history, or outbox record is silently discarded.
 
@@ -89,6 +93,7 @@ A change is done only when implementation and documentation are updated, focused
 4. Stage 3, BA row ownership and file binding: implemented and merged.
 5. Stage 4, compatibility and Sheet-write hardening: implemented and merged for covered scope.
 6. Stage 5 Task 1, account-isolated local storage and legacy quarantine: implemented, real-device validated, and merged.
-7. Remaining Stage 5 tasks: auth fallback cleanup, secure storage, credential migration, token redaction, deployed smoke tests, branch protection, and offline-sync integration coverage.
+7. Stage 5 Task 2, legacy auth fallback cleanup: implemented and merged in PR #11.
+8. Remaining Stage 5 tasks: secure storage, credential migration, token redaction, deployed smoke tests, branch protection, and offline-sync integration coverage.
 
 No later stage is complete while an earlier security or runtime blocker remains unresolved.
