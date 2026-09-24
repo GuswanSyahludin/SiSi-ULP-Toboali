@@ -1,10 +1,10 @@
 # SiSi ULP Toboali: Security Audit and Remediation Status
 
-_Last updated: 23 September 2026_
+_Last updated: 24 September 2026_
 
 ## Executive status
 
-Stages 0 through 5 Task 2 are implemented and merged. Stage 5 Task 1 established account-scoped mobile local storage and quarantines the pre-Stage-5 shared SQLite database. Stage 5 Task 2 removed legacy device-auth fallback paths that could reuse stale sessions or tokens. The next work is secure mobile credential storage and migration.
+Stages 0 through 5 Task 3 are implemented and merged. Stage 5 Task 1 established account-scoped mobile local storage and quarantines the pre-Stage-5 shared SQLite database. Stage 5 Task 2 removed legacy device-auth fallback paths that could reuse stale sessions or tokens. Stage 5 Task 3 moved mobile session and device-token persistence to platform secure storage, bound legacy migration to a matching token-backed session, and purged plaintext legacy fields on every load/logout path. The next work is validation of upgraded-installation migration and real-device evidence.
 
 ## Ordered remediation
 
@@ -46,15 +46,20 @@ Device authentication now uses only `loginPerangkat`, `cekPerangkat`, and `logou
 
 Evidence: PR #11, squash merge `4269d3aa2899896b0e436d78c80a14395086e91a`. All four CI checks passed.
 
+### Stage 5 Task 3: Secure session and device-token storage, FIXED
+
+Mobile session JSON and device tokens are written to `flutter_secure_storage`; plaintext credential writes to SharedPreferences were removed. One-time migration requires non-empty username, ULP, and matching non-empty tokens in both the legacy `sesiJson` payload and the separate legacy `token` field. Invalid, incomplete, malformed, or mismatched legacy state is rejected and purged. Legacy fields are also purged when a secure session already exists or no legacy session payload is present. Secure sessions without a token are rejected.
+
+Evidence: PR #12, squash merge `38aa8d536f334fed7ff2110b0808fd3e6f19fea2`. Four CI checks passed and the final diff audit found no unresolved review threads. PR #13, squash merge `b27bc106e55d9fe94a111db172156847bfdb848b`, removed four accidental P0 artifacts from the repository.
+
 ## Next Stage 5 backlog
 
-1. Audit and migrate mobile session/token storage to secure storage.
-2. Verify migration of legacy credentials on upgraded installations.
-3. Document secure-storage real-device validation.
-4. Verify token redaction across URLs, logs, errors, and redirects.
-5. Add deployed Apps Script authorization and safe-write smoke tests.
-6. Verify branch protection requires every security and release gate.
-7. Add Flutter integration coverage for offline sync, retry, and duplicate delivery.
+1. Verify migration of legacy credentials on upgraded installations.
+2. Document and execute secure-storage real-device validation.
+3. Verify token redaction across URLs, logs, errors, and redirects.
+4. Add deployed Apps Script authorization and safe-write smoke tests.
+5. Verify branch protection requires every security and release gate.
+6. Add Flutter integration coverage for offline sync, retry, and duplicate delivery.
 
 ## Authorization policy
 
@@ -69,6 +74,7 @@ BA data and BA-linked files are internal to the caller's ULP. No role, including
 - Required CI checks are green.
 - Deployed-runtime and real-device evidence is recorded before production sign-off.
 - Account-scoped mobile database, queue, cache, photo, and worker behavior is verified on a real device.
+- Secure-storage migration and purge behavior is verified on upgraded real devices.
 
 ## Known limitations
 
