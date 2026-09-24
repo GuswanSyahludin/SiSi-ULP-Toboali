@@ -123,7 +123,8 @@
       }
       .field input:focus-visible,
       .field select:focus-visible,
-      .btn:focus-visible {
+      .btn:focus-visible,
+      .action-btn:focus-visible {
         outline: 3px solid oklch(70% 0.13 245/0.35);
         outline-offset: 2px;
       }
@@ -247,6 +248,7 @@
         display: flex;
         justify-content: center;
         gap: 6px;
+        flex-wrap: wrap;
       }
       .action-btn {
         min-height: 30px;
@@ -270,6 +272,17 @@
       }
       .action-btn-danger:hover {
         background: oklch(62% 0.15 58);
+      }
+      .action-btn-delete {
+        background: oklch(53% 0.17 25);
+        color: oklch(98% 0.005 25);
+      }
+      .action-btn-delete:hover {
+        background: oklch(46% 0.17 25);
+      }
+      .action-btn:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
       }
       .pager { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px 16px; border-top:1px solid var(--jp-border); color:var(--jp-muted); font-size:13px; }
       .pager[hidden] { display:none; }
@@ -340,12 +353,52 @@
       .form .full {
         grid-column: 1/-1;
       }
+      .delete-content {
+        padding: 20px 22px 4px;
+      }
+      .delete-copy {
+        margin: 0;
+        color: var(--jp-muted);
+        line-height: 1.6;
+      }
+      .delete-details {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px 14px;
+        margin: 16px 0 0;
+      }
+      .delete-detail {
+        min-width: 0;
+        padding: 10px 12px;
+        border: 1px solid var(--jp-border);
+        border-radius: 9px;
+        background: oklch(97% 0.008 250);
+      }
+      .delete-detail dt {
+        margin-bottom: 3px;
+        color: var(--jp-muted);
+        font-size: 11px;
+        font-weight: 750;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .delete-detail dd {
+        margin: 0;
+        overflow-wrap: anywhere;
+        font-weight: 750;
+      }
       .foot {
         display: flex;
         justify-content: flex-end;
         gap: 10px;
         padding: 16px 22px;
         border-top: 1px solid var(--jp-border);
+      }
+      .btn-danger {
+        background: oklch(53% 0.17 25);
+      }
+      .btn-danger:hover {
+        background: oklch(46% 0.17 25);
       }
       @media (max-width: 700px) {
         .wrap {
@@ -374,6 +427,12 @@
         }
         .form .full {
           grid-column: auto;
+        }
+        .delete-content {
+          padding: 18px 18px 4px;
+        }
+        .delete-details {
+          grid-template-columns: 1fr;
         }
         .dialog h3,
         .foot {
@@ -460,7 +519,7 @@
               <col style="width: 140px;">
               <col style="width: 120px;">
               <col style="width: 110px;">
-              <col style="width: 170px;">
+              <col style="width: 220px;">
             </colgroup>
             <thead>
               <tr>
@@ -484,7 +543,7 @@
                 <th>Lokasi</th>
                 <th>Status Jadwal</th>
                 <th>Status Pekerjaan</th>
-                <th class="action-head">Update Status Jadwal</th>
+                <th class="action-head">Aksi Jadwal</th>
               </tr>
             </thead>
             <tbody id="jpBody">
@@ -611,16 +670,41 @@
         </div>
       </div>
     </div>
+    <div class="modal" id="jpDeleteModal" role="dialog" aria-modal="true" aria-labelledby="jpDeleteTitle">
+      <div class="dialog">
+        <h3 id="jpDeleteTitle">Hapus jadwal padam?</h3>
+        <div class="delete-content">
+          <p class="delete-copy">Jadwal ini akan dihapus permanen. Periksa detail berikut sebelum melanjutkan.</p>
+          <dl class="delete-details">
+            <div class="delete-detail"><dt>Kode jadwal</dt><dd id="jpDeleteKode"></dd></div>
+            <div class="delete-detail"><dt>Tanggal</dt><dd id="jpDeleteTanggal"></dd></div>
+            <div class="delete-detail"><dt>Penyulang</dt><dd id="jpDeletePenyulang"></dd></div>
+            <div class="delete-detail"><dt>Section</dt><dd id="jpDeleteSection"></dd></div>
+            <div class="delete-detail"><dt>Jenis pekerjaan</dt><dd id="jpDeleteJenis"></dd></div>
+            <div class="delete-detail"><dt>Waktu padam - nyala</dt><dd id="jpDeleteWaktu"></dd></div>
+          </dl>
+        </div>
+        <div class="foot">
+          <button class="btn btn-secondary" onclick="jpCloseDelete()">Batal</button>
+          <button class="btn btn-danger" id="jpDeleteConfirm" onclick="jpConfirmDelete()">Hapus jadwal</button>
+        </div>
+      </div>
+    </div>
     <script>
       var jpMaster = {},
         jpMasterRows = [],
-        jpCurrentPage = 1;
+        jpCurrentPage = 1,
+        jpDeleteTarget = null;
       function jpSession() {
         return (
           (typeof _state !== "undefined" && _state.sesi) ||
           window.__SISI_SESI__ ||
           {}
         );
+      }
+      function jpToken() {
+        var state = typeof _state !== "undefined" ? _state : {};
+        return state.token || jpSession().token || "";
       }
       function jpIsSuper() {
         return String(jpSession().role || "").trim() === "Super User";
@@ -783,6 +867,65 @@
             ? "status-batal"
             : "status-terjadwal";
       }
+      function jpCellText(row, index) {
+        var cell = row && row.cells ? row.cells[index] : null;
+        var value = cell ? String(cell.textContent || "").trim() : "";
+        return value || "Belum tersedia";
+      }
+      function jpOpenDelete(button) {
+        var row = button && button.closest ? button.closest("tr") : null;
+        if (!row) return;
+        jpDeleteTarget = {
+          kode: row.getAttribute("data-kode") || jpCellText(row, 1),
+          tanggal: jpCellText(row, 7),
+          penyulang: jpCellText(row, 3),
+          section: jpCellText(row, 4),
+          jenis: jpCellText(row, 5),
+          waktu: jpCellText(row, 8) + " - " + jpCellText(row, 9),
+        };
+        document.getElementById("jpDeleteKode").textContent = jpDeleteTarget.kode;
+        document.getElementById("jpDeleteTanggal").textContent = jpDeleteTarget.tanggal;
+        document.getElementById("jpDeletePenyulang").textContent = jpDeleteTarget.penyulang;
+        document.getElementById("jpDeleteSection").textContent = jpDeleteTarget.section;
+        document.getElementById("jpDeleteJenis").textContent = jpDeleteTarget.jenis;
+        document.getElementById("jpDeleteWaktu").textContent = jpDeleteTarget.waktu;
+        document.getElementById("jpDeleteModal").classList.add("show");
+      }
+      function jpCloseDelete() {
+        var modal = document.getElementById("jpDeleteModal"),
+          button = document.getElementById("jpDeleteConfirm");
+        if (modal) modal.classList.remove("show");
+        if (button) {
+          button.disabled = false;
+          button.textContent = "Hapus jadwal";
+        }
+        jpDeleteTarget = null;
+      }
+      function jpConfirmDelete() {
+        var target = jpDeleteTarget,
+          button = document.getElementById("jpDeleteConfirm");
+        if (!target || !target.kode || !button) return;
+        button.disabled = true;
+        button.textContent = "Menghapus...";
+        SisiRun
+          .withSuccessHandler(function (res) {
+            if (!res || res.ok !== true) {
+              button.disabled = false;
+              button.textContent = "Hapus jadwal";
+              jpNotify((res && res.message) || "Gagal menghapus jadwal", "error");
+              return;
+            }
+            jpCloseDelete();
+            jpNotify(res.message || "Jadwal berhasil dihapus.", "success");
+            loadList(jpCurrentPage);
+          })
+          .withFailureHandler(function (err) {
+            button.disabled = false;
+            button.textContent = "Hapus jadwal";
+            jpNotify((err && err.message) || err, "error");
+          })
+          .hapusJadwalPadam({ token: jpToken(), kode: target.kode });
+      }
       function jpDateInputValue(date) {
         var y = date.getFullYear(),
           m = String(date.getMonth() + 1).padStart(2, "0"),
@@ -857,7 +1000,10 @@
         }
         body.innerHTML = rows
           .map(function (x) {
-            var status = x.status || "Terjadwal";
+            var status = x.status || "Terjadwal",
+              deleteButton = jpKey(status) === "TERJADWAL"
+                ? '<button class="action-btn action-btn-delete" onclick="jpOpenDelete(this)">Hapus</button>'
+                : "";
             return (
               '<tr data-kode="' +
               jpEsc(x.kode) +
@@ -908,7 +1054,9 @@
               jpWorkStatusClass(x.statusPekerjaan) +
               '">' +
               jpText(x.statusPekerjaan) +
-              '</span></td><td><div class="action-group"><button class="action-btn action-btn-success" onclick="jpUpdateStatus(this, \'Terealisasi\')">Terealisasi</button><button class="action-btn action-btn-danger" onclick="jpUpdateStatus(this, \'Batal Pekerjaan\')">Batal</button></div></td></tr>'
+              '</span></td><td><div class="action-group"><button class="action-btn action-btn-success" onclick="jpUpdateStatus(this, \'Terealisasi\')">Terealisasi</button><button class="action-btn action-btn-danger" onclick="jpUpdateStatus(this, \'Batal Pekerjaan\')">Batal</button>' +
+              deleteButton +
+              '</div></td></tr>'
             );
           })
           .join("");

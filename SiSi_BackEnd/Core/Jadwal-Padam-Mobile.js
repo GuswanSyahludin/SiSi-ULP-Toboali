@@ -6,6 +6,7 @@ var JADWAL_PADAM_MOBILE_ACTIONS = [
   "simpanMobileJadwalPadam",
   "updateMobileJadwalPadam",
   "updateMobileStatusJadwalPadam",
+  "hapusMobileJadwalPadam",
   "getMobileJadwalPadamWaText",
   "getMobileLaporanUp3Uiw",
   "simpanMobileLaporanC4A",
@@ -46,6 +47,8 @@ function jadwalPadamMobileRouter_(e, body) {
       return updateJadwalPadam(params);
     case "updateMobileStatusJadwalPadam":
       return updateStatusJadwalPadam(params);
+    case "hapusMobileJadwalPadam":
+      return hapusJadwalPadam(params);
     case "getMobileJadwalPadamWaText":
       return getJadwalPadamWaText(params);
     case "getMobileLaporanUp3Uiw":

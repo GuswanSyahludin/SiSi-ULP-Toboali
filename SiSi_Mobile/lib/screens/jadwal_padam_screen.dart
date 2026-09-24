@@ -24,6 +24,7 @@ class _JadwalPadamScreenState extends State<JadwalPadamScreen> {
   bool _loading = true;
   bool _sendingWa = false;
   String? _error;
+  String? _deletingKode;
   int _loadRevision = 0;
 
   String get _token => '${widget.sesi['token'] ?? ''}';
@@ -178,6 +179,123 @@ class _JadwalPadamScreenState extends State<JadwalPadamScreen> {
     } else {
       _message('${result['message'] ?? 'Gagal memperbarui status'}',
           error: true);
+    }
+  }
+
+  Future<void> _confirmDelete(Map<String, dynamic> row) async {
+    final status = '${row['status'] ?? 'Terjadwal'}'.trim();
+    if (status != 'Terjadwal') {
+      _message('Jadwal berstatus $status tidak dapat dihapus.', error: true);
+      return;
+    }
+    final kode = '${row['kode'] ?? ''}'.trim();
+    if (kode.isEmpty) {
+      _message('Kode jadwal tidak tersedia.', error: true);
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Hapus jadwal padam?'),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 430),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Jadwal ini akan dihapus permanen. Periksa detail berikut sebelum melanjutkan.',
+                  style: TextStyle(color: Color(0xFF667085), height: 1.4),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(13),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5F7FB),
+                    borderRadius: BorderRadius.circular(13),
+                    border: Border.all(color: const Color(0xFFDDE3EC)),
+                  ),
+                  child: Column(
+                    children: [
+                      _deleteDetail('Kode jadwal', kode),
+                      _deleteDetail('Tanggal',
+                          row['tanggalLabel'] ?? row['tanggal'] ?? '-'),
+                      _deleteDetail('Penyulang', row['penyulang']),
+                      _deleteDetail('Section', row['section']),
+                      _deleteDetail('Jenis pekerjaan', row['jenis']),
+                      _deleteDetail(
+                        'Waktu padam - nyala',
+                        '${row['jamPadam'] ?? '-'} - ${row['jamNyala'] ?? '-'} WIB',
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.red600),
+            child: const Text('Hapus jadwal'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await _deleteRow(row);
+  }
+
+  Widget _deleteDetail(String label, dynamic value) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 132,
+              child: Text(label,
+                  style: const TextStyle(color: Color(0xFF667085))),
+            ),
+            Expanded(
+              child: Text(
+                '${value ?? '-'}',
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ),
+          ],
+        ),
+      );
+
+  Future<void> _deleteRow(Map<String, dynamic> row) async {
+    final kode = '${row['kode'] ?? ''}'.trim();
+    if (kode.isEmpty || _deletingKode != null) return;
+    setState(() => _deletingKode = kode);
+    try {
+      final result = await JadwalPadamService.delete(
+        token: _token,
+        kode: kode,
+      );
+      if (!mounted) return;
+      if (result['ok'] == true) {
+        _message(result['message'] ?? 'Jadwal $kode berhasil dihapus.');
+        await _load();
+      } else {
+        _message('${result['message'] ?? 'Gagal menghapus jadwal'}', error: true);
+      }
+    } catch (e) {
+      if (mounted) {
+        _message('$e'.replaceFirst('Exception: ', ''), error: true);
+      }
+    } finally {
+      if (mounted && _deletingKode == kode) {
+        setState(() => _deletingKode = null);
+      }
     }
   }
 
@@ -342,6 +460,9 @@ class _JadwalPadamScreenState extends State<JadwalPadamScreen> {
     final status = '${row['status'] ?? 'Terjadwal'}';
     final cancelled = status.toLowerCase().contains('batal');
     final done = status == 'Terealisasi';
+    final canDelete = status.trim() == 'Terjadwal';
+    final kode = '${row['kode'] ?? ''}'.trim();
+    final deleting = _deletingKode == kode;
     final color = cancelled
         ? AppColors.red600
         : done
@@ -401,30 +522,43 @@ class _JadwalPadamScreenState extends State<JadwalPadamScreen> {
                             fontSize: 12, color: Color(0xFF667085))),
                   ])),
               PopupMenuButton<String>(
+                enabled: !deleting,
                 onSelected: (v) {
                   if (v == 'edit') _openForm(row: row);
                   if (v == 'done') _statusAction(row, 'Terealisasi');
                   if (v == 'cancel') _statusAction(row, 'Batal Pekerjaan');
+                  if (v == 'delete') _confirmDelete(row);
                 },
-                itemBuilder: (_) => const [
-                  PopupMenuItem(
+                itemBuilder: (_) => <PopupMenuEntry<String>>[
+                  const PopupMenuItem(
                       value: 'edit',
                       child: ListTile(
                           leading: Icon(Icons.edit_outlined),
                           title: Text('Edit jadwal'),
                           contentPadding: EdgeInsets.zero)),
-                  PopupMenuItem(
+                  const PopupMenuItem(
                       value: 'done',
                       child: ListTile(
                           leading: Icon(Icons.task_alt_rounded),
                           title: Text('Terealisasi'),
                           contentPadding: EdgeInsets.zero)),
-                  PopupMenuItem(
+                  const PopupMenuItem(
                       value: 'cancel',
                       child: ListTile(
                           leading: Icon(Icons.cancel_outlined),
                           title: Text('Batalkan'),
                           contentPadding: EdgeInsets.zero)),
+                  if (canDelete)
+                    PopupMenuItem<String>(
+                      value: 'delete',
+                      child: ListTile(
+                        leading: Icon(Icons.delete_outline,
+                            color: AppColors.red600),
+                        title: Text('Hapus jadwal',
+                            style: TextStyle(color: AppColors.red600)),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
                 ],
               ),
             ]),

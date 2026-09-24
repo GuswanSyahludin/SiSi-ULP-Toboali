@@ -32,5 +32,6 @@ class JadwalPadamService {
   static Future<Map<String, dynamic>> list({required String token, required String tglDari, required String tglSampai, String penyulang = '', String status = '', String statusPekerjaan = '', int page = 1}) => _post('getMobileJadwalPadamList', {'token': token, 'tglDari': tglDari, 'tglSampai': tglSampai, 'penyulang': penyulang, 'status': status, 'statusPekerjaan': statusPekerjaan, 'page': page, 'pageSize': 50});
   static Future<Map<String, dynamic>> save(Map<String, dynamic> payload) => _post(payload['kode'] == null ? 'simpanMobileJadwalPadam' : 'updateMobileJadwalPadam', payload);
   static Future<Map<String, dynamic>> updateStatus({required String token, required String kode, required String status}) => _post('updateMobileStatusJadwalPadam', {'token': token, 'kode': kode, 'status': status});
+  static Future<Map<String, dynamic>> delete({required String token, required String kode}) => _post('hapusMobileJadwalPadam', {'token': token, 'kode': kode});
   static Future<Map<String, dynamic>> waText({required String token, required String tglDari, required String tglSampai, String penyulang = '', String status = ''}) => _post('getMobileJadwalPadamWaText', {'token': token, 'tglDari': tglDari, 'tglSampai': tglSampai, 'penyulang': penyulang, 'status': status});
 }
