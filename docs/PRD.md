@@ -5,7 +5,7 @@
 **Document status:** Living product and engineering specification  
 **Repository:** `SyahludinGuswan/Sisi-ULP-Toboali`  
 **Primary operating scope:** Internal ULP Toboali operations  
-**Last updated:** 23 September 2026
+**Last updated:** 24 September 2026
 
 ## 1. Product contract
 
@@ -39,6 +39,8 @@ The mobile client supports authenticated offline-first field workflows, durable 
 - Logout cancels periodic and manual workers before closing the active account database.
 - A stale worker must reject execution when its account namespace differs from the active session.
 - The legacy `sisi_db` file and SQLite `-wal`/`-shm` sidecars are quarantined, not silently copied into an account database, because legacy row ownership is not provable.
+- Session JSON and device tokens are stored in platform secure storage; SharedPreferences is only a one-time migration source and is purged after migration, logout, or invalid legacy-state handling.
+- Legacy migration requires a complete username, ULP, and matching non-empty token in both the legacy session payload and the separate legacy token field; mismatches fail closed.
 - Pending records and photos must remain retryable; no recovery procedure may require deleting local SQLite.
 
 ## 4. Core workflows
@@ -72,6 +74,7 @@ Corrections are durable and retryable. `Lain-lain` requires manual weight from 1
 - **FR-09:** BA PDF, upload, Master sync, and download require a uniquely resolved owned row.
 - **FR-10:** Device-auth endpoint failure cannot trigger legacy token/session fallback.
 - **FR-11:** Required CI, deployed-runtime, and real-device acceptance evidence is recorded before production sign-off.
+- **FR-12:** Session and device credentials are never persisted in plaintext SharedPreferences after secure-storage migration.
 
 ## 6. Security and reliability requirements
 
@@ -79,9 +82,9 @@ Fail closed by default. Do not trust client-supplied ULP, role, ownership, file 
 
 ## 7. Testing and definition of done
 
-Automated acceptance includes the Audit Gate, backend security tests, Flutter analysis/tests/build, token-query rejection, BA ownership/download coverage, account namespace tests, legacy database quarantine tests, worker contract tests, offline queue coverage, and auth-fallback contract tests.
+Automated acceptance includes the Audit Gate, backend security tests, Flutter analysis/tests/build, token-query rejection, BA ownership/download coverage, account namespace tests, legacy database quarantine tests, worker contract tests, offline queue coverage, auth-fallback contract tests, and secure-storage migration contract tests.
 
-Runtime acceptance must cover deployed Apps Script authorization and safe writes, plus real-device upgrade from the old shared database, legacy quarantine, account A to logout to account B, restart, offline queue/retry, duplicate delivery handling, photo isolation, stale-worker rejection, revoked device token, malformed device-auth response, and unavailable device-auth endpoint behavior.
+Runtime acceptance must cover deployed Apps Script authorization and safe writes, plus real-device upgrade from the old shared database, legacy quarantine, account A to logout to account B, restart, offline queue/retry, duplicate delivery handling, photo isolation, stale-worker rejection, revoked device token, malformed device-auth response, unavailable device-auth endpoint behavior, and secure-storage migration/purge behavior.
 
 A change is done only when implementation and documentation are updated, focused and full tests pass, CI is green, deployed-runtime and real-device evidence is recorded, and no pending data, photo, audit history, or outbox record is silently discarded.
 
@@ -94,6 +97,7 @@ A change is done only when implementation and documentation are updated, focused
 5. Stage 4, compatibility and Sheet-write hardening: implemented and merged for covered scope.
 6. Stage 5 Task 1, account-isolated local storage and legacy quarantine: implemented, real-device validated, and merged.
 7. Stage 5 Task 2, legacy auth fallback cleanup: implemented and merged in PR #11.
-8. Remaining Stage 5 tasks: secure storage, credential migration, token redaction, deployed smoke tests, branch protection, and offline-sync integration coverage.
+8. Stage 5 Task 3, secure session and device-token storage migration: implemented, contract-tested, audited, and merged in PR #12.
+9. Remaining Stage 5 tasks: legacy credential migration validation, secure-storage real-device evidence, token redaction, deployed smoke tests, branch protection, and offline-sync integration coverage.
 
 No later stage is complete while an earlier security or runtime blocker remains unresolved.
