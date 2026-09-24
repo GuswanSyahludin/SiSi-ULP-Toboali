@@ -20,6 +20,7 @@ dependencies:
   latlong2: ^0.9.1
   intl: ^0.20.0
   shared_preferences: ^2.5.5
+  flutter_secure_storage: ^9.2.4
   workmanager: ^0.10.9
   image: ^4.2.0
   crypto: ^3.0.6
