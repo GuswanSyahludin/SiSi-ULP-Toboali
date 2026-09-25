@@ -11,6 +11,9 @@
   "jsonExtensions": [
     ".json"
   ],
-  "filePushOrder": [],
+  "filePushOrder": [
+    "Core/Code.js",
+    "Core/PageLoader-Compat.js"
+  ],
   "skipSubdirectories": false
 }
