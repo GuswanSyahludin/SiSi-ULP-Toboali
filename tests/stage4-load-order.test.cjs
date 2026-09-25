@@ -16,11 +16,7 @@ const files=[
 ];
 function source(name){return fs.readFileSync(path.join(root,name),'utf8');}
 function productionOrder(){
-  assert.deepEqual(clasp.filePushOrder,[
-    'Core/Code.js',
-    'Core/PageLoader-Compat.js',
-    'Core/ZZZZZZZZZZZZZZZZZZ-PageLoader-Dashboard-Delete.js',
-  ]);
+  assert.deepEqual(clasp.filePushOrder,['Core/Code.js','Core/PageLoader-Compat.js']);
   return files.slice().sort();
 }
 function context(){
