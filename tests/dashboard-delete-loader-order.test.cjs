@@ -14,12 +14,20 @@ function readCoreFile(name) {
   return fs.readFileSync(path.join(coreDir, name), 'utf8');
 }
 
-test('the final loader override always injects Dashboard delete wiring', () => {
-  assert.deepEqual(clasp.filePushOrder, [
-    'Core/Code.js',
-    'Core/PageLoader-Compat.js',
-    finalLoader,
-  ]);
+function effectiveClaspOrder() {
+  const allCoreFiles = fs.readdirSync(coreDir)
+    .filter((name) => /\\.js$/.test(name))
+    .map((name) => 'Core/' + name);
+  const prioritized = clasp.filePushOrder.filter((name) => allCoreFiles.includes(name));
+  const remaining = allCoreFiles
+    .filter((name) => !prioritized.includes(name))
+    .sort();
+  return prioritized.concat(remaining);
+}
+
+test('the final loader is last under clasp ordering and injects Dashboard delete wiring', () => {
+  assert.deepEqual(clasp.filePushOrder, ['Core/Code.js', 'Core/PageLoader-Compat.js']);
+  assert.equal(effectiveClaspOrder().at(-1), finalLoader);
 
   const session = { username: 'tester', role: 'Teknik', aksesMenu: 'Tek-Dashboard' };
   const context = {
@@ -39,7 +47,7 @@ test('the final loader override always injects Dashboard delete wiring', () => {
   };
   vm.createContext(context);
 
-  // Deliberately load each competing definition, with the configured winner last.
+  // Load the competing handlers in the same relative order clasp will use.
   vm.runInContext(readCoreFile('Code.js'), context, { filename: 'Code.js' });
   vm.runInContext(readCoreFile('PageLoader-Compat.js'), context, { filename: 'PageLoader-Compat.js' });
   vm.runInContext(readCoreFile('ZZ-Dashboard-Jadwal-Delete-Compat.js'), context, { filename: 'ZZ-Dashboard-Jadwal-Delete-Compat.js' });
