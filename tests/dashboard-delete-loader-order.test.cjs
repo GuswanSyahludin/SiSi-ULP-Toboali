@@ -8,22 +8,33 @@ const vm = require('node:vm');
 const repoRoot = path.join(__dirname, '..');
 const coreDir = path.join(repoRoot, 'SiSi_BackEnd', 'Core');
 const clasp = JSON.parse(fs.readFileSync(path.join(repoRoot, 'SiSi_BackEnd', '.clasp.json'), 'utf8'));
+const finalLoader = 'Core/ZZZZZZZZZZZZZZZZZZ-PageLoader-Dashboard-Delete.js';
 
 function readCoreFile(name) {
   return fs.readFileSync(path.join(coreDir, name), 'utf8');
 }
 
-test('the compatibility getPageContent implementation wins and injects Dashboard delete wiring', () => {
+function effectiveClaspOrder() {
+  const allCoreFiles = fs.readdirSync(coreDir)
+    .filter((name) => /\.js$/.test(name))
+    .map((name) => 'Core/' + name);
+  const prioritized = clasp.filePushOrder.filter((name) => allCoreFiles.includes(name));
+  const remaining = allCoreFiles
+    .filter((name) => !prioritized.includes(name))
+    .sort();
+  return prioritized.concat(remaining);
+}
+
+test('the final loader is last under clasp ordering and injects Dashboard delete wiring', () => {
   assert.deepEqual(clasp.filePushOrder, ['Core/Code.js', 'Core/PageLoader-Compat.js']);
+  assert.equal(effectiveClaspOrder().at(-1), finalLoader);
 
   const session = { username: 'tester', role: 'Teknik', aksesMenu: 'Tek-Dashboard' };
   const context = {
     CacheService: {
       getScriptCache() {
         return {
-          get(key) {
-            return key === 'sesi_session-token' ? JSON.stringify(session) : null;
-          },
+          get(key) { return key === 'sesi_session-token' ? JSON.stringify(session) : null; },
           put() {},
         };
       },
@@ -36,10 +47,11 @@ test('the compatibility getPageContent implementation wins and injects Dashboard
   };
   vm.createContext(context);
 
-  // Apps Script uses global declarations, so the last getPageContent definition wins.
+  // Load the competing handlers in the same relative order clasp will use.
   vm.runInContext(readCoreFile('Code.js'), context, { filename: 'Code.js' });
   vm.runInContext(readCoreFile('PageLoader-Compat.js'), context, { filename: 'PageLoader-Compat.js' });
   vm.runInContext(readCoreFile('ZZ-Dashboard-Jadwal-Delete-Compat.js'), context, { filename: 'ZZ-Dashboard-Jadwal-Delete-Compat.js' });
+  vm.runInContext(readCoreFile('ZZZZZZZZZZZZZZZZZZ-PageLoader-Dashboard-Delete.js'), context, { filename: 'final-loader.js' });
 
   const result = context.getPageContent('session-token', 'Tek-Dashboard');
   assert.equal(result.success, true);
