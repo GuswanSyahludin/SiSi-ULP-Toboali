@@ -16,7 +16,7 @@ function readCoreFile(name) {
 
 function effectiveClaspOrder() {
   const allCoreFiles = fs.readdirSync(coreDir)
-    .filter((name) => /\\.js$/.test(name))
+    .filter((name) => /\.js$/.test(name))
     .map((name) => 'Core/' + name);
   const prioritized = clasp.filePushOrder.filter((name) => allCoreFiles.includes(name));
   const remaining = allCoreFiles
