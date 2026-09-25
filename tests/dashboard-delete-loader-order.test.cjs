@@ -17,17 +17,15 @@ test('the compatibility getPageContent implementation wins and injects Dashboard
   assert.deepEqual(clasp.filePushOrder, ['Core/Code.js', 'Core/PageLoader-Compat.js']);
 
   const context = {
-    PAGE_FILE_ALIASES: { 'Tek-Dashboard': 'Core/Tek-Dashboard' },
     HtmlService: {
       createHtmlOutputFromFile(name) {
         return { getContent: () => '<main data-page="' + name + '"></main>' };
       },
     },
     getSesiByToken(token) {
-      return token === 'session-token' ? { username: 'tester', role: 'Teknik' } : null;
-    },
-    _bolehAksesMenu(_session, pageName) {
-      return pageName === 'Tek-Dashboard';
+      return token === 'session-token'
+        ? { username: 'tester', role: 'Teknik', aksesMenu: 'Tek-Dashboard' }
+        : null;
     },
   };
   vm.createContext(context);
