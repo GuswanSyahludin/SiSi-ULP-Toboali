@@ -9,14 +9,18 @@ const files=[
   'ZZZZZZZZZ-BA-Atomicity.js',
   'ZZZZZZZZZZ-BA-Same-ULP-Auth.js',
   'ZZZZZZZZZZZ-BA-Row-Ownership.js',
-  'ZZZZZZZZZZZZ-Stage4-Sheet-Write-Safety.js',
+  'ZZZZZZZZZZZZ-Stage-4-Sheet-Write-Safety.js',
   'ZZZZZZZZZZZZZ-BA-Detail-Edit-Auth.js',
   'ZZZZZZZZZZZZZZ-BA-Photo-Upload-Auth.js',
   'ZZZZZZZZZZZZZZZ-BA-Master-Write-Safety.js',
 ];
 function source(name){return fs.readFileSync(path.join(root,name),'utf8');}
 function productionOrder(){
-  assert.deepEqual(clasp.filePushOrder,['Core/Code.js','Core/PageLoader-Compat.js']);
+  assert.deepEqual(clasp.filePushOrder,[
+    'Core/Code.js',
+    'Core/PageLoader-Compat.js',
+    'Core/ZZZZZZZZZZZZZZZZZZ-PageLoader-Dashboard-Delete.js',
+  ]);
   return files.slice().sort();
 }
 function context(){
