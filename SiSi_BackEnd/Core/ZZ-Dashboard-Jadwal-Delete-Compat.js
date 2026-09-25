@@ -3,8 +3,8 @@ function _dashboardJadwalDeleteClientScript_() {
   return `
 <script>
 (function () {
-  if (window.__SISI_DASHBOARD_JADWAL_DELETE__) return;
-  window.__SISI_DASHBOARD_JADWAL_DELETE__ = true;
+  var ns = window.__SISI_DASHBOARD_JADWAL_DELETE__ ||
+    (window.__SISI_DASHBOARD_JADWAL_DELETE__ = {});
 
   function toast(message, type) {
     if (typeof window.tdToast === "function") {
@@ -25,10 +25,10 @@ function _dashboardJadwalDeleteClientScript_() {
       var label = fields[i].querySelector("span:first-child");
       if (label && String(label.textContent || "").trim().toLowerCase() === "status jadwal") {
         var value = fields[i].querySelector("span:last-child");
-        return String(value ? value.textContent : "").trim();
+        return String(value ? value.textContent : "").trim().toLowerCase();
       }
     }
-    return "Terjadwal";
+    return "";
   }
 
   function wire() {
@@ -36,11 +36,11 @@ function _dashboardJadwalDeleteClientScript_() {
     for (var i = 0; i < cards.length; i++) {
       var card = cards[i];
       if (card.getAttribute("data-dashboard-delete-wired") === "1") continue;
-      if (statusOf(card).toLowerCase() !== "terjadwal") continue;
+      if (statusOf(card) !== "terjadwal") continue;
       var actions = card.querySelector(".cal-item-actions");
       var kodeEl = card.querySelector(".cal-item-kode");
       if (!actions || !kodeEl) continue;
-      let kode = String(kodeEl.textContent || "").trim();
+      var kode = String(kodeEl.textContent || "").trim();
       if (!kode) continue;
 
       var button = document.createElement("button");
@@ -51,6 +51,10 @@ function _dashboardJadwalDeleteClientScript_() {
       button.innerHTML = '<i class="fa-solid fa-trash"></i>';
       button.addEventListener("click", function () {
         var current = this;
+        if (!window.SisiRun || typeof window.SisiRun.withSuccessHandler !== "function") {
+          toast("Layanan hapus jadwal belum siap.", "error");
+          return;
+        }
         if (!window.confirm("Hapus jadwal " + kode + "?\\n\\nData ini akan dihapus permanen.")) return;
         current.disabled = true;
         current.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
@@ -86,13 +90,25 @@ function _dashboardJadwalDeleteClientScript_() {
     }
   }
 
-  var style = document.createElement("style");
-  style.textContent = ".dashboard-cal-delete{display:grid;place-items:center;width:32px;height:32px;border:1px solid oklch(84% .08 25);border-radius:8px;background:oklch(96% .035 25);color:oklch(48% .17 25);cursor:pointer}.dashboard-cal-delete:hover{background:oklch(91% .07 25)}.dashboard-cal-delete:disabled{opacity:.55;cursor:not-allowed}.dashboard-cal-delete:focus-visible{outline:3px solid oklch(68% .15 25/.3);outline-offset:1px}";
-  document.head.appendChild(style);
-  wire();
-  var target = document.getElementById("calModalBody");
-  if (target) new MutationObserver(wire).observe(target, { childList: true, subtree: true });
-  window.setTimeout(wire, 250);
+  ns.install = function () {
+    var styleId = "sisi-dashboard-jadwal-delete-style";
+    if (!document.getElementById(styleId)) {
+      var style = document.createElement("style");
+      style.id = styleId;
+      style.textContent = ".dashboard-cal-delete{display:grid;place-items:center;width:32px;height:32px;border:1px solid oklch(84% .08 25);border-radius:8px;background:oklch(96% .035 25);color:oklch(48% .17 25);cursor:pointer}.dashboard-cal-delete:hover{background:oklch(91% .07 25)}.dashboard-cal-delete:disabled{opacity:.55;cursor:not-allowed}.dashboard-cal-delete:focus-visible{outline:3px solid oklch(68% .15 25/.3);outline-offset:1px}";
+      document.head.appendChild(style);
+    }
+
+    wire();
+    var target = document.getElementById("calModalBody");
+    if (target && target.getAttribute("data-dashboard-delete-observed") !== "1") {
+      target.setAttribute("data-dashboard-delete-observed", "1");
+      new MutationObserver(wire).observe(target, { childList: true, subtree: true });
+    }
+    window.setTimeout(wire, 250);
+  };
+
+  ns.install();
 })();
 </script>`;
 }
