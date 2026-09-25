@@ -9,7 +9,7 @@ const files=[
   'ZZZZZZZZZ-BA-Atomicity.js',
   'ZZZZZZZZZZ-BA-Same-ULP-Auth.js',
   'ZZZZZZZZZZZ-BA-Row-Ownership.js',
-  'ZZZZZZZZZZZZ-Stage-4-Sheet-Write-Safety.js',
+  'ZZZZZZZZZZZZ-Stage4-Sheet-Write-Safety.js',
   'ZZZZZZZZZZZZZ-BA-Detail-Edit-Auth.js',
   'ZZZZZZZZZZZZZZ-BA-Photo-Upload-Auth.js',
   'ZZZZZZZZZZZZZZZ-BA-Master-Write-Safety.js',
