@@ -32,22 +32,24 @@ function makeHarness() {
         };
       },
     },
+    apiRouter_(e, body) {
+      return { legacy: true, e, body };
+    },
     getMasterGarduMobile(token, ulp) {
       calls.push({ token, ulp });
       return { success: true, marker: 'master-route' };
     },
   };
   vm.createContext(context);
-  vm.runInContext(fs.readFileSync(codePath, 'utf8'), context, {
-    filename: codePath,
-  });
   vm.runInContext(fs.readFileSync(routePath, 'utf8'), context, {
     filename: routePath,
   });
   return { context, calls };
 }
 
-test('JSON mobile master-data action reaches getMasterGarduMobile', () => {
+test('Code.js exposes the legacy router and the compatibility route handles JSON master sync', () => {
+  assert.match(fs.readFileSync(codePath, 'utf8'), /function\s+apiRouter_\s*\(/);
+
   const h = makeHarness();
   const response = h.context.apiRouter_({}, {
     action: 'getMasterGarduMobile',
@@ -64,4 +66,15 @@ test('JSON mobile master-data action reaches getMasterGarduMobile', () => {
     token: 'device-session-token',
     ulp: 'DELTA_SYNC:{"cmd":"snapshotCreate"}',
   }]);
+});
+
+test('non-master actions remain delegated to the legacy router', () => {
+  const h = makeHarness();
+  const body = { action: 'getLaporanHarian', token: 't' };
+  const response = h.context.apiRouter_({ parameter: {} }, body);
+  assert.deepEqual(JSON.parse(JSON.stringify(response)), {
+    legacy: true,
+    e: { parameter: {} },
+    body,
+  });
 });
