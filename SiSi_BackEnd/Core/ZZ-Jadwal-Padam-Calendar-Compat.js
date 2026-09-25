@@ -2,9 +2,15 @@
 function getJadwalPadamCalendarMonth(params) {
   try {
     params = params || {};
+    var g = guard_(arguments, {
+      ulp: true,
+      aksi: "getJadwalPadamCalendarMonth",
+    });
     var year = Number(params.year),
       month = Number(params.month),
       ulp = _jpText_(params.ulp);
+    if (!g.isSuper) ulp = _jpText_(g.ulp);
+
     if (year < 2000 || year > 2100 || month < 1 || month > 12)
       return { ok: false, rows: [], message: "Bulan kalender tidak valid." };
 
@@ -82,6 +88,7 @@ function getJadwalPadamCalendarMonth(params) {
         daerah: _jpText_(item.daerah),
         lokasi: _jpText_(item.lokasi),
         bebanA: item.bebanA == null ? "" : item.bebanA,
+        bebanMw: item.bebanMw == null ? "" : item.bebanMw,
         ensRupiah: item.ensRupiah == null ? "" : item.ensRupiah,
         status: _jpText_(item.status) || "Terjadwal",
         statusPekerjaan: _jpText_(item.statusPekerjaan) || "Padam",
