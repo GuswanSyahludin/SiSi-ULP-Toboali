@@ -12,7 +12,13 @@ const routePath = path.join(
   repoRoot,
   'SiSi_BackEnd',
   'Core',
-  'ZZZZZZZZZZZZZZZZZZZ-Mobile-Master-Sync-Route.js',
+  'ZZZZZZZZZZZZZZZZZZ-Mobile-Master-Sync-Route.js',
+);
+const finalLoaderPath = path.join(
+  repoRoot,
+  'SiSi_BackEnd',
+  'Core',
+  'ZZZZZZZZZZZZZZZZZZ-PageLoader-Dashboard-Delete.js',
 );
 
 function makeHarness() {
@@ -47,9 +53,14 @@ function makeHarness() {
   return { context, calls };
 }
 
-test('Code.js exposes the legacy router and the compatibility route handles JSON master sync', () => {
+test('mobile sync route sits before the final Dashboard loader override', () => {
+  assert.ok(fs.existsSync(routePath));
+  assert.ok(fs.existsSync(finalLoaderPath));
+  assert.ok(path.basename(routePath) < path.basename(finalLoaderPath));
   assert.match(fs.readFileSync(codePath, 'utf8'), /function\s+apiRouter_\s*\(/);
+});
 
+test('JSON mobile master-data action reaches getMasterGarduMobile', () => {
   const h = makeHarness();
   const response = h.context.apiRouter_({}, {
     action: 'getMasterGarduMobile',
