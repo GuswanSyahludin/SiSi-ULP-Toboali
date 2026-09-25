@@ -45,6 +45,12 @@ function getPageContent(token, pageName, injectedPageName) {
         "Core/SIE-BeritaAcara-WebFix",
       ).getContent();
     }
+    if (
+      pageName === "Tek-Dashboard" &&
+      typeof _dashboardJadwalDeleteClientScript_ === "function"
+    ) {
+      html += _dashboardJadwalDeleteClientScript_();
+    }
     return {
       success: true,
       html: html,
