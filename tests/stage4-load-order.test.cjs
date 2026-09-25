@@ -16,7 +16,7 @@ const files=[
 ];
 function source(name){return fs.readFileSync(path.join(root,name),'utf8');}
 function productionOrder(){
-  assert.deepEqual(clasp.filePushOrder,[]);
+  assert.deepEqual(clasp.filePushOrder,['Core/Code.js','Core/PageLoader-Compat.js']);
   return files.slice().sort();
 }
 function context(){
@@ -64,6 +64,6 @@ test('production clasp order is used, and Stage 4 delegates once without recursi
 test('all live Stage 4 writers are represented in the production-order fixture',()=>{
   const text=files.map(source).join('\n');
   for(const symbol of ['simpanBeritaAcaraGardu','updateBeritaAcaraDetail','uploadFotoBeritaAcara','updateFotoBeritaAcaraDetail','uploadBaFinal','syncGarduKeMaster','_baTerapkanUpdateMaster_']) {
-    assert.match(text,new RegExp(symbol.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
+    assert.match(text,new RegExp(symbol));
   }
 });
