@@ -17,6 +17,7 @@ test('the compatibility getPageContent implementation wins and injects Dashboard
   assert.deepEqual(clasp.filePushOrder, ['Core/Code.js', 'Core/PageLoader-Compat.js']);
 
   const context = {
+    PAGE_FILE_ALIASES: { 'Tek-Dashboard': 'Core/Tek-Dashboard' },
     HtmlService: {
       createHtmlOutputFromFile(name) {
         return { getContent: () => '<main data-page="' + name + '"></main>' };
