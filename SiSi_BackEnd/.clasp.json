@@ -13,7 +13,8 @@
   ],
   "filePushOrder": [
     "Core/Code.js",
-    "Core/PageLoader-Compat.js"
+    "Core/PageLoader-Compat.js",
+    "Core/ZZZZZZZZZZZZZZZZZZ-PageLoader-Dashboard-Delete.js"
   ],
   "skipSubdirectories": false
 }
