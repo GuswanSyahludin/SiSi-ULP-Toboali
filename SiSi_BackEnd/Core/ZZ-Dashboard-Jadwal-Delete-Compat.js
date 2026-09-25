@@ -40,7 +40,7 @@ function _dashboardJadwalDeleteClientScript_() {
       var actions = card.querySelector(".cal-item-actions");
       var kodeEl = card.querySelector(".cal-item-kode");
       if (!actions || !kodeEl) continue;
-      var kode = String(kodeEl.textContent || "").trim();
+      let kode = String(kodeEl.textContent || "").trim();
       if (!kode) continue;
 
       var button = document.createElement("button");
