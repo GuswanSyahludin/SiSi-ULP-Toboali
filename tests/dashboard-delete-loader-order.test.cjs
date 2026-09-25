@@ -16,16 +16,22 @@ function readCoreFile(name) {
 test('the compatibility getPageContent implementation wins and injects Dashboard delete wiring', () => {
   assert.deepEqual(clasp.filePushOrder, ['Core/Code.js', 'Core/PageLoader-Compat.js']);
 
+  const session = { username: 'tester', role: 'Teknik', aksesMenu: 'Tek-Dashboard' };
   const context = {
+    CacheService: {
+      getScriptCache() {
+        return {
+          get(key) {
+            return key === 'sesi_session-token' ? JSON.stringify(session) : null;
+          },
+          put() {},
+        };
+      },
+    },
     HtmlService: {
       createHtmlOutputFromFile(name) {
         return { getContent: () => '<main data-page="' + name + '"></main>' };
       },
-    },
-    getSesiByToken(token) {
-      return token === 'session-token'
-        ? { username: 'tester', role: 'Teknik', aksesMenu: 'Tek-Dashboard' }
-        : null;
     },
   };
   vm.createContext(context);
