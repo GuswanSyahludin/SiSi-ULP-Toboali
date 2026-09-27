@@ -322,12 +322,15 @@ function bersihkanPerangkatTerlantar(hari) {
 }
 
 function authPerangkatRouter_(e, body) {
-  var p = (e && e.parameter) || {};
-  var action = String((body && body.action) || p.action || "").trim();
+  /* H-01 FIX: Terima HANYA dari body (JSON POST), jangan dari e.parameter (query string).
+     Semua client (Flutter, web, test) harus POST JSON, tidak boleh query string. */
+  var action = String((body && body.action) || "").trim();
+
   if (typeof jadwalPadamMobileRouter_ === "function") {
-  var lewatJadwal = jadwalPadamMobileRouter_(e, body);
-  if (lewatJadwal) return _devJson_(lewatJadwal);
-}
+    var lewatJadwal = jadwalPadamMobileRouter_(e, body);
+    if (lewatJadwal) return _devJson_(lewatJadwal);
+  }
+
   if (AUTH_PERANGKAT_ACTIONS.indexOf(action) < 0) return null;
   var hasil;
   try {
@@ -338,22 +341,26 @@ function authPerangkatRouter_(e, body) {
           : { success: false, message: "Login wajib menggunakan POST JSON." };
         break;
       case "cekPerangkat":
-        hasil = cekPerangkat((body && body.deviceToken) || p.deviceToken);
+        /* H-01: terima HANYA dari body.deviceToken, jangan fallback ke query */
+        hasil = cekPerangkat(body && body.deviceToken ? String(body.deviceToken).trim() : "");
         break;
       case "logoutPerangkat":
+        /* H-01: terima HANYA dari body */
         hasil = logoutPerangkat(
-          (body && body.deviceToken) || p.deviceToken,
-          (body && body.token) || p.token,
+          body && body.deviceToken ? String(body.deviceToken).trim() : "",
+          body && body.token ? String(body.token).trim() : ""
         );
         break;
       case "daftarPerangkat":
-        hasil = daftarPerangkat((body && body.token) || p.token);
+        /* H-01: terima HANYA dari body.token */
+        hasil = daftarPerangkat(body && body.token ? String(body.token).trim() : "");
         break;
       case "cabutPerangkat":
+        /* H-01: terima HANYA dari body */
         hasil = cabutPerangkat(
-          (body && body.token) || p.token,
-          (body && body.deviceToken) || p.deviceToken,
-          (body && body.username) || p.username,
+          body && body.token ? String(body.token).trim() : "",
+          body && body.deviceToken ? String(body.deviceToken).trim() : "",
+          body && body.username ? String(body.username).trim() : ""
         );
         break;
       case "getMasterGarduMobile":
@@ -366,11 +373,12 @@ function authPerangkatRouter_(e, body) {
                   message: "Master-Gardu-Sync-Mobile.js belum terpasang.",
                 };
         } else {
+          /* H-01: terima HANYA dari body, jangan fallback ke query */
           hasil =
             typeof getMasterGarduMobile === "function"
               ? getMasterGarduMobile(
-                  (body && body.token) || p.token,
-                  (body && body.ulp) || p.ulp,
+                  body && body.token ? String(body.token).trim() : "",
+                  body && body.ulp ? String(body.ulp).trim() : ""
                 )
               : {
                   success: false,
