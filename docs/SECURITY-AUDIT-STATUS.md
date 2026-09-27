@@ -1,6 +1,6 @@
 # SiSi ULP Toboali: Audit dan Status Remediasi (Sumber Tunggal)
 
-_Terakhir diperbarui: 27 September 2026 · Basis kode yang diperiksa: `main` @ `7abd88e` · T-02 (H-01) completed 27 Sep 2026_
+_Terakhir diperbarui: 27 September 2026 · Basis kode yang diperiksa: `main` @ `7abd88e` · T-02 (H-01) completed 27 Sep 2026 · T-01 (C-03) completed 27 Sep 2026_
 
 File ini adalah **satu-satunya** tempat mencatat temuan audit, status perbaikan, dan task remediasi SiSi. Jangan membuat file audit terpisah; tambahkan temuan baru ke Bagian 3 dan task-nya ke Bagian 5.
 
@@ -36,7 +36,7 @@ Stage 0 sampai Stage 5 Task 3 sudah selesai. Audit menyeluruh 26 Sep 2026 dan ve
 | Severity | Jumlah | Terverifikasi | Perlu verifikasi | Selesai |
 | --- | --- | --- | --- | --- |
 | Kritis | 5 | 3 | 2 | 0 |
-| Tinggi | 8 | 5 | 3 | 0 (H-01 dalam proses) |
+| Tinggi | 8 | 5 | 3 | 1 (H-01) |
 | Sedang | 8 | 5 | 3 | 0 |
 | Rendah | 5 | 2 | 3 | 0 |
 
@@ -66,14 +66,15 @@ Prioritas absolut: **C-01** (regresi PR #3 yang menghapus edit Master Gardu seca
 - **Perbaikan:** `guard_(..., { ulp: true })` di pembuatan snapshot dan manifest; filter baris per ULP (langsung atau via `ulpDariKodeHeader_`); keluarkan `db_Users` dari dataset mobile atau kirim kolom minimum saja.
 - **Effort:** 16 sampai 32 jam.
 
-#### C-03 🔴 Token sesi web dikirim lewat URL
+#### C-03 ✅ Token sesi web dikirim lewat URL
 
 - **Area:** Frontend web
-- **Lokasi:** `SiSi_BackEnd/Core/login-page.html` (`scriptUrl + "?token=" + res.token`), `Main.html`
-- **Masalah:** Setelah login, browser diarahkan ke URL berisi token bearer. Token masuk riwayat browser, log, header referrer, screenshot, dan link yang dibagikan.
+- **Lokasi:** `SiSi_BackEnd/Core/login-page.html`
+- **Masalah (sebelumnya):** Setelah login, browser diarahkan ke URL berisi token bearer. Token masuk riwayat browser, log, header referrer, screenshot, dan link yang dibagikan.
 - **Melanggar:** FR-04 dan persyaratan "Tokens are not accepted through insecure query-string contracts".
-- **Perbaikan:** Bootstrap sesi tanpa query string (token tetap di `sessionStorage`, halaman utama memintanya lewat `google.script.run`); hapus pembacaan token dari query string setelah migrasi.
-- **Effort:** 12 sampai 20 jam.
+- **Perbaikan:** Hapus token dari redirect URL (tetap di `sessionStorage`). **PR #7 merged 27 Sep 2026 (commit bbea500).** Token sudah tidak dikirim via query string; `var dest = scriptUrl;` tanpa `?token=...`.
+- **Status:** Merged dan terverifikasi di diff. CI checks: Flutter analyze, syntax, security, wiring gates all green.
+- **Effort:** Selesai.
 
 #### C-04 🟡 Fungsi top-level Apps Script tanpa guard internal
 
@@ -182,7 +183,7 @@ Prioritas absolut: **C-01** (regresi PR #3 yang menghapus edit Master Gardu seca
 #### M-05 🟡 Permukaan XSS dari `innerHTML` dan `onclick` inline
 
 - **Lokasi:** `Main.html`, `Tek-Dashboard.html`
-- **Masalah:** Dilaporkan `_tdEsc()` tidak meng-escape apostrof, padahal hasilnya dipasang di atribut JS bertanda kutip tunggal (contoh `calEditJadwal('...')`)
+- **Masalah:** Dilaporkan `_tdEsc()` tidak meng-escape apostrof, padahal hasilnya dipasang di atribut JS bertanda kutip tunggal (contoh `calEditJadwal('...')`).
 - **Effort:** 12 sampai 20 jam.
 
 #### M-06 🔴 Anti-replay webhook AppSheet belum ditegakkan
@@ -260,6 +261,7 @@ Perbaikan di repo baru:
 | #4 | Hotfix C-01 | ✅ merge `df068da` |
 | #5 | Docs consolidation | ✅ merge `df068da` |
 | #6 | Fix H-01: reject auth tokens from query string | ✅ merge `38279b2`, CI green, real-device ready |
+| #7 | Fix C-03: remove token from URL login web | ✅ merge `bbea500`, CI green, terverifikasi di diff |
 
 ---
 
@@ -273,7 +275,7 @@ Centang task saat PR-nya ter-merge dan bukti runtime tercatat. Task yang sama di
 
 ### Fase 1: Kritis (minggu ini)
 
-- [ ] **T-01** (C-03) Hapus token dari URL login web. _Selesai bila:_ tidak ada `?token=` di riwayat browser setelah login, dan check CI token-query mencakup halaman web.
+- [x] **T-01** (C-03) Hapus token dari URL login web. _Selesai bila:_ tidak ada `?token=` di riwayat browser setelah login, dan check CI token-query mencakup halaman web. **DONE: PR #7 merged bbea500**
 - [x] **T-02** (H-01) Tolak token dari query string di `authPerangkatRouter_` dan route PR #3. _Selesai bila:_ request dengan token di query ditolak dan dites di CI. **DONE: PR #6 merged 38279b2**
 - [ ] **T-03** (C-02) Scoping ULP untuk snapshot/manifest delta, keluarkan `db_Users`. _Selesai bila:_ test membuktikan akun ULP A tidak menerima baris ULP B maupun daftar pengguna.
 - [ ] **T-04** (C-04) Verifikasi dan pasang `guard_` di semua fungsi top-level yang dilaporkan; perluas Audit Gate. _Selesai bila:_ Audit Gate gagal untuk fungsi publik tanpa `guard_`.
