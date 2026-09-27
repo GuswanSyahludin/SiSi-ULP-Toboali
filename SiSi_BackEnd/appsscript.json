@@ -14,5 +14,14 @@
   "webapp": {
     "executeAs": "USER_DEPLOYING",
     "access": "ANYONE_ANONYMOUS"
-  }
+  },
+  "filePushOrder": [
+    "Core/Code.js",
+    "Core/PageLoader-Compat.js",
+    "ZZ-Dashboard-Jadwal-Delete-Compat.js",
+    "Jadwal-Padam-Code.js",
+    "Tek-LaporanUP3.js",
+    "Tek-LaporanWilayah.js",
+    "Tek-LaporanHarianSheet.js"
+  ]
 }
