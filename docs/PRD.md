@@ -3,9 +3,10 @@
 ## SiSi ULP Toboali
 
 **Document status:** Living product and engineering specification  
-**Repository:** `SyahludinGuswan/Sisi-ULP-Toboali`  
+**Repository:** `GuswanSyahludin/SiSi-ULP-Toboali` (formerly `SyahludinGuswan/Sisi-ULP-Toboali`)  
 **Primary operating scope:** Internal ULP Toboali operations  
-**Last updated:** 24 September 2026
+**Audit findings and remediation tasks:** `docs/SECURITY-AUDIT-STATUS.md` (single source of truth)  
+**Last updated:** 27 September 2026
 
 ## 1. Product contract
 
@@ -99,5 +100,6 @@ A change is done only when implementation and documentation are updated, focused
 7. Stage 5 Task 2, legacy auth fallback cleanup: implemented and merged in PR #11.
 8. Stage 5 Task 3, secure session and device-token storage migration: implemented, contract-tested, audited, and merged in PR #12.
 9. Remaining Stage 5 tasks: legacy credential migration validation, secure-storage real-device evidence, token redaction, deployed smoke tests, branch protection, and offline-sync integration coverage.
+10. Stage 6, full-stack audit remediation (26 to 27 September 2026): findings C-01 to L-05 and tasks T-00 to T-32 are tracked in `docs/SECURITY-AUDIT-STATUS.md`. C-01 (Master Gardu edit loss from the PR #3 route) blocks every other release.
 
 No later stage is complete while an earlier security or runtime blocker remains unresolved.
