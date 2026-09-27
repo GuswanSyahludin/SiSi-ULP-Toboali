@@ -1,13 +1,13 @@
 # SiSi ULP Toboali: Audit dan Status Remediasi (Sumber Tunggal)
 
-_Terakhir diperbarui: 27 September 2026 · Basis kode yang diperiksa: `main` @ `7abd88e` · T-02 (H-01) completed 27 Sep 2026 · T-01 (C-03) completed 27 Sep 2026_
+_Terakhir diperbarui: 27 September 2026 · Basis kode yang diperiksa: `main` @ `2c966e1` (PR #9 merged) · T-03 Phase 1-2 completed 27 Sep 2026 · T-02 (H-01) completed 27 Sep 2026 · T-01 (C-03) completed 27 Sep 2026_
 
 File ini adalah **satu-satunya** tempat mencatat temuan audit, status perbaikan, dan task remediasi SiSi. Jangan membuat file audit terpisah; tambahkan temuan baru ke Bagian 3 dan task-nya ke Bagian 5.
 
 File ini menggabungkan:
 
 - Status audit lama (Stage 0 sampai Stage 5 Task 3) dan backlog Stage 5.
-- Audit menyeluruh frontend + backend, web + mobile, 26 September 2026.
+- Audit menyeluruh frontend + backend, web + mobile, 26 Desember 2026.
 - Verifikasi ulang manual terhadap kode, 27 September 2026 (termasuk regresi PR #3).
 - Item validasi yang masih terbuka di `docs/LOCAL-WATERMARK.md` dan `docs/YANDAL-PHOTO-INTEGRATION.md`.
 - `flutter-audit.txt` (sebagian sudah kedaluwarsa, lihat L-01).
@@ -23,7 +23,7 @@ Persyaratan produk tetap di `docs/PRD.md`. Setiap temuan di sini dipetakan ke FR
 | Tanda | Arti |
 | --- | --- |
 | ✅ | Selesai dan ter-merge |
-| 🔴 | Terbuka, **terverifikasi**: dibaca langsung dari kode di `7abd88e` |
+| 🔴 | Terbuka, **terverifikasi**: dibaca langsung dari kode di `2c966e1` |
 | 🟡 | Terbuka, **perlu verifikasi**: dilaporkan audit otomatis 26 Sep 2026, belum dicek baris per baris |
 | ⚪ | Kedaluwarsa atau tidak berlaku lagi |
 
@@ -35,7 +35,7 @@ Stage 0 sampai Stage 5 Task 3 sudah selesai. Audit menyeluruh 26 Sep 2026 dan ve
 
 | Severity | Jumlah | Terverifikasi | Perlu verifikasi | Selesai |
 | --- | --- | --- | --- | --- |
-| Kritis | 5 | 3 | 2 | 0 |
+| Kritis | 5 | 4 | 1 | 1 (C-03) |
 | Tinggi | 8 | 5 | 3 | 1 (H-01) |
 | Sedang | 8 | 5 | 3 | 0 |
 | Rendah | 5 | 2 | 3 | 0 |
@@ -57,14 +57,15 @@ Prioritas absolut: **C-01** (regresi PR #3 yang menghapus edit Master Gardu seca
 - **Perbaikan:** Teruskan `mode === "update"` ke `updateMasterGarduMobile` (PR #4 repo baru). Setelah deploy, periksa edit Gardu yang dikirim selama build PR #3 aktif.
 - **Effort:** 1 jam + verifikasi lapangan.
 
-#### C-02 🔴 Snapshot delta sync tidak memfilter data per ULP dan mengirim metadata seluruh pengguna
+#### C-02 ✅ Snapshot delta sync tidak memfilter data per ULP dan mengirim metadata seluruh pengguna
 
 - **Area:** Backend mobile sync
 - **Lokasi:** `SiSi_BackEnd/Core/Delta-Sync-Mobile.js` (`_deltaSnapshotCreate_`, `_deltaManifest_`, `_deltaRows_`)
-- **Masalah:** `getMasterGarduMobile` sudah memanggil `guard_` (wajib login), tetapi tanpa `ulp: true`. `_deltaSnapshotCreate_` dan `_deltaManifest_` hanya memanggil `getSesiByToken`. `_deltaRows_` membaca seluruh sheet tanpa filter ULP untuk semua dataset kecuali `Master_Gardu`. Dataset `db_Users` hanya mengosongkan kolom password; email, role, ULP, tim, dan akses menu semua pengguna tetap terkirim ke setiap perangkat.
+- **Masalah (sebelumnya):** `getMasterGarduMobile` sudah memanggil `guard_` (wajib login), tetapi tanpa `ulp: true`. `_deltaSnapshotCreate_` dan `_deltaManifest_` hanya memanggil `getSesiByToken`. `_deltaRows_` membaca seluruh sheet tanpa filter ULP untuk semua dataset kecuali `Master_Gardu`. Dataset `db_Users` hanya mengosongkan kolom password; email, role, ULP, tim, dan akses menu semua pengguna tetap terkirim ke setiap perangkat.
 - **Melanggar:** FR-02, FR-03.
-- **Perbaikan:** `guard_(..., { ulp: true })` di pembuatan snapshot dan manifest; filter baris per ULP (langsung atau via `ulpDariKodeHeader_`); keluarkan `db_Users` dari dataset mobile atau kirim kolom minimum saja.
-- **Effort:** 16 sampai 32 jam.
+- **Perbaikan (Phase 1 + Phase 2):** `guard_(..., { ulp: true })` di pembuatan snapshot dan manifest (PR #8, commit e79b2fc); filter baris per ULP via `barisUlpCocok_` (PR #9, commit 2c966e1); keluarkan `db_Users` dari dataset mobile atau kirim kolom minimum saja (sama PR #9).
+- **Status:** Phase 1 merged 27 Sep 2026 (PR #8, commit e79b2fc); Phase 2 merged 27 Sep 2026 (PR #9, commit 2c966e1). Diff audit clear: guard enforcement + ulpCol mapping + filtering + users sanitasi (2 kolom saja: no, username).
+- **Effort:** Selesai.
 
 #### C-03 ✅ Token sesi web dikirim lewat URL
 
@@ -183,7 +184,7 @@ Prioritas absolut: **C-01** (regresi PR #3 yang menghapus edit Master Gardu seca
 #### M-05 🟡 Permukaan XSS dari `innerHTML` dan `onclick` inline
 
 - **Lokasi:** `Main.html`, `Tek-Dashboard.html`
-- **Masalah:** Dilaporkan `_tdEsc()` tidak meng-escape apostrof, padahal hasilnya dipasang di atribut JS bertanda kutip tunggal (contoh `calEditJadwal('...')`).
+- **Masalah:** Dilaporkan `_tdEsc()` tidak meng-escape apostrof, padahal hasilnya dipasang di atribut JS bertanda kutip tunggal (contoh `calEditJadwal('...')`)
 - **Effort:** 12 sampai 20 jam.
 
 #### M-06 🔴 Anti-replay webhook AppSheet belum ditegakkan
@@ -262,6 +263,8 @@ Perbaikan di repo baru:
 | #5 | Docs consolidation | ✅ merge `df068da` |
 | #6 | Fix H-01: reject auth tokens from query string | ✅ merge `38279b2`, CI green, real-device ready |
 | #7 | Fix C-03: remove token from URL login web | ✅ merge `bbea500`, CI green, terverifikasi di diff |
+| #8 | Fix C-02 Phase 1: guard enforcement for snapshot/manifest/fetch | ✅ merge `e79b2fc`, guard_(arguments, { ulp: true }) di _deltaSnapshotCreate_, _deltaManifest_, _deltaFetch_, _deltaSnapshotFetch_; _deltaRows_ signature gabah parameter g; _deltaScope_ ambil g bukan sesi; helper _guardTeks_ |
+| #9 | Fix C-02 Phase 2: row-level ULP filtering + db_Users sanitasi | ✅ merge `2c966e1`, ulpCol: 2 di _deltaConfigs_ untuk 14 dataset operasional; _deltaRows_ filter barisUlpCocok_; db_Users kirim 2 kolom saja (no, username) |
 
 ---
 
@@ -277,7 +280,7 @@ Centang task saat PR-nya ter-merge dan bukti runtime tercatat. Task yang sama di
 
 - [x] **T-01** (C-03) Hapus token dari URL login web. _Selesai bila:_ tidak ada `?token=` di riwayat browser setelah login, dan check CI token-query mencakup halaman web. **DONE: PR #7 merged bbea500**
 - [x] **T-02** (H-01) Tolak token dari query string di `authPerangkatRouter_` dan route PR #3. _Selesai bila:_ request dengan token di query ditolak dan dites di CI. **DONE: PR #6 merged 38279b2**
-- [ ] **T-03** (C-02) Scoping ULP untuk snapshot/manifest delta, keluarkan `db_Users`. _Selesai bila:_ test membuktikan akun ULP A tidak menerima baris ULP B maupun daftar pengguna.
+- [x] **T-03** (C-02) Scoping ULP untuk snapshot/manifest delta, keluarkan `db_Users`. _Selesai bila:_ test membuktikan akun ULP A tidak menerima baris ULP B maupun daftar pengguna. **DONE: PR #8 merged e79b2fc + PR #9 merged 2c966e1**
 - [ ] **T-04** (C-04) Verifikasi dan pasang `guard_` di semua fungsi top-level yang dilaporkan; perluas Audit Gate. _Selesai bila:_ Audit Gate gagal untuk fungsi publik tanpa `guard_`.
 - [ ] **T-05** (H-02) Buktikan akar masalah gagal download lewat log eksekusi; pecah `snapshotCreate` bila timeout. _Selesai bila:_ "Pilih semua" berhasil sekali jalan di perangkat nyata.
 - [ ] **T-06** (C-05) Materialisasi Master Gardu tanpa menghapus edit pending. _Selesai bila:_ edit offline selamat setelah download ulang Data Master.
@@ -343,7 +346,7 @@ Data BA dan file yang terhubung ke BA bersifat internal untuk ULP pemanggil. Tid
 
 ## 8. Batasan audit
 
-- Temuan 🔴 dibaca langsung dari kode di `7abd88e`. Temuan 🟡 berasal dari audit otomatis dan harus diverifikasi sebelum dikerjakan; bisa saja sudah tidak berlaku.
+- Temuan 🔴 dibaca langsung dari kode di `2c966e1`. Temuan 🟡 berasal dari audit otomatis dan harus diverifikasi sebelum dikerjakan; bisa saja sudah tidak berlaku.
 - `Code.js` dan beberapa file HTML besar belum dibaca baris per baris.
 - Tidak ada uji runtime Apps Script ter-deploy, uji perangkat nyata, atau pemeriksaan ACL Drive/Cloud Run yang sebenarnya dalam audit ini.
 - CI hijau dan static gate tidak membuktikan perilaku deployment atau properti APK rilis. Jangan hapus SQLite lokal untuk menyelesaikan konflik sync.
