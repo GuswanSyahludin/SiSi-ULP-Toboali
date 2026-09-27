@@ -1,6 +1,6 @@
 /* ============================================================================
    Delta-Sync-Mobile.js: manifest + immutable snapshot downloads per module
-   Rev 8 Sep 2026
+   Rev 8 Sep 2026 + C-02 Phase 1 (ULP enforcement)
    ============================================================================ */
 var DELTA_SYNC_CACHE_SEC = 600;
 var DELTA_SYNC_PAGE = 500;
@@ -97,11 +97,9 @@ function _deltaYandalPetugasRows_() {
   return out;
 }
 
-function _deltaRows_(token, name, cfg) {
+function _deltaRows_(g, token, name, cfg) {
   if (cfg.special === "gardu") {
-    var sesi = getSesiByToken(String(token || ""));
-    if (!sesi) throw new Error("Sesi habis.");
-    var result = getMasterGarduMobile(token, String(sesi.ulp || ""));
+    var result = getMasterGarduMobile(token, String(g.ulp || ""));
     if (!result || result.success !== true) throw new Error((result && result.message) || "Master Gardu gagal.");
     return (result.list || []).map(function (x) { return x; });
   }
@@ -134,9 +132,8 @@ function _deltaDigest_(rows) {
 
 /* Legacy protocol remains available for APK versions released before snapshots. */
 function _deltaManifest_(token, force) {
-  var sesi = getSesiByToken(String(token || ""));
-  if (!sesi) return { success: false, message: "Sesi habis." };
-  var scope = String(sesi.kodeUlp || sesi.ulp || "all").replace(/[^a-zA-Z0-9_-]/g, "_");
+  var g = guard_(arguments, { ulp: true, aksi: "deltaManifest" });
+  var scope = String(g.kodeUlp || g.ulp || "all").replace(/[^a-zA-Z0-9_-]/g, "_");
   var cache = CacheService.getScriptCache(), ck = "delta_manifest_v1_" + scope;
   if (!force) {
     var hit = cache.get(ck);
@@ -146,7 +143,7 @@ function _deltaManifest_(token, force) {
   Object.keys(cfgs).forEach(function (name) {
     var cfg = cfgs[name];
     try {
-      var rows = _deltaRows_(token, name, cfg);
+      var rows = _deltaRows_(g, token, name, cfg);
       datasets.push({ name: name, version: _deltaDigest_(rows), count: rows.length, kind: cfg.support ? "support" : "main" });
     } catch (err) {
       warnings.push({ name: name, message: String((err && err.message) || err) });
@@ -159,10 +156,10 @@ function _deltaManifest_(token, force) {
 }
 
 function _deltaFetch_(token, name, offset, limit) {
-  guard_(arguments, { ulp: true, aksi: "deltaFetch" });
+  var g = guard_(arguments, { ulp: true, aksi: "deltaFetch" });
   var cfg = _deltaConfigs_()[name];
   if (!cfg) return { success: false, message: "Dataset tidak dikenal: " + name };
-  var rows = _deltaRows_(token, name, cfg), from = Math.max(0, Number(offset) || 0);
+  var rows = _deltaRows_(g, token, name, cfg), from = Math.max(0, Number(offset) || 0);
   var take = Math.max(1, Math.min(DELTA_SYNC_PAGE, Number(limit) || DELTA_SYNC_PAGE));
   return {
     success: true,
@@ -183,8 +180,8 @@ function _deltaSnapshotError_(code, message) {
   return err;
 }
 
-function _deltaScope_(sesi) {
-  return String((sesi && (sesi.kodeUlp || sesi.ulp)) || "all").trim().toLowerCase();
+function _deltaScope_(g) {
+  return String((g && (g.kodeUlp || g.ulp)) || "all").trim().toLowerCase();
 }
 
 function _deltaSnapshotRoot_() {
@@ -241,8 +238,7 @@ function _deltaChunkName_(name, index) {
 }
 
 function _deltaSnapshotCreate_(token, payload) {
-  var sesi = getSesiByToken(String(token || ""));
-  if (!sesi) return { success: false, code: "SESSION_EXPIRED", message: "Sesi habis." };
+  var g = guard_(arguments, { ulp: true, aksi: "deltaSnapshotCreate" });
   _deltaSnapshotCleanup_();
   var cfgs = _deltaConfigs_(), names;
   try { names = _deltaRequestedNames_(payload && payload.datasets, cfgs); }
@@ -255,7 +251,7 @@ function _deltaSnapshotCreate_(token, payload) {
       var name = names[i], cfg = cfgs[name];
       try {
         /* Source rows and digest are computed exactly once for this immutable snapshot. */
-        var rows = _deltaRows_(token, name, cfg);
+        var rows = _deltaRows_(g, token, name, cfg);
         var version = _deltaDigest_(rows);
         for (var offset = 0, page = 0; offset < rows.length; offset += DELTA_SNAPSHOT_PAGE, page++) {
           var chunk = rows.slice(offset, offset + DELTA_SNAPSHOT_PAGE);
@@ -269,7 +265,7 @@ function _deltaSnapshotCreate_(token, payload) {
     }
     var meta = {
       apiVersion: 2,
-      scope: _deltaScope_(sesi),
+      scope: _deltaScope_(g),
       createdAt: createdAt.toISOString(),
       expiresAt: expiresAt.toISOString(),
       pageSize: DELTA_SNAPSHOT_PAGE,
@@ -305,13 +301,18 @@ function _deltaSnapshotOpen_(token, snapshotId) {
   var meta;
   try { meta = JSON.parse(files.next().getBlob().getDataAsString("UTF-8")); }
   catch (_) { throw _deltaSnapshotError_("SNAPSHOT_INVALID", "Metadata snapshot tidak valid."); }
-  if (_deltaScope_(sesi) !== String(meta.scope || ""))
+  var g = { sesi: sesi, ulp: _guardTeks_(sesi.ulp), kodeUlp: _guardTeks_(sesi.kodeUlp) };
+  if (_deltaScope_(g) !== String(meta.scope || ""))
     throw _deltaSnapshotError_("SNAPSHOT_FORBIDDEN", "Snapshot bukan milik lingkup akun ini.");
   if (!meta.expiresAt || Date.now() >= new Date(meta.expiresAt).getTime()) {
     try { folder.setTrashed(true); } catch (_) {}
     throw _deltaSnapshotError_("SNAPSHOT_EXPIRED", "Snapshot download sudah kedaluwarsa.");
   }
   return { folder: folder, meta: meta };
+}
+
+function _guardTeks_(v) {
+  return String(v == null ? "" : v).trim();
 }
 
 function _deltaSnapshotManifest_(token, snapshotId) {
@@ -328,7 +329,7 @@ function _deltaSnapshotManifest_(token, snapshotId) {
 }
 
 function _deltaSnapshotFetch_(token, snapshotId, name, offset, limit) {
-  guard_(arguments, { ulp: true, aksi: "deltaSnapshotFetch" });
+  var g = guard_(arguments, { ulp: true, aksi: "deltaSnapshotFetch" });
   var opened = _deltaSnapshotOpen_(token, snapshotId), meta = opened.meta;
   var datasets = meta.datasets || [], dataset = null;
   for (var i = 0; i < datasets.length; i++) if (datasets[i].name === name) { dataset = datasets[i]; break; }
