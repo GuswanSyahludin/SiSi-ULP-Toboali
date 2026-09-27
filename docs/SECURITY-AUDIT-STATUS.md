@@ -38,7 +38,7 @@ Stage 0 sampai Stage 5 Task 3 sudah selesai. Audit menyeluruh 26 Sep 2026 dan ve
 | Kritis | 5 | 3 | 2 |
 | Tinggi | 8 | 5 | 3 |
 | Sedang | 8 | 5 | 3 |
-| Rendah | 5 | 3 | 2 |
+| Rendah | 5 | 2 | 3 |
 
 Prioritas absolut: **C-01** (regresi PR #3 yang menghapus edit Master Gardu secara diam-diam). Perbaikannya ada di PR #4 repo baru dan harus di-merge serta di-deploy sebelum pekerjaan lain.
 
