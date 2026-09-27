@@ -79,7 +79,7 @@ function _jpTgl_(v) {
     return Utilities.formatDate(v, "Asia/Jakarta", "yyyy-MM-dd");
   var s = _jpText_(v),
     iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/),
-    num = s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
+    num = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
   if (iso)
     return (
       iso[1] + "-" + ("0" + iso[2]).slice(-2) + "-" + ("0" + iso[3]).slice(-2)
@@ -210,6 +210,7 @@ function _jpMasterMap_() {
 }
 
 function getJadwalPadamMaster(params) {
+  guard_(arguments, { ulp: true, aksi: "getJadwalPadamMaster" });
   params = params || {};
   var rows = _jpRows_(JADWAL_PADAM_SHEETS.daerah),
     ctx = _jpMasterContext_(),
@@ -242,6 +243,7 @@ function _jpBustCalendarCache_() {
   return next;
 }
 function getJadwalPadamCalendarMonth(params) {
+  guard_(arguments, { ulp: true, aksi: "getJadwalPadamCalendarMonth" });
   try {
     params = params || {};
     var year = Number(params.year),
@@ -337,6 +339,7 @@ function getJadwalPadamCalendarMonth(params) {
 }
 
 function getJadwalPadamList(params) {
+  guard_(arguments, { ulp: true, aksi: "getJadwalPadamList" });
   params = params || {};
   var sh = _jpSheet_(JADWAL_PADAM_SHEETS.rekap);
   if (!sh)
@@ -468,6 +471,7 @@ function getJadwalPadamList(params) {
 }
 
 function getJadwalPadamMasterBeban(params) {
+  guard_(arguments, { ulp: true, aksi: "getJadwalPadamMasterBeban" });
   params = params || {};
   var x = _jpMaster_(params.penyulang, params.section || "");
   return {
@@ -499,6 +503,7 @@ function _jpTimeDate_(value) {
   return d;
 }
 function simpanJadwalPadam(payload) {
+  guard_(arguments, { ulp: true, aksi: "simpanJadwalPadam" });
   try {
     payload = payload || {};
     var token = _jpText_(payload.token),
@@ -620,6 +625,7 @@ function simpanJadwalPadam(payload) {
 }
 
 function updateJadwalPadam(payload) {
+  guard_(arguments, { ulp: true, aksi: "updateJadwalPadam" });
   try {
     payload = payload || {};
     var sesi =
@@ -731,6 +737,7 @@ function updateJadwalPadam(payload) {
 }
 
 function updateStatusJadwalPadam(payload) {
+  guard_(arguments, { ulp: true, aksi: "updateStatusJadwalPadam" });
   try {
     payload = payload || {};
     var token = _jpText_(payload.token),
@@ -785,6 +792,7 @@ function _jpWaNumber_(value, digits) {
   });
 }
 function getJadwalPadamWaText(params) {
+  guard_(arguments, { ulp: true, aksi: "getJadwalPadamWaText" });
   try {
     params = params || {};
     var token = _jpText_(params.token),
