@@ -48,12 +48,16 @@ function fileIdFoto_(nilai) {
 
 /** URL baku untuk DISIMPAN di gsheet: thumbnail tanpa ukuran. */
 function urlFotoBaku_(nilai) {
+  guard_(arguments, { ulp: true, aksi: "urlFotoBaku_" });
+  
   var id = fileIdFoto_(nilai);
   return id ? FOTO_URL_PREFIX + id : String(nilai || "").trim();
 }
 
 /** URL untuk DIBACA UI. Tidak mengubah nilai di gsheet. */
 function urlFotoUkuran_(nilai, lebar) {
+  guard_(arguments, { ulp: true, aksi: "urlFotoUkuran_" });
+  
   var baku = urlFotoBaku_(nilai);
   if (!baku || baku.indexOf(FOTO_URL_PREFIX) !== 0) return baku;
   var w = Math.max(64, Math.min(2400, Number(lebar || 400)));
@@ -79,6 +83,8 @@ function urlFotoUkuran_(nilai, lebar) {
  * setelah mencapai akhir sheet, putaran berikutnya kembali dari baris 2.
  */
 function normalisasiUrlFotoRowTick() {
+  guard_(arguments, { ulp: true, aksi: "normalisasiUrlFotoRowTick" });
+  
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(3000)) return;
   try {

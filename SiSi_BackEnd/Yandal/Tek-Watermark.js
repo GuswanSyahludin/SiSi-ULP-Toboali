@@ -25,6 +25,8 @@ var WM_ENGINE_SECRET =
  * @return {string} URL thumbnail baku tanpa ukuran.
  */
 function watermarkFoto_(fileId, outputFolderId, info, outName) {
+  guard_(arguments, { ulp: true, aksi: "watermarkFoto_" });
+  
   info = info || {};
   var source = DriveApp.getFileById(fileId);
   var blob = source.getBlob();
