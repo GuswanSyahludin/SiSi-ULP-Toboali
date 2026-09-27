@@ -9,10 +9,12 @@ void main() {
         File('lib/widgets/sync_section_pengaturan.dart').readAsStringSync();
     expect(source, contains('Checkbox('));
     expect(source, contains('_selectedModules'));
-    expect(source, contains('Pilih semua'));
-    expect(source, contains(r'Download ${_selectedModules.length} pilihan'));
+    expect(source, contains('_teamName'));
+    expect(source, contains('_moduleKeys'));
     expect(source, contains('startModulesSync(_selectedModules)'));
-    expect(source, contains('moduleDescriptions'));
-    expect(source, contains('Terakhir disinkron pukul'));
+    expect(source, contains('Tersinkron'));
+    expect(source, contains('Database berhasil di-download'));
+    expect(source, contains('_expanded'));
+    expect(source, contains('Download'));
   });
 }
