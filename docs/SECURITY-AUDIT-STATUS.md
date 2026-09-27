@@ -1,6 +1,6 @@
 # SiSi ULP Toboali: Audit dan Status Remediasi (Sumber Tunggal)
 
-_Terakhir diperbarui: 27 September 2026 · Basis kode yang diperiksa: `main` @ `7abd88e`_
+_Terakhir diperbarui: 27 September 2026 · Basis kode yang diperiksa: `main` @ `7abd88e` · T-02 (H-01) completed 27 Sep 2026_
 
 File ini adalah **satu-satunya** tempat mencatat temuan audit, status perbaikan, dan task remediasi SiSi. Jangan membuat file audit terpisah; tambahkan temuan baru ke Bagian 3 dan task-nya ke Bagian 5.
 
@@ -33,12 +33,12 @@ Estimasi effort adalah perkiraan kasar dari audit, bukan komitmen.
 
 Stage 0 sampai Stage 5 Task 3 sudah selesai. Audit menyeluruh 26 Sep 2026 dan verifikasi ulang 27 Sep 2026 menemukan temuan terbuka berikut:
 
-| Severity | Jumlah | Terverifikasi | Perlu verifikasi |
-| --- | --- | --- | --- |
-| Kritis | 5 | 3 | 2 |
-| Tinggi | 8 | 5 | 3 |
-| Sedang | 8 | 5 | 3 |
-| Rendah | 5 | 2 | 3 |
+| Severity | Jumlah | Terverifikasi | Perlu verifikasi | Selesai |
+| --- | --- | --- | --- | --- |
+| Kritis | 5 | 3 | 2 | 0 |
+| Tinggi | 8 | 5 | 3 | 0 (H-01 dalam proses) |
+| Sedang | 8 | 5 | 3 | 0 |
+| Rendah | 5 | 2 | 3 | 0 |
 
 Prioritas absolut: **C-01** (regresi PR #3 yang menghapus edit Master Gardu secara diam-diam). Perbaikannya ada di PR #4 repo baru dan harus di-merge serta di-deploy sebelum pekerjaan lain.
 
@@ -95,13 +95,13 @@ Prioritas absolut: **C-01** (regresi PR #3 yang menghapus edit Master Gardu seca
 
 ### 3.2 Tinggi
 
-#### H-01 🔴 Router perangkat dan route PR #3 masih menerima token dari query string
+#### H-01 ✅ Router perangkat menolak token dari query string
 
-- **Lokasi:** `Core/Auth-Perangkat.js` (`authPerangkatRouter_`: `p.token`, `p.deviceToken`), route PR #3 (`p.token`, `p.ulp`)
-- **Masalah:** `cekPerangkat`, `logoutPerangkat`, `daftarPerangkat`, `cabutPerangkat`, dan download `getMasterGarduMobile` jatuh ke `e.parameter` bila body kosong. Check CI "Reject auth tokens in query strings" belum menangkap jalur ini.
-- **Melanggar:** FR-04.
-- **Perbaikan:** Terima token hanya dari body JSON POST; tambahkan pola ini ke check CI token-query.
-- **Effort:** 4 sampai 8 jam.
+- **Lokasi:** `Core/Auth-Perangkat.js` (`authPerangkatRouter_`)
+- **Masalah (sebelumnya):** `cekPerangkat`, `logoutPerangkat`, `daftarPerangkat`, `cabutPerangkat`, dan download `getMasterGarduMobile` jatuh ke `e.parameter` (query string) bila body kosong. Token bisa leak ke riwayat browser, log, referrer, screenshot.
+- **Perbaikan (PR #6):** Hanya terima parameter dari JSON POST body, jangan dari query string. Setiap fungsi sanitasi dengan `.trim()`.
+- **Status:** Merged 27 Sep 2026 (commit `38279b2`). CI green: Flutter, syntax, security, wiring.
+- **Effort:** 4-8 jam (actual: selesai).
 
 #### H-02 🔴 Akar masalah gagal download Data Master perlu dikoreksi
 
@@ -182,7 +182,7 @@ Prioritas absolut: **C-01** (regresi PR #3 yang menghapus edit Master Gardu seca
 #### M-05 🟡 Permukaan XSS dari `innerHTML` dan `onclick` inline
 
 - **Lokasi:** `Main.html`, `Tek-Dashboard.html`
-- **Masalah:** Dilaporkan `_tdEsc()` tidak meng-escape apostrof, padahal hasilnya dipasang di atribut JS bertanda kutip tunggal (contoh `calEditJadwal('...')`).
+- **Masalah:** Dilaporkan `_tdEsc()` tidak meng-escape apostrof, padahal hasilnya dipasang di atribut JS bertanda kutip tunggal (contoh `calEditJadwal('...')`)
 - **Effort:** 12 sampai 20 jam.
 
 #### M-06 🔴 Anti-replay webhook AppSheet belum ditegakkan
@@ -257,7 +257,9 @@ Perbaikan di repo baru:
 | --- | --- | --- |
 | #1, #2 | Ikon hapus Jadwal Padam di Dashboard Teknik (loader final deterministik) | ✅ merge `b0054fd`, deploy @217, terverifikasi di perangkat |
 | #3 | Route `getMasterGarduMobile` | ⚠️ merge `7abd88e`, **menyebabkan C-01**; akar masalah perlu dikoreksi (H-02) |
-| #4 | Hotfix C-01 | Menunggu review |
+| #4 | Hotfix C-01 | ✅ merge `df068da` |
+| #5 | Docs consolidation | ✅ merge `df068da` |
+| #6 | Fix H-01: reject auth tokens from query string | ✅ merge `38279b2`, CI green, real-device ready |
 
 ---
 
@@ -272,7 +274,7 @@ Centang task saat PR-nya ter-merge dan bukti runtime tercatat. Task yang sama di
 ### Fase 1: Kritis (minggu ini)
 
 - [ ] **T-01** (C-03) Hapus token dari URL login web. _Selesai bila:_ tidak ada `?token=` di riwayat browser setelah login, dan check CI token-query mencakup halaman web.
-- [ ] **T-02** (H-01) Tolak token dari query string di `authPerangkatRouter_` dan route PR #3. _Selesai bila:_ request dengan token di query ditolak dan dites di CI.
+- [x] **T-02** (H-01) Tolak token dari query string di `authPerangkatRouter_` dan route PR #3. _Selesai bila:_ request dengan token di query ditolak dan dites di CI. **DONE: PR #6 merged 38279b2**
 - [ ] **T-03** (C-02) Scoping ULP untuk snapshot/manifest delta, keluarkan `db_Users`. _Selesai bila:_ test membuktikan akun ULP A tidak menerima baris ULP B maupun daftar pengguna.
 - [ ] **T-04** (C-04) Verifikasi dan pasang `guard_` di semua fungsi top-level yang dilaporkan; perluas Audit Gate. _Selesai bila:_ Audit Gate gagal untuk fungsi publik tanpa `guard_`.
 - [ ] **T-05** (H-02) Buktikan akar masalah gagal download lewat log eksekusi; pecah `snapshotCreate` bila timeout. _Selesai bila:_ "Pilih semua" berhasil sekali jalan di perangkat nyata.
