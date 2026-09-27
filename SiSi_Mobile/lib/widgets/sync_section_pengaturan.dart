@@ -137,6 +137,16 @@ class _State extends State<SyncSectionPengaturan> {
     }
   }
 
+  Future<void> _retryDownload() async {
+    final progress = SyncProgressService.instance.state.value;
+    if (progress.running) return;
+    final result = await AutoSyncService.startModulesSync(_selectedModules.isEmpty ? _moduleKeys : _selectedModules);
+    if (!mounted) return;
+    if (result['ok'] != true) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${result['message']}')));
+    }
+  }
+
   Future<void> _showDownloadSuccess(int count) async {
     await showDialog<void>(
       context: context,
@@ -161,35 +171,26 @@ class _State extends State<SyncSectionPengaturan> {
   Widget build(BuildContext context) => _packageCard(_moduleKeys, SyncProgressService.instance.state.value, _selectedModules.length);
 
   Widget _packageCard(List<String> moduleKeys, SyncProgressState progress, int selectedCount) {
-    final color = _teamColor;
+    final color = progress.failed ? AppColors.red600 : _teamColor;
+    final isFailed = progress.failed && !progress.running;
     return Container(
       clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: AppColors.neutral200), boxShadow: [BoxShadow(color: AppColors.navy950.withOpacity(.055), blurRadius: 14, offset: const Offset(0, 5))]),
+      decoration: BoxDecoration(
+        color: isFailed ? AppColors.red100 : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: isFailed ? AppColors.red300 : AppColors.neutral200),
+        boxShadow: [BoxShadow(color: (isFailed ? AppColors.red600 : AppColors.navy950).withOpacity(.055), blurRadius: 14, offset: const Offset(0, 5))]
+      ),
       child: Column(children: [
         Padding(padding: const EdgeInsets.all(15), child: Row(children: [
           Container(width: 44, height: 44, decoration: BoxDecoration(color: color.withOpacity(.12), borderRadius: BorderRadius.circular(14)), child: Icon(_teamIcon, color: color, size: 24)),
           const SizedBox(width: 11),
-          Expanded(child: Text(_teamName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800))),
-          Text('${moduleKeys.length}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-          const SizedBox(width: 4),
-          const Text('Database', style: TextStyle(fontSize: 9, color: AppColors.neutral500)),
-          const SizedBox(width: 9),
-          SizedBox.square(dimension: 35, child: OutlinedButton(onPressed: () => setState(() => _expanded = !_expanded), style: OutlinedButton.styleFrom(padding: EdgeInsets.zero, side: const BorderSide(color: AppColors.neutral200), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))), child: AnimatedRotation(turns: _expanded ? .125 : 0, duration: const Duration(milliseconds: 180), child: const Icon(Icons.add_rounded, size: 21)))),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(_teamName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)), if (isFailed) Text(progress.message ?? 'Download gagal', style: const TextStyle(fontSize: 10, color: AppColors.red600, height: 1.2), maxLines: 2, overflow: TextOverflow.ellipsis)])),
+          if (!isFailed) ...[Text('${moduleKeys.length}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)), const SizedBox(width: 4), const Text('Database', style: TextStyle(fontSize: 9, color: AppColors.neutral500)), const SizedBox(width: 9)],
+          SizedBox.square(dimension: 35, child: OutlinedButton(onPressed: () => setState(() => _expanded = !_expanded), style: OutlinedButton.styleFrom(padding: EdgeInsets.zero, side: BorderSide(color: isFailed ? AppColors.red300 : AppColors.neutral200), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))), child: AnimatedRotation(turns: _expanded && !isFailed ? .125 : 0, duration: const Duration(milliseconds: 180), child: Icon(isFailed ? Icons.error_outline_rounded : Icons.add_rounded, size: 21, color: isFailed ? AppColors.red600 : null)))),
         ])),
-        if (_expanded) ...[
-          const Divider(height: 1),
-          Container(color: AppColors.neutral50, padding: const EdgeInsets.fromLTRB(13, 11, 13, 12), child: Column(children: [
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Database tersedia', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700)), Text('Sync terakhir', style: TextStyle(fontSize: 9, color: AppColors.neutral500))]),
-            const SizedBox(height: 8),
-            ...moduleKeys.map((key) => _moduleTile(key, progress)),
-          ])),
-        ],
-        const Divider(height: 1),
-        Container(color: AppColors.neutral50, padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11), child: Row(children: [
-          Expanded(child: Text(selectedCount == 0 ? 'Pilih Database' : '$selectedCount Database siap', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700))),
-          SizedBox(height: 38, child: FilledButton(onPressed: progress.running || selectedCount == 0 ? null : _downloadSelected, style: FilledButton.styleFrom(backgroundColor: color, padding: const EdgeInsets.symmetric(horizontal: 13), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11))), child: Text(progress.running ? '${progress.percent}%' : 'Download', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800)))),
-        ])),
-        if (progress.running) Padding(padding: const EdgeInsets.fromLTRB(13, 0, 13, 11), child: Column(children: [LinearProgressIndicator(value: progress.fraction, minHeight: 5, color: color), const SizedBox(height: 4), Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Expanded(child: Text(progress.datasetLabel.isEmpty ? progress.stage : progress.datasetLabel, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 8, color: AppColors.neutral500))), Text('${progress.percent}%', style: const TextStyle(fontSize: 8, color: AppColors.neutral500))])])),
+        if (isFailed) ...[const Divider(height: 1), Padding(padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11), child: SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: progress.running ? null : _retryDownload, icon: const Icon(Icons.refresh_rounded, size: 18), label: const Text('Coba Ulang'), style: OutlinedButton.styleFrom(side: const BorderSide(color: AppColors.red600), foregroundColor: AppColors.red600, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11))))))] else if (_expanded) ...[const Divider(height: 1), Container(color: AppColors.neutral50, padding: const EdgeInsets.fromLTRB(13, 11, 13, 12), child: Column(children: [Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Database tersedia', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700)), Text('Sync terakhir', style: TextStyle(fontSize: 9, color: AppColors.neutral500))]), const SizedBox(height: 8), ...moduleKeys.map((key) => _moduleTile(key, progress))]))],
+        if (!isFailed) ...[const Divider(height: 1), Container(color: AppColors.neutral50, padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11), child: Row(children: [Expanded(child: Text(selectedCount == 0 ? 'Pilih Database' : '$selectedCount Database siap', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700))), SizedBox(height: 38, child: FilledButton(onPressed: progress.running || selectedCount == 0 ? null : _downloadSelected, style: FilledButton.styleFrom(backgroundColor: color, padding: const EdgeInsets.symmetric(horizontal: 13), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11))), child: Text(progress.running ? '${progress.percent}%' : 'Download', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800))))])), if (progress.running) Padding(padding: const EdgeInsets.fromLTRB(13, 0, 13, 11), child: Column(children: [LinearProgressIndicator(value: progress.fraction, minHeight: 5, color: color), const SizedBox(height: 4), Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Expanded(child: Text(progress.datasetLabel.isEmpty ? progress.stage : progress.datasetLabel, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 8, color: AppColors.neutral500))), Text('${progress.percent}%', style: const TextStyle(fontSize: 8, color: AppColors.neutral500))])]))]
       ]),
     );
   }
@@ -200,12 +201,8 @@ class _State extends State<SyncSectionPengaturan> {
     final last = DateTime.tryParse(info?.lastSyncAt ?? '')?.toLocal();
     final label = SyncRepository.moduleLabels[key] ?? key;
     final date = last == null ? 'Belum tersinkron' : DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(last);
-    return Padding(padding: const EdgeInsets.only(bottom: 6), child: Material(color: active ? AppColors.navy100 : Colors.white, borderRadius: BorderRadius.circular(10), child: InkWell(onTap: progress.running ? null : () => _toggle(key), borderRadius: BorderRadius.circular(10), child: Padding(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8), child: Row(children: [
-      Checkbox(value: _selectedModules.contains(key), visualDensity: VisualDensity.compact, onChanged: progress.running ? null : (_) => _toggle(key)),
-      const SizedBox(width: 4),
-      Expanded(child: Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600))),
-      Column(crossAxisAlignment: CrossAxisAlignment.end, children: [Text(active ? 'Menyinkronkan' : (last == null ? 'Belum tersinkron' : 'Tersinkron'), style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: active || last != null ? AppColors.success700 : AppColors.neutral500)), const SizedBox(height: 2), Text(active ? '${progress.percent}%' : date, style: const TextStyle(fontSize: 8, color: AppColors.neutral500))]),
-    ])))));
+    return Padding(padding: const EdgeInsets.only(bottom: 6), child: Material(color: active ? AppColors.navy100 : Colors.white, borderRadius: BorderRadius.circular(10), child: InkWell(onTap: progress.running ? null : () => _toggle(key), borderRadius: BorderRadius.circular(10), child: Padding(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8), child: Row(children: [Checkbox(value: _selectedModules.contains(key), visualDensity: VisualDensity.compact, onChanged: progress.running ? null : (_) => _toggle(key)), const SizedBox(width: 4), Expanded(child: Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600))), Column(crossAxisAlignment: CrossAxisAlignment.end, children: [Text(active ? 'Menyinkronkan' : (last == null ? 'Belum tersinkron' : 'Tersinkron'), style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: active || last != null ? AppColors.success700 : AppColors.neutral500)), const SizedBox(height: 2), Text(active ? '${progress.percent}%' : date, style: const TextStyle(fontSize: 8, color: AppColors.neutral500))]),]))))
+    ));
   }
 
   void _toggle(String key) => setState(() { if (!_selectedModules.add(key)) _selectedModules.remove(key); });
