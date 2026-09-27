@@ -23,6 +23,7 @@ const finalLoaderPath = path.join(
 
 function makeHarness() {
   const calls = [];
+  const updates = [];
   const context = {
     console,
     ContentService: {
@@ -45,12 +46,16 @@ function makeHarness() {
       calls.push({ token, ulp });
       return { success: true, marker: 'master-route' };
     },
+    updateMasterGarduMobile(token, payload) {
+      updates.push({ token, payload });
+      return { success: true, marker: 'update-route' };
+    },
   };
   vm.createContext(context);
   vm.runInContext(fs.readFileSync(routePath, 'utf8'), context, {
     filename: routePath,
   });
-  return { context, calls };
+  return { context, calls, updates };
 }
 
 test('mobile sync route sits before the final Dashboard loader override', () => {
@@ -76,6 +81,33 @@ test('JSON mobile master-data action reaches getMasterGarduMobile', () => {
   assert.deepEqual(h.calls, [{
     token: 'device-session-token',
     ulp: 'DELTA_SYNC:{"cmd":"snapshotCreate"}',
+  }]);
+  assert.deepEqual(h.updates, []);
+});
+
+test('Gardu edit upload (mode=update) reaches updateMasterGarduMobile, never the download gateway', () => {
+  const h = makeHarness();
+  const payload = {
+    gardu: 'TB-001',
+    ulp: 'ULP Toboali',
+    data: { alamat: 'Jl. Contoh' },
+  };
+  const response = h.context.apiRouter_({}, {
+    action: 'getMasterGarduMobile',
+    mode: 'update',
+    token: 'device-session-token',
+    payload,
+  });
+
+  assert.equal(response.mimeType, 'application/json');
+  assert.deepEqual(JSON.parse(response.body), {
+    success: true,
+    marker: 'update-route',
+  });
+  assert.deepEqual(h.calls, []);
+  assert.deepEqual(JSON.parse(JSON.stringify(h.updates)), [{
+    token: 'device-session-token',
+    payload,
   }]);
 });
 
