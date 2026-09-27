@@ -7,7 +7,7 @@ File ini adalah **satu-satunya** tempat mencatat temuan audit, status perbaikan,
 File ini menggabungkan:
 
 - Status audit lama (Stage 0 sampai Stage 5 Task 3) dan backlog Stage 5.
-- Audit menyeluruh frontend + backend, web + mobile, 26 Desember 2026.
+- Audit menyeluruh frontend + backend, web + mobile, 26 September 2026.
 - Verifikasi ulang manual terhadap kode, 27 September 2026 (termasuk regresi PR #3).
 - Item validasi yang masih terbuka di `docs/LOCAL-WATERMARK.md` dan `docs/YANDAL-PHOTO-INTEGRATION.md`.
 - `flutter-audit.txt` (sebagian sudah kedaluwarsa, lihat L-01).
@@ -64,8 +64,8 @@ Prioritas absolut: **C-01** (regresi PR #3 yang menghapus edit Master Gardu seca
 - **Masalah (sebelumnya):** `getMasterGarduMobile` sudah memanggil `guard_` (wajib login), tetapi tanpa `ulp: true`. `_deltaSnapshotCreate_` dan `_deltaManifest_` hanya memanggil `getSesiByToken`. `_deltaRows_` membaca seluruh sheet tanpa filter ULP untuk semua dataset kecuali `Master_Gardu`. Dataset `db_Users` hanya mengosongkan kolom password; email, role, ULP, tim, dan akses menu semua pengguna tetap terkirim ke setiap perangkat.
 - **Melanggar:** FR-02, FR-03.
 - **Perbaikan (Phase 1 + Phase 2):** `guard_(..., { ulp: true })` di pembuatan snapshot dan manifest (PR #8, commit e79b2fc); filter baris per ULP via `barisUlpCocok_` (PR #9, commit 2c966e1); keluarkan `db_Users` dari dataset mobile atau kirim kolom minimum saja (sama PR #9).
-- **Status:** Phase 1 merged 27 Sep 2026 (PR #8, commit e79b2fc); Phase 2 merged 27 Sep 2026 (PR #9, commit 2c966e1). Diff audit clear: guard enforcement + ulpCol mapping + filtering + users sanitasi (2 kolom saja: no, username).
-- **Effort:** Selesai.
+- **Status:** Phase 1 merged 27 Sep 2026 (PR #8, commit e79b2fc); Phase 2 merged 27 Sep 2026 (PR #9, commit 2c966e1). Diff audit clear: guard enforcement + ulpCol mapping + filtering + users sanitasi (2 kolom saja: no, username). Phase 3 refinement dan verifikasi runtime dimulai 27 Sep 2026.
+- **Effort:** Selesai (code), refinement pending runtime validation.
 
 #### C-03 ✅ Token sesi web dikirim lewat URL
 
@@ -281,6 +281,31 @@ Centang task saat PR-nya ter-merge dan bukti runtime tercatat. Task yang sama di
 - [x] **T-01** (C-03) Hapus token dari URL login web. _Selesai bila:_ tidak ada `?token=` di riwayat browser setelah login, dan check CI token-query mencakup halaman web. **DONE: PR #7 merged bbea500**
 - [x] **T-02** (H-01) Tolak token dari query string di `authPerangkatRouter_` dan route PR #3. _Selesai bila:_ request dengan token di query ditolak dan dites di CI. **DONE: PR #6 merged 38279b2**
 - [x] **T-03** (C-02) Scoping ULP untuk snapshot/manifest delta, keluarkan `db_Users`. _Selesai bila:_ test membuktikan akun ULP A tidak menerima baris ULP B maupun daftar pengguna. **DONE: PR #8 merged e79b2fc + PR #9 merged 2c966e1**
+
+### Fase 1 Refinement dan Verifikasi (Phase 3 untuk T-03)
+
+Setelah kedua PR ter-merge, validasi runtime dan temuan edge case:
+
+**Pengujian utama:**
+- Test di staging: login akun ULP A, ambil snapshot, periksa baris bahwa ULP B dan daftar pengguna **tidak** ada.
+- Test di staging: login akun tanpa ULP, periksa apakah fallback `TAMPILKAN_BARIS_TANPA_ULP = true` berfungsi.
+- Test akun superuser: pastikan `barisUlpCocok_(g, "superadmin")` atau bypass yang benar tidak mencegat data administrator.
+- Monitor log Apps Script: cek waktu eksekusi `_deltaSnapshotCreate_`, apakah terus di bawah 30 detik per dataset atau batch.
+
+**Cleanup dan penyesuaian kecil:**
+- Verifikasi header file dan dokumentasi inline `_deltaConfigs_`, `_deltaRows_`, `barisUlpCocok_` sudah sesuai intent (komentar di code sudah lengkap).
+- Periksa backward compat: akun/perangkat lama dengan snapshot sebelum Phase 1 apakah mereka bisa download/refresh atau perlu invalidasi cache.
+- Cek metrik perangkat nyata: upload size data snapshot, parse time di mobile, battery impact.
+
+**Keputusan berdasarkan hasil:**
+- Bila semua test hijau: mark T-03 fully resolved, lanjut T-04 (C-04 guard top-level).
+- Bila ada timeout atau parsing error: masuk debugging H-02 (pecah `snapshotCreate`), mungkin perlu PR #10 untuk tunning batch size atau optimisasi schema.
+- Bila ada edge case akun (superadmin, guest, migrasi): dokumentasikan di `docs/OPERATIONAL-RUNBOOK.md` beserta workaround saat switchover.
+
+**Tanggung jawab di fase ini:** QA di staging real-device + perangkat lama, log monitoring, dokumentasi edge case.
+
+---
+
 - [ ] **T-04** (C-04) Verifikasi dan pasang `guard_` di semua fungsi top-level yang dilaporkan; perluas Audit Gate. _Selesai bila:_ Audit Gate gagal untuk fungsi publik tanpa `guard_`.
 - [ ] **T-05** (H-02) Buktikan akar masalah gagal download lewat log eksekusi; pecah `snapshotCreate` bila timeout. _Selesai bila:_ "Pilih semua" berhasil sekali jalan di perangkat nyata.
 - [ ] **T-06** (C-05) Materialisasi Master Gardu tanpa menghapus edit pending. _Selesai bila:_ edit offline selamat setelah download ulang Data Master.
