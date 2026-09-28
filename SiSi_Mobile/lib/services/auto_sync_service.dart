@@ -51,9 +51,12 @@ void callbackDispatcher() {
       var modules = _queuedModules(prefs, modulesKey, fallback: fallback);
       while (modules.isNotEmpty) {
         final module = modules.first;
-        if ((await SyncRepository().sinkronModul(token, module))['ok'] != true) {
-          return false;
-        }
+        final result = await SyncRepository().sinkronModul(
+          token,
+          module,
+          finalizeProgress: false,
+        );
+        if (result['ok'] != true) return false;
         await prefs.reload();
         modules = _queuedModules(prefs, modulesKey, fallback: fallback)
             .where((item) => item != module)
@@ -66,6 +69,8 @@ void callbackDispatcher() {
           modules,
         );
       }
+      await SyncProgressService.instance.success(
+          'Semua Data Master dalam antrean selesai diperbarui.');
       await prefs.setBool(enabledKey, true);
       return true;
     } catch (_) {
