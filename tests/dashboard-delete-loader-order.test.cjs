@@ -30,6 +30,8 @@ test('production order keeps dependencies and page loader deterministic', () => 
     'Core/Code.js',
     'Core/Engine-Secrets.js',
     'Core/Guard.js',
+    'Core/Migrasi-Password.js',
+    'Core/Audit-Guard.js',
     'Core/Auth-Perangkat.js',
     'Core/Jadwal-Padam-Mobile.js',
     'Core/Delta-Sync-Mobile.js',
