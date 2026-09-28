@@ -33,7 +33,14 @@ const resetReplacement = [
   '    PropertiesService.getScriptProperties().setProperty("SISI_PW_CUTOVER_LOCKED", "0");',
   '  `);',
   '  const migrasi = ctx.call("doLogin", ["superuser", "RahasiaSuper123"]);',
-  '  if (migrasi.ok && migrasi.value && migrasi.value.token) ctx.migrationToken = migrasi.value.token;',
+  '  if (migrasi.ok && migrasi.value && migrasi.value.token) {',
+  '    ctx.migrationToken = migrasi.value.token;',
+  '    const rows = ctx.harness.dumpSheet(spreadsheetId, "db_Users");',
+  '    for (let i = 1; i < rows.length; i++) {',
+  '      if (String(rows[i][2]).trim() === "superuser") ctx.harness.store.setCell(spreadsheetId, "db_Users", i + 1, 4, "RahasiaSuper123");',
+  '    }',
+  '    ctx.call("_bustUsersCache_");',
+  '  }',
   '}',
 ].join('\n');
 if (!source.includes(resetNeedle)) throw new Error('H-08 suite adapter: reset() shape changed');
