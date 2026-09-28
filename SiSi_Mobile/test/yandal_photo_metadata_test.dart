@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import '../lib/screens/yandal_photo_screen.dart';
+import 'package:sisi_mobile/screens/yandal_photo_screen.dart';
 
 void main(){
   Map<String,dynamic> complete()=>{
