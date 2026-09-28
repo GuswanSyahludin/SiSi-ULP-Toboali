@@ -1,6 +1,6 @@
 /* ============================================================================
    Delta-Sync-Mobile.js: manifest + immutable snapshot downloads per module
-   Rev 8 Sep 2026 + C-02 Phase 1 (ULP enforcement)
+   Rev 8 Sep 2026 + C-02 Phase 1-2 (ULP enforcement + filtering)
    ============================================================================ */
 var DELTA_SYNC_CACHE_SEC = 600;
 var DELTA_SYNC_PAGE = 500;
@@ -11,21 +11,25 @@ var DELTA_SNAPSHOT_META = "_meta.json";
 
 function _deltaConfigs_() {
   return {
-    db_Global_Header: { sheet: "db_Global_Header", key: 1, width: 17, dual: true, main: true },
-    db_ROW_Realisasi: { sheet: "db_ROW_Realisasi", key: 2, width: 13, dual: true, main: true },
-    db_ROW_Eksekusi: { sheet: "db_ROW_Eksekusi", key: 3, width: 30, dual: true, main: true },
-    db_Hartek_PenyulangGardu: { sheet: "db_Hartek_PenyulangGardu", key: 2, width: 15, dual: true, main: true },
-    db_Hartek_Pekerjaan: { sheet: "db_Hartek_Pekerjaan", key: 3, width: 17, dual: true, main: true },
-    db_Hartek_Material: { sheet: "db_Hartek_Material", key: 4, width: 19, dual: true, main: true },
-    db_InsJar_Realisasi: { sheet: "db_InsJar_Realisasi", key: 2, width: 13, dual: true, main: true },
-    db_InsDu_Realisasi: { sheet: "db_InsDu_Realisasi", key: 2, width: 12, dual: true, main: true },
-    db_INS_Temuan: { sheet: "db_INS_Temuan", key: 3, width: 45, dual: true, main: true },
-    db_Yandal_Shift: { sheet: "db_Yandal_Shift", key: 2, width: 12, dual: true, main: true },
-    db_Yandal_P0: { sheet: "db_Yandal_P0", key: 3, width: 50, dual: true, main: true },
-    db_Yandal_Pengecekan_Switching: { sheet: "db_Yandal_Pengecekan_Switching", key: 4, width: 50, dual: true, main: true },
+    /* Kolom 0-indexed untuk ULP filtering. Format: { ulpCol: index }.
+       COL_... constants di Code.js menentukan kolom actual di sheet.
+       Sheet yang tidak punya kolom ULP atau support-only tidak perlu ulpCol.
+    */
+    db_Global_Header: { sheet: "db_Global_Header", key: 1, width: 17, dual: true, main: true, ulpCol: 2 },
+    db_ROW_Realisasi: { sheet: "db_ROW_Realisasi", key: 2, width: 13, dual: true, main: true, ulpCol: 2 },
+    db_ROW_Eksekusi: { sheet: "db_ROW_Eksekusi", key: 3, width: 30, dual: true, main: true, ulpCol: 2 },
+    db_Hartek_PenyulangGardu: { sheet: "db_Hartek_PenyulangGardu", key: 2, width: 15, dual: true, main: true, ulpCol: 2 },
+    db_Hartek_Pekerjaan: { sheet: "db_Hartek_Pekerjaan", key: 3, width: 17, dual: true, main: true, ulpCol: 2 },
+    db_Hartek_Material: { sheet: "db_Hartek_Material", key: 4, width: 19, dual: true, main: true, ulpCol: 2 },
+    db_InsJar_Realisasi: { sheet: "db_InsJar_Realisasi", key: 2, width: 13, dual: true, main: true, ulpCol: 2 },
+    db_InsDu_Realisasi: { sheet: "db_InsDu_Realisasi", key: 2, width: 12, dual: true, main: true, ulpCol: 2 },
+    db_INS_Temuan: { sheet: "db_INS_Temuan", key: 3, width: 45, dual: true, main: true, ulpCol: 2 },
+    db_Yandal_Shift: { sheet: "db_Yandal_Shift", key: 2, width: 12, dual: true, main: true, ulpCol: 2 },
+    db_Yandal_P0: { sheet: "db_Yandal_P0", key: 3, width: 50, dual: true, main: true, ulpCol: 2 },
+    db_Yandal_Pengecekan_Switching: { sheet: "db_Yandal_Pengecekan_Switching", key: 4, width: 50, dual: true, main: true, ulpCol: 2 },
     db_Yandal_Pengukuran_Gardu: { special: "yandalUkurGardu", key: 4, width: 24, main: true },
-    Teknik_Laporan_Harian: { sheet: "Teknik_Laporan Harian", key: 1, width: 8, dual: true, main: true },
-    db_Users: { sheet: "db_Users", key: 2, width: 11, support: true, sanitize: "users" },
+    Teknik_Laporan_Harian: { sheet: "Teknik_Laporan Harian", key: 1, width: 8, dual: true, main: true, ulpCol: 2 },
+    db_Users: { sheet: "db_Users", key: 2, width: 11, support: true, sanitize: "users", usersOnly: true },
     db_Tim: { sheet: "db_Tim", key: 3, width: 0, support: true },
     db_Penyulang: { sheet: "db_Penyulang", key: 2, width: 0, support: true },
     db_List_Temuan: { sheet: "db_List_Temuan", key: 3, width: 0, support: true },
@@ -115,7 +119,31 @@ function _deltaRows_(g, token, name, cfg) {
   var out = [];
   for (var i = 0; i < rows.length; i++) {
     var row = rows[i].map(_deltaPlain_);
-    if (cfg.sanitize === "users" && row.length > 3) row[3] = "";
+    
+    /* C-02 Phase 2: Filter per ULP untuk dataset operasional (non-support).
+       Support datasets (list master, kategori, dll) tidak difilter per ULP.
+       db_Users diperlakukan khusus: kirim hanya kolom username (indeks 1).
+    */
+    if (cfg.usersOnly) {
+      /* db_Users: hanya kirim username (kolom 1), kosongkan sisanya kecuali nomor (kolom 0).
+         Tidak mengirim email, role, ULP, tim, aksesMenu ke perangkat.
+      */
+      var safeName = String(row.length > 1 ? row[1] : "").trim();
+      out.push([row[0], safeName]);
+      continue;
+    }
+    
+    if (!cfg.support && cfg.ulpCol !== undefined) {
+      /* Dataset operasional: filter per ULP menggunakan barisUlpCocok_ dari Guard.js.
+         Baris yang ULP-nya tidak cocok dengan g.ulp (atau g.kodeUlp) diskip.
+      */
+      if (typeof barisUlpCocok_ === "function") {
+        if (!barisUlpCocok_(g, String(row[cfg.ulpCol] || ""))) {
+          continue;  /* Skip baris yang tidak cocok ULP. */
+        }
+      }
+    }
+    
     out.push(row);
   }
   return out;
