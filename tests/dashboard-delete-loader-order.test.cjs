@@ -25,8 +25,16 @@ function effectiveClaspOrder() {
   return prioritized.concat(remaining);
 }
 
-test('page loader remains after competing page-loader implementations', () => {
-  assert.deepEqual(clasp.filePushOrder, ['Core/Code.js', 'Core/PageLoader-Compat.js']);
+test('production order keeps dependencies and page loader deterministic', () => {
+  const requiredPrefix = [
+    'Core/Code.js',
+    'Core/Engine-Secrets.js',
+    'Core/Guard.js',
+    'Core/Auth-Perangkat.js',
+    'Core/Jadwal-Padam-Mobile.js',
+    'Core/Delta-Sync-Mobile.js',
+  ];
+  assert.deepEqual(clasp.filePushOrder.slice(0, requiredPrefix.length), requiredPrefix);
   const order = effectiveClaspOrder();
   const competing = [
     'Core/Code.js',
