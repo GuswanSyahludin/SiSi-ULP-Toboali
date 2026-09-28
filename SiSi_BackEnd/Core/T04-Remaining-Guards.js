@@ -91,11 +91,15 @@ function simpanMobileLaporanC4A(params) {
 /* SIE/GASPOL. */
 function getGaspolRekap(opts) {
   var g = _t04GuardReport_(arguments, "getGaspolRekap");
-  return _t04GetGaspolRekapOriginal_(_t04CopyScopedParams_(opts, g, false));
+  return _t04WithReportContext_(g.token, function () {
+    return _t04GetGaspolRekapOriginal_(_t04CopyScopedParams_(opts, g, false));
+  });
 }
 function submitGaspolToInputTbl(opts) {
   var g = _t04GuardReport_(arguments, "submitGaspolToInputTbl");
-  return _t04SubmitGaspolOriginal_(_t04CopyScopedParams_(opts, g, false));
+  return _t04WithReportContext_(g.token, function () {
+    return _t04SubmitGaspolOriginal_(_t04CopyScopedParams_(opts, g, false));
+  });
 }
 function getMonitoringTlTemuan(params) {
   var g = _t04GuardReport_(arguments, "getMonitoringTlTemuan");
