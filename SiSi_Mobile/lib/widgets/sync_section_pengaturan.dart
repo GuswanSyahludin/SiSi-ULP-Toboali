@@ -23,6 +23,7 @@ class _State extends State<SyncSectionPengaturan> {
   bool _wasRunning = false;
   int _pendingDownloadCount = 0;
   final Set<String> _selectedModules = {};
+  Set<String> _lastRequestedModules = {}; // Track modules from last download attempt for retry
   bool _expanded = true;
 
   List<String> get _moduleKeys {
@@ -129,6 +130,7 @@ class _State extends State<SyncSectionPengaturan> {
     if (progress.running || _selectedModules.isEmpty) return;
     final count = _selectedModules.length;
     _pendingDownloadCount = count;
+    _lastRequestedModules = Set.from(_selectedModules); // Save for retry
     final result = await AutoSyncService.startModulesSync(_selectedModules);
     if (!mounted) return;
     if (result['ok'] != true) {
@@ -140,9 +142,12 @@ class _State extends State<SyncSectionPengaturan> {
   Future<void> _retryDownload() async {
     final progress = SyncProgressService.instance.state.value;
     if (progress.running) return;
-    final result = await AutoSyncService.startModulesSync(_selectedModules.isEmpty ? _moduleKeys : _selectedModules);
+    final toRetry = _lastRequestedModules.isEmpty ? _moduleKeys : _lastRequestedModules;
+    _pendingDownloadCount = toRetry.length; // Track count for success callback
+    final result = await AutoSyncService.startModulesSync(toRetry);
     if (!mounted) return;
     if (result['ok'] != true) {
+      _pendingDownloadCount = 0; // Reset if retry fails immediately
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${result['message']}')));
     }
   }
@@ -172,6 +177,8 @@ class _State extends State<SyncSectionPengaturan> {
 
   Widget _packageCard(List<String> moduleKeys, SyncProgressState progress, int selectedCount) {
     final color = progress.failed ? AppColors.red600 : _teamColor;
+    // isFailed isolates the error UI state. Edge case: (failed && running) shows normal UI during retry warming;
+    // this prevents button flicker during state transitions and ensures retry initiates from non-error visual state.
     final isFailed = progress.failed && !progress.running;
     return Container(
       clipBehavior: Clip.antiAlias,
@@ -190,7 +197,7 @@ class _State extends State<SyncSectionPengaturan> {
           SizedBox.square(dimension: 35, child: OutlinedButton(onPressed: () => setState(() => _expanded = !_expanded), style: OutlinedButton.styleFrom(padding: EdgeInsets.zero, side: BorderSide(color: isFailed ? AppColors.red300 : AppColors.neutral200), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))), child: AnimatedRotation(turns: _expanded && !isFailed ? .125 : 0, duration: const Duration(milliseconds: 180), child: Icon(isFailed ? Icons.error_outline_rounded : Icons.add_rounded, size: 21, color: isFailed ? AppColors.red600 : null)))),
         ])),
         if (isFailed) ...[const Divider(height: 1), Padding(padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11), child: SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: progress.running ? null : _retryDownload, icon: const Icon(Icons.refresh_rounded, size: 18), label: const Text('Coba Ulang'), style: OutlinedButton.styleFrom(side: const BorderSide(color: AppColors.red600), foregroundColor: AppColors.red600, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11))))))] else if (_expanded) ...[const Divider(height: 1), Container(color: AppColors.neutral50, padding: const EdgeInsets.fromLTRB(13, 11, 13, 12), child: Column(children: [Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Database tersedia', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700)), Text('Sync terakhir', style: TextStyle(fontSize: 9, color: AppColors.neutral500))]), const SizedBox(height: 8), ...moduleKeys.map((key) => _moduleTile(key, progress))]))],
-        if (!isFailed) ...[const Divider(height: 1), Container(color: AppColors.neutral50, padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11), child: Row(children: [Expanded(child: Text(selectedCount == 0 ? 'Pilih Database' : '$selectedCount Database siap', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700))), SizedBox(height: 38, child: FilledButton(onPressed: progress.running || selectedCount == 0 ? null : _downloadSelected, style: FilledButton.styleFrom(backgroundColor: color, padding: const EdgeInsets.symmetric(horizontal: 13), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11))), child: Text(progress.running ? '${progress.percent}%' : 'Download', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800))))])), if (progress.running) Padding(padding: const EdgeInsets.fromLTRB(13, 0, 13, 11), child: Column(children: [LinearProgressIndicator(value: progress.fraction, minHeight: 5, color: color), const SizedBox(height: 4), Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Expanded(child: Text(progress.datasetLabel.isEmpty ? progress.stage : progress.datasetLabel, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 8, color: AppColors.neutral500))), Text('${progress.percent}%', style: const TextStyle(fontSize: 8, color: AppColors.neutral500))])]))]
+        if (!isFailed) ...[const Divider(height: 1), Container(color: AppColors.neutral50, padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11), child: Row(children: [Expanded(child: Text(selectedCount == 0 ? 'Pilih Database' : '$selectedCount Database siap', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700))), SizedBox(height: 38, child: FilledButton(onPressed: progress.running || selectedCount == 0 ? null : _downloadSelected, style: FilledButton.styleFrom(backgroundColor: color, padding: const EdgeInsets.symmetric(horizontal: 13), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11))), child: Text(progress.running ? '${progress.percent}%' : 'Download', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800))))])), if (progress.running) Padding(padding: const EdgeInsets.fromLTRB(13, 0, 13, 11), child: Column(children: [LinearProgressIndicator(value: progress.fraction, minHeight: 5, color: color), const SizedBox(height: 4), Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Expanded(child: Text(progress.datasetLabel.isEmpty ? progress.stage : progress.datasetLabel, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 8, color: AppColors.neutral500))), Text('${progress.percent}%', style: const TextStyle(fontSize: 8, color: AppColors.neutral500))]))])]
       ]),
     );
   }
