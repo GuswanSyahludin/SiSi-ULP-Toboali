@@ -35,8 +35,10 @@
     "Teknik/Tek-LaporanUP3.js",
     "Teknik/Tek-LapUP3UIWHarian.js",
     "Core/T04-Remaining-Guards.js",
+    "Core/Trigger-Manager.js",
     "Core/ZZZZZZZZZZZZZZZZZZ-Mobile-Master-Sync-Route.js",
     "Core/ZZZZZZZZZZZZZZZZZZZ-Auth-Perangkat-No-Recursion.js",
-    "Core/ZZZZZZZZZZZZZZZZZZZZ-Dispatch-Final-Guard.js"
+    "Core/ZZZZZZZZZZZZZZZZZZZZ-Dispatch-Final-Guard.js",
+    "Core/ZZZZZZZZZZZZZZZZZZZZZ-Device-Token-TTL.js"
   ]
 }
