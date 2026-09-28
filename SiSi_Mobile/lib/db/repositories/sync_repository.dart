@@ -1,4 +1,5 @@
 import '../../services/api_service.dart';
+import '../../services/auto_sync_service.dart';
 import '../../services/sync_error_message.dart';
 import '../../services/sync_progress_service.dart';
 import '../db_provider.dart';
@@ -114,6 +115,10 @@ class SyncRepository {
     }
   }
 
+  Future<bool> _isManualSyncMode() async {
+    return AutoSyncService.isManualSyncModeEnabled();
+  }
+
   Future<Map<String, dynamic>> sinkronModul(
     String token,
     String module, {
@@ -156,7 +161,9 @@ class SyncRepository {
       await _materialize(result.changed.toSet(), initial, delta);
       await DbProvider.instance.syncDao.tandaiTersinkron('master:$module',
           jumlah: result.changed.length, keterangan: result.message);
-      if (finalizeProgress) {
+      // Check if in manual sync mode; if not, finalize based on parameter
+      final manualMode = await _isManualSyncMode();
+      if (finalizeProgress && !manualMode) {
         await progress.success('${moduleLabels[module]} selesai diperbarui.');
       }
       return {
