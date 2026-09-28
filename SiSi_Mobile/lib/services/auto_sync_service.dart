@@ -153,6 +153,13 @@ class AutoSyncService {
     return prefs.getBool(_key(_enabledKey, session)) == true;
   }
 
+  static Future<bool> isManualSyncModeEnabled() async {
+    final sesi = await SesiStore.muat();
+    if (sesi == null) return false;
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_key(_manualSyncModeKey, sesi)) == true;
+  }
+
   static Future<Map<String, dynamic>> startModuleSync(String module) =>
       startModulesSync([module]);
 
