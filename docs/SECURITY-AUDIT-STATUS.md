@@ -1,6 +1,6 @@
 # SiSi ULP Toboali: Audit dan Status Remediasi
 
-_Terakhir diperbarui: 28 September 2026 23:55 WIB · H-06 COMPLETE in PR #26; production deployment and real-device validation remain pending_
+_Terakhir diperbarui: 29 September 2026 00:30 WIB · C-05 COMPLETE in PR #28; real-device acceptance and production sign-off remain pending_
 
 File ini adalah **satu-satunya** tempat mencatat temuan audit, status perbaikan, dan task remediasi SiSi.
 
@@ -19,7 +19,7 @@ File ini adalah **satu-satunya** tempat mencatat temuan audit, status perbaikan,
 | H-07 | Watermark foto guard enforcement | ✅ MERGED | 88eb6a0 |
 | **H-06/T-10** | **Device-token absolute/idle expiry and scheduled cleanup** | **✅ MERGED** | **d59c4f3** |
 | H-08 | Password plaintext tanpa time limit | ✅ MERGED | b46c8775bef39b28fae6fd74c7cdc45c300b0110 |
-| C-05 | Materialisasi data deletion | 🟡 OPEN | — |
+| C-05 | Materialisasi data deletion | ✅ MERGED | 66f272eb1799fe8b5220cb0e3db73f72730b5f46 |
 
 **Overall:** Critical remediation code merged; staging, production deployment, and real-device evidence remain open.  
 **Security Posture:** 🟡 Remediations merged, runtime acceptance incomplete
@@ -102,6 +102,33 @@ Watermark creation, URL normalization, sized URL rendering, and ROW URL normaliz
 
 ---
 
+## C-05 / T-06: Master Gardu snapshot materialization safety
+
+### Completion: ✅ Merged, real-device acceptance pending
+
+**PR:** [#28](https://github.com/GuswanSyahludin/SiSi-ULP-Toboali/pull/28)  
+**Merged commit:** `66f272eb1799fe8b5220cb0e3db73f72730b5f46`  
+**Merged:** 29 September 2026
+
+### Contract and implementation
+
+- Fresh Master Gardu snapshots are materialized in one database transaction.
+- Incoming rows are upserted; stale rows are deleted only when they have no pending `gardu_outbox` entry.
+- A pending row absent from the fresh snapshot is preserved rather than deleted.
+- Pending `gardu_outbox` JSON patches are replayed after snapshot upsert and before commit.
+- The previous full-table `delete(masterGardus)` path is removed.
+- Regression coverage checks pending-row protection, stale-row safety, and patch replay; backend and Flutter CI checks passed.
+
+### Acceptance still pending
+
+- On a real Android/iOS device, edit a Gardu while offline.
+- Download a fresh Master Gardu snapshot and verify the local edit remains.
+- Restart or interrupt sync and verify the outbox remains retryable.
+- Send the outbox and verify the server update succeeds without losing the local row.
+- Production deployment and sign-off remain pending; do not call C-05 production-ready.
+
+---
+
 ## Cumulative Security Coverage
 
 - ✅ 16 top-level functions guarded (T-04).
@@ -111,14 +138,15 @@ Watermark creation, URL normalization, sized URL rendering, and ROW URL normaliz
 - ✅ Master sync batching, recursion prevention, and deterministic load order merged (T-05).
 - ✅ Device-token absolute/idle expiry and cleanup merged (H-06).
 - ✅ Password plaintext cutover merged with a single-use, time-limited migration and fail-closed verification (H-08); runtime migration acceptance remains pending.
-- ⏳ Staging and real-device evidence remains open for T-05/H-06.
+- ✅ C-05/T-06 Master Gardu snapshot materialization merged with atomic upsert, pending-outbox preservation, stale-row deletion safety, and JSON patch replay; real-device acceptance and production sign-off remain pending.
+- ⏳ Staging and real-device evidence remains open for T-05/H-06/C-05.
 
 ---
 
 ## Remaining Open Items
 
 1. 🟡 **Runtime migration acceptance**: H-08 staging migration, verified backup, migration cutoff/fail-closed verification, and post-cutover validation.
-2. 🟡 **C-05**: Materialisasi data deletion.
+2. 🟡 **C-05 real-device acceptance**: Validate pending local edit preservation, atomic `gardu_outbox` JSON patch replay, retry/restart behavior, and production sign-off evidence.
 3. 🟡 **H-02/T-05 QA**: Staging and real-device Master download without retry.
 4. 🟡 **H-06 QA**: Real-device expiry, forced login, secure-storage clearing, and scheduled cleanup evidence.
 
@@ -129,10 +157,12 @@ Watermark creation, URL normalization, sized URL rendering, and ROW URL normaliz
 - [x] PR #25 merged with CI green.
 - [x] PR #26 merged with CI green.
 - [x] PR #27 merged with automated backend/security and query-string checks green.
+- [x] PR #28 merged with backend, Flutter, and query-string checks green.
 - [ ] Create verified staging backup/version history before H-08 migration.
 - [ ] Deploy H-06 to isolated staging only.
 - [ ] Observe daily cleanup trigger in Apps Script logs.
 - [ ] Verify real-device expired/idle token behavior.
+- [ ] Verify C-05 real-device pending-edit preservation and `gardu_outbox` patch replay.
 - [ ] Update runbook after staging evidence.
 
 ---
@@ -140,3 +170,5 @@ Watermark creation, URL normalization, sized URL rendering, and ROW URL normaliz
 ## Kesimpulan
 
 H-08 code remediation is merged and covered by automated tests. It is **not yet production-deployed** and is not closed operationally until staging migration evidence confirms the database is hashed, the cutoff rejects residual plaintext, and reset/migration recovery works. H-06 likewise remains open operationally until staging and real-device evidence confirms expired tokens are rejected and users are forced through fresh device login.
+
+C-05/T-06 code remediation is merged in PR #28 with green automated CI. Real-device acceptance and production sign-off remain pending, so the change is **not production-ready**.

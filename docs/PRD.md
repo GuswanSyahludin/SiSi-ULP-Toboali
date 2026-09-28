@@ -6,7 +6,7 @@
 **Repository:** `GuswanSyahludin/SiSi-ULP-Toboali` (formerly `SyahludinGus/SiSi-ULP-Toboali`)  
 **Primary operating scope:** Internal ULP Toboali operations  
 **Audit findings and remediation tasks:** `docs/SECURITY-AUDIT-STATUS.md` (single source of truth)  
-**Last updated:** 28 September 2026, 23:55 WIB
+**Last updated:** 29 September 2026, 00:30 WIB
 
 ## 1. Product contract
 
@@ -36,6 +36,7 @@ The Flutter mobile client supports authenticated offline-first field workflows, 
 - Device tokens expire absolutely after 30 days or after 7 days without activity; either condition forces a fresh device login.
 - Password plaintext is accepted only during an explicit, single-use migration window capped at 7 days; after cutoff, password verification fails closed and requires migration or reset.
 - Password audit/migration requires Super User authorization, and all account password writes require the hash module with no plaintext fallback.
+- Master Gardu snapshot materialization must upsert the fresh server snapshot without deleting pending local edits. Rows with `gardu_outbox` entries remain addressable even when absent from a snapshot, and their JSON patches are replayed atomically after materialization.
 - Mobile local database names are derived from normalized `username + ulp`.
 - `AppDatabase` requires an account-scoped name; the legacy shared `sisi_db` name is never a default.
 - Access to local database state fails closed before session activation.
@@ -55,7 +56,7 @@ The approved device-auth login path creates the active session. Session restorat
 
 ### Offline synchronization
 
-Local writes are durable before success is shown. Outbox entries contain enough information for safe retry and duplicate resistance. Failed items remain visible. Queue state and background workers are bound to the active account.
+Local writes are durable before success is shown. Master Gardu materialization uses an atomic snapshot merge: incoming rows are upserted, stale rows without pending outbox edits may be removed, pending rows are preserved, and each pending JSON patch is replayed before the transaction commits. Outbox entries contain enough information for safe retry and duplicate resistance. Failed items remain visible. Queue state and background workers are bound to the active account.
 
 ### Berita Acara
 
@@ -81,16 +82,17 @@ Corrections are durable and retryable. `Lain-lain` requires manual weight from 1
 - **FR-12:** Session and device credentials are never persisted in plaintext SharedPreferences after secure-storage migration.
 - **FR-13:** Device credentials expire after 30 days absolute or 7 days idle, whichever comes first; expiry forces fresh login.
 - **FR-14:** Password plaintext verification is rejected after the explicit migration cutoff; residual accounts require migration or reset.
+- **FR-15:** Master Gardu materialization preserves pending offline edits and replays `gardu_outbox` patches atomically after a new snapshot.
 
 ## 6. Security and reliability requirements
 
-Fail closed by default. Do not trust client-supplied ULP, role, ownership, file membership, identifiers, or URLs without server-side resolution. Do not log secrets or tokens. Use locks for atomic identifier generation, bounded retry for queues, and preserve failed records and audit history. Password migration must preserve a verified backup/version-history point and must not restore plaintext as a rollback path.
+Fail closed by default. Do not trust client-supplied ULP, role, ownership, file membership, identifiers, or URLs without server-side resolution. Do not log secrets or tokens. Use locks for atomic identifier generation, bounded retry for queues, and preserve failed records and audit history. Password migration must preserve a verified backup/version-history point and must not restore plaintext as a rollback path. Master snapshot replacement must not silently discard pending local edits.
 
 ## 7. Testing and definition of done
 
-Automated acceptance includes the Audit Gate, backend security tests, Flutter analysis/tests/build, token-query rejection, password cutover coverage, BA ownership/download coverage, account namespace tests, legacy database quarantine tests, worker contract tests, offline queue coverage, auth-fallback contract tests, and secure-storage migration contract tests.
+Automated acceptance includes the Audit Gate, backend security tests, Flutter analysis/tests/build, token-query rejection, password cutover coverage, Master Gardu pending-edit materialization coverage, BA ownership/download coverage, account namespace tests, legacy database quarantine tests, worker contract tests, offline queue coverage, auth-fallback contract tests, and secure-storage migration contract tests.
 
-Runtime acceptance must cover deployed Apps Script authorization and safe writes, plus staging password migration with backup/version-history evidence, dry-run counts, batch migration, post-cutover plaintext rejection, reset/migration recovery, real-device upgrade from the old shared database, legacy quarantine, account A to logout to account B, restart, offline queue/retry, duplicate delivery handling, photo isolation, stale-worker rejection, revoked device token, absolute device-token expiry, idle device-token expiry, malformed device-auth response, unavailable device-auth endpoint behavior, and secure-storage migration/purge behavior.
+Runtime acceptance must cover deployed Apps Script authorization and safe writes, plus staging password migration with backup/version-history evidence, dry-run counts, batch migration, post-cutover plaintext rejection, reset/migration recovery, real-device offline Gardu edit followed by fresh Master download and outbox replay, real-device upgrade from the old shared database, legacy quarantine, account A to logout to account B, restart, offline queue/retry, duplicate delivery handling, photo isolation, stale-worker rejection, revoked device token, absolute device-token expiry, idle device-token expiry, malformed device-auth response, unavailable device-auth endpoint behavior, and secure-storage migration/purge behavior.
 
 A change is done only when implementation and documentation are updated, focused and full tests pass, CI is green, deployed-runtime and real-device evidence is recorded, and no pending data, photo, audit history, or outbox record is silently discarded.
 
@@ -108,7 +110,7 @@ A change is done only when implementation and documentation are updated, focused
 
 ### Stage 6: Full-Stack Audit Remediation (27 September 2026)
 
-**Audit Period:** 26-28 September 2026  
+**Audit Period:** 26-29 September 2026  
 **Audit Scope:** Backend + web + mobile (comprehensive)
 
 **Critical Tasks Completed:**
@@ -167,6 +169,13 @@ A change is done only when implementation and documentation are updated, focused
 - Automated backend/security and query-string checks passed on the merged PR.
 - Status: code merged to `main`; isolated staging migration, verified backup, cutoff proof, and post-cutover validation remain pending.
 
-**Remaining Open Items:** Runtime migration acceptance for H-08 (staging migration, verified backup, cutoff/fail-closed verification, and post-cutover validation), C-05 materialized deletion, H-02/T-05 staging and real-device acceptance, H-06 real-device expiry/forced-login validation, and other items tracked in `docs/SECURITY-AUDIT-STATUS.md`.
+#### C-05 / T-06: Master Gardu snapshot materialization safety ✅
+- **PR #28** merged as `66f272eb1799fe8b5220cb0e3db73f72730b5f46` on 29 September 2026.
+- Incoming Master Gardu rows are upserted atomically; stale rows without pending outbox edits may be removed.
+- Rows with pending `gardu_outbox` edits remain present even if absent from the fresh snapshot, and their JSON patches are replayed before the transaction commits.
+- Regression coverage verifies pending-row protection, no full-table delete, and patch replay; backend and Flutter CI checks passed.
+- Status: merged to `main`; real-device offline-edit preservation, outbox retry/restart, and production sign-off remain pending. This change is not production-ready until those evidence items are recorded.
+
+**Remaining Open Items:** Runtime migration acceptance for H-08 (staging migration, verified backup, cutoff/fail-closed verification, and post-cutover validation), C-05 real-device validation and production sign-off, H-02/T-05 staging and real-device acceptance, H-06 real-device expiry/forced-login validation, and other items tracked in `docs/SECURITY-AUDIT-STATUS.md`.
 
 No later stage is complete while an earlier security or runtime blocker remains unresolved.
