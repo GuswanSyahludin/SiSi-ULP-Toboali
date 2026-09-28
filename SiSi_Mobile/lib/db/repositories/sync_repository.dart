@@ -1,5 +1,6 @@
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../services/api_service.dart';
-import '../../services/auto_sync_service.dart';
 import '../../services/sync_error_message.dart';
 import '../../services/sync_progress_service.dart';
 import '../db_provider.dart';
@@ -10,6 +11,8 @@ import 'laporan_repository.dart';
 import 'local_master_materializer.dart';
 import 'p0_repository.dart';
 import 'teknik_to_repository.dart';
+
+const _manualSyncModeKey = 'manualSyncMode';
 
 class SyncRepository {
   static const modulMasterData = 'masterData',
@@ -115,8 +118,15 @@ class SyncRepository {
     }
   }
 
-  Future<bool> _isManualSyncMode() async {
-    return AutoSyncService.isManualSyncModeEnabled();
+  Future<bool> _isInManualSyncMode() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      // Check if any manual sync mode key exists; if it does, we're in manual mode
+      final keys = prefs.getKeys();
+      return keys.any((k) => k.endsWith(_manualSyncModeKey));
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<Map<String, dynamic>> sinkronModul(
@@ -162,8 +172,8 @@ class SyncRepository {
       await DbProvider.instance.syncDao.tandaiTersinkron('master:$module',
           jumlah: result.changed.length, keterangan: result.message);
       // Check if in manual sync mode; if not, finalize based on parameter
-      final manualMode = await _isManualSyncMode();
-      if (finalizeProgress && !manualMode) {
+      final inManualMode = await _isInManualSyncMode();
+      if (finalizeProgress && !inManualMode) {
         await progress.success('${moduleLabels[module]} selesai diperbarui.');
       }
       return {
