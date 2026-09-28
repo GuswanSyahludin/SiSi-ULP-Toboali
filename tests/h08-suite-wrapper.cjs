@@ -20,7 +20,7 @@ const resetNeedle = [
   '  seedAll(ctx, { spreadsheetId });',
   '  ctx.call("_bustUsersCache_");',
   '}',
-].join('\\n');
+].join('\n');
 const resetReplacement = [
   'function reset(ctx, spreadsheetId) {',
   '  ctx.harness.store.reset();',
@@ -35,13 +35,13 @@ const resetReplacement = [
   '  const migrasi = ctx.call("doLogin", ["superuser", "RahasiaSuper123"]);',
   '  if (migrasi.ok && migrasi.value && migrasi.value.token) ctx.migrationToken = migrasi.value.token;',
   '}',
-].join('\\n');
+].join('\n');
 if (!source.includes(resetNeedle)) throw new Error('H-08 suite adapter: reset() shape changed');
 source = source.replace(resetNeedle, resetReplacement);
 
 const section3 = 'console.log("\\n=== 3. Hash password + dual-read ===");';
 if (!source.includes(section3)) throw new Error('H-08 suite adapter: hash section not found');
-source = source.replace(section3, 'reset(ctx, SS);\\n' + section3);
+source = source.replace(section3, 'reset(ctx, SS);\n' + section3);
 source = source.replaceAll('ctx.call("auditPasswordSiSi_", []).value', 'ctx.call("auditPasswordSiSi_", [ctx.migrationToken]).value');
 source = source.replaceAll('ctx.call("migrasiPasswordHash_", [{ kering: true }]).value', 'ctx.call("migrasiPasswordHash_", [ctx.migrationToken, { kering: true }]).value');
 source = source.replaceAll('ctx.call("migrasiPasswordHash_", [{}]).value', 'ctx.call("migrasiPasswordHash_", [ctx.migrationToken, {}]).value');
