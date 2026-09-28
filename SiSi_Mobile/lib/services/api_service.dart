@@ -62,7 +62,19 @@ class ApiService {
     final deviceToken = await SesiStore.deviceToken();
     if (deviceToken.isEmpty) return {'success': false, 'kode': 'TANPA_TOKEN', 'message': 'Belum ada sesi perangkat.'};
     final result = await _call('cekPerangkat', {'deviceToken': deviceToken});
-    if (result['success'] == true) await SesiStore.simpan(result, deviceToken: deviceToken);
+    if (result['success'] == true) {
+      await SesiStore.simpan(result, deviceToken: deviceToken);
+    } else if ({
+      'DEVICE_TOKEN_EXPIRED',
+      'PERANGKAT_TIDAK_DIKENAL',
+      'AKUN_TIDAK_ADA',
+      'PASSWORD_BERUBAH',
+      'TANPA_TOKEN',
+    }.contains(result['kode'])) {
+      // Backend explicitly rejected the device credential. Clear secure
+      // session state so the next app flow cannot reuse a dead token.
+      await SesiStore.hapus();
+    }
     return result;
   }
 
@@ -92,7 +104,7 @@ class ApiService {
 
   static Future<Map<String, dynamic>> setApprovalP0({required String kodeP0, required String keputusan, required String username, String alasan = ''}) async {
     final session = await SesiStore.muat();
-    return _call('setMobileApprovalP0', {'token': (session?['token'] ?? '').toString(), 'kodeP0': kodeP0, 'keputusan': keputusan, 'username': username, 'alasan': alasan});
+    return _call('setMobileApprovalP0', {'token': (session?['token'] ?? '').toString(), 'kodeP0': kodeP0, 'username': username, 'keputusan': keputusan, 'alasan': alasan});
   }
 
   static Future<Map<String, dynamic>> getLampiranPengecekanP0(String kodeP0) async {
