@@ -2,26 +2,8 @@
    Foto-Url.js — Standar URL foto SiSi (ROW + modul lain)
    Rev 22 Agu 2026
    -----------------------------------------------------
-   NILAI BAKU YANG DISIMPAN DI GSHEET:
-     https://drive.google.com/thumbnail?id=<FILE_ID>
-
-   Sengaja TANPA &sz=... supaya satu nilai bisa dipakai lintas UI:
-     kartu/list : urlFotoUkuran_(url, 400)
-     popup/detail: urlFotoUkuran_(url, 1600)
-
-   Helper menerima semua format lama:
-     • https://lh3.googleusercontent.com/d/<ID>
-     • https://drive.google.com/file/d/<ID>/view
-     • https://drive.google.com/open?id=<ID>
-     • https://drive.google.com/uc?...&id=<ID>
-     • https://drive.google.com/thumbnail?id=<ID>&sz=w400
-     • File ID polos
-
-   Mobile ROW saat ini menulis lh3 di Code.js. Agar Code.js besar tidak ditulis
-   ulang penuh dan berisiko rusak, fungsi tick di bawah menormalisasi kolom
-   S/U/W sesudah upload. Jalankan pasangNormalisasiUrlFotoROWTrigger() SEKALI
-   setelah clasp push + deploy. Maksimal 1 menit setelah upload, nilai di gsheet
-   sudah menjadi format baku.
+   Helper URL bersifat pure dan dipakai lintas modul. Akses ke Drive tetap
+   diamankan oleh endpoint pemanggil; helper tidak membaca atau menulis data.
    ===================================================== */
 
 var FOTO_URL_PREFIX = "https://drive.google.com/thumbnail?id=";
@@ -46,50 +28,33 @@ function fileIdFoto_(nilai) {
   return "";
 }
 
-/** URL baku untuk DISIMPAN di gsheet: thumbnail tanpa ukuran. */
+/** URL baku untuk DISIMPAN di gsheet: thumbnail tanpa ukuran. Pure helper. */
 function urlFotoBaku_(nilai) {
-  guard_(arguments, { ulp: true, aksi: "urlFotoBaku_" });
-  
   var id = fileIdFoto_(nilai);
   return id ? FOTO_URL_PREFIX + id : String(nilai || "").trim();
 }
 
-/** URL untuk DIBACA UI. Tidak mengubah nilai di gsheet. */
+/** URL untuk DIBACA UI. Pure helper, tidak membaca/menulis data. */
 function urlFotoUkuran_(nilai, lebar) {
-  guard_(arguments, { ulp: true, aksi: "urlFotoUkuran_" });
-  
   var baku = urlFotoBaku_(nilai);
   if (!baku || baku.indexOf(FOTO_URL_PREFIX) !== 0) return baku;
   var w = Math.max(64, Math.min(2400, Number(lebar || 400)));
   return baku + "&sz=w" + Math.round(w);
 }
 
-/* Dihapus 29 Agu 2026: publikasikanFoto_().
-   Fungsi itu menerima File ID dari klien lalu setSharing(ANYONE_WITH_LINK) atas
-   nama owner (executeAs: USER_DEPLOYING). Karena web app memakai
-   access: ANYONE_ANONYMOUS, siapa pun di internet bisa memakainya untuk
-   mempublikasikan berkas APA PUN di Drive owner — bukan hanya foto yang
-   memang sengaja dibagikan. Tidak memiliki satu pun pemanggil di JS, HTML,
-   maupun Flutter, jadi dihapus, bukan diperbaiki.
-   Berbagi foto yang disengaja tidak berubah: tetap ANYONE_WITH_LINK di
-   Code.js (foto eksekusi), Tek-Temuan-Code.js (foto temuan), Tek-ROW-Code.js
-   (thumbnail), dan Tek-Yandal-Code.js (watermark) — dibutuhkan AppSheet
-   untuk merender gambar. */
+/* Dihapus 29 Agu 2026: publikasikanFoto_(). */
 
 /**
  * Normalisasi bertahap kolom URL ROW (S/U/W).
- * Hanya menulis sel yang berisi URL valid dan belum berbentuk baku, sehingga
- * murah dan aman dijalankan tiap menit. Progress row disimpan di ScriptCache;
- * setelah mencapai akhir sheet, putaran berikutnya kembali dari baris 2.
+ * Trigger-only: sesi pengguna ditolak; trigger terjadwal boleh berjalan.
  */
 function normalisasiUrlFotoRowTick() {
-  guard_(arguments, { ulp: true, aksi: "normalisasiUrlFotoRowTick" });
-  
+  guardInternal_(arguments, "normalisasiUrlFotoRowTick");
+
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(3000)) return;
   try {
-    var sh =
-      SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(FOTO_ROW_SHEET);
+    var sh = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(FOTO_ROW_SHEET);
     if (!sh || sh.getLastRow() < 2) return;
 
     var cache = CacheService.getScriptCache();
@@ -118,16 +83,13 @@ function normalisasiUrlFotoRowTick() {
     var next = start + count;
     cache.put("fotoRowNormNext", String(next > last ? 2 : next), 21600);
   } finally {
-    try {
-      lock.releaseLock();
-    } catch (e) {}
+    try { lock.releaseLock(); } catch (e) {}
   }
 }
 
 /** Jalankan SEKALI dari editor setelah deploy. */
 function hapusNormalisasiUrlFotoROWTrigger() {
-  var all = ScriptApp.getProjectTriggers(),
-    n = 0;
+  var all = ScriptApp.getProjectTriggers(), n = 0;
   for (var i = 0; i < all.length; i++) {
     if (all[i].getHandlerFunction() === "normalisasiUrlFotoRowTick") {
       ScriptApp.deleteTrigger(all[i]);
