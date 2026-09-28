@@ -10,7 +10,10 @@ const source = fs.readFileSync(path.join(root, 'SiSi_BackEnd/Core/ZZZZZZZZZZZZZZ
 const props = new Map();
 const calls = [];
 const originalFunctions = {
-  _verifyPw_: (stored, supplied) => stored === supplied,
+  _verifyPw_: (stored, supplied) =>
+    String(stored).startsWith('sisi1$')
+      ? supplied === 'anything'
+      : stored === supplied,
   verifikasiLogin_: () => ({ boleh: true }),
   cariPasswordTersimpan_: () => ({ ditemukan: true, nilai: 'legacy-pass' }),
   auditPasswordSiSi_: () => ({ ok: true, masihPlaintext: 1 }),
@@ -38,7 +41,7 @@ vm.runInContext(source, ctx, { filename: 'Password-Cutover.js' });
 
 function setCutoff(ms, locked = '0') {
   props.set('SISI_PW_PLAINTEXT_CUTOFF_AT', String(ms));
-  props.set('SISI_PW_CUTOVER_LOCKED', locked);
+  props.set(ctx.H08_PROP_LOCKED, locked);
 }
 
 function clearState() {
@@ -62,7 +65,7 @@ test('plaintext is rejected and cutover is locked after the deadline', () => {
   clearState();
   setCutoff(Date.now() - 1);
   assert.equal(ctx._verifyPw_('legacy-pass', 'legacy-pass'), false);
-  assert.equal(props.get('SISI_PW_CUTOVER_LOCKED'), '1');
+  assert.equal(props.get(ctx.H08_PROP_LOCKED), '1');
   assert.equal(ctx.verifikasiLogin_('tester', 'legacy-pass').kode, 'PASSWORD_MIGRATION_REQUIRED');
 });
 
