@@ -6,7 +6,7 @@
 **Repository:** `GuswanSyahludin/SiSi-ULP-Toboali` (formerly `SyahludinGuswan/Sisi-ULP-Toboali`)  
 **Primary operating scope:** Internal ULP Toboali operations  
 **Audit findings and remediation tasks:** `docs/SECURITY-AUDIT-STATUS.md` (single source of truth)  
-**Last updated:** 27 September 2026, 17:21 WIB
+**Last updated:** 28 September 2026, 20:34 WIB
 
 ## 1. Product contract
 
@@ -131,7 +131,7 @@ A change is done only when implementation and documentation are updated, focused
 - **Status:** All 16 functions guarded, merged & verified
 - **Risk Mitigated:** All top-level functions require valid session + ULP scoping
 
-#### C-01: Master Gardu Edit Upload Regression ✅ (CRITICAL)
+#### C-01: Master Gardu Edit Upload Regression ✅
 - **Root Cause:** PR #3 wrapper didn't distinguish download vs upload requests
 - **Impact:** APK edits sent with mode: "update" silently lost (25-27 Sep)
 - **Remediation:**
@@ -148,6 +148,17 @@ A change is done only when implementation and documentation are updated, focused
 - ✅ Data loss regression (C-01) fixed
 - ✅ All CI checks passing
 
-**Remaining Open Items (H-02, H-06, H-07, H-08 +):** Tracked in `docs/SECURITY-AUDIT-STATUS.md`
+#### H-02 / T-05: Master sync timeout and dispatch hardening ✅
+- **PR #25** ([link](https://github.com/GuswanSyahludin/SiSi-ULP-Toboali/pull/25)) squash-merged as commit `6c29b7ca71f3c83deab721efaa75cb72e2608d35` on 28 September 2026.
+- Default 24-dataset Master sync is split into batches of up to 4 datasets.
+- Per-dataset checkpoints and resume behavior are preserved; partial snapshot batches fail closed.
+- Snapshot timing logs record only safe metadata such as duration, row count, and chunk count; no tokens or payloads are logged.
+- Backend routing recursion was removed, T04 wrapper self-capture was fixed, legacy mobile stub loading was excluded, and deployment/harness load order was made deterministic.
+- CI before merge passed backend syntax/security, Flutter analysis/build, wiring, and query-string auth rejection checks.
+- **Status:** Merged to `main`; not deployed to production.
+- **Remaining acceptance:** staging backend/Sheet/Drive plus real Android/iOS validation for `Pilih semua` without retry, timeout, restart, offline queue, account switch, backup/restore, and rollback.
+- **Follow-up:** keep `.clasp.json` and `appsscript.json` file order aligned before any deployment path that uses the latter as the source manifest.
+
+**Remaining Open Items (H-02 runtime acceptance, H-06, H-07, H-08 +):** Tracked in `docs/SECURITY-AUDIT-STATUS.md`
 
 No later stage is complete while an earlier security or runtime blocker remains unresolved.
