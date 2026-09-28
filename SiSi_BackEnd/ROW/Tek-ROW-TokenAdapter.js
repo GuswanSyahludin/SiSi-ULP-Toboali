@@ -8,22 +8,33 @@
  */
 function getSemuaLaporan(token, tglMulai, tglAkhir, tim, penyulang) {
   try {
-    guard_(arguments, { aksi: 'getSemuaLaporan' });
+    var g = guard_(arguments, { ulp: true, aksi: "getSemuaLaporan" });
 
     var RL = COL_ROW_RLZ;
-    var data = _readSheetDual_('db_ROW_Realisasi', RL.kodePekerjaan, COL_ROW_RLZ_N) || [];
-    var fDari = tglMulai ? _normTgl(tglMulai) : '';
-    var fSampai = tglAkhir ? _normTgl(tglAkhir) : '';
-    var fTim = tim ? String(tim).trim().toLowerCase() : '';
-    var fPeny = penyulang ? String(penyulang).trim().toLowerCase() : '';
+    var data = _readSheetDual_("db_ROW_Realisasi", RL.kodePekerjaan, COL_ROW_RLZ_N) || [];
+    var fDari = tglMulai ? _normTgl(tglMulai) : "";
+    var fSampai = tglAkhir ? _normTgl(tglAkhir) : "";
+    var fTim = tim ? String(tim).trim().toLowerCase() : "";
+    var fPeny = penyulang ? String(penyulang).trim().toLowerCase() : "";
+
+    function _rowMilikSesi_(row) {
+      if (g.isSuper) return true;
+      var kodeHeader = String(row[RL.kodeHeader] || "").trim();
+      var ownerUlp = kodeHeader && typeof ulpDariKodeHeader_ === "function"
+        ? String(ulpDariKodeHeader_(kodeHeader) || "").trim()
+        : "";
+      /* Header tidak ditemukan = ownership tidak dapat dibuktikan. */
+      return !!ownerUlp && barisUlpCocok_(g, ownerUlp);
+    }
 
     var totBul = {};
     for (var b = 0; b < data.length; b++) {
       var rb = data[b];
-      if (!String(rb[RL.kodePekerjaan] || '').trim() && !String(rb[RL.kodeHeader] || '').trim()) continue;
+      if (!_rowMilikSesi_(rb)) continue;
+      if (!String(rb[RL.kodePekerjaan] || "").trim() && !String(rb[RL.kodeHeader] || "").trim()) continue;
       var tB = _normTgl(rb[RL.tanggal]);
       if (!tB) continue;
-      var k = String(rb[RL.tim] || '').trim().toLowerCase() + '|' + tB.substring(0, 7);
+      var k = String(rb[RL.tim] || "").trim().toLowerCase() + "|" + tB.substring(0, 7);
       if (!totBul[k]) totBul[k] = { r: 0, s: 0, b: 0 };
       totBul[k].r += Number(rb[RL.rabas]) || 0;
       totBul[k].s += Number(rb[RL.sedang]) || 0;
@@ -33,11 +44,12 @@ function getSemuaLaporan(token, tglMulai, tglAkhir, tim, penyulang) {
     var rows = [], no = 1;
     for (var i = 0; i < data.length; i++) {
       var r = data[i];
-      if (!String(r[RL.kodePekerjaan] || '').trim() && !String(r[RL.kodeHeader] || '').trim()) continue;
+      if (!_rowMilikSesi_(r)) continue;
+      if (!String(r[RL.kodePekerjaan] || "").trim() && !String(r[RL.kodeHeader] || "").trim()) continue;
 
       var tglStr = _normTgl(r[RL.tanggal]);
-      var timR = String(r[RL.tim] || '').trim();
-      var penyR = String(r[RL.penyulang] || '').trim();
+      var timR = String(r[RL.tim] || "").trim();
+      var penyR = String(r[RL.penyulang] || "").trim();
       if (fDari && (!tglStr || tglStr < fDari)) continue;
       if (fSampai && (!tglStr || tglStr > fSampai)) continue;
       if (fTim && timR.toLowerCase() !== fTim) continue;
@@ -46,17 +58,17 @@ function getSemuaLaporan(token, tglMulai, tglAkhir, tim, penyulang) {
       var rabas = Number(r[RL.rabas]) || 0;
       var sedang = Number(r[RL.sedang]) || 0;
       var besar = Number(r[RL.besar]) || 0;
-      var tb = totBul[timR.toLowerCase() + '|' + (tglStr ? tglStr.substring(0, 7) : '')] || { r: 0, s: 0, b: 0 };
+      var tb = totBul[timR.toLowerCase() + "|" + (tglStr ? tglStr.substring(0, 7) : "")] || { r: 0, s: 0, b: 0 };
       rows.push([
-        no++, timR, String(r[RL.hari] || ''), tglStr,
-        '-', '-', '-', '-', rabas + sedang + besar,
-        tb.r, tb.s, tb.b, penyR, String(r[RL.section] || ''),
-        rabas, sedang, besar, ''
+        no++, timR, String(r[RL.hari] || ""), tglStr,
+        "-", "-", "-", "-", rabas + sedang + besar,
+        tb.r, tb.s, tb.b, penyR, String(r[RL.section] || ""),
+        rabas, sedang, besar, ""
       ]);
     }
     return { success: true, rows: rows };
   } catch (e) {
-    if (typeof _guardErrorAkses_ === 'function' && _guardErrorAkses_(e)) throw e;
+    if (typeof _guardErrorAkses_ === "function" && _guardErrorAkses_(e)) throw e;
     return { success: false, rows: [], message: e.message };
   }
 }
