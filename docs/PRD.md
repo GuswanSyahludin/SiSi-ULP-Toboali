@@ -6,7 +6,7 @@
 **Repository:** `GuswanSyahludin/SiSi-ULP-Toboali` (formerly `SyahludinGuswan/Sisi-ULP-Toboali`)  
 **Primary operating scope:** Internal ULP Toboali operations  
 **Audit findings and remediation tasks:** `docs/SECURITY-AUDIT-STATUS.md` (single source of truth)  
-**Last updated:** 28 September 2026, 20:34 WIB
+**Last updated:** 28 September 2026, 23:38 WIB
 
 ## 1. Product contract
 
@@ -33,6 +33,7 @@ The mobile client supports authenticated offline-first field workflows, durable 
 - Device authentication uses `loginPerangkat`, `cekPerangkat`, and `logoutPerangkat` only.
 - Unknown or unavailable device-auth endpoints fail closed; they must not fall back to legacy `login`, `cekSesi`, or `logout` flows.
 - Legacy session tokens are not reused to restore or migrate a device session, and logout sends only the device token.
+- Device tokens expire absolutely after 30 days or after 7 days without activity; either condition forces a fresh device login.
 - Mobile local database names are derived from normalized `username + ulp`.
 - `AppDatabase` requires an account-scoped name; the legacy shared `sisi_db` name is never a default.
 - Access to local database state fails closed before session activation.
@@ -48,7 +49,7 @@ The mobile client supports authenticated offline-first field workflows, durable 
 
 ### Authentication and session
 
-The approved device-auth login path creates the active session. Session restoration validates the persisted session and activates exactly one account namespace. If device authentication is unavailable, the client reports failure instead of reusing a stale legacy session. Logout cancels workers, clears session access, and closes the account database.
+The approved device-auth login path creates the active session. Session restoration validates the persisted session and activates exactly one account namespace. If device authentication is unavailable, the client reports failure instead of reusing a stale legacy session. Logout cancels workers, clears session access, and closes the account database. When the absolute or idle device-token limit is exceeded, the backend deletes the credential and the Flutter client clears secure session state, forcing `loginPerangkat()` again.
 
 ### Offline synchronization
 
@@ -76,6 +77,7 @@ Corrections are durable and retryable. `Lain-lain` requires manual weight from 1
 - **FR-10:** Device-auth endpoint failure cannot trigger legacy token/session fallback.
 - **FR-11:** Required CI, deployed-runtime, and real-device acceptance evidence is recorded before production sign-off.
 - **FR-12:** Session and device credentials are never persisted in plaintext SharedPreferences after secure-storage migration.
+- **FR-13:** Device credentials expire after 30 days absolute or 7 days idle, whichever comes first; expiry forces fresh login.
 
 ## 6. Security and reliability requirements
 
@@ -85,7 +87,7 @@ Fail closed by default. Do not trust client-supplied ULP, role, ownership, file 
 
 Automated acceptance includes the Audit Gate, backend security tests, Flutter analysis/tests/build, token-query rejection, BA ownership/download coverage, account namespace tests, legacy database quarantine tests, worker contract tests, offline queue coverage, auth-fallback contract tests, and secure-storage migration contract tests.
 
-Runtime acceptance must cover deployed Apps Script authorization and safe writes, plus real-device upgrade from the old shared database, legacy quarantine, account A to logout to account B, restart, offline queue/retry, duplicate delivery handling, photo isolation, stale-worker rejection, revoked device token, malformed device-auth response, unavailable device-auth endpoint behavior, and secure-storage migration/purge behavior.
+Runtime acceptance must cover deployed Apps Script authorization and safe writes, plus real-device upgrade from the old shared database, legacy quarantine, account A to logout to account B, restart, offline queue/retry, duplicate delivery handling, photo isolation, stale-worker rejection, revoked device token, absolute device-token expiry, idle device-token expiry, malformed device-auth response, unavailable device-auth endpoint behavior, and secure-storage migration/purge behavior.
 
 A change is done only when implementation and documentation are updated, focused and full tests pass, CI is green, deployed-runtime and real-device evidence is recorded, and no pending data, photo, audit history, or outbox record is silently discarded.
 
@@ -103,7 +105,7 @@ A change is done only when implementation and documentation are updated, focused
 
 ### Stage 6: Full-Stack Audit Remediation (27 September 2026)
 
-**Audit Period:** 26-27 September 2026  
+**Audit Period:** 26-28 September 2026  
 **Audit Scope:** Backend + web + mobile (comprehensive)
 
 **Critical Tasks Completed:**
@@ -134,31 +136,26 @@ A change is done only when implementation and documentation are updated, focused
 #### C-01: Master Gardu Edit Upload Regression ✅
 - **Root Cause:** PR #3 wrapper didn't distinguish download vs upload requests
 - **Impact:** APK edits sent with mode: "update" silently lost (25-27 Sep)
-- **Remediation:**
-  - **PR #4** (hotfix merged) - Add mode=update dispatch logic
-  - **PR #13** (commit 35806d2) - Documentation + test coverage
+- **Remediation:** PR #4 hotfix and PR #13 documentation/test coverage
 - **Status:** Fixed & documented
-- **Risk Mitigated:** Master Gardu edits now route correctly; regression test prevents recurrence
-
-**Cumulative Security Posture:** 🟢 PRODUCTION-READY
-- ✅ 4 critical security tasks (T-01 → T-04) complete
-- ✅ 16 top-level functions guarded (T-04)
-- ✅ Delta sync ULP-scoped (T-03)
-- ✅ Token exposure eliminated (T-01, T-02)
-- ✅ Data loss regression (C-01) fixed
-- ✅ All CI checks passing
+- **Risk Mitigated:** Master Gardu edits route correctly; regression test prevents recurrence
 
 #### H-02 / T-05: Master sync timeout and dispatch hardening ✅
-- **PR #25** ([link](https://github.com/GuswanSyahludin/SiSi-ULP-Toboali/pull/25)) squash-merged as commit `6c29b7ca71f3c83deab721efaa75cb72e2608d35` on 28 September 2026.
+- **PR #25** squash-merged as `6c29b7ca71f3c83deab721efaa75cb72e2608d35` on 28 September 2026.
 - Default 24-dataset Master sync is split into batches of up to 4 datasets.
-- Per-dataset checkpoints and resume behavior are preserved; partial snapshot batches fail closed.
-- Snapshot timing logs record only safe metadata such as duration, row count, and chunk count; no tokens or payloads are logged.
-- Backend routing recursion was removed, T04 wrapper self-capture was fixed, legacy mobile stub loading was excluded, and deployment/harness load order was made deterministic.
-- CI before merge passed backend syntax/security, Flutter analysis/build, wiring, and query-string auth rejection checks.
-- **Status:** Merged to `main`; not deployed to production.
-- **Remaining acceptance:** staging backend/Sheet/Drive plus real Android/iOS validation for `Pilih semua` without retry, timeout, restart, offline queue, account switch, backup/restore, and rollback.
-- **Follow-up:** keep `.clasp.json` and `appsscript.json` file order aligned before any deployment path that uses the latter as the source manifest.
+- Per-dataset checkpoints/resume are preserved; partial snapshot batches fail closed.
+- Snapshot timing logs contain only safe metadata; no tokens or payloads are logged.
+- Backend recursion, T04 wrapper self-capture, legacy mobile stub loading, and deployment/harness ordering issues were fixed.
+- Status: merged to `main`; production deployment and real-device staging validation remain pending.
 
-**Remaining Open Items (H-02 runtime acceptance, H-06, H-07, H-08 +):** Tracked in `docs/SECURITY-AUDIT-STATUS.md`
+#### H-06 / T-10: Device-token lifetime enforcement ✅
+- **PR #26** squash-merged as `d59c4f3f5695ac7e8838b4aa475826203adeeef3` on 28 September 2026.
+- `expiresAt` is 30 days from device login; `lastSeenAt` idle timeout is 7 days.
+- If either limit passes, `cekPerangkat` deletes the token and returns `DEVICE_TOKEN_EXPIRED`; the user must run `loginPerangkat` again.
+- Cleanup is scheduled through the central daily worker; secure Flutter session state is cleared after backend rejection.
+- Backend syntax/security, Flutter analysis/build, and query-string auth rejection checks passed.
+- Status: merged to `main`; no production deployment or real-device expiry test yet.
+
+**Remaining Open Items:** H-08 password plaintext enforcement, C-05 materialized deletion, H-02/T-05 staging and real-device acceptance, H-06 real-device expiry/forced-login validation, and other items tracked in `docs/SECURITY-AUDIT-STATUS.md`.
 
 No later stage is complete while an earlier security or runtime blocker remains unresolved.
