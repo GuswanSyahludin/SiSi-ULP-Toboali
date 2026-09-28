@@ -114,10 +114,15 @@ class SyncRepository {
     }
   }
 
-  Future<Map<String, dynamic>> sinkronModul(String token, String module) async {
+  Future<Map<String, dynamic>> sinkronModul(
+    String token,
+    String module, {
+    bool finalizeProgress = true,
+  }) async {
     final datasets = moduleDatasets[module];
-    if (datasets == null)
+    if (datasets == null) {
       return {'ok': false, 'message': 'Modul Data Master tidak dikenal.'};
+    }
     final key = 'module:$module';
     if (_kunci.contains(key)) {
       return {'ok': false, 'message': 'Modul sedang diunduh.'};
@@ -151,7 +156,9 @@ class SyncRepository {
       await _materialize(result.changed.toSet(), initial, delta);
       await DbProvider.instance.syncDao.tandaiTersinkron('master:$module',
           jumlah: result.changed.length, keterangan: result.message);
-      await progress.success('${moduleLabels[module]} selesai diperbarui.');
+      if (finalizeProgress) {
+        await progress.success('${moduleLabels[module]} selesai diperbarui.');
+      }
       return {
         'ok': true,
         'message': '${moduleLabels[module]} selesai diperbarui.'
