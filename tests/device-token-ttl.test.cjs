@@ -63,26 +63,26 @@ test('login issues absolute and idle TTL metadata', () => {
 });
 
 test('absolute expiry forces login and deletes the old token', () => {
-  props.set('dev-' + TOKEN, JSON.stringify(record({ expiresAt: Date.now() - 1 })));
+  props.set('dev_' + TOKEN, JSON.stringify(record({ expiresAt: Date.now() - 1 })));
   const result = ctx.cekPerangkat(TOKEN);
   assert.equal(result.success, false);
   assert.equal(result.kode, 'DEVICE_TOKEN_EXPIRED');
-  assert.equal(props.has('dev-' + TOKEN), false);
+  assert.equal(props.has('dev_' + TOKEN), false);
 });
 
 test('idle expiry forces login and deletes the old token', () => {
-  props.set('dev-' + TOKEN, JSON.stringify(record({ lastSeenAt: Date.now() - 7 * 86400000 - 1, terakhirDipakai: Date.now() - 7 * 86400000 - 1 })));
+  props.set('dev_' + TOKEN, JSON.stringify(record({ lastSeenAt: Date.now() - 7 * 86400000 - 1, terakhirDipakai: Date.now() - 7 * 86400000 - 1 })));
   const result = ctx.cekPerangkat(TOKEN);
   assert.equal(result.success, false);
   assert.equal(result.kode, 'DEVICE_TOKEN_EXPIRED');
-  assert.equal(props.has('dev-' + TOKEN), false);
+  assert.equal(props.has('dev_' + TOKEN), false);
 });
 
 test('cleanup removes expired tokens but keeps fresh tokens', () => {
-  props.set('dev-expired', JSON.stringify(record({ expiresAt: Date.now() - 1 })));
-  props.set('dev-fresh', JSON.stringify(record()));
+  props.set('dev_expired', JSON.stringify(record({ expiresAt: Date.now() - 1 })));
+  props.set('dev_fresh', JSON.stringify(record()));
   const result = ctx.bersihkanPerangkatTerlantar();
   assert.equal(result.success, true);
-  assert.equal(props.has('dev-expired'), false);
-  assert.equal(props.has('dev-fresh'), true);
+  assert.equal(props.has('dev_expired'), false);
+  assert.equal(props.has('dev_fresh'), true);
 });
