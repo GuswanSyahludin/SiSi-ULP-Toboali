@@ -1,9 +1,9 @@
 # SiSi Security Audit Status
 
-**Last Updated:** 2026-09-28 10:30 AM (Asia/Jakarta)
+**Last Updated:** 2026-09-28 11:22 AM (Asia/Jakarta)
 **Audit Period:** September 2026 (PLN ULP Toboali)
 **Total Findings:** 86 security & operational issues
-**Phase 1 Status:** IN PROGRESS (9/9 blocking issues identified, 3/3 merged)
+**Phase 1 Status:** IN PROGRESS (9/9 blocking issues identified, 4/4 merged)
 
 ---
 
@@ -16,7 +16,7 @@ Must complete before any production deployment.
 - **Finding:** Silent data loss on gardu edit uploads; downloads route intercepted mode=update requests
 - **Fix:** Route mode=update to updateMasterGarduMobile endpoint instead of download gateway
 - **Impact:** Prevents accidental data loss during simultaneous edit/download operations
-- **Next:** Deploy to production
+- **Next:** Deploy as part of Phase 1 release
 
 ---
 
@@ -40,23 +40,30 @@ Must complete before any production deployment.
 ---
 
 ### T-04: Guard Functions (C-04)
-- **Status:** ⏳ PENDING (architecture ready from T-03)
-- **Finding:** Top-level Apps Script functions (Code.js, Jadwal-Padam-Code.js, Tek-LaporanHarianSheet.js) lack guard_ enforcement
-- **Scope:** ~15-20 public functions
-- **Approach:** Add `guard_({ulp: true, aksi: "functionName"})` calls at entry of each function
-- **Parallel Track:** Can start after T-03 merges
-- **Est. Effort:** 2-4 hours implementation + 2 hours testing
+- **Status:** ✅ MERGED (PR #20, squash commit baccc9793b7af5ba1ef4f5bf1c7b830d8c3203b5)
+- **Date Merged:** 2026-09-28 11:20 AM
+- **Finding:** Top-level Apps Script functions could be called directly through `google.script.run`, bypassing router-only authorization
+- **Fixes Applied:**
+  - Guarded PDF download entry through `doGet` with authenticated ULP scope
+  - Enforced webhook JSON and secret validation before `doPost` reaches the existing handler; mobile POST routing remains unchanged
+  - Guarded `getMobileDropdownRow` as an authenticated shared-resource read
+  - Guarded `simpanMobileEksekusiRow` with session ULP enforcement
+  - Added `Code-Session.js` and `Code-Admin.js` to the Apps Script load order
+  - Kept incomplete `Code-Mobile.js` out of load order until its `updateMobileEksekusiRow` stub is reconciled with the complete implementation in `Code.js`
+- **Impact:** Direct calls to the covered entry points fail closed before data access or writes
+- **Testing:** Diff audit passed; CI status was still pending at merge and must complete before deployment
+- **Next:** Complete CI, staging validation, then reconcile the mobile module before a production release
 
 ---
 
 ### T-05: Master Data Download Timeout (H-02)
 - **Status:** ⏳ PENDING
 - **Finding:** Large Master Data downloads timeout (~5-10 min ops, 15 min+ network latency)
-- **Approach:** 
+- **Approach:**
   1. Profile snapshotCreate execution time
   2. Split Master_Gardu per ULP or paginate chunks
   3. Debug db_Users sanitization performance
-- **Parallel Track:** Can debug while T-04 progresses
+- **Parallel Track:** Can debug while staging validation progresses
 - **Est. Effort:** 2-3 hours profiling + 2-3 hours fix + 4-6 hours QA
 
 ---
@@ -66,12 +73,12 @@ Must complete before any production deployment.
 **Blocked Until:**
 1. ✅ T-00 merge (done)
 2. ✅ T-03 merge (done)
-3. ⏳ T-04 complete + test pass
+3. ✅ T-04 merge (done; CI and staging validation pending)
 4. ⏳ T-05 complete + staging QA pass
 5. ⏳ Staging validation on real data (Android/iOS real devices + backend staging)
 6. ⏳ Production rollout plan agreed
 
-**Estimated Phase 1 Completion:** Wed 2026-10-01 (2-3 days)
+**Estimated Phase 1 Completion:** Wed 2026-10-01, subject to T-05 and staging results
 
 ---
 
@@ -101,7 +108,7 @@ Must complete before any production deployment.
 
 | Category | Count | Status | Notes |
 |----------|-------|--------|-------|
-| **Critical (C-*)** | 4 | 1 done (T-00), 1 merged (T-03), 2 pending (T-04, T-05) | Blocks production |
+| **Critical (C-*)** | 4 | 2 done (T-00, T-03), 1 merged (T-04), 1 pending (T-05) | Blocks production |
 | **High (H-*)** | 8 | 0 done | ULP/auth, token handling, workflows |
 | **Low (L-*)** | ~15 | 0 done | Documentation, testing, monitoring |
 | **Validation (V-*)** | ~20 | 0 done | Feature validation, edge cases |
@@ -115,13 +122,14 @@ Must complete before any production deployment.
 - 2026-09-27: PR #4 merged (T-00 Master Gardu fix)
 - 2026-09-27: PR #8 merged (T-03 Phase 1 guard enforcement)
 - 2026-09-27: PRs #10-17 merged (T-04 guard functions, Dashboard delete fix, H-07 watermark guard, mobile error UI)
-- **2026-09-28: PR #19 merged (T-03 Phase 2 ULP filtering)** ← YOU ARE HERE
+- 2026-09-28 10:30 AM: PR #19 merged (T-03 Phase 2 ULP filtering)
+- **2026-09-28 11:20 AM: PR #20 merged (T-04 guarded entry points and webhook enforcement)**
 
-**Next (Est. 2026-09-28 to 2026-10-01):**
-- Complete T-04 guard enforcement for remaining functions
+**Next (2026-09-28 to 2026-10-01):**
+- Complete CI verification for PR #20
 - Debug T-05 download timeout root cause + fix
 - Staging validation: real devices + backend data
-- Phase 1 production deployment (Thu-Fri)
+- Phase 1 production deployment, only after all gates pass
 
 ---
 
