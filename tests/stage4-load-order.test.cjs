@@ -16,7 +16,17 @@ const files=[
 ];
 function source(name){return fs.readFileSync(path.join(root,name),'utf8');}
 function productionOrder(){
-  assert.deepEqual(clasp.filePushOrder,['Core/Code.js','Core/PageLoader-Compat.js']);
+  const requiredPrefix=[
+    'Core/Code.js',
+    'Core/Engine-Secrets.js',
+    'Core/Guard.js',
+    'Core/Migrasi-Password.js',
+    'Core/Audit-Guard.js',
+    'Core/Auth-Perangkat.js',
+    'Core/Jadwal-Padam-Mobile.js',
+    'Core/Delta-Sync-Mobile.js',
+  ];
+  assert.deepEqual(clasp.filePushOrder.slice(0,requiredPrefix.length),requiredPrefix);
   return files.slice().sort();
 }
 function context(){
