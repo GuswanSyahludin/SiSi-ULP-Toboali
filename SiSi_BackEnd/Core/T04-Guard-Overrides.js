@@ -1,12 +1,14 @@
 /* ═════════════════════════════════════
    T04-Guard-Overrides.js
-   Guard shim sementara untuk entry point yang masih berada di Code.js.
-   Code-Mobile.js sengaja belum dimuat di appsscript.json karena implementasi
-   updateMobileEksekusiRow di sana masih stub dan akan menimpa fungsi lengkap.
+   Guard shim untuk entry point yang masih berada di Code.js.
+   Code-Mobile.js sengaja tidak dimuat di appsscript.json karena implementasi
+   updateMobileEksekusiRow di sana masih stub dan akan menimpa implementasi
+   lengkap yang masih berada di Code.js.
 ═════════════════════════════════════ */
 
 /* Simpan implementasi lengkap dari Code.js sebelum memasang wrapper. */
 var _t04DoGetOriginal_ = doGet;
+var _t04DoPostOriginal_ = doPost;
 var _t04GetMobileDropdownRowOriginal_ = getMobileDropdownRow;
 var _t04SimpanMobileEksekusiRowOriginal_ = simpanMobileEksekusiRow;
 
@@ -19,6 +21,44 @@ function doGet(e) {
     });
   }
   return _t04DoGetOriginal_(e);
+}
+
+/*
+ * doPost punya dua autentikasi yang berbeda:
+ * - mobile: autentikasi token sesi ditangani apiRouter_;
+ * - webhook: autentikasi secret body ditangani webhookVerifikasi_.
+ * Jangan pakai guard_ pada webhook karena webhook tidak memiliki sesi pengguna.
+ * Wrapper ini menolak webhook sebelum menyentuh handler lama, lalu handler lama
+ * mengulang verifikasi sebagai defense-in-depth sebelum memproses action.
+ */
+function doPost(e) {
+  if (e && e.parameter && e.parameter.mobile) {
+    return _t04DoPostOriginal_(e);
+  }
+
+  var body = {};
+  try {
+    if (e && e.postData && e.postData.contents) {
+      body = JSON.parse(e.postData.contents);
+    }
+  } catch (err) {
+    audit_(null, "WEBHOOK", "", "TOLAK", "body JSON tidak valid");
+    return ContentService.createTextOutput(JSON.stringify({
+      ok: false,
+      message: "Body webhook harus JSON valid.",
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  var ver = webhookVerifikasi_(body);
+  if (!ver.ok) {
+    return ContentService.createTextOutput(JSON.stringify({
+      ok: false,
+      message: ver.message,
+      kode: ver.kode,
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  return _t04DoPostOriginal_(e);
 }
 
 /* Dropdown adalah resource bersama, tetapi tetap wajib berasal dari sesi sah. */
