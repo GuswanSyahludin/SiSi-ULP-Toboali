@@ -1,6 +1,6 @@
 # SiSi Security Audit Status
 
-**Last Updated:** 2026-09-28 11:40 AM (Asia/Jakarta)
+**Last Updated:** 2026-09-28 11:45 AM (Asia/Jakarta)
 **Audit Period:** September 2026 (PLN ULP Toboali)
 **Total Findings:** 86 security & operational issues
 **Phase 1 Status:** IN PROGRESS (9/9 blocking issues identified, T-00/T-03/T-04 merged)
@@ -13,45 +13,31 @@ Must complete before any production deployment.
 ### T-00: Master Gardu Edit Upload Fix (C-01)
 - **Status:** ✅ MERGED (PR #4, commit ed61a0e)
 - **Date Merged:** 2026-09-27
-- **Finding:** Silent data loss on gardu edit uploads; downloads route intercepted mode=update requests
 - **Fix:** Route mode=update to updateMasterGarduMobile endpoint instead of download gateway
-- **Impact:** Prevents accidental data loss during simultaneous edit/download operations
-- **Next:** Deploy as part of Phase 1 release
-
----
 
 ### T-03: ULP Scoping Delta Sync (C-02)
 - **Status:** ✅ MERGED (PR #19, commit e032569)
-- **Date Merged:** 2026-09-28 10:30 AM
-- **Finding:** Delta sync endpoints exposed cross-ULP operational data; db_Users leaked across organizations
+- **Date Merged:** 2026-09-28
 - **Fix:** Guard enforcement, per-row ULP filtering, and db_Users field restriction
-- **Impact:** Users from ULP_A cannot fetch operational data from ULP_B via delta sync
-- **Testing:** Regression tests added for ULP boundary validation
-
----
 
 ### T-04: Guard Functions (C-04)
-- **Status:** ✅ MERGED (PR #20, #21, #22; latest squash commit 23d65bbd3fb48bf27c4ac0cd6ab76a8ee69a7b03)
+- **Status:** ✅ MERGED (PRs #20, #21, #22, #23, #24)
+- **Latest commits:** `23d65bbd3fb48bf27c4ac0cd6ab76a8ee69a7b03`, `24293af58f6b7f5e451b320581b6507f7bed7353`, `9c1746e14b82a6aca631303a2f3880d198cf3dd5`
 - **Date Merged:** 2026-09-28
-- **Finding:** Top-level Apps Script functions could be called directly through `google.script.run`, bypassing router-only authorization
 - **Fixes Applied:**
-  - Guarded PDF `doGet`, webhook `doPost`, mobile dropdown, and ROW write entry points
-  - Guarded UP3/Wilayah/daily report and mobile report endpoints
-  - Guarded SIE/GASPOL, monitoring temuan, and all Data Pendukung CheckPoint endpoints
-  - Forced non-Super requests to the authenticated session ULP; payload ULP cannot override scope
-  - Bound monitoring username to the authenticated session and preserved token context for nested report/GASPOL calls
-  - Corrected `appsscript.json` load order to match the actual `Teknik/` repository structure
-  - Kept incomplete `Code-Mobile.js` out of the load order until its `updateMobileEksekusiRow` stub is reconciled with the complete implementation in `Code.js`
-- **Testing:** Diff audits passed; JavaScript syntax smoke checks passed; CI and staging validation remain pending
-- **Impact:** Covered direct calls fail closed before unauthorized data access or writes
-
----
+  - Guarded PDF `doGet`, webhook `doPost`, mobile dropdown, and ROW write entry points.
+  - Guarded UP3/Wilayah/daily report, mobile report, SIE/GASPOL, monitoring, and CheckPoint endpoints.
+  - Forced non-Super requests to the authenticated session ULP, including ROW report ownership resolved via `Kode Header`.
+  - Bound monitoring username to the authenticated session and preserved nested report/GASPOL auth context.
+  - Corrected Apps Script module load order to match the repository structure.
+  - Fixed photo helper/trigger context: pure URL formatters no longer reject internal calls, while scheduled normalization uses `guardInternal_`.
+  - Kept incomplete `Code-Mobile.js` out of load order until its `updateMobileEksekusiRow` stub is reconciled with `Code.js`.
+- **Testing:** Diff audits passed; JavaScript syntax smoke checks passed; CI and staging validation remain pending.
+- **Impact:** Covered direct calls fail closed before unauthorized data access or writes; internal watermark and scheduled photo normalization flows continue to work.
 
 ### T-05: Master Data Download Timeout (H-02)
 - **Status:** ⏳ PENDING
-- **Finding:** Large Master Data downloads timeout (~5-10 min ops, 15 min+ network latency)
 - **Approach:** Profile snapshotCreate, split/paginate Master_Gardu, optimize db_Users sanitization
-- **Est. Effort:** 2-3 hours profiling + 2-3 hours fix + 4-6 hours QA
 
 ---
 
@@ -101,6 +87,8 @@ Must complete before any production deployment.
 - 2026-09-28 11:20 AM: PR #20 merged (T-04 core entry points)
 - 2026-09-28 11:30 AM: PR #21 merged (T-04 report endpoints)
 - 2026-09-28 11:40 AM: PR #22 merged (T-04 SIE/Checkpoint endpoints)
+- 2026-09-28 11:42 AM: PR #23 merged (T-04 ROW report ULP ownership)
+- 2026-09-28 11:44 AM: PR #24 merged (T-04 photo helper/trigger context)
 
 **Next:** Complete CI verification, fix/profile T-05, then run staging validation. Deploy only after all gates pass.
 
