@@ -13,6 +13,14 @@ var _t04GetLaporanHarianRowOriginal_ = getLaporanHarianRow;
 var _t04RefreshLaporanHarianOriginal_ = refreshLaporanHarian;
 var _t04GetMobileLaporanUp3UiwOriginal_ = getMobileLaporanUp3Uiw;
 var _t04SimpanMobileLaporanC4AOriginal_ = simpanMobileLaporanC4A;
+var _t04ReportContextToken_ = "";
+
+function _t04GuardReport_(args, aksi) {
+  if (_t04ReportContextToken_) {
+    return guard_({ token: _t04ReportContextToken_ }, { ulp: true, aksi: aksi });
+  }
+  return guard_(args, { ulp: true, aksi: aksi });
+}
 
 function _t04ScopedReportParams_(params, g) {
   var out = {};
@@ -23,37 +31,51 @@ function _t04ScopedReportParams_(params, g) {
   return out;
 }
 
+function _t04WithReportContext_(token, fn) {
+  var previous = _t04ReportContextToken_;
+  _t04ReportContextToken_ = token || previous;
+  try {
+    return fn();
+  } finally {
+    _t04ReportContextToken_ = previous;
+  }
+}
+
 function getLaporanUP3(params) {
-  var g = guard_(arguments, { ulp: true, aksi: "getLaporanUP3" });
+  var g = _t04GuardReport_(arguments, "getLaporanUP3");
   return _t04GetLaporanUP3Original_(_t04ScopedReportParams_(params, g));
 }
 
 function getLaporanWilayah(params) {
-  var g = guard_(arguments, { ulp: true, aksi: "getLaporanWilayah" });
+  var g = _t04GuardReport_(arguments, "getLaporanWilayah");
   return _t04GetLaporanWilayahOriginal_(_t04ScopedReportParams_(params, g));
 }
 
 function simpanLaporanHarianWeb(params) {
-  var g = guard_(arguments, { ulp: true, aksi: "simpanLaporanHarianWeb" });
+  var g = _t04GuardReport_(arguments, "simpanLaporanHarianWeb");
   return _t04SimpanLaporanHarianWebOriginal_(_t04ScopedReportParams_(params, g));
 }
 
 function getLaporanHarianRow(params) {
-  guard_(arguments, { ulp: true, aksi: "getLaporanHarianRow" });
+  _t04GuardReport_(arguments, "getLaporanHarianRow");
   return _t04GetLaporanHarianRowOriginal_(params || {});
 }
 
 function refreshLaporanHarian(params) {
-  var g = guard_(arguments, { ulp: true, aksi: "refreshLaporanHarian" });
+  var g = _t04GuardReport_(arguments, "refreshLaporanHarian");
   return _t04RefreshLaporanHarianOriginal_(_t04ScopedReportParams_(params, g));
 }
 
 function getMobileLaporanUp3Uiw(params) {
-  guard_(arguments, { ulp: true, aksi: "getMobileLaporanUp3Uiw" });
-  return _t04GetMobileLaporanUp3UiwOriginal_(params || {});
+  var g = _t04GuardReport_(arguments, "getMobileLaporanUp3Uiw");
+  return _t04WithReportContext_(g.token, function () {
+    return _t04GetMobileLaporanUp3UiwOriginal_(params || {});
+  });
 }
 
 function simpanMobileLaporanC4A(params) {
-  var g = guard_(arguments, { ulp: true, aksi: "simpanMobileLaporanC4A" });
-  return _t04SimpanMobileLaporanC4AOriginal_(_t04ScopedReportParams_(params, g));
+  var g = _t04GuardReport_(arguments, "simpanMobileLaporanC4A");
+  return _t04WithReportContext_(g.token, function () {
+    return _t04SimpanMobileLaporanC4AOriginal_(_t04ScopedReportParams_(params, g));
+  });
 }
