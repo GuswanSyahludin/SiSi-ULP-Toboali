@@ -2,10 +2,12 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const path = require('node:path');
 const vm = require('node:vm');
 
-const auth = fs.readFileSync('SiSi_BackEnd/Core/Auth-Perangkat.js', 'utf8');
-const ttl = fs.readFileSync('SiSi_BackEnd/Core/ZZZZZZZZZZZZZZZZZZZZZ-Device-Token-TTL.js', 'utf8');
+const repoRoot = path.join(__dirname, '..');
+const auth = fs.readFileSync(path.join(repoRoot, 'SiSi_BackEnd/Core/Auth-Perangkat.js'), 'utf8');
+const ttl = fs.readFileSync(path.join(repoRoot, 'SiSi_BackEnd/Core/ZZZZZZZZZZZZZZZZZZZZZ-Device-Token-TTL.js'), 'utf8');
 const TOKEN = 'device-old';
 const props = new Map();
 const cache = new Map();
