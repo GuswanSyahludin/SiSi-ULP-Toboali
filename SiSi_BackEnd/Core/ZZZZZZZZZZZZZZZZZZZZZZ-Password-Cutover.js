@@ -36,7 +36,7 @@ function _h08Prop_(key) {
 function _h08CutoffMs_() {
   var raw = _h08Prop_(H08_PROP_CUTOFF_AT);
   if (!raw) return 0;
-  if (/^\\d+$/.test(raw)) {
+  if (/^\d+$/.test(raw)) {
     var numeric = Number(raw);
     return isFinite(numeric) && numeric > 0 ? numeric : 0;
   }
