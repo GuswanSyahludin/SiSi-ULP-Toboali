@@ -224,6 +224,7 @@ class DeltaSyncRepository {
           .where((item) {
         final name = item['name'].toString();
         return batchNames.contains(name) &&
+            (datasetNames == null || datasetNames.contains(name)) &&
             (force || local[name] != item['version'].toString());
       }).toList();
       final batchTotal = datasets.fold<int>(
@@ -297,7 +298,7 @@ class DeltaSyncRepository {
 
   Future<Map<String, dynamic>> _openSnapshot(
     String token,
-    Set<String> datasetNames, {
+    Set<String>? datasetNames, {
     required bool allowResume,
   }) async {
     if (allowResume) {
@@ -319,12 +320,10 @@ class DeltaSyncRepository {
           final names = List.from(manifest['datasets'] ?? const [])
               .map((item) => (item as Map)['name'].toString())
               .toSet();
-          // Resume only when this immutable snapshot contains every dataset
-          // in the current batch. A partial manifest must not be returned:
-          // otherwise the batch could be considered complete while a missing
-          // dataset is never downloaded. If it does not cover the batch,
-          // continue searching and eventually create a full batch snapshot.
-          if (names.containsAll(datasetNames)) return manifest;
+          final coversRequest = datasetNames == null
+              ? names.length >= _allDatasetNames.length
+              : names.containsAll(datasetNames);
+          if (coversRequest) return manifest;
         } on _SnapshotExpired {
           await _clearSnapshot(id);
         }
@@ -332,7 +331,7 @@ class DeltaSyncRepository {
     }
     return _send(token, {
       'cmd': 'snapshotCreate',
-      'datasets': datasetNames.toList(),
+      if (datasetNames != null) 'datasets': datasetNames.toList(),
     });
   }
 
