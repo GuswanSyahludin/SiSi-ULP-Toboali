@@ -17,6 +17,7 @@ const _manualPendingKey = 'manualSyncPending';
 const _manualModuleKey = 'manualSyncModule';
 const _manualModulesKey = 'manualSyncModules';
 const _accountKey = 'accountKey';
+const _manualSyncModeKey = 'manualSyncMode';
 
 String _key(String base, Map<String, dynamic> session) =>
     DbProvider.scopedKey(base, session);
@@ -46,31 +47,38 @@ void callbackDispatcher() {
       final moduleKey = _key(_manualModuleKey, sesi);
       final modulesKey = _key(_manualModulesKey, sesi);
       final pendingKey = _key(_manualPendingKey, sesi);
+      final manualSyncModeKey = _key(_manualSyncModeKey, sesi);
       final fallback =
           (data?['module'] ?? prefs.getString(moduleKey))?.toString();
       var modules = _queuedModules(prefs, modulesKey, fallback: fallback);
-      while (modules.isNotEmpty) {
-        final module = modules.first;
-        final result = await SyncRepository().sinkronModul(
-          token,
-          module,
-          finalizeProgress: false,
-        );
-        if (result['ok'] != true) return false;
-        await prefs.reload();
-        modules = _queuedModules(prefs, modulesKey, fallback: fallback)
-            .where((item) => item != module)
-            .toList();
-        await _saveQueuedModules(
-          prefs,
-          pendingKey,
-          moduleKey,
-          modulesKey,
-          modules,
-        );
+      
+      // Mark that we're in manual sync mode
+      await prefs.setBool(manualSyncModeKey, true);
+      
+      try {
+        while (modules.isNotEmpty) {
+          final module = modules.first;
+          final result = await SyncRepository().sinkronModul(token, module);
+          if (result['ok'] != true) return false;
+          await prefs.reload();
+          modules = _queuedModules(prefs, modulesKey, fallback: fallback)
+              .where((item) => item != module)
+              .toList();
+          await _saveQueuedModules(
+            prefs,
+            pendingKey,
+            moduleKey,
+            modulesKey,
+            modules,
+          );
+        }
+        await SyncProgressService.instance.success(
+            'Semua Data Master dalam antrean selesai diperbarui.');
+      } finally {
+        // Clear manual sync mode flag
+        await prefs.remove(manualSyncModeKey);
       }
-      await SyncProgressService.instance.success(
-          'Semua Data Master dalam antrean selesai diperbarui.');
+      
       await prefs.setBool(enabledKey, true);
       return true;
     } catch (_) {
