@@ -115,12 +115,6 @@ function _devTerbitkanSesi_(dasar) {
   sesi.loginAt = new Date().toISOString();
   var ttl = _devTtl_();
   CacheService.getScriptCache().put("sesi_" + token, JSON.stringify(sesi), ttl);
-  /* DIHAPUS 29 Agu 2026 (K1 — session confusion):
-     CacheService.getUserCache().put("userToken", ...).
-     Di bawah executeAs: USER_DEPLOYING + access: ANYONE_ANONYMOUS, getUserCache
-     di-scope ke PEMILIK SCRIPT, bukan per pengguna — jadi dipakai bersama semua
-     pengunjung anonim dan bisa menyerahkan token pengguna lain.
-     Token dikembalikan ke klien dan dikirim balik eksplisit di setiap request. */
   return sesi;
 }
 function _devPangkas_(username) {
@@ -148,9 +142,6 @@ function loginPerangkat(username, password, perangkat) {
     password = String(password || "");
     if (!username || !password)
       return { success: false, message: "Username dan password wajib diisi" };
-    /* Verifikasi terpadu (29 Agu 2026): throttle + dual-read hash/plaintext +
-       upgrade hash otomatis, sama persis dengan jalur doLogin. Sebelumnya
-       `if (pw !== password)` — plaintext dan tanpa pembatasan percobaan. */
     var v = verifikasiLogin_(username, password);
     if (!v.boleh) return { success: false, message: v.pesan };
 
@@ -244,9 +235,6 @@ function logoutPerangkat(deviceToken, token) {
 
 function daftarPerangkat(token) {
   try {
-    /* FAIL-CLOSED. Pola lama `if (typeof _assertSuperUser === "function")` akan
-       melewatkan pemeriksaan bila Code.js gagal dimuat, padahal fungsi ini
-       mengembalikan deviceToken semua pengguna. */
     _assertSuperUserKetat_(token);
     var semua = _devSemua_(),
       out = [];
@@ -273,7 +261,6 @@ function daftarPerangkat(token) {
 
 function cabutPerangkat(token, deviceToken, username) {
   try {
-    /* FAIL-CLOSED — lihat catatan di daftarPerangkat(). */
     _assertSuperUserKetat_(token);
     deviceToken = String(deviceToken || "").trim();
     username = String(username || "").trim();
@@ -326,7 +313,14 @@ function authPerangkatRouter_(e, body) {
      Semua client (Flutter, web, test) harus POST JSON, tidak boleh query string. */
   var action = String((body && body.action) || "").trim();
 
-  if (typeof jadwalPadamMobileRouter_ === "function") {
+  /* Hanya delegasikan action Jadwal Padam di sini. Untuk action lain, delegasi
+     universal ke jadwalPadamMobileRouter_ membuat apiRouter_ memanggil dirinya
+     kembali dan berakhir Maximum call stack size exceeded. */
+  if (
+    typeof jadwalPadamMobileRouter_ === "function" &&
+    typeof JADWAL_PADAM_MOBILE_ACTIONS !== "undefined" &&
+    JADWAL_PADAM_MOBILE_ACTIONS.indexOf(action) >= 0
+  ) {
     var lewatJadwal = jadwalPadamMobileRouter_(e, body);
     if (lewatJadwal) return _devJson_(lewatJadwal);
   }
@@ -341,22 +335,18 @@ function authPerangkatRouter_(e, body) {
           : { success: false, message: "Login wajib menggunakan POST JSON." };
         break;
       case "cekPerangkat":
-        /* H-01: terima HANYA dari body.deviceToken, jangan fallback ke query */
         hasil = cekPerangkat(body && body.deviceToken ? String(body.deviceToken).trim() : "");
         break;
       case "logoutPerangkat":
-        /* H-01: terima HANYA dari body */
         hasil = logoutPerangkat(
           body && body.deviceToken ? String(body.deviceToken).trim() : "",
           body && body.token ? String(body.token).trim() : ""
         );
         break;
       case "daftarPerangkat":
-        /* H-01: terima HANYA dari body.token */
         hasil = daftarPerangkat(body && body.token ? String(body.token).trim() : "");
         break;
       case "cabutPerangkat":
-        /* H-01: terima HANYA dari body */
         hasil = cabutPerangkat(
           body && body.token ? String(body.token).trim() : "",
           body && body.deviceToken ? String(body.deviceToken).trim() : "",
@@ -373,7 +363,6 @@ function authPerangkatRouter_(e, body) {
                   message: "Master-Gardu-Sync-Mobile.js belum terpasang.",
                 };
         } else {
-          /* H-01: terima HANYA dari body, jangan fallback ke query */
           hasil =
             typeof getMasterGarduMobile === "function"
               ? getMasterGarduMobile(

@@ -19,6 +19,10 @@
     "Core/Code.js",
     "Core/Code-Session.js",
     "Core/Code-Admin.js",
+    "Core/Guard.js",
+    "Core/Auth-Perangkat.js",
+    "Core/Jadwal-Padam-Mobile.js",
+    "Core/Delta-Sync-Mobile.js",
     "Core/T04-Guard-Overrides.js",
     "Core/PageLoader-Compat.js",
     "Core/ZZ-Dashboard-Jadwal-Delete-Compat.js",
@@ -30,6 +34,9 @@
     "Teknik/Tek-Data-Chechpoint-Code.js",
     "Teknik/Tek-LaporanUP3.js",
     "Teknik/Tek-LapUP3UIWHarian.js",
-    "Core/T04-Remaining-Guards.js"
+    "Core/T04-Remaining-Guards.js",
+    "Core/ZZZZZZZZZZZZZZZZZZ-Mobile-Master-Sync-Route.js",
+    "Core/ZZZZZZZZZZZZZZZZZZZ-Auth-Perangkat-No-Recursion.js",
+    "Core/ZZZZZZZZZZZZZZZZZZZZ-Dispatch-Final-Guard.js"
   ]
 }

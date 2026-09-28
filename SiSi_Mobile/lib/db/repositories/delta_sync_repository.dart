@@ -43,7 +43,36 @@ class _SnapshotExpired implements Exception {
 
 class DeltaSyncRepository {
   final db = DbProvider.instance;
-  static const _allDatasetCount = 24;
+
+  // Keep this list in the same order as the backend registry. A null request is
+  // split locally so a single Drive snapshot never contains every dataset.
+  static const _allDatasetNames = <String>[
+    'db_Global_Header',
+    'db_ROW_Realisasi',
+    'db_ROW_Eksekusi',
+    'db_Hartek_PenyulangGardu',
+    'db_Hartek_Pekerjaan',
+    'db_Hartek_Material',
+    'db_InsJar_Realisasi',
+    'db_InsDu_Realisasi',
+    'db_INS_Temuan',
+    'db_Yandal_Shift',
+    'db_Yandal_P0',
+    'db_Yandal_Pengecekan_Switching',
+    'db_Yandal_Pengukuran_Gardu',
+    'Teknik_Laporan_Harian',
+    'db_Users',
+    'db_Tim',
+    'db_Penyulang',
+    'db_List_Temuan',
+    'db_Hartek_List_Pekerjaan',
+    'db_Material',
+    'db_Yandal_List_P0',
+    'db_List_Petugas_Yandal',
+    'db_Section',
+    'Master_Gardu',
+  ];
+  static const _snapshotBatchSize = 4;
 
   Future<Map<String, dynamic>> _send(
     String token,
@@ -135,6 +164,21 @@ class DeltaSyncRepository {
     }
   }
 
+  List<Set<String>> _snapshotBatches(Set<String>? datasetNames) {
+    if (datasetNames != null) {
+      // Preserve the public API: an explicit selection remains one request.
+      return datasetNames.isEmpty ? const <Set<String>>[] : [datasetNames];
+    }
+    final batches = <Set<String>>[];
+    for (var start = 0; start < _allDatasetNames.length; start += _snapshotBatchSize) {
+      final end = (start + _snapshotBatchSize > _allDatasetNames.length)
+          ? _allDatasetNames.length
+          : start + _snapshotBatchSize;
+      batches.add(_allDatasetNames.sublist(start, end).toSet());
+    }
+    return batches;
+  }
+
   Future<DeltaSyncResult> _syncSnapshot(
     String token, {
     required bool force,
@@ -143,26 +187,56 @@ class DeltaSyncRepository {
     bool allowResume = true,
   }) async {
     final local = await _versions();
-    final manifest = await _openSnapshot(
-      token,
-      datasetNames,
-      allowResume: allowResume,
-    );
-    final snapshotId = manifest['snapshotId'].toString();
-    final datasets = List.from(manifest['datasets'] ?? const [])
-        .map((raw) => Map<String, dynamic>.from(raw as Map))
-        .where((item) {
-      final name = item['name'].toString();
-      return (datasetNames == null || datasetNames.contains(name)) &&
-          (force || local[name] != item['version'].toString());
-    }).toList();
-    final overallTotal = datasets.fold<int>(
-      0,
-      (sum, item) => sum + (num.tryParse('${item['count']}')?.toInt() ?? 0),
-    );
+    final batches = _snapshotBatches(datasetNames);
     final changed = <String>[];
+    final warnings = <dynamic>[];
     var finishedRows = 0;
-    try {
+    var overallTotal = 0;
+
+    for (final batchNames in batches) {
+      // Each batch gets its own immutable snapshot and is released as soon as
+      // its datasets are committed. Existing checkpoints can reopen that same
+      // snapshot through _openSnapshot when a previous run was interrupted.
+      final manifest = await _openSnapshot(
+        token,
+        batchNames,
+        allowResume: allowResume,
+      );
+      final batch = manifest['batch'];
+      if (batch is Map) {
+        final requestedCount = batch['requestedCount'];
+        final completedCount = batch['completedCount'];
+        if (requestedCount is num &&
+            completedCount is num &&
+            completedCount < requestedCount) {
+          final warningsCount = manifest['warnings'] is List
+              ? (manifest['warnings'] as List).length
+              : 0;
+          throw Exception(
+            'Snapshot batch parsial: $completedCount/$requestedCount selesai; '
+            '$warningsCount warning.',
+          );
+        }
+      }
+      final snapshotId = manifest['snapshotId'].toString();
+      final datasets = List.from(manifest['datasets'] ?? const [])
+          .map((raw) => Map<String, dynamic>.from(raw as Map))
+          .where((item) {
+        final name = item['name'].toString();
+        return batchNames.contains(name) &&
+            (datasetNames == null || datasetNames.contains(name)) &&
+            (force || local[name] != item['version'].toString());
+      }).toList();
+      final batchTotal = datasets.fold<int>(
+        0,
+        (sum, item) =>
+            sum + (num.tryParse('${item['count']}')?.toInt() ?? 0),
+      );
+      // The denominator grows as later batch manifests arrive; transferred
+      // rows stay aggregate and never reset at a batch boundary.
+      overallTotal += batchTotal;
+      warnings.addAll(List.from(manifest['warnings'] ?? const []));
+
       for (final item in datasets) {
         final name = item['name'].toString();
         final version = item['version'].toString();
@@ -205,11 +279,11 @@ class DeltaSyncRepository {
         finishedRows += downloaded;
         changed.add(name);
       }
+      // Do not release on an interrupted/failed download: the checkpoint can
+      // reopen this immutable snapshot and continue before its TTL expires.
       await _releaseSnapshot(token, snapshotId);
-    } on _SnapshotExpired {
-      rethrow;
     }
-    final warnings = List.from(manifest['warnings'] ?? const []);
+
     final warningText =
         warnings.isEmpty ? '' : ' · ${warnings.length} sumber dilewati';
     return DeltaSyncResult(
@@ -247,7 +321,7 @@ class DeltaSyncRepository {
               .map((item) => (item as Map)['name'].toString())
               .toSet();
           final coversRequest = datasetNames == null
-              ? names.length >= _allDatasetCount
+              ? names.length >= _allDatasetNames.length
               : names.containsAll(datasetNames);
           if (coversRequest) return manifest;
         } on _SnapshotExpired {

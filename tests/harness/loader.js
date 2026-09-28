@@ -1,13 +1,18 @@
-/* Loads every SiSi_BackEnd .js file into one shared VM context, the way the Apps
-   Script V8 runtime evaluates all project files in a single global scope. */
+/* Loads the deployed backend shape into one shared VM context. The harness
+   follows the same intentional exclusions as clasp so legacy duplicate/stub
+   files cannot silently become the effective implementation. */
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { createContext, runInContext } from "node:vm";
 import { createHarness } from "./apps-script-shim.js";
 
-/* Order matters only for load-time syntax/redeclaration issues, not for call
-   time. Code.js first because it declares SPREADSHEET_ID and COL_USERS. */
+const IGNORED_BACKEND_FILES = new Set([
+  "Core/Code-Mobile.js",
+]);
+
+/* Order matters only for load-time syntax/redeclaration issues. Code.js and
+   its runtime dependencies load before compatibility wrappers. */
 const LOAD_ORDER = [
   "Core/Code.js",
   "Core/Engine-Secrets.js",
@@ -52,7 +57,8 @@ export function listBackendFiles(backendRoot) {
         if (entry === "node_modules" || entry.startsWith(".")) continue;
         walk(full);
       } else if (entry.endsWith(".js")) {
-        found.push(relative(backendRoot, full).replace(/\\/g, "/"));
+        const rel = relative(backendRoot, full).replace(/\\/g, "/");
+        if (!IGNORED_BACKEND_FILES.has(rel)) found.push(rel);
       }
     }
   })(backendRoot);
@@ -70,14 +76,11 @@ export function loadBackend(options = {}) {
   const backendRoot = resolve(options.backendRoot);
   const harnessOptions = { dbPath: options.dbPath || ":memory:", ...(options.harness || {}) };
   const harness = createHarness(harnessOptions);
-
   const context = createContext(harness.globals);
   const errors = [];
   const loaded = [];
 
   for (const rel of orderFiles(listBackendFiles(backendRoot))) {
-    // rel is normalized with forward slashes. Split it into native path
-    // segments so this loader works on both Windows and Linux CI runners.
     const src = readFileSync(join(backendRoot, ...rel.split("/")), "utf8");
     try {
       runInContext(src, context, { filename: rel, displayErrors: true });
@@ -89,25 +92,11 @@ export function loadBackend(options = {}) {
 
   function call(fnName, args = []) {
     const fn = context[fnName];
-    if (typeof fn !== "function") {
-      return { ok: false, error: `Fungsi tidak ditemukan atau bukan function: ${fnName}` };
-    }
-    try {
-      return { ok: true, value: fn(...args) };
-    } catch (err) {
-      return { ok: false, error: err.message, stack: (err.stack || "").split("\n").slice(0, 6).join("\n") };
-    }
+    if (typeof fn !== "function") return { ok: false, error: `Fungsi tidak ditemukan atau bukan function: ${fnName}` };
+    try { return { ok: true, value: fn(...args) }; }
+    catch (err) { return { ok: false, error: err.message, stack: (err.stack || "").split("\n").slice(0, 6).join("\n") }; }
   }
-
-  function fnNames() {
-    return Object.keys(context).filter((k) => typeof context[k] === "function");
-  }
-
-  /* Jalankan potongan kode di dalam VM. Dipakai uji untuk mendefinisikan fungsi
-     sementara yang perlu memanggil API Apps Script dari dalam konteks. */
-  function evalInVm(src, label = "eval") {
-    return runInContext(src, context, { filename: label, displayErrors: true });
-  }
-
+  function fnNames() { return Object.keys(context).filter((k) => typeof context[k] === "function"); }
+  function evalInVm(src, label = "eval") { return runInContext(src, context, { filename: label, displayErrors: true }); }
   return { harness, context, call, fnNames, evalInVm, errors, loaded, backendRoot };
 }
