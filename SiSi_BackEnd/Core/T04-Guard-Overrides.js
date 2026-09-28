@@ -13,7 +13,7 @@ var _t04GetMobileDropdownRowOriginal_ = getMobileDropdownRow;
 var _t04SimpanMobileEksekusiRowOriginal_ = simpanMobileEksekusiRow;
 
 /* PDF wajib memiliki sesi sah dan ULP. Jalur login/public tetap terbuka. */
-function doGet(e) {
+doGet = function (e) {
   if (e && e.parameter && e.parameter.pdf) {
     guard_({ token: String(e.parameter.token || "").trim() }, {
       ulp: true,
@@ -21,7 +21,7 @@ function doGet(e) {
     });
   }
   return _t04DoGetOriginal_(e);
-}
+};
 
 /*
  * doPost punya dua autentikasi yang berbeda:
@@ -31,7 +31,7 @@ function doGet(e) {
  * Wrapper ini menolak webhook sebelum menyentuh handler lama, lalu handler lama
  * mengulang verifikasi sebagai defense-in-depth sebelum memproses action.
  */
-function doPost(e) {
+doPost = function (e) {
   if (e && e.parameter && e.parameter.mobile) {
     return _t04DoPostOriginal_(e);
   }
@@ -59,16 +59,16 @@ function doPost(e) {
   }
 
   return _t04DoPostOriginal_(e);
-}
+};
 
 /* Dropdown adalah resource bersama, tetapi tetap wajib berasal dari sesi sah. */
-function getMobileDropdownRow(token) {
+getMobileDropdownRow = function (token) {
   guard_(arguments, { ulp: false, aksi: "getMobileDropdownRow" });
   return _t04GetMobileDropdownRowOriginal_(token);
-}
+};
 
 /* Simpan ROW wajib terikat ke ULP sesi, bukan input klien. */
-function simpanMobileEksekusiRow(payload) {
+simpanMobileEksekusiRow = function (payload) {
   guard_(arguments, { ulp: true, aksi: "simpanMobileEksekusiRow" });
   return _t04SimpanMobileEksekusiRowOriginal_(payload);
-}
+};

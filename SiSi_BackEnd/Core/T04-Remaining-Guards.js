@@ -4,7 +4,7 @@
    google.script.run. File ini harus dimuat setelah seluruh modul endpoint.
 ═════════════════════════════════════ */
 
-/* Laporan harian */
+/* Capture originals before assignment-style wrappers replace them. */
 var _t04GetLaporanUP3Original_ = getLaporanUP3;
 var _t04GetLaporanWilayahOriginal_ = getLaporanWilayah;
 var _t04SimpanLaporanHarianWebOriginal_ = simpanLaporanHarianWeb;
@@ -55,79 +55,81 @@ function _t04WithReportContext_(token, fn) {
   }
 }
 
-function getLaporanUP3(params) {
+getLaporanUP3 = function (params) {
   var g = _t04GuardReport_(arguments, "getLaporanUP3");
   return _t04GetLaporanUP3Original_(_t04CopyScopedParams_(params, g, false));
-}
-function getLaporanWilayah(params) {
+};
+getLaporanWilayah = function (params) {
   var g = _t04GuardReport_(arguments, "getLaporanWilayah");
   return _t04GetLaporanWilayahOriginal_(_t04CopyScopedParams_(params, g, false));
-}
-function simpanLaporanHarianWeb(params) {
+};
+simpanLaporanHarianWeb = function (params) {
   var g = _t04GuardReport_(arguments, "simpanLaporanHarianWeb");
   return _t04SimpanLaporanHarianWebOriginal_(_t04CopyScopedParams_(params, g, false));
-}
-function getLaporanHarianRow(params) {
+};
+getLaporanHarianRow = function (params) {
   _t04GuardReport_(arguments, "getLaporanHarianRow");
   return _t04GetLaporanHarianRowOriginal_(params || {});
-}
-function refreshLaporanHarian(params) {
+};
+refreshLaporanHarian = function (params) {
   var g = _t04GuardReport_(arguments, "refreshLaporanHarian");
   return _t04RefreshLaporanHarianOriginal_(_t04CopyScopedParams_(params, g, false));
-}
-function getMobileLaporanUp3Uiw(params) {
+};
+getMobileLaporanUp3Uiw = function (params) {
   var g = _t04GuardReport_(arguments, "getMobileLaporanUp3Uiw");
   return _t04WithReportContext_(g.token, function () {
     return _t04GetMobileLaporanUp3UiwOriginal_(params || {});
   });
-}
-function simpanMobileLaporanC4A(params) {
+};
+simpanMobileLaporanC4A = function (params) {
   var g = _t04GuardReport_(arguments, "simpanMobileLaporanC4A");
   return _t04WithReportContext_(g.token, function () {
     return _t04SimpanMobileLaporanC4AOriginal_(_t04CopyScopedParams_(params, g, false));
   });
-}
+};
 
 /* SIE/GASPOL. */
-function getGaspolRekap(opts) {
+getGaspolRekap = function (opts) {
   var g = _t04GuardReport_(arguments, "getGaspolRekap");
   return _t04WithReportContext_(g.token, function () {
     return _t04GetGaspolRekapOriginal_(_t04CopyScopedParams_(opts, g, false));
   });
-}
-function submitGaspolToInputTbl(opts) {
+};
+submitGaspolToInputTbl = function (opts) {
   var g = _t04GuardReport_(arguments, "submitGaspolToInputTbl");
   return _t04WithReportContext_(g.token, function () {
     return _t04SubmitGaspolOriginal_(_t04CopyScopedParams_(opts, g, false));
   });
-}
-function getMonitoringTlTemuan(params) {
+};
+getMonitoringTlTemuan = function (params) {
   var g = _t04GuardReport_(arguments, "getMonitoringTlTemuan");
-  return _t04GetMonitoringTlTemuanOriginal_(_t04CopyScopedParams_(params, g, true));
-}
+  return _t04WithReportContext_(g.token, function () {
+    return _t04GetMonitoringTlTemuanOriginal_(_t04CopyScopedParams_(params, g, true));
+  });
+};
 
 /* Data Pendukung CheckPoint. */
-function getDpgHarMatrix(opts) {
+getDpgHarMatrix = function (opts) {
   var g = _t04GuardReport_(arguments, "getDpgHarMatrix");
   return _t04GetDpgHarMatrixOriginal_(_t04CopyScopedParams_(opts, g, false));
-}
-function getDpgCoverGardu(opts) {
+};
+getDpgCoverGardu = function (opts) {
   var g = _t04GuardReport_(arguments, "getDpgCoverGardu");
   return _t04GetDpgCoverGarduOriginal_(_t04CopyScopedParams_(opts, g, false));
-}
-function getDpgGangguanPenyulang(opts) {
+};
+getDpgGangguanPenyulang = function (opts) {
   var g = _t04GuardReport_(arguments, "getDpgGangguanPenyulang");
   return _t04GetDpgGangguanPenyulangOriginal_(_t04CopyScopedParams_(opts, g, false));
-}
-function getDpgGangguanCharts(opts) {
+};
+getDpgGangguanCharts = function (opts) {
   var g = _t04GuardReport_(arguments, "getDpgGangguanCharts");
   return _t04GetDpgGangguanChartsOriginal_(_t04CopyScopedParams_(opts, g, false));
-}
-function getDpgRekapTemuan(opts) {
+};
+getDpgRekapTemuan = function (opts) {
   var g = _t04GuardReport_(arguments, "getDpgRekapTemuan");
   return _t04GetDpgRekapTemuanOriginal_(_t04CopyScopedParams_(opts, g, false));
-}
-function getDpgSectionList(opts) {
+};
+getDpgSectionList = function (opts) {
   var g = _t04GuardReport_(arguments, "getDpgSectionList");
   return _t04GetDpgSectionListOriginal_(_t04CopyScopedParams_(opts, g, false));
-}
+};
