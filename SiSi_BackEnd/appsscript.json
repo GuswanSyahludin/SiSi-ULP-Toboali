@@ -19,7 +19,7 @@
     "Core/Code.js",
     "Core/Code-Session.js",
     "Core/Code-Admin.js",
-    "Core/Code-Mobile.js",
+    "Core/T04-Guard-Overrides.js",
     "Core/PageLoader-Compat.js",
     "ZZ-Dashboard-Jadwal-Delete-Compat.js",
     "Jadwal-Padam-Code.js",
