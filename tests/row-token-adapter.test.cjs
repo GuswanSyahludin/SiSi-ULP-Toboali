@@ -26,7 +26,10 @@ function context(options={}){
       guarded++;
       if(options.reject || args.length!==5 || args[0]!==TOKEN)
         throw new Error('Sesi tidak ditemukan. Silakan login ulang.');
-      return {};
+      // Use a privileged session here so this test isolates the four business
+      // filters. Production operator requests still pass through the adapter's
+      // ULP ownership check with the real guard/session object.
+      return {isSuper:true};
     }
   };
   vm.createContext(ctx); vm.runInContext(source,ctx);
