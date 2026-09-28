@@ -176,15 +176,18 @@ class _State extends State<SyncSectionPengaturan> {
   Widget build(BuildContext context) => _packageCard(_moduleKeys, SyncProgressService.instance.state.value, _selectedModules.length);
 
   Widget _packageCard(List<String> moduleKeys, SyncProgressState progress, int selectedCount) {
-    final color = progress.failed ? AppColors.red600 : _teamColor;
+    const failureRed = Color(0xFFDC2626);
+    const failureLightBg = Color(0xFFFEE2E2);
+    const failureLightBorder = Color(0xFFFCA5A5);
+    final color = progress.failed ? failureRed : _teamColor;
     final isFailed = progress.failed && !progress.running;
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: isFailed ? AppColors.red100 : Colors.white,
+        color: isFailed ? failureLightBg : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isFailed ? AppColors.red300 : AppColors.neutral200),
-        boxShadow: [BoxShadow(color: (isFailed ? AppColors.red600 : AppColors.navy950).withOpacity(.055), blurRadius: 14, offset: const Offset(0, 5))],
+        border: Border.all(color: isFailed ? failureLightBorder : AppColors.neutral200),
+        boxShadow: [BoxShadow(color: (isFailed ? failureRed : AppColors.navy950).withOpacity(.055), blurRadius: 14, offset: const Offset(0, 5))],
       ),
       child: Column(children: [
         Padding(padding: const EdgeInsets.all(15), child: Row(children: [
@@ -192,10 +195,9 @@ class _State extends State<SyncSectionPengaturan> {
           const SizedBox(width: 11),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(_teamName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-            if (isFailed) Text(progress.message ?? 'Download gagal', style: const TextStyle(fontSize: 10, color: AppColors.red600, height: 1.2), maxLines: 2, overflow: TextOverflow.ellipsis),
+            if (isFailed) Text(progress.message ?? 'Download gagal', style: const TextStyle(fontSize: 10, color: failureRed, height: 1.2), maxLines: 2, overflow: TextOverflow.ellipsis),
           ])),
-          if (!isFailed) ...[
-            Text('${moduleKeys.length}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+          if (!isFailed) ...[                    Text('${moduleKeys.length}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
             const SizedBox(width: 4),
             const Text('Database', style: TextStyle(fontSize: 9, color: AppColors.neutral500)),
             const SizedBox(width: 9),
@@ -206,19 +208,18 @@ class _State extends State<SyncSectionPengaturan> {
               onPressed: () => setState(() => _expanded = !_expanded),
               style: OutlinedButton.styleFrom(
                 padding: EdgeInsets.zero,
-                side: BorderSide(color: isFailed ? AppColors.red300 : AppColors.neutral200),
+                side: BorderSide(color: isFailed ? failureLightBorder : AppColors.neutral200),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
               child: AnimatedRotation(
                 turns: _expanded && !isFailed ? .125 : 0,
                 duration: const Duration(milliseconds: 180),
-                child: Icon(isFailed ? Icons.error_outline_rounded : Icons.add_rounded, size: 21, color: isFailed ? AppColors.red600 : null),
+                child: Icon(isFailed ? Icons.error_outline_rounded : Icons.add_rounded, size: 21, color: isFailed ? failureRed : null),
               ),
             ),
           ),
         ])),
-        if (isFailed) ...[
-          const Divider(height: 1),
+        if (isFailed) ...[        const Divider(height: 1),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
             child: SizedBox(
@@ -228,15 +229,14 @@ class _State extends State<SyncSectionPengaturan> {
                 icon: const Icon(Icons.refresh_rounded, size: 18),
                 label: const Text('Coba Ulang'),
                 style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColors.red600),
-                  foregroundColor: AppColors.red600,
+                  side: const BorderSide(color: failureRed),
+                  foregroundColor: failureRed,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
                 ),
               ),
             ),
           ),
-        ] else if (_expanded) ...[
-          const Divider(height: 1),
+        ] else if (_expanded) ...[          const Divider(height: 1),
           Container(
             color: AppColors.neutral50,
             padding: const EdgeInsets.fromLTRB(13, 11, 13, 12),
@@ -250,8 +250,7 @@ class _State extends State<SyncSectionPengaturan> {
             ]),
           ),
         ],
-        if (!isFailed) ...[
-          const Divider(height: 1),
+        if (!isFailed) ...[          const Divider(height: 1),
           Container(
             color: AppColors.neutral50,
             padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
