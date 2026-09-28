@@ -3,9 +3,9 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import '../lib/services/local_watermark_data.dart';
-import '../lib/services/local_watermark_renderer.dart';
-import '../lib/services/watermark_photo_export.dart';
+import 'package:sisi_mobile/services/local_watermark_data.dart';
+import 'package:sisi_mobile/services/local_watermark_renderer.dart';
+import 'package:sisi_mobile/services/watermark_photo_export.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -23,7 +23,9 @@ void main() {
   setUp(() { debugDefaultTargetPlatformOverride = TargetPlatform.android; });
   tearDown(() { messenger.setMockMethodCallHandler(WatermarkPhotoExport.channel, null); debugDefaultTargetPlatformOverride = null; });
   test('all requested team formats pass when complete',(){
-    for(final t in WatermarkTeam.values)expect(WatermarkPhotoExport.missingIndicators(metadata(t)),isEmpty);
+    for(final t in WatermarkTeam.values) {
+      expect(WatermarkPhotoExport.missingIndicators(metadata(t)),isEmpty);
+    }
   });
   test('all common required values block when absent',(){
     for(final field in ['code','ulp','capturedAt','createdAt','latitude','longitude','isMocked','penyulang','section']){
@@ -33,15 +35,21 @@ void main() {
   });
   test('only the relevant team indicators are required',(){
     final required={WatermarkTeam.yandal:['jenisPekerjaan','daerah','subTim','petugas'],WatermarkTeam.row:['jenisPekerjaan'],WatermarkTeam.inspeksiGardu:['nomorGardu','temuan'],WatermarkTeam.inspeksiJaringan:['segmen','temuan']};
-    for(final e in required.entries){for(final field in e.value){
-      expect(WatermarkPhotoExport.missingIndicators(metadata(e.key)..[field]=' '),isNotEmpty,reason:'${e.key}: $field');
-    }}
+    for(final e in required.entries){
+      for(final field in e.value){
+        expect(WatermarkPhotoExport.missingIndicators(metadata(e.key)..[field]=' '),isNotEmpty,reason:'${e.key}: $field');
+      }
+    }
     final row=metadata(WatermarkTeam.row)..remove('temuan')..remove('nomorGardu')..remove('segmen')..remove('daerah')..remove('petugas')..remove('subTim');
     expect(WatermarkPhotoExport.missingIndicators(row),isEmpty);
   });
   test('placeholders, local IDs and mock locations are not complete',(){
-    for(final value in ['-','Belum tersedia','null','N/A'])expect(WatermarkPhotoExport.missingIndicators(metadata(WatermarkTeam.row)..['penyulang']=value),isNotEmpty);
-    for(final value in ['LOCAL-P0-12','DRAF-1','DRAFT_123'])expect(WatermarkPhotoExport.missingIndicators(metadata(WatermarkTeam.yandal)..['code']=value),isNotEmpty);
+    for(final value in ['-','Belum tersedia','null','N/A']) {
+      expect(WatermarkPhotoExport.missingIndicators(metadata(WatermarkTeam.row)..['penyulang']=value),isNotEmpty);
+    }
+    for(final value in ['LOCAL-P0-12','DRAF-1','DRAFT_123']) {
+      expect(WatermarkPhotoExport.missingIndicators(metadata(WatermarkTeam.yandal)..['code']=value),isNotEmpty);
+    }
     expect(WatermarkPhotoExport.missingIndicators(metadata(WatermarkTeam.row)..['isMocked']=true),contains('GPS non-simulasi'));
   });
   test('zero coordinates allowed, invalid coordinates and naive dates blocked',(){

@@ -1,3 +1,5 @@
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../services/api_service.dart';
 import '../../services/sync_error_message.dart';
 import '../../services/sync_progress_service.dart';
@@ -9,6 +11,8 @@ import 'laporan_repository.dart';
 import 'local_master_materializer.dart';
 import 'p0_repository.dart';
 import 'teknik_to_repository.dart';
+
+const _manualSyncModeKey = 'manualSyncMode';
 
 class SyncRepository {
   static const modulMasterData = 'masterData',
@@ -114,10 +118,26 @@ class SyncRepository {
     }
   }
 
-  Future<Map<String, dynamic>> sinkronModul(String token, String module) async {
+  Future<bool> _isInManualSyncMode() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      // Check if any manual sync mode key exists; if it does, we're in manual mode
+      final keys = prefs.getKeys();
+      return keys.any((k) => k.endsWith(_manualSyncModeKey));
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<Map<String, dynamic>> sinkronModul(
+    String token,
+    String module, {
+    bool finalizeProgress = true,
+  }) async {
     final datasets = moduleDatasets[module];
-    if (datasets == null)
+    if (datasets == null) {
       return {'ok': false, 'message': 'Modul Data Master tidak dikenal.'};
+    }
     final key = 'module:$module';
     if (_kunci.contains(key)) {
       return {'ok': false, 'message': 'Modul sedang diunduh.'};
@@ -151,7 +171,11 @@ class SyncRepository {
       await _materialize(result.changed.toSet(), initial, delta);
       await DbProvider.instance.syncDao.tandaiTersinkron('master:$module',
           jumlah: result.changed.length, keterangan: result.message);
-      await progress.success('${moduleLabels[module]} selesai diperbarui.');
+      // Check if in manual sync mode; if not, finalize based on parameter
+      final inManualMode = await _isInManualSyncMode();
+      if (finalizeProgress && !inManualMode) {
+        await progress.success('${moduleLabels[module]} selesai diperbarui.');
+      }
       return {
         'ok': true,
         'message': '${moduleLabels[module]} selesai diperbarui.'
