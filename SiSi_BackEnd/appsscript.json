@@ -21,10 +21,11 @@
     "Core/Code-Admin.js",
     "Core/T04-Guard-Overrides.js",
     "Core/PageLoader-Compat.js",
-    "ZZ-Dashboard-Jadwal-Delete-Compat.js",
-    "Jadwal-Padam-Code.js",
-    "Tek-LaporanUP3.js",
-    "Tek-LaporanWilayah.js",
-    "Tek-LaporanHarianSheet.js"
+    "Core/ZZ-Dashboard-Jadwal-Delete-Compat.js",
+    "Teknik/Jadwal-Padam-Code.js",
+    "Teknik/Jadwal-Padam-Delete.js",
+    "Teknik/Tek-LaporanUP3.js",
+    "Teknik/Tek-LapUP3UIWHarian.js",
+    "Core/T04-Remaining-Guards.js"
   ]
 }
