@@ -3,10 +3,10 @@
 ## SiSi ULP Toboali
 
 **Document status:** Living product and engineering specification  
-**Repository:** `GuswanSyahludin/SiSi-ULP-Toboali` (formerly `SyahludinGuswan/Sisi-ULP-Toboali`)  
+**Repository:** `GuswanSyahludin/SiSi-ULP-Toboali` (formerly `SyahludinGus/SiSi-ULP-Toboali`)  
 **Primary operating scope:** Internal ULP Toboali operations  
 **Audit findings and remediation tasks:** `docs/SECURITY-AUDIT-STATUS.md` (single source of truth)  
-**Last updated:** 28 September 2026, 23:38 WIB
+**Last updated:** 28 September 2026, 23:55 WIB
 
 ## 1. Product contract
 
@@ -22,7 +22,7 @@ The Apps Script backend provides authenticated session/account operations, mobil
 
 ### Flutter mobile
 
-The mobile client supports authenticated offline-first field workflows, durable outboxes, inspections, reports, ROW and photo flows, P0/Yandal corrections and approvals, Master downloads, explicit retries, and account-safe local persistence.
+The Flutter mobile client supports authenticated offline-first field workflows, durable outboxes, inspections, reports, ROW and photo flows, P0/Yandal corrections and approvals, Master downloads, explicit retries, and account-safe local persistence.
 
 ## 3. Authorization and storage requirements
 
@@ -34,6 +34,8 @@ The mobile client supports authenticated offline-first field workflows, durable 
 - Unknown or unavailable device-auth endpoints fail closed; they must not fall back to legacy `login`, `cekSesi`, or `logout` flows.
 - Legacy session tokens are not reused to restore or migrate a device session, and logout sends only the device token.
 - Device tokens expire absolutely after 30 days or after 7 days without activity; either condition forces a fresh device login.
+- Password plaintext is accepted only during an explicit, single-use migration window capped at 7 days; after cutoff, password verification fails closed and requires migration or reset.
+- Password audit/migration requires Super User authorization, and all account password writes require the hash module with no plaintext fallback.
 - Mobile local database names are derived from normalized `username + ulp`.
 - `AppDatabase` requires an account-scoped name; the legacy shared `sisi_db` name is never a default.
 - Access to local database state fails closed before session activation.
@@ -49,7 +51,7 @@ The mobile client supports authenticated offline-first field workflows, durable 
 
 ### Authentication and session
 
-The approved device-auth login path creates the active session. Session restoration validates the persisted session and activates exactly one account namespace. If device authentication is unavailable, the client reports failure instead of reusing a stale legacy session. Logout cancels workers, clears session access, and closes the account database. When the absolute or idle device-token limit is exceeded, the backend deletes the credential and the Flutter client clears secure session state, forcing `loginPerangkat()` again.
+The approved device-auth login path creates the active session. Session restoration validates the persisted session and activates exactly one account namespace. If device authentication is unavailable, the client reports failure instead of reusing a stale legacy session. Logout cancels workers, clears session access, and closes the account database. When the absolute or idle device-token limit is exceeded, the backend deletes the credential and the Flutter client clears secure session state, forcing `loginPerangkat()` again. A legacy plaintext password is usable only within the controlled migration window; after cutoff the user must complete an explicit migration/reset path.
 
 ### Offline synchronization
 
@@ -78,16 +80,17 @@ Corrections are durable and retryable. `Lain-lain` requires manual weight from 1
 - **FR-11:** Required CI, deployed-runtime, and real-device acceptance evidence is recorded before production sign-off.
 - **FR-12:** Session and device credentials are never persisted in plaintext SharedPreferences after secure-storage migration.
 - **FR-13:** Device credentials expire after 30 days absolute or 7 days idle, whichever comes first; expiry forces fresh login.
+- **FR-14:** Password plaintext verification is rejected after the explicit migration cutoff; residual accounts require migration or reset.
 
 ## 6. Security and reliability requirements
 
-Fail closed by default. Do not trust client-supplied ULP, role, ownership, file membership, identifiers, or URLs without server-side resolution. Do not log secrets or tokens. Use locks for atomic identifier generation, bounded retry for queues, and preserve failed records and audit history.
+Fail closed by default. Do not trust client-supplied ULP, role, ownership, file membership, identifiers, or URLs without server-side resolution. Do not log secrets or tokens. Use locks for atomic identifier generation, bounded retry for queues, and preserve failed records and audit history. Password migration must preserve a verified backup/version-history point and must not restore plaintext as a rollback path.
 
 ## 7. Testing and definition of done
 
-Automated acceptance includes the Audit Gate, backend security tests, Flutter analysis/tests/build, token-query rejection, BA ownership/download coverage, account namespace tests, legacy database quarantine tests, worker contract tests, offline queue coverage, auth-fallback contract tests, and secure-storage migration contract tests.
+Automated acceptance includes the Audit Gate, backend security tests, Flutter analysis/tests/build, token-query rejection, password cutover coverage, BA ownership/download coverage, account namespace tests, legacy database quarantine tests, worker contract tests, offline queue coverage, auth-fallback contract tests, and secure-storage migration contract tests.
 
-Runtime acceptance must cover deployed Apps Script authorization and safe writes, plus real-device upgrade from the old shared database, legacy quarantine, account A to logout to account B, restart, offline queue/retry, duplicate delivery handling, photo isolation, stale-worker rejection, revoked device token, absolute device-token expiry, idle device-token expiry, malformed device-auth response, unavailable device-auth endpoint behavior, and secure-storage migration/purge behavior.
+Runtime acceptance must cover deployed Apps Script authorization and safe writes, plus staging password migration with backup/version-history evidence, dry-run counts, batch migration, post-cutover plaintext rejection, reset/migration recovery, real-device upgrade from the old shared database, legacy quarantine, account A to logout to account B, restart, offline queue/retry, duplicate delivery handling, photo isolation, stale-worker rejection, revoked device token, absolute device-token expiry, idle device-token expiry, malformed device-auth response, unavailable device-auth endpoint behavior, and secure-storage migration/purge behavior.
 
 A change is done only when implementation and documentation are updated, focused and full tests pass, CI is green, deployed-runtime and real-device evidence is recorded, and no pending data, photo, audit history, or outbox record is silently discarded.
 
@@ -156,6 +159,14 @@ A change is done only when implementation and documentation are updated, focused
 - Backend syntax/security, Flutter analysis/build, and query-string auth rejection checks passed.
 - Status: merged to `main`; no production deployment or real-device expiry test yet.
 
-**Remaining Open Items:** H-08 password plaintext enforcement, C-05 materialized deletion, H-02/T-05 staging and real-device acceptance, H-06 real-device expiry/forced-login validation, and other items tracked in `docs/SECURITY-AUDIT-STATUS.md`.
+#### H-08: Password plaintext cutover ✅
+- **PR #27** squash-merged as `b46c8775bef39b28fae6fd74c7cdc45c300b0110` on 28 September 2026.
+- A single-use migration window is capped at 7 days; plaintext verification fails closed without a valid window or after cutoff.
+- Hash verification remains available; password audit/migration requires Super User authorization.
+- Account password writes require the hash module and the emergency plaintext rollback path is blocked.
+- Automated backend/security and query-string checks passed on the merged PR.
+- Status: code merged to `main`; isolated staging migration, verified backup, cutoff proof, and post-cutover validation remain pending.
+
+**Remaining Open Items:** Runtime migration acceptance for H-08 (staging migration, verified backup, cutoff/fail-closed verification, and post-cutover validation), C-05 materialized deletion, H-02/T-05 staging and real-device acceptance, H-06 real-device expiry/forced-login validation, and other items tracked in `docs/SECURITY-AUDIT-STATUS.md`.
 
 No later stage is complete while an earlier security or runtime blocker remains unresolved.
