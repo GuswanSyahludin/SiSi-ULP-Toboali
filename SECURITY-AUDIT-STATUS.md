@@ -1,9 +1,9 @@
 # SiSi Security Audit Status
 
-**Last Updated:** 2026-09-28 11:22 AM (Asia/Jakarta)
+**Last Updated:** 2026-09-28 11:40 AM (Asia/Jakarta)
 **Audit Period:** September 2026 (PLN ULP Toboali)
 **Total Findings:** 86 security & operational issues
-**Phase 1 Status:** IN PROGRESS (9/9 blocking issues identified, 4/4 merged)
+**Phase 1 Status:** IN PROGRESS (9/9 blocking issues identified, T-00/T-03/T-04 merged)
 
 ---
 
@@ -24,46 +24,33 @@ Must complete before any production deployment.
 - **Status:** ✅ MERGED (PR #19, commit e032569)
 - **Date Merged:** 2026-09-28 10:30 AM
 - **Finding:** Delta sync endpoints exposed cross-ULP operational data; db_Users leaked across organizations
-- **Scope:** Master_Gardu, db_ROW_Realisasi, db_Hartek_*, db_Yandal_*, db_INS_Temuan, etc.
-- **Fixes Applied:**
-  1. **Phase 1 (merged PR #8):** Guard enforcement in _deltaSnapshotOpen_, _deltaManifest_, _deltaFetch_, _deltaSnapshotCreate_
-  2. **Phase 2 (merged PR #19):** Per-row ULP filtering + db_Users field restriction
-- **Implementation:**
-  - Added `ulpCol: 2` config mapping for all operational datasets (ULP in column C)
-  - _deltaRows_ filters using `barisUlpCocok_(g, ulpValue)` before manifest/fetch/snapshot
-  - db_Users restricted to [ID, username] only; removed email, role, ULP, team, menu-access
-  - Master_Gardu scoped via getMasterGarduMobile(ulp)
+- **Fix:** Guard enforcement, per-row ULP filtering, and db_Users field restriction
 - **Impact:** Users from ULP_A cannot fetch operational data from ULP_B via delta sync
-- **Testing:** Regression tests added (barisUlpCocok_ boundary validation)
-- **Next:** Staging validation on real master data before Phase 1 deployment
+- **Testing:** Regression tests added for ULP boundary validation
 
 ---
 
 ### T-04: Guard Functions (C-04)
-- **Status:** ✅ MERGED (PR #20, squash commit baccc9793b7af5ba1ef4f5bf1c7b830d8c3203b5)
-- **Date Merged:** 2026-09-28 11:20 AM
+- **Status:** ✅ MERGED (PR #20, #21, #22; latest squash commit 23d65bbd3fb48bf27c4ac0cd6ab76a8ee69a7b03)
+- **Date Merged:** 2026-09-28
 - **Finding:** Top-level Apps Script functions could be called directly through `google.script.run`, bypassing router-only authorization
 - **Fixes Applied:**
-  - Guarded PDF download entry through `doGet` with authenticated ULP scope
-  - Enforced webhook JSON and secret validation before `doPost` reaches the existing handler; mobile POST routing remains unchanged
-  - Guarded `getMobileDropdownRow` as an authenticated shared-resource read
-  - Guarded `simpanMobileEksekusiRow` with session ULP enforcement
-  - Added `Code-Session.js` and `Code-Admin.js` to the Apps Script load order
-  - Kept incomplete `Code-Mobile.js` out of load order until its `updateMobileEksekusiRow` stub is reconciled with the complete implementation in `Code.js`
-- **Impact:** Direct calls to the covered entry points fail closed before data access or writes
-- **Testing:** Diff audit passed; CI status was still pending at merge and must complete before deployment
-- **Next:** Complete CI, staging validation, then reconcile the mobile module before a production release
+  - Guarded PDF `doGet`, webhook `doPost`, mobile dropdown, and ROW write entry points
+  - Guarded UP3/Wilayah/daily report and mobile report endpoints
+  - Guarded SIE/GASPOL, monitoring temuan, and all Data Pendukung CheckPoint endpoints
+  - Forced non-Super requests to the authenticated session ULP; payload ULP cannot override scope
+  - Bound monitoring username to the authenticated session and preserved token context for nested report/GASPOL calls
+  - Corrected `appsscript.json` load order to match the actual `Teknik/` repository structure
+  - Kept incomplete `Code-Mobile.js` out of the load order until its `updateMobileEksekusiRow` stub is reconciled with the complete implementation in `Code.js`
+- **Testing:** Diff audits passed; JavaScript syntax smoke checks passed; CI and staging validation remain pending
+- **Impact:** Covered direct calls fail closed before unauthorized data access or writes
 
 ---
 
 ### T-05: Master Data Download Timeout (H-02)
 - **Status:** ⏳ PENDING
 - **Finding:** Large Master Data downloads timeout (~5-10 min ops, 15 min+ network latency)
-- **Approach:**
-  1. Profile snapshotCreate execution time
-  2. Split Master_Gardu per ULP or paginate chunks
-  3. Debug db_Users sanitization performance
-- **Parallel Track:** Can debug while staging validation progresses
+- **Approach:** Profile snapshotCreate, split/paginate Master_Gardu, optimize db_Users sanitization
 - **Est. Effort:** 2-3 hours profiling + 2-3 hours fix + 4-6 hours QA
 
 ---
@@ -71,36 +58,25 @@ Must complete before any production deployment.
 ## Phase 1 Deployment Gate
 
 **Blocked Until:**
-1. ✅ T-00 merge (done)
-2. ✅ T-03 merge (done)
-3. ✅ T-04 merge (done; CI and staging validation pending)
-4. ⏳ T-05 complete + staging QA pass
-5. ⏳ Staging validation on real data (Android/iOS real devices + backend staging)
-6. ⏳ Production rollout plan agreed
+1. ✅ T-00 merge
+2. ✅ T-03 merge
+3. ✅ T-04 merge, diff and syntax audits passed
+4. ⏳ CI completion for the merged changes
+5. ⏳ T-05 complete + staging QA pass
+6. ⏳ Staging validation on real Android/iOS devices and backend staging
+7. ⏳ Production rollout plan agreed
 
-**Estimated Phase 1 Completion:** Wed 2026-10-01, subject to T-05 and staging results
+**No production deployment has been performed.**
 
 ---
 
 ## Phase 2: Urgent (Weeks 1-2)
-14 findings affecting operational workflows but not blocking security
-
 - H-03: Concurrency race fix for simpanMobileEksekusiRow
 - H-06: Device token TTL/expiry + refresh rotation
-- H-07: Watermark photo public access fix (makePublic: false)
+- H-07: Watermark photo public access fix
 - H-08: Password plaintext-to-hash migration with deadline
 - T-01: Remove session token from URL query string
-- H-04, H-05, L-*: Remaining operational/validation findings
-
----
-
-## Phase 3: Important (Weeks 2-3)
-20+ findings on operational hardening, audit logs, monitoring
-
----
-
-## Phase 4: Polish & Validation (Weeks 3-4)
-~30 findings on documentation, testing, process improvements
+- H-04, H-05, L-*: Remaining operational and validation findings
 
 ---
 
@@ -108,7 +84,7 @@ Must complete before any production deployment.
 
 | Category | Count | Status | Notes |
 |----------|-------|--------|-------|
-| **Critical (C-*)** | 4 | 2 done (T-00, T-03), 1 merged (T-04), 1 pending (T-05) | Blocks production |
+| **Critical (C-*)** | 4 | T-00/T-03/T-04 merged, T-05 pending | Blocks production |
 | **High (H-*)** | 8 | 0 done | ULP/auth, token handling, workflows |
 | **Low (L-*)** | ~15 | 0 done | Documentation, testing, monitoring |
 | **Validation (V-*)** | ~20 | 0 done | Feature validation, edge cases |
@@ -118,24 +94,21 @@ Must complete before any production deployment.
 
 ## Deployment Timeline
 
-**Actual Progress:**
-- 2026-09-27: PR #4 merged (T-00 Master Gardu fix)
-- 2026-09-27: PR #8 merged (T-03 Phase 1 guard enforcement)
-- 2026-09-27: PRs #10-17 merged (T-04 guard functions, Dashboard delete fix, H-07 watermark guard, mobile error UI)
-- 2026-09-28 10:30 AM: PR #19 merged (T-03 Phase 2 ULP filtering)
-- **2026-09-28 11:20 AM: PR #20 merged (T-04 guarded entry points and webhook enforcement)**
+- 2026-09-27: PR #4 merged (T-00)
+- 2026-09-27: PR #8 merged (T-03 Phase 1)
+- 2026-09-27: PRs #10-17 merged (earlier guard and operational fixes)
+- 2026-09-28 10:30 AM: PR #19 merged (T-03 Phase 2)
+- 2026-09-28 11:20 AM: PR #20 merged (T-04 core entry points)
+- 2026-09-28 11:30 AM: PR #21 merged (T-04 report endpoints)
+- 2026-09-28 11:40 AM: PR #22 merged (T-04 SIE/Checkpoint endpoints)
 
-**Next (2026-09-28 to 2026-10-01):**
-- Complete CI verification for PR #20
-- Debug T-05 download timeout root cause + fix
-- Staging validation: real devices + backend data
-- Phase 1 production deployment, only after all gates pass
+**Next:** Complete CI verification, fix/profile T-05, then run staging validation. Deploy only after all gates pass.
 
 ---
 
 ## Notes
 
-- All fixes marked for Phase 1 must be tested together before production
-- No incremental deployment: Phase 1 deploys as one unit
-- Rollback plan: revert main to commit before Phase 1 start (if critical issues found)
-- Phase 2+ can be deployed incrementally after Phase 1 stabilizes
+- All Phase 1 fixes must be tested together before production.
+- No incremental production deployment.
+- Rollback: revert main to the pre-Phase-1 commit if a critical issue is found.
+- Phase 2+ may be deployed incrementally after Phase 1 stabilizes.
