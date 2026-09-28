@@ -24,6 +24,10 @@
     "Core/ZZ-Dashboard-Jadwal-Delete-Compat.js",
     "Teknik/Jadwal-Padam-Code.js",
     "Teknik/Jadwal-Padam-Delete.js",
+    "Teknik/Tek-Gangguan.js",
+    "Teknik/Gangguan-Beranda-Mobile.js",
+    "Teknik/SIE-Teknik-Code.js",
+    "Teknik/Tek-Data-Chechpoint-Code.js",
     "Teknik/Tek-LaporanUP3.js",
     "Teknik/Tek-LapUP3UIWHarian.js",
     "Core/T04-Remaining-Guards.js"
