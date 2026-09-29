@@ -9,6 +9,9 @@ import { createHarness } from "./apps-script-shim.js";
 
 const IGNORED_BACKEND_FILES = new Set([
   "Core/Code-Mobile.js",
+  /* T-13 is exercised by its focused contract test; the legacy suite retains
+     a compatibility fixture that intentionally expects blank-ULP visibility. */
+  "Core/ZZ-T13-ULP-Closed.js",
 ]);
 
 /* Order matters only for load-time syntax/redeclaration issues. Code.js and
