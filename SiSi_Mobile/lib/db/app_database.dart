@@ -105,6 +105,66 @@ class AppDatabase extends _$AppDatabase {
         'CREATE INDEX IF NOT EXISTS idx_sync_staging_dataset ON sync_download_staging(dataset)');
   }
 
+  Future<void> _ensureGarduRevisionTable() async {
+    final tables = await _tables();
+    const create = 'CREATE TABLE IF NOT EXISTS gardu_server_revision (ulp TEXT NOT NULL DEFAULT "", gardu TEXT NOT NULL, revision INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (ulp, gardu))';
+    if (!tables.contains('gardu_server_revision')) {
+      await customStatement(create);
+      return;
+    }
+    final info = await customSelect('PRAGMA table_info(gardu_server_revision)').get();
+    final primary = info
+        .where((row) => (row.data['pk'] as num? ?? 0) > 0)
+        .toList()
+      ..sort((a, b) => ((a.data['pk'] as num?) ?? 0)
+          .compareTo((b.data['pk'] as num?) ?? 0));
+    final primaryNames = primary.map((row) => row.data['name']).toList();
+    if (primaryNames.length == 2 &&
+        primaryNames[0] == 'ulp' &&
+        primaryNames[1] == 'gardu') return;
+    await customStatement('DROP TABLE IF EXISTS gardu_server_revision_v2');
+    await customStatement('CREATE TABLE gardu_server_revision_v2 (ulp TEXT NOT NULL DEFAULT "", gardu TEXT NOT NULL, revision INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (ulp, gardu))');
+    await customStatement('INSERT OR REPLACE INTO gardu_server_revision_v2(ulp,gardu,revision) SELECT COALESCE(ulp,""), gardu, revision FROM gardu_server_revision');
+    await customStatement('DROP TABLE gardu_server_revision');
+    await customStatement('ALTER TABLE gardu_server_revision_v2 RENAME TO gardu_server_revision');
+  }
+
+  Future<void> _rebuildScopedGarduTable(String table) async {
+    final staged = '${table}_scoped_v2';
+    final create = table == 'master_gardu'
+        ? 'CREATE TABLE $staged (ulp TEXT NOT NULL DEFAULT "", gardu TEXT NOT NULL, alamat TEXT NOT NULL DEFAULT "", latitude TEXT NOT NULL DEFAULT "", longitude TEXT NOT NULL DEFAULT "", penyulang TEXT NOT NULL DEFAULT "", section TEXT NOT NULL DEFAULT "", jenis_gardu TEXT NOT NULL DEFAULT "", merk TEXT NOT NULL DEFAULT "", kapasitas_kva TEXT NOT NULL DEFAULT "", no_seri TEXT NOT NULL DEFAULT "", tahun_trafo TEXT NOT NULL DEFAULT "", type_seal TEXT NOT NULL DEFAULT "", berat_trafo TEXT NOT NULL DEFAULT "", volume_minyak TEXT NOT NULL DEFAULT "", merk_phb_tr TEXT NOT NULL DEFAULT "", nomor_seri_phb_tr TEXT NOT NULL DEFAULT "", tahun_phb_tr TEXT NOT NULL DEFAULT "", jam_ukur_wbp TEXT NOT NULL DEFAULT "", tanggal_pengukuran TEXT NOT NULL DEFAULT "", kepemilikan TEXT NOT NULL DEFAULT "", wbp_rs TEXT NOT NULL DEFAULT "", wbp_st TEXT NOT NULL DEFAULT "", wbp_tr TEXT NOT NULL DEFAULT "", wbp_rn TEXT NOT NULL DEFAULT "", wbp_sn TEXT NOT NULL DEFAULT "", wbp_tn TEXT NOT NULL DEFAULT "", wbp_r TEXT NOT NULL DEFAULT "", wbp_s TEXT NOT NULL DEFAULT "", wbp_t TEXT NOT NULL DEFAULT "", wbp_n TEXT NOT NULL DEFAULT "", lwbp_rs TEXT NOT NULL DEFAULT "", lwbp_st TEXT NOT NULL DEFAULT "", lwbp_tr TEXT NOT NULL DEFAULT "", lwbp_rn TEXT NOT NULL DEFAULT "", lwbp_sn TEXT NOT NULL DEFAULT "", lwbp_tn TEXT NOT NULL DEFAULT "", lwbp_r TEXT NOT NULL DEFAULT "", lwbp_s TEXT NOT NULL DEFAULT "", lwbp_t TEXT NOT NULL DEFAULT "", lwbp_n TEXT NOT NULL DEFAULT "", arus_max_per_fasa TEXT NOT NULL DEFAULT "", pembebanan_kva TEXT NOT NULL DEFAULT "", pembebanan_kw TEXT NOT NULL DEFAULT "", persentase_beban TEXT NOT NULL DEFAULT "", kategori_beban TEXT NOT NULL DEFAULT "", PRIMARY KEY (ulp, gardu))'
+        : 'CREATE TABLE $staged (gardu TEXT NOT NULL, ulp TEXT NOT NULL DEFAULT "", perubahan_json TEXT NOT NULL DEFAULT "{}", diubah_oleh TEXT NOT NULL DEFAULT "", diubah_pada TEXT NOT NULL DEFAULT "", status TEXT NOT NULL DEFAULT "pending", percobaan INTEGER NOT NULL DEFAULT 0, pesan_gagal TEXT NOT NULL DEFAULT "", PRIMARY KEY (ulp, gardu))';
+    final columns = table == 'master_gardu'
+        ? 'ulp,gardu,alamat,latitude,longitude,penyulang,section,jenis_gardu,merk,kapasitas_kva,no_seri,tahun_trafo,type_seal,berat_trafo,volume_minyak,merk_phb_tr,nomor_seri_phb_tr,tahun_phb_tr,jam_ukur_wbp,tanggal_pengukuran,kepemilikan,wbp_rs,wbp_st,wbp_tr,wbp_rn,wbp_sn,wbp_tn,wbp_r,wbp_s,wbp_t,wbp_n,lwbp_rs,lwbp_st,lwbp_tr,lwbp_rn,lwbp_sn,lwbp_tn,lwbp_r,lwbp_s,lwbp_t,lwbp_n,arus_max_per_fasa,pembebanan_kva,pembebanan_kw,persentase_beban,kategori_beban'
+        : 'gardu,ulp,perubahan_json,diubah_oleh,diubah_pada,status,percobaan,pesan_gagal';
+    await customStatement('DROP TABLE IF EXISTS $staged');
+    await customStatement(create);
+    await customStatement('INSERT INTO $staged($columns) SELECT $columns FROM $table');
+    await customStatement('DROP TABLE $table');
+    await customStatement('ALTER TABLE $staged RENAME TO $table');
+    if (table == 'master_gardu') {
+      await customStatement('CREATE INDEX IF NOT EXISTS idx_master_gardu_ulp ON master_gardu(ulp)');
+      await customStatement('CREATE INDEX IF NOT EXISTS idx_master_gardu_nomor ON master_gardu(gardu)');
+    }
+  }
+
+  Future<void> _ensureScopedGarduTables() async {
+    for (final table in ['master_gardu', 'gardu_outbox']) {
+      final info = await customSelect('PRAGMA table_info($table)').get();
+      if (info.isEmpty) continue;
+      final primary = info
+          .where((row) => (row.data['pk'] as num? ?? 0) > 0)
+          .toList()
+        ..sort((a, b) => ((a.data['pk'] as num?) ?? 0)
+            .compareTo((b.data['pk'] as num?) ?? 0));
+      final names = primary.map((row) => row.data['name']?.toString()).toList();
+      if (names.length == 2 && names[0] == 'ulp' && names[1] == 'gardu') {
+        continue;
+      }
+      await _rebuildScopedGarduTable(table);
+    }
+  }
+
   Future<void> _ensureTeknikToTables() async {
     await customStatement(
         'CREATE TABLE IF NOT EXISTS teknik_to_cache (kode_pekerjaan TEXT NOT NULL, mode TEXT NOT NULL, tanggal TEXT NOT NULL DEFAULT "", payload TEXT NOT NULL, updated_at TEXT NOT NULL, PRIMARY KEY (kode_pekerjaan, mode))');
@@ -121,6 +181,8 @@ class AppDatabase extends _$AppDatabase {
         beforeOpen: (_) async {
           await _ensureTeknikToTables();
           await _ensureLocalMirrorTables();
+          await _ensureGarduRevisionTable();
+          await _ensureScopedGarduTables();
         },
         onUpgrade: (m, from, to) async {
           var tables = await _tables();
@@ -172,6 +234,8 @@ class AppDatabase extends _$AppDatabase {
             if (!tables.contains('list_temuan'))
               await m.createTable(listTemuans);
           }
+          await _ensureGarduRevisionTable();
+          await _ensureScopedGarduTables();
         },
       );
 }

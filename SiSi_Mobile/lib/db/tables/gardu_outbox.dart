@@ -6,7 +6,7 @@ class GarduOutboxes extends Table {
   String get tableName => 'gardu_outbox';
 
   @override
-  Set<Column> get primaryKey => {gardu};
+  Set<Column> get primaryKey => {ulp, gardu};
 
   TextColumn get gardu => text()();
   TextColumn get ulp => text().withDefault(const Constant(''))();

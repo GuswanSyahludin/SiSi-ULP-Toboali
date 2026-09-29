@@ -13,9 +13,7 @@ class GarduScreen extends StatefulWidget {
   static bool boleh(Map<String, dynamic> sesi) {
     final role = (sesi['role'] ?? '').toString().trim().toLowerCase();
     final subTim = (sesi['subTim'] ?? '').toString().trim().toLowerCase();
-    return role == 'super user' ||
-        role == 'admin' ||
-        subTim == 'inspeksi gardu';
+    return role == 'super user' || role == 'admin' || subTim == 'inspeksi gardu';
   }
 
   @override
@@ -44,6 +42,8 @@ class _GarduScreenState extends State<GarduScreen> {
   List<MasterGardu> _allRows = [];
   List<MasterGardu> _rows = [];
   Set<String> _pending = {};
+  Set<String> _conflicts = {};
+  String _conflictMessage = '';
   StreamSubscription<List<GarduOutbox>>? _subscription;
   String _filterType = 'nomor';
   String? _category;
@@ -53,7 +53,21 @@ class _GarduScreenState extends State<GarduScreen> {
   void initState() {
     super.initState();
     _subscription = _repo.pantauAntrean().listen((rows) {
-      if (mounted) setState(() => _pending = rows.map((e) => e.gardu).toSet());
+      if (!mounted) return;
+      final conflicts = rows.where((row) => row.status == 'konflik').toList();
+      setState(() {
+        _pending = rows
+            .where((row) => row.status != 'konflik')
+            .map((row) => row.gardu)
+            .toSet();
+        _conflicts = conflicts.map((row) => row.gardu).toSet();
+        _conflictMessage = conflicts
+            .map((row) => row.pesanGagal.trim())
+            .firstWhere(
+              (message) => message.isNotEmpty,
+              orElse: () => 'Data Gardu berubah di perangkat lain. Muat ulang sebelum mengirim ulang.',
+            );
+      });
     });
     _load();
   }
@@ -91,8 +105,7 @@ class _GarduScreenState extends State<GarduScreen> {
           final capacity = _number(_capacity.text);
           if (capacity == null) return true;
           final garduCapacity = _number(gardu.kapasitasKva);
-          return garduCapacity != null &&
-              (garduCapacity - capacity).abs() <= .001;
+          return garduCapacity != null && (garduCapacity - capacity).abs() <= .001;
         case 'kategori':
           return _category == null || garduCategory(gardu) == _category;
         default:
@@ -106,8 +119,7 @@ class _GarduScreenState extends State<GarduScreen> {
       case 'nomor':
         return _search.text.trim().isNotEmpty;
       case 'range':
-        return _minLoad.text.trim().isNotEmpty ||
-            _maxLoad.text.trim().isNotEmpty;
+        return _minLoad.text.trim().isNotEmpty || _maxLoad.text.trim().isNotEmpty;
       case 'kapasitas':
         return _capacity.text.trim().isNotEmpty;
       case 'kategori':
@@ -117,9 +129,7 @@ class _GarduScreenState extends State<GarduScreen> {
     }
   }
 
-  void _applyFilters() {
-    setState(() => _rows = _filter(_allRows));
-  }
+  void _applyFilters() => setState(() => _rows = _filter(_allRows));
 
   void _clearValues() {
     _search.clear();
@@ -143,10 +153,7 @@ class _GarduScreenState extends State<GarduScreen> {
     final role = (widget.sesi['role'] ?? '').toString().trim().toLowerCase();
     final privileged = role == 'super user' || role == 'admin';
     final ulp = privileged ? '' : (widget.sesi['ulp'] ?? '').toString().trim();
-    var rows = await _repo.cari('', ulp: ulp, limit: 5000);
-    if (rows.isEmpty && ulp.isNotEmpty && await _repo.jumlah() > 0) {
-      rows = await _repo.cari('', limit: 5000);
-    }
+    final rows = await _repo.cari('', ulp: ulp, limit: 5000);
     if (mounted) {
       setState(() {
         _allRows = rows;
@@ -190,8 +197,7 @@ class _GarduScreenState extends State<GarduScreen> {
           Expanded(
             child: TextField(
               controller: _minLoad,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
               onChanged: (_) => _applyFilters(),
               decoration: _plainDecoration('Min', suffix: '%'),
             ),
@@ -203,8 +209,7 @@ class _GarduScreenState extends State<GarduScreen> {
           Expanded(
             child: TextField(
               controller: _maxLoad,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
               onChanged: (_) => _applyFilters(),
               decoration: _plainDecoration('Maks', suffix: '%'),
             ),
@@ -224,7 +229,7 @@ class _GarduScreenState extends State<GarduScreen> {
             isExpanded: true,
             hint: const Text('Pilih kriteria beban'),
             items: _categoryLabels.entries
-                .map((entry) => DropdownMenuItem(
+                .map((entry) => DropdownMenuItem<String>(
                       value: entry.key,
                       child: Text(entry.value),
                     ))
@@ -254,45 +259,45 @@ class _GarduScreenState extends State<GarduScreen> {
       initialValue: _filterType,
       onSelected: _selectFilter,
       itemBuilder: (_) => _filterLabels.entries
-          .map((entry) => PopupMenuItem<String>(
-                value: entry.key,
-                child: Row(children: [
-                  Icon(
-                    entry.key == _filterType
-                        ? Icons.radio_button_checked_rounded
-                        : Icons.radio_button_unchecked_rounded,
-                    size: 19,
-                    color: entry.key == _filterType
-                        ? AppColors.cyan600
-                        : const Color(0xFF94A3B8),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(entry.value),
-                ]),
-              ))
-          .toList(),
+          .map<PopupMenuEntry<String>>((entry) {
+        return PopupMenuItem<String>(
+          value: entry.key,
+          child: Row(
+            children: [
+              Icon(
+                entry.key == _filterType
+                    ? Icons.radio_button_checked_rounded
+                    : Icons.radio_button_unchecked_rounded,
+                size: 19,
+                color: entry.key == _filterType ? AppColors.cyan600 : const Color(0xFF94A3B8),
+              ),
+              const SizedBox(width: 10),
+              Text(entry.value),
+            ],
+          ),
+        );
+      }).toList(),
       child: SizedBox(
         width: 48,
         height: 48,
-        child: Stack(alignment: Alignment.center, children: [
-          Icon(
-            Icons.filter_list_rounded,
-            color:
-                _hasActiveFilter ? AppColors.cyan600 : const Color(0xFF64748B),
-          ),
-          if (_hasActiveFilter)
-            const Positioned(
-              right: 8,
-              top: 8,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: AppColors.amber700,
-                  shape: BoxShape.circle,
-                ),
-                child: SizedBox.square(dimension: 9),
-              ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Icon(
+              Icons.filter_list_rounded,
+              color: _hasActiveFilter ? AppColors.cyan600 : const Color(0xFF64748B),
             ),
-        ]),
+            if (_hasActiveFilter)
+              const Positioned(
+                right: 8,
+                top: 8,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(color: AppColors.amber700, shape: BoxShape.circle),
+                  child: SizedBox.square(dimension: 9),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -301,10 +306,7 @@ class _GarduScreenState extends State<GarduScreen> {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       constraints: const BoxConstraints(minHeight: 56),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFCFDFF),
-        borderRadius: BorderRadius.circular(14),
-      ),
+      decoration: BoxDecoration(color: const Color(0xFFFCFDFF), borderRadius: BorderRadius.circular(14)),
       child: Row(children: [
         const SizedBox(width: 14),
         const Icon(Icons.search_rounded, color: Color(0xFF64748B)),
@@ -315,51 +317,53 @@ class _GarduScreenState extends State<GarduScreen> {
     );
   }
 
+  Widget _conflictBanner() {
+    if (_conflicts.isEmpty) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: const Color(0xFFFFF1F2), border: Border.all(color: const Color(0xFFFDA4AF)), borderRadius: BorderRadius.circular(12)),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: Color(0xFFBE123C), size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '${_conflicts.length} perubahan Gardu konflik. $_conflictMessage',
+              style: const TextStyle(color: Color(0xFF9F1239), fontSize: 12, fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!GarduScreen.boleh(widget.sesi)) {
-      return const Scaffold(
-        body: Center(child: Text('Akses menu Gardu ditolak.')),
-      );
+      return const Scaffold(body: Center(child: Text('Akses menu Gardu ditolak.')));
     }
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8FC),
       appBar: AppBar(
         backgroundColor: AppColors.navy700,
         foregroundColor: Colors.white,
-        title:
-            const Text('Gardu', style: TextStyle(fontWeight: FontWeight.w900)),
-        actions: [
-          IconButton(onPressed: _load, icon: const Icon(Icons.refresh_rounded)),
-        ],
+        title: const Text('Gardu', style: TextStyle(fontWeight: FontWeight.w900)),
+        actions: [IconButton(onPressed: _load, icon: const Icon(Icons.refresh_rounded))],
       ),
       body: Column(children: [
         _filterBar(),
+        _conflictBanner(),
         Padding(
           padding: const EdgeInsets.fromLTRB(18, 4, 18, 12),
           child: Row(children: [
-            Text(
-              '${_rows.length} gardu',
-              style: const TextStyle(
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF475569),
-              ),
-            ),
+            Text('${_rows.length} gardu', style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF475569))),
             const SizedBox(width: 8),
-            Text(
-              _filterLabels[_filterType]!,
-              style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
-            ),
+            Text(_filterLabels[_filterType]!, style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
             const Spacer(),
             if (_pending.isNotEmpty)
-              Text(
-                '${_pending.length} belum sinkron',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFFB45309),
-                ),
-              ),
+              Text('${_pending.length} belum sinkron', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFFB45309))),
           ]),
         ),
         Expanded(
@@ -370,9 +374,7 @@ class _GarduScreenState extends State<GarduScreen> {
                       child: Padding(
                         padding: const EdgeInsets.all(28),
                         child: Text(
-                          _allRows.isEmpty
-                              ? 'Belum ada Master Gardu. Jalankan Sinkron Data di Pengaturan.'
-                              : 'Tidak ada gardu yang sesuai dengan filter.',
+                          _allRows.isEmpty ? 'Belum ada Master Gardu. Jalankan Sinkron Data di Pengaturan.' : 'Tidak ada gardu yang sesuai dengan filter.',
                           textAlign: TextAlign.center,
                           style: const TextStyle(color: Color(0xFF64748B)),
                         ),
@@ -456,44 +458,15 @@ class _GarduEditScreenState extends State<GarduEditScreen> {
     super.initState();
     final g = widget.gardu;
     final values = <String, String>{
-      'alamat': g.alamat,
-      'jenisGardu': g.jenisGardu,
-      'merk': g.merk,
-      'kapasitasKva': g.kapasitasKva,
-      'noSeri': g.noSeri,
-      'tahunTrafo': g.tahunTrafo,
-      'typeSeal': g.typeSeal,
-      'merkPhbTr': g.merkPhbTr,
-      'nomorSeriPhbTr': g.nomorSeriPhbTr,
-      'tahunPhbTr': g.tahunPhbTr,
-      'jamUkurWbp': g.jamUkurWbp,
-      'tanggalPengukuran': g.tanggalPengukuran,
-      'kepemilikan': g.kepemilikan,
-      'arusMaxPerFasa': g.arusMaxPerFasa,
-      'pembebananKva': g.pembebananKva,
-      'pembebananKw': g.pembebananKw,
-      'persentaseBeban': g.persentaseBeban,
-      'kategoriBeban': g.kategoriBeban,
-      'wbpRs': g.wbpRs,
-      'wbpSt': g.wbpSt,
-      'wbpTr': g.wbpTr,
-      'wbpRn': g.wbpRn,
-      'wbpSn': g.wbpSn,
-      'wbpTn': g.wbpTn,
-      'wbpR': g.wbpR,
-      'wbpS': g.wbpS,
-      'wbpT': g.wbpT,
-      'wbpN': g.wbpN,
-      'lwbpRs': g.lwbpRs,
-      'lwbpSt': g.lwbpSt,
-      'lwbpTr': g.lwbpTr,
-      'lwbpRn': g.lwbpRn,
-      'lwbpSn': g.lwbpSn,
-      'lwbpTn': g.lwbpTn,
-      'lwbpR': g.lwbpR,
-      'lwbpS': g.lwbpS,
-      'lwbpT': g.lwbpT,
-      'lwbpN': g.lwbpN,
+      'alamat': g.alamat, 'jenisGardu': g.jenisGardu, 'merk': g.merk, 'kapasitasKva': g.kapasitasKva,
+      'noSeri': g.noSeri, 'tahunTrafo': g.tahunTrafo, 'typeSeal': g.typeSeal, 'merkPhbTr': g.merkPhbTr,
+      'nomorSeriPhbTr': g.nomorSeriPhbTr, 'tahunPhbTr': g.tahunPhbTr, 'jamUkurWbp': g.jamUkurWbp,
+      'tanggalPengukuran': g.tanggalPengukuran, 'kepemilikan': g.kepemilikan, 'arusMaxPerFasa': g.arusMaxPerFasa,
+      'pembebananKva': g.pembebananKva, 'pembebananKw': g.pembebananKw, 'persentaseBeban': g.persentaseBeban,
+      'kategoriBeban': g.kategoriBeban, 'wbpRs': g.wbpRs, 'wbpSt': g.wbpSt, 'wbpTr': g.wbpTr, 'wbpRn': g.wbpRn,
+      'wbpSn': g.wbpSn, 'wbpTn': g.wbpTn, 'wbpR': g.wbpR, 'wbpS': g.wbpS, 'wbpT': g.wbpT, 'wbpN': g.wbpN,
+      'lwbpRs': g.lwbpRs, 'lwbpSt': g.lwbpSt, 'lwbpTr': g.lwbpTr, 'lwbpRn': g.lwbpRn, 'lwbpSn': g.lwbpSn,
+      'lwbpTn': g.lwbpTn, 'lwbpR': g.lwbpR, 'lwbpS': g.lwbpS, 'lwbpT': g.lwbpT, 'lwbpN': g.lwbpN,
     };
     for (final entry in values.entries) {
       _controllers[entry.key] = TextEditingController(text: entry.value);
@@ -508,20 +481,13 @@ class _GarduEditScreenState extends State<GarduEditScreen> {
     super.dispose();
   }
 
-  bool _numeric(String key) =>
-      key.contains('wbp') ||
-      key.contains('Wbp') ||
-      key.contains('Beban') ||
-      key == 'arusMaxPerFasa' ||
-      key == 'kapasitasKva';
+  bool _numeric(String key) => key.contains('wbp') || key.contains('Wbp') || key.contains('Beban') || key == 'arusMaxPerFasa' || key == 'kapasitasKva';
 
   Future<void> _save() async {
     setState(() => _saving = true);
     await _repo.editLokal(
       asli: widget.gardu,
-      perubahan: {
-        for (final e in _controllers.entries) e.key: e.value.text.trim(),
-      },
+      perubahan: {for (final e in _controllers.entries) e.key: e.value.text.trim()},
       username: (widget.sesi['username'] ?? '').toString(),
     );
     if (!mounted) return;
@@ -537,44 +503,23 @@ class _GarduEditScreenState extends State<GarduEditScreen> {
             TextButton(
               onPressed: _saving ? null : _save,
               child: _saving
-                  ? const SizedBox.square(
-                      dimension: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text(
-                      'SIMPAN',
-                      style: TextStyle(fontWeight: FontWeight.w900),
-                    ),
+                  ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('SIMPAN', style: TextStyle(fontWeight: FontWeight.w900)),
             ),
           ],
         ),
         body: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            const Text(
-              'Perubahan disimpan di HP dahulu, lalu dikirim melalui Sinkron Data.',
-              style: TextStyle(
-                color: Color(0xFFB45309),
-                fontWeight: FontWeight.w800,
-              ),
-            ),
+            const Text('Perubahan disimpan di HP dahulu, lalu dikirim melalui Sinkron Data.', style: TextStyle(color: Color(0xFFB45309), fontWeight: FontWeight.w800)),
             const SizedBox(height: 16),
             ..._labels.entries.map(
               (entry) => Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: TextField(
                   controller: _controllers[entry.key],
-                  keyboardType: _numeric(entry.key)
-                      ? const TextInputType.numberWithOptions(decimal: true)
-                      : TextInputType.text,
-                  decoration: InputDecoration(
-                    labelText: entry.value,
-                    filled: true,
-                    fillColor: const Color(0xFFFCFDFF),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
+                  keyboardType: _numeric(entry.key) ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
+                  decoration: InputDecoration(labelText: entry.value, filled: true, fillColor: const Color(0xFFFCFDFF), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
                 ),
               ),
             ),

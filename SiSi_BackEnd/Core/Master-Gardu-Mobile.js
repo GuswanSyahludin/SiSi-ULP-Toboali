@@ -115,9 +115,12 @@ function getMasterGarduMobile(token, ulpDiminta) {
       } catch (_) {
         return { success: false, message: "Payload Gardu tidak valid." };
       }
+      var serverRevision = data._serverRevision;
+      delete data._serverRevision;
       return updateMasterGarduMobile(token, {
         gardu: gardu,
         ulp: target,
+        serverRevision: serverRevision,
         data: data,
       });
     }
