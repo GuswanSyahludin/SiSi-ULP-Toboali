@@ -6,7 +6,7 @@
 **Repository:** `GuswanSyahludin/SiSi-ULP-Toboali`  
 **Primary operating scope:** Internal ULP Toboali operations  
 **Audit findings and remediation tasks:** `docs/SECURITY-AUDIT-STATUS.md`  
-**Last updated:** 29 September 2026, 20:34 WIB
+**Last updated:** 29 September 2026, 21:06 WIB
 
 ## 1. Product contract
 
@@ -29,6 +29,7 @@ The system is fail-closed. Foreign, blank, duplicate, unresolved, or ambiguous o
 - Master Gardu snapshot materialization upserts fresh data without deleting pending local edits; `gardu_outbox` patches are replayed atomically.
 - Master Gardu identity is scoped by normalized `(ulp, gardu)` in mobile tables, outbox updates, snapshot deletion, patch replay, and revision storage.
 - Master Gardu optimistic concurrency stores a per-row `serverRevision`; stale edits fail with `MASTER_GARDU_CONFLICT` and remain visible as conflict outbox rows.
+- REL-03 write paths preflight formula and immutable cells before writes and avoid full-range rewrites that can replace formulas with values.
 - Mobile ROW append requires a valid session and same-ULP scope, validates coordinates and diameter, sanitizes text before Sheet writes, serializes append side effects, and replays a successful request by idempotency key instead of appending a duplicate row.
 - Mobile local databases and queues are account-scoped by normalized username and ULP.
 - SharedPreferences, Workmanager inputs, SQLite tables, outboxes, caches, and local mirrors remain isolated by account namespace.
@@ -84,12 +85,13 @@ The server authenticates the caller, verifies same-ULP access, resolves exactly 
 - **FR-22:** Mobile builds can target approved staging or production deployments through `SISI_API_URL`.
 - **FR-23:** The live `main` branch protection configuration is auditable and must enforce the required security/release gates before merge.
 - **FR-24:** Android release signing and backup policy fail closed by source and CI contract.
+- **FR-25:** Master Gardu formula and immutable-cell protections are enforced before source writes.
 
 ## 5. Security, reliability, and definition of done
 
 Fail closed by default. Do not trust client-supplied ULP, role, ownership, identifiers, or URLs without server-side resolution. Do not log secrets or tokens. Use locks for atomic identifiers, bounded retry for queues, and preserve failed records and audit history. Password migration requires a verified backup/version-history point. Master snapshot replacement must not discard pending or conflict local edits, and migration must preserve data, defaults, indexes, and composite identity. Photo privacy changes are not production-ready until existing public files are rotated and staging/real-device access tests pass.
 
-Automated acceptance includes the Audit Gate, backend security tests, Flutter analysis/tests/build, query-string rejection, password cutover coverage, Master Gardu pending-edit coverage, Master Gardu conflict contract coverage, photo privacy contract coverage, mobile ROW safe-write coverage, Jadwal Padam endpoint-load and ownership coverage, BA ownership/download coverage, account isolation, secure-storage migration, and offline queue tests.
+Automated acceptance includes the Audit Gate, backend security tests, Flutter analysis/tests/build, query-string rejection, password cutover coverage, Master Gardu pending-edit coverage, Master Gardu conflict contract coverage, REL-03 formula-safe write coverage, photo privacy contract coverage, mobile ROW safe-write coverage, Jadwal Padam endpoint-load and ownership coverage, BA ownership/download coverage, account isolation, secure-storage migration, and offline queue tests.
 
 Runtime acceptance must cover staging authorization/safe writes, mobile ROW invalid-session/foreign-ULP rejection, CSV/formula injection rejection, invalid coordinate/diameter rejection, concurrent append and retry idempotency, password migration and cutoff, authenticated photo retrieval and wrong-ULP/public-link rejection, controlled public-file ACL rotation, real-device offline Gardu edit followed by fresh Master download and outbox replay, two-device stale-edit conflict detection, cross-ULP Jadwal Padam read/write rejection, restart/retry, account switching, token expiry, secure-storage behavior, Android backup/restore denial, and signed internal release installation. A change is done only when implementation, docs, focused/full tests, CI, deployed-runtime evidence, and real-device evidence are complete.
 
@@ -120,5 +122,7 @@ Runtime acceptance must cover staging authorization/safe writes, mobile ROW inva
 - **T-14/T-15/T-18/T-21/T-22/T-24, PR #35:** Source-only hardening batch merged as `28c2849750a2355c9e0c734c98dfe0adc4b4dc83` on 29 September 2026. It adds device/client login throttling, generic login failures, production-default webhook timestamp enforcement, build-time mobile API configuration, mobile README/release guidance, debug hygiene, and deployment overlay ordering. Automated backend, query-string, Flutter analyze/compile, and Flutter debug-build checks are green; staging, deployed-runtime, compatibility, and real-device evidence remain pending.
 - **T-29, PR #36:** Branch-protection audit tooling merged as `0b17197f84a4d2ad6dcd5eef9d71a905a964bd5c` on 29 September 2026. It adds `scripts/verify_branch_protection.py` and `docs/GITHUB-BRANCH-PROTECTION.md` to verify live required checks, review policy, stale-review dismissal, admin enforcement, force-push/deletion settings, and conversation resolution. The source/CI portion is complete; the live ruleset result and evidence capture remain pending.
 - **Source-only SiSi batch, PR #37:** Android release signing fail-closed checks, explicit deny backup/data-extraction policy, signing-source audit, and regression contract merged as `7b3a74b75eb1d40ca84762f1096e5c10ee42e2c4` on 29 September 2026. All PR checks were green; staging secret-store verification, signed internal APK installation, and real-device backup/restore evidence remain pending.
+- **Android resource correction, PR #38:** Android 12+ `dataExtractionRules` now points to the correct deny-all `data_extraction_rules.xml` resource; its regression contract was updated and all required PR checks were green. Merged as `a698e4ca3c74fce79ab79ab1182bf803187a06fd` on 29 September 2026.
+- **REL-03 formula-safe writes, PR #39:** Master Gardu HI writes now preflight immutable/formula cells and reject unsafe targets before the first write; `db_InsDu_Realisasi` recalculation uses targeted `jumlahTemuan` writes instead of whole-range replacement. Deployment-order and source contracts are green. Merged as `ab6270724ee21ee4efcd6d7b2e20cdca25e8e66e` on 29 September 2026; sanitized staging formula mapping and two-device/runtime validation remain pending.
 
-**Overall:** Code remediations are merged, including PR #37. Runtime acceptance and live branch-protection verification are incomplete. The system is not production-ready until the documented staging, ACL rotation, concurrency/retry, client compatibility, real-device, signing, and GitHub ruleset evidence exists.
+**Overall:** Code remediations are merged, including PRs #38 and #39. Runtime acceptance and live branch-protection verification are incomplete. The system is not production-ready until the documented staging, ACL rotation, concurrency/retry, client compatibility, real-device, signing, and GitHub ruleset evidence exists.
