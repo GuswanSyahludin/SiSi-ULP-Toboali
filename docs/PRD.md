@@ -6,7 +6,7 @@
 **Repository:** `GuswanSyahludin/SiSi-ULP-Toboali`  
 **Primary operating scope:** Internal ULP Toboali operations  
 **Audit findings and remediation tasks:** `docs/SECURITY-AUDIT-STATUS.md`  
-**Last updated:** 29 September 2026, 08:20 WIB
+**Last updated:** 29 September 2026, 14:25 WIB
 
 ## 1. Product contract
 
@@ -25,6 +25,8 @@ The system is fail-closed. Foreign, blank, duplicate, unresolved, or ambiguous o
 - Password audit/migration requires Super User authorization, and account password writes have no plaintext fallback.
 - Jadwal Padam reads and writes are same-ULP: master, list, calendar, Master Beban, save, update, status, delete, and WhatsApp-text endpoints require the authenticated ULP scope. Foreign, unresolved, duplicate, or ambiguous rows fail closed before side effects.
 - Master Gardu snapshot materialization upserts fresh data without deleting pending local edits; `gardu_outbox` patches are replayed atomically.
+- Master Gardu identity is scoped by normalized `(ulp, gardu)` in mobile tables, outbox updates, snapshot deletion, patch replay, and revision storage.
+- Master Gardu optimistic concurrency stores a per-row `serverRevision`; stale edits fail with `MASTER_GARDU_CONFLICT` and remain visible as conflict outbox rows.
 - Mobile local databases and queues are account-scoped by normalized username and ULP.
 - SharedPreferences, Workmanager inputs, SQLite tables, outboxes, caches, and local mirrors remain isolated by account namespace.
 - Legacy shared database files are quarantined, not silently assigned to another account.
@@ -38,7 +40,7 @@ The approved device-auth path creates the active session. Session restoration ac
 
 ### Offline synchronization
 
-Local writes are durable before success is shown. Master Gardu materialization uses an atomic snapshot merge: incoming rows are upserted, stale rows without pending outbox edits may be removed, pending rows are preserved, and pending JSON patches are replayed before commit. Failed outbox items remain visible and retryable.
+Local writes are durable before success is shown. Master Gardu materialization uses an atomic snapshot merge: incoming rows are upserted, stale rows without pending or conflict outbox edits may be removed, pending and conflict rows are preserved, and pending JSON patches are replayed before commit. Failed outbox items remain visible and retryable. Snapshot deletion and patch replay always use the composite `(ulp, gardu)` identity.
 
 ### Berita Acara
 
@@ -62,14 +64,15 @@ The server authenticates the caller, verifies same-ULP access, resolves exactly 
 - **FR-14:** Plaintext password verification is rejected after the explicit migration cutoff.
 - **FR-15:** Master Gardu materialization preserves pending offline edits and replays `gardu_outbox` patches atomically.
 - **FR-16:** Jadwal Padam endpoints enforce same-ULP read/write ownership using effective scope and row resolution by `kode`.
+- **FR-17:** Master Gardu edits require the current per-row server revision; stale revisions are rejected and preserved as non-retryable conflicts.
 
 ## 5. Security, reliability, and definition of done
 
-Fail closed by default. Do not trust client-supplied ULP, role, ownership, identifiers, or URLs without server-side resolution. Do not log secrets or tokens. Use locks for atomic identifiers, bounded retry for queues, and preserve failed records and audit history. Password migration requires a verified backup/version-history point. Master snapshot replacement must not discard pending local edits.
+Fail closed by default. Do not trust client-supplied ULP, role, ownership, identifiers, or URLs without server-side resolution. Do not log secrets or tokens. Use locks for atomic identifiers, bounded retry for queues, and preserve failed records and audit history. Password migration requires a verified backup/version-history point. Master snapshot replacement must not discard pending or conflict local edits, and migration must preserve data, defaults, indexes, and composite identity.
 
-Automated acceptance includes the Audit Gate, backend security tests, Flutter analysis/tests/build, query-string rejection, password cutover coverage, Master Gardu pending-edit coverage, Jadwal Padam endpoint-load and ownership coverage, BA ownership/download coverage, account isolation, secure-storage migration, and offline queue tests.
+Automated acceptance includes the Audit Gate, backend security tests, Flutter analysis/tests/build, query-string rejection, password cutover coverage, Master Gardu pending-edit coverage, Master Gardu conflict contract coverage, Jadwal Padam endpoint-load and ownership coverage, BA ownership/download coverage, account isolation, secure-storage migration, and offline queue tests.
 
-Runtime acceptance must cover staging authorization/safe writes, password migration and cutoff, real-device offline Gardu edit followed by fresh Master download and outbox replay, cross-ULP Jadwal Padam read/write rejection, restart/retry, account switching, token expiry, and secure-storage behavior. A change is done only when implementation, docs, focused/full tests, CI, deployed-runtime evidence, and real-device evidence are complete.
+Runtime acceptance must cover staging authorization/safe writes, password migration and cutoff, real-device offline Gardu edit followed by fresh Master download and outbox replay, two-device stale-edit conflict detection, cross-ULP Jadwal Padam read/write rejection, restart/retry, account switching, token expiry, and secure-storage behavior. A change is done only when implementation, docs, focused/full tests, CI, deployed-runtime evidence, and real-device evidence are complete.
 
 ## 6. Delivery status
 
@@ -91,6 +94,7 @@ Runtime acceptance must cover staging authorization/safe writes, password migrat
 - **H-06/T-10, PR #26:** 30-day absolute and 7-day idle device-token expiry merged as `d59c4f3f5695ac7e8838b4aa475826203adeeef3`; staging/real-device acceptance pending.
 - **H-08, PR #27:** Time-limited password plaintext cutover merged as `b46c8775bef39b28fae6fd74c7cdc45c300b0110`; staging migration and cutoff evidence pending.
 - **C-05/T-06, PR #28:** Atomic Master Gardu snapshot materialization merged as `66f272eb1799fe8b5220cb0e3db73f72730b5f46`; real-device preservation and sign-off pending.
-- **T-08/H-04, PR #29:** Jadwal Padam final ULP ownership overlay merged as `b15febf7523e4bdb49b645a12c2510f6b1cec76d` on 29 September 2026. It covers master/list/calendar/Master Beban/save/update/status/delete/WhatsApp endpoints, derives effective scope with `ulpScope_`, checks target ownership with `barisUlpCocok_`, validates selected master ownership, requires JSON-body tokens, and fixes loader dependencies. Endpoint load-contract and all CI checks are green. Cross-ULP staging, real-device validation, production deployment, and sign-off remain pending.
+- **T-08/H-04, PR #29:** Jadwal Padam final ULP ownership overlay merged as `b15febf7523e4bdb49b645a12c2510f6b1cec76d` on 29 September 2026. Cross-ULP staging, real-device validation, production deployment, and sign-off remain pending.
+- **T-09/H-05, PR #30:** Optimistic concurrency for Master Gardu merged as `0c75ae2b8fc7bf707778ad01f77bd2d5aa6545df` on 29 September 2026. It adds per-row server revisions, stale-edit rejection, conflict-preserving outbox behavior, normalized `(ulp, gardu)` mobile keys, scoped snapshot materialization, explicit legacy SQLite table rebuilds that preserve schema constraints/defaults/indexes, and removal of the UI fallback that could display unscoped cache rows. Two-device real-device conflict validation, conflict UI end-to-end acceptance, staging validation, production deployment, and sign-off remain pending.
 
 **Overall:** Code remediations are merged, but runtime acceptance is incomplete. The system is not production-ready until the documented staging and real-device evidence exists.
