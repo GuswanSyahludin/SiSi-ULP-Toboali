@@ -105,6 +105,11 @@ class AppDatabase extends _$AppDatabase {
         'CREATE INDEX IF NOT EXISTS idx_sync_staging_dataset ON sync_download_staging(dataset)');
   }
 
+  Future<void> _ensureGarduRevisionTable() async {
+    await customStatement(
+        'CREATE TABLE IF NOT EXISTS gardu_server_revision (gardu TEXT PRIMARY KEY NOT NULL, ulp TEXT NOT NULL DEFAULT "", revision INTEGER NOT NULL DEFAULT 0)');
+  }
+
   Future<void> _ensureTeknikToTables() async {
     await customStatement(
         'CREATE TABLE IF NOT EXISTS teknik_to_cache (kode_pekerjaan TEXT NOT NULL, mode TEXT NOT NULL, tanggal TEXT NOT NULL DEFAULT "", payload TEXT NOT NULL, updated_at TEXT NOT NULL, PRIMARY KEY (kode_pekerjaan, mode))');
@@ -121,6 +126,7 @@ class AppDatabase extends _$AppDatabase {
         beforeOpen: (_) async {
           await _ensureTeknikToTables();
           await _ensureLocalMirrorTables();
+          await _ensureGarduRevisionTable();
         },
         onUpgrade: (m, from, to) async {
           var tables = await _tables();
@@ -172,6 +178,7 @@ class AppDatabase extends _$AppDatabase {
             if (!tables.contains('list_temuan'))
               await m.createTable(listTemuans);
           }
+          await _ensureGarduRevisionTable();
         },
       );
 }
