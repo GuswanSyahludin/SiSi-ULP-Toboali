@@ -2,31 +2,17 @@
 var T09_MASTER_GARDU_REV_PREFIX = "SISI_MASTER_GARDU_REV|";
 
 function _t09RevisionKey_(ulp, gardu) {
-  return (
-    T09_MASTER_GARDU_REV_PREFIX +
+  return T09_MASTER_GARDU_REV_PREFIX +
     String(ulp || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "_") +
-    "|" +
-    String(gardu || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "_")
-  );
+    "|" + String(gardu || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "_");
 }
-
 function _t09Revision_(ulp, gardu) {
   try {
-    return Number(
-      PropertiesService.getScriptProperties().getProperty(
-        _t09RevisionKey_(ulp, gardu),
-      ) || 0,
-    );
-  } catch (e) {
-    return 0;
-  }
+    return Number(PropertiesService.getScriptProperties().getProperty(_t09RevisionKey_(ulp, gardu)) || 0);
+  } catch (e) { return 0; }
 }
-
 function _t09SetRevision_(ulp, gardu, revision) {
-  PropertiesService.getScriptProperties().setProperty(
-    _t09RevisionKey_(ulp, gardu),
-    String(revision),
-  );
+  PropertiesService.getScriptProperties().setProperty(_t09RevisionKey_(ulp, gardu), String(revision));
 }
 
 var _t09GetMasterOriginal_ = getMasterGarduMobile;
@@ -44,27 +30,31 @@ getMasterGarduMobile = function (token, ulpDiminta) {
 
 var _t09UpdateMasterOriginal_ = updateMasterGarduMobile;
 updateMasterGarduMobile = function (token, payload) {
-  payload = payload || {};
-  var gardu = String(payload.gardu || "").trim();
-  var ulp = String(payload.ulp || "").trim();
-  var expected = Number(payload.serverRevision);
-  if (!isFinite(expected) || expected < 0) expected = 0;
-  var current = _t09Revision_(ulp, gardu);
-  if (expected !== current) {
-    return {
-      success: false,
-      conflict: true,
-      code: "MASTER_GARDU_CONFLICT",
-      serverRevision: current,
-      message:
-        "Data Gardu sudah berubah di perangkat lain. Muat ulang Master Gardu sebelum mengirim edit.",
-    };
+  if (typeof withLock_ !== "function") {
+    return { success: false, message: "Lock otorisasi tidak tersedia; update Gardu ditolak." };
   }
-  var result = _t09UpdateMasterOriginal_(token, payload);
-  if (!result || result.success !== true) return result;
-  var next = current + 1;
-  _t09SetRevision_(ulp, gardu, next);
-  result.serverRevision = next;
-  result.conflict = false;
-  return result;
+  payload = payload || {};
+  return withLock_(function () {
+    var gardu = String(payload.gardu || "").trim();
+    var ulp = String(payload.ulp || "").trim();
+    var expected = Number(payload.serverRevision);
+    if (!isFinite(expected) || expected < 0) expected = 0;
+    var current = _t09Revision_(ulp, gardu);
+    if (expected !== current) {
+      return {
+        success: false,
+        conflict: true,
+        code: "MASTER_GARDU_CONFLICT",
+        serverRevision: current,
+        message: "Data Gardu sudah berubah di perangkat lain. Muat ulang Master Gardu sebelum mengirim edit.",
+      };
+    }
+    var result = _t09UpdateMasterOriginal_(token, payload);
+    if (!result || result.success !== true) return result;
+    var next = current + 1;
+    _t09SetRevision_(ulp, gardu, next);
+    result.serverRevision = next;
+    result.conflict = false;
+    return result;
+  }, 30000);
 };

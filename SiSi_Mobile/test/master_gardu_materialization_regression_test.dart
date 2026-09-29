@@ -10,9 +10,10 @@ void main() {
     expect(source, contains('final pending = await antrean();'));
     expect(source, contains('pendingGardus'));
     expect(source, contains('_replayPatch(row)'));
-    expect(source, contains('Never do a full-table delete'));
+    expect(source, contains('if (!incomingGardus.contains(row.gardu)'));
+    expect(source, contains('!pendingGardus.contains(row.gardu)'));
     expect(source, isNot(contains('delete(masterGardus).go()')));
-    expect(source, contains("UPDATE master_gardu SET"));
+    expect(source, contains('UPDATE master_gardu SET'));
   });
 
   test('pending rows are protected when absent from a new snapshot', () {
