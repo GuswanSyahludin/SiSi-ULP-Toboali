@@ -31,6 +31,7 @@ const resetReplacement = [
   '    PropertiesService.getScriptProperties().setProperty("SISI_PW_MIGRATION_STARTED_AT", String(now));',
   '    PropertiesService.getScriptProperties().setProperty("SISI_PW_PLAINTEXT_CUTOFF_AT", String(now + 7 * 86400000));',
   '    PropertiesService.getScriptProperties().setProperty("SISI_PW_CUTOVER_LOCKED", "0");',
+  '    PropertiesService.getScriptProperties().setProperty("SISI_WEBHOOK_TS_MODE", "warn");',
   '  `);',
   '  const migrasi = ctx.call("doLogin", ["superuser", "RahasiaSuper123"]);',
   '  if (migrasi.ok && migrasi.value && migrasi.value.token) {',
