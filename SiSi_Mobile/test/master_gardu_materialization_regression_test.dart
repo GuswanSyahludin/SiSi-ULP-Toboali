@@ -7,7 +7,7 @@ void main() {
     final source =
         File('lib/db/daos/master_gardu_dao.dart').readAsStringSync();
 
-    expect(source, contains('final pending = await antrean();'));
+    expect(source, contains('final pending = await antrean(includeConflict: true);'));
     expect(source, contains('final pendingKeys ='));
     expect(source, contains('final incomingKeys ='));
     expect(source, contains('_replayPatch(row)'));
@@ -23,6 +23,7 @@ void main() {
     final source =
         File('lib/db/daos/master_gardu_dao.dart').readAsStringSync();
 
+    expect(source, contains('final pending = await antrean(includeConflict: true);'));
     expect(source, contains('final pendingKeys ='));
     expect(source, contains('final incomingKeys ='));
     expect(source, contains('!incomingKeys.contains(_key(row.ulp, row.gardu))'));
