@@ -41,11 +41,7 @@ class MasterGarduDao extends DatabaseAccessor<AppDatabase>
           final value = revision['serverRevision'];
           final parsed = value is int ? value : int.tryParse('$value');
           if (parsed == null || parsed < 0) continue;
-          await setServerRevision(
-            gardu,
-            '${revision['ulp'] ?? ''}'.trim(),
-            parsed,
-          );
+          await setServerRevision(gardu, '${revision['ulp'] ?? ''}'.trim(), parsed);
         }
       });
 
