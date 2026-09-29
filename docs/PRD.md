@@ -6,7 +6,7 @@
 **Repository:** `GuswanSyahludin/SiSi-ULP-Toboali`  
 **Primary operating scope:** Internal ULP Toboali operations  
 **Audit findings and remediation tasks:** `docs/SECURITY-AUDIT-STATUS.md`  
-**Last updated:** 29 September 2026, 19:27 WIB
+**Last updated:** 29 September 2026, 20:01 WIB
 
 ## 1. Product contract
 
@@ -37,6 +37,7 @@ The system is fail-closed. Foreign, blank, duplicate, unresolved, or ambiguous o
 - Login failures use a generic response, and supplied device/client identifiers receive an additional device-level throttle.
 - AppSheet webhook timestamps are enforced by default in production to prevent replay; legacy warning-mode fixtures opt in explicitly.
 - The mobile API deployment URL is build-time configurable with `SISI_API_URL`; no production token or signing material is committed.
+- Main-branch merges require live-verifiable security and release gates, including backend, Flutter, and auth-transport checks, review approval, stale-review dismissal, administrator enforcement, disabled force-push/deletion, and conversation resolution.
 
 ## 3. Core workflows
 
@@ -80,6 +81,7 @@ The server authenticates the caller, verifies same-ULP access, resolves exactly 
 - **FR-20:** Production webhook requests require a valid timestamp within the replay-protection window.
 - **FR-21:** Login throttling includes the supplied device/client identifier, and authentication errors do not reveal account existence.
 - **FR-22:** Mobile builds can target approved staging or production deployments through `SISI_API_URL`.
+- **FR-23:** The live `main` branch protection configuration is auditable and must enforce the required security/release gates before merge.
 
 ## 5. Security, reliability, and definition of done
 
@@ -114,5 +116,6 @@ Runtime acceptance must cover staging authorization/safe writes, mobile ROW inva
 - **T-11/H-07, PR #31:** Private-by-default watermark and inspection photos merged as `de0f532ffbfbc3487490d256037b4861b204edff` on 29 September 2026. It forces private Drive ACLs, sends `makePublic: false` to the watermark engine, adds authenticated same-ULP `getFotoPrivatT11` retrieval, and wires the privacy overlay last. Existing public-file ACL rotation, staging, real-device access validation, and production sign-off remain pending.
 - **T-07/H-03, PR #32:** Mobile ROW safe-write boundary merged as `8d88970d6ef0b52549e26c8b84d9bbfe862fecb4` on 29 September 2026. It adds fail-closed session/ULP authorization, text sanitization, coordinate and diameter validation, lock-protected append/enqueue, and username-scoped idempotency replay. Staging concurrency, retry behavior, real-device validation, client payload compatibility, and production sign-off remain pending.
 - **T-14/T-15/T-18/T-21/T-22/T-24, PR #35:** Source-only hardening batch merged as `28c2849750a2355c9e0c734c98dfe0adc4b4dc83` on 29 September 2026. It adds device/client login throttling, generic login failures, production-default webhook timestamp enforcement, build-time mobile API configuration, mobile README/release guidance, debug hygiene, and deployment overlay ordering. Automated backend, query-string, Flutter analyze/compile, and Flutter debug-build checks are green; staging, deployed-runtime, compatibility, and real-device evidence remain pending.
+- **T-29, PR #36:** Branch-protection audit tooling merged as `0b17197f84a4d2ad6dcd5eef9d71a905a964bd5c` on 29 September 2026. It adds `scripts/verify_branch_protection.py` and `docs/GITHUB-BRANCH-PROTECTION.md` to verify live required checks, review policy, stale-review dismissal, admin enforcement, force-push/deletion settings, and conversation resolution. The source/CI portion is complete; the live ruleset result and evidence capture remain pending.
 
-**Overall:** Code remediations are merged, including PR #35. Runtime acceptance is incomplete. The system is not production-ready until the documented staging, ACL rotation, concurrency/retry, client compatibility, and real-device evidence exists.
+**Overall:** Code remediations are merged, including PR #36. Runtime acceptance and live branch-protection verification are incomplete. The system is not production-ready until the documented staging, ACL rotation, concurrency/retry, client compatibility, real-device, and GitHub ruleset evidence exists.
