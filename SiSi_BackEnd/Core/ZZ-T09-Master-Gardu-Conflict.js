@@ -3,16 +3,17 @@ var T09_MASTER_GARDU_REV_PREFIX = "SISI_MASTER_GARDU_REV|";
 
 function _t09RevisionKey_(ulp, gardu) {
   return T09_MASTER_GARDU_REV_PREFIX +
-    String(ulp || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "_") +
-    "|" + String(gardu || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "_");
+    encodeURIComponent(String(ulp || "").trim().toLowerCase()) +
+    "|" + encodeURIComponent(String(gardu || "").trim().toLowerCase());
 }
 function _t09Revision_(ulp, gardu) {
   try {
-    return Number(PropertiesService.getScriptProperties().getProperty(_t09RevisionKey_(ulp, gardu)) || 0);
+    var value = Number(PropertiesService.getScriptProperties().getProperty(_t09RevisionKey_(ulp, gardu)) || 0);
+    return isFinite(value) && value >= 0 ? Math.floor(value) : 0;
   } catch (e) { return 0; }
 }
 function _t09SetRevision_(ulp, gardu, revision) {
-  PropertiesService.getScriptProperties().setProperty(_t09RevisionKey_(ulp, gardu), String(revision));
+  PropertiesService.getScriptProperties().setProperty(_t09RevisionKey_(ulp, gardu), String(Math.max(0, Math.floor(Number(revision) || 0))));
 }
 
 var _t09GetMasterOriginal_ = getMasterGarduMobile;
@@ -34,11 +35,18 @@ updateMasterGarduMobile = function (token, payload) {
     return { success: false, message: "Lock otorisasi tidak tersedia; update Gardu ditolak." };
   }
   payload = payload || {};
+  if (payload.serverRevision === undefined || payload.serverRevision === null ||
+      !/^\d+$/.test(String(payload.serverRevision).trim())) {
+    return {
+      success: false,
+      code: "MASTER_GARDU_REVISION_REQUIRED",
+      message: "Revisi dasar Master Gardu wajib dikirim; muat ulang data sebelum mengedit.",
+    };
+  }
   return withLock_(function () {
     var gardu = String(payload.gardu || "").trim();
     var ulp = String(payload.ulp || "").trim();
     var expected = Number(payload.serverRevision);
-    if (!isFinite(expected) || expected < 0) expected = 0;
     var current = _t09Revision_(ulp, gardu);
     if (expected !== current) {
       return {
