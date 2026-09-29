@@ -25,7 +25,8 @@ function getMasterGarduMobile(token, ulpDiminta) {
     if (raw.indexOf("WO_ROW:") === 0) {
       var woPayload = {};
       try { woPayload = JSON.parse(raw.substring("WO_ROW:".length)); }
-      catch (eWo) { return { success: false, message: "Payload WO ROW tidak valid." }; }
+      catch (eWo) { return { success: false, message: "Payload WO ROW tidak valid." };
+      }
       return typeof woRowMobile_ === "function" ? woRowMobile_(token, woPayload) : { success: false, message: "WO-ROW-Mobile.js belum terpasang." };
     }
     if (raw.indexOf("TEMUAN_TEKNIK:") === 0) {
@@ -70,7 +71,7 @@ function getMasterGarduMobile(token, ulpDiminta) {
     for (var i = 0; i < n; i++) {
       var no = String(ident[i][1] || "").trim(), ulp = String(ident[i][0] || "").trim();
       if (!no || (filter && ulp.toLowerCase() !== filter)) continue;
-      list.push({ ulp: ulp, gardu: no, alamat: ident[i][2], penyulang: ident[i][3], section: ident[i][4], latitude: ident[i][7], longitude: ident[i][8], jenisGardu: ident[i][9], merk: ident[i][10], kapasitasKva: ident[i][11], noSeri: ident[i][12], tahunTrafo: ident[i][13], typeSeal: ident[i][14], merkPhbTr: ident[i][15], nomorSeriPhbTr: ident[i][16], tahunTrafo: ident[i][13], tahunTrafo: ident[i][13], tahunTrafo: ident[i][13], jamUkurWbp: ident[i][18], tanggalPengukuran: ident[i][19], kepemilikan: ident[i][20], beratTrafo: berat[i][0], volumeMinyak: minyak[i][0], wbpRs: wbp[i][0], wbpSt: wbp[i][1], wbpTr: wbp[i][2], wbpRn: wbp[i][3], wbpSn: wbp[i][4], wbpTn: wbp[i][5], wbpR: wbp[i][6], wbpS: wbp[i][7], wbpT: wbp[i][8], wbpN: wbp[i][9], lwbpRs: lwbp[i][0], lwbpSt: lwbp[i][1], lwbpTr: lwbp[i][2], lwbpRn: lwbp[i][3], lwbpSn: lwbp[i][4], lwbpTn: lwbp[i][5], lwbpR: lwbp[i][6], lwbpS: lwbp[i][7], lwbpT: lwbp[i][8], lwbpN: lwbp[i][9], arusMaxPerFasa: arus[i][0], pembebananKva: beban[i][0], pembebananKw: beban[i][1], persentaseBeban: beban[i][2], kategoriBeban: beban[i][3] });
+      list.push({ ulp: ulp, gardu: no, alamat: ident[i][2], penyulang: ident[i][3], section: ident[i][4], latitude: ident[i][7], longitude: ident[i][8], jenisGardu: ident[i][9], merk: ident[i][10], kapasitasKva: ident[i][11], noSeri: ident[i][12], tahunTrafo: ident[i][13], typeSeal: ident[i][14], merkPhbTr: ident[i][15], nomorSeriPhbTr: ident[i][16], jamUkurWbp: ident[i][18], tanggalPengukuran: ident[i][19], kepemilikan: ident[i][20], beratTrafo: berat[i][0], volumeMinyak: minyak[i][0], wbpRs: wbp[i][0], wbpSt: wbp[i][1], wbpTr: wbp[i][2], wbpRn: wbp[i][3], wbpSn: wbp[i][4], wbpTn: wbp[i][5], wbpR: wbp[i][6], wbpS: wbp[i][7], wbpT: wbp[i][8], wbpN: wbp[i][9], lwbpRs: lwbp[i][0], lwbpSt: lwbp[i][1], lwbpTr: lwbp[i][2], lwbpRn: lwbp[i][3], lwbpSn: lwbp[i][4], lwbpTn: lwbp[i][5], lwbpR: lwbp[i][6], lwbpS: lwbp[i][7], lwbpT: lwbp[i][8], lwbpN: lwbp[i][9], arusMaxPerFasa: arus[i][0], pembebananKva: beban[i][0], pembebananKw: beban[i][1], persentaseBeban: beban[i][2], kategoriBeban: beban[i][3] });
     }
     return { success: true, count: list.length, list: list };
   } catch (e) { return { success: false, message: "Master Gardu gagal: " + e.message }; }
