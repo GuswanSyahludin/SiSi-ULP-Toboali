@@ -43,6 +43,7 @@
     "Core/Migrasi-Password.js",
     "Core/ZZZZZZZZZZZZZZZZZZZZZZ-Password-Cutover.js",
     "Core/ZZ-T08-Jadwal-Ownership.js",
-    "Core/ZZ-T09-Master-Gardu-Conflict.js"
+    "Core/ZZ-T09-Master-Gardu-Conflict.js",
+    "Core/ZZ-T11-Photo-Privacy.js"
   ]
 }
