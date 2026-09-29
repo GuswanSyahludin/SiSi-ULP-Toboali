@@ -12,9 +12,25 @@ val localProperties = Properties().apply {
 
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
+val requiredSigningKeys = listOf("keyAlias", "keyPassword", "storeFile", "storePassword")
 val hasReleaseSigning = keystorePropertiesFile.exists()
 if (hasReleaseSigning) {
     keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
+    val missingSigningKeys = requiredSigningKeys.filter { keystoreProperties.getProperty(it).isNullOrBlank() }
+    require(missingSigningKeys.isEmpty()) {
+        "Release signing configuration is incomplete. Missing: ${missingSigningKeys.joinToString(", ")}"
+    }
+    require(rootProject.file(keystoreProperties.getProperty("storeFile")).isFile) {
+        "Release signing keystore does not exist at the configured storeFile"
+    }
+}
+
+// Never allow a release artifact to silently fall back to unsigned output.
+gradle.taskGraph.whenReady {
+    val releaseRequested = allTasks.any { it.name.contains("Release", ignoreCase = true) }
+    if (releaseRequested && !hasReleaseSigning) {
+        error("Release signing is required. Provide a complete key.properties and keystore outside the repository.")
+    }
 }
 
 android {
@@ -39,10 +55,10 @@ android {
     signingConfigs {
         if (hasReleaseSigning) {
             create("release") {
-                keyAlias = keystoreProperties["keyAlias"] as String
-                keyPassword = keystoreProperties["keyPassword"] as String
-                storeFile = file(keystoreProperties["storeFile"] as String)
-                storePassword = keystoreProperties["storePassword"] as String
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
             }
         }
     }
