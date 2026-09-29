@@ -16,7 +16,7 @@
         android:icon="@mipmap/launcher_icon"
         android:allowBackup="false"
         android:fullBackupContent="false"
-        android:dataExtractionRules="@xml/backup_rules">
+        android:dataExtractionRules="@xml/data_extraction_rules">
         <!-- Hanya Maps SDK for Android. Jangan tambahkan Routes, Places,
              Navigation, Geocoding, atau Street View SDK ke aplikasi. -->
         <meta-data
