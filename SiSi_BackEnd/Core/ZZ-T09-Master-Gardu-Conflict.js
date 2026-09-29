@@ -43,11 +43,16 @@ updateMasterGarduMobile = function (token, payload) {
       message: "Revisi dasar Master Gardu wajib dikirim; muat ulang data sebelum mengedit.",
     };
   }
+  var sesi = typeof getSesiByToken === "function" ? getSesiByToken(String(token || "").trim()) : null;
+  var role = sesi ? (typeof _normRole_ === "function" ? _normRole_(sesi.role) : String(sesi.role || "").trim().toLowerCase()) : "";
+  var superUser = role === "SUPER" || role === "super user";
+  var effectiveUlp = superUser
+    ? String(payload.ulp || (sesi && sesi.ulp) || "").trim()
+    : String((sesi && sesi.ulp) || payload.ulp || "").trim();
   return withLock_(function () {
     var gardu = String(payload.gardu || "").trim();
-    var ulp = String(payload.ulp || "").trim();
     var expected = Number(payload.serverRevision);
-    var current = _t09Revision_(ulp, gardu);
+    var current = _t09Revision_(effectiveUlp, gardu);
     if (expected !== current) {
       return {
         success: false,
@@ -60,7 +65,7 @@ updateMasterGarduMobile = function (token, payload) {
     var result = _t09UpdateMasterOriginal_(token, payload);
     if (!result || result.success !== true) return result;
     var next = current + 1;
-    _t09SetRevision_(ulp, gardu, next);
+    _t09SetRevision_(effectiveUlp, gardu, next);
     result.serverRevision = next;
     result.conflict = false;
     return result;
