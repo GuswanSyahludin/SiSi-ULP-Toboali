@@ -6,7 +6,7 @@
 **Repository:** `GuswanSyahludin/SiSi-ULP-Toboali`  
 **Primary operating scope:** Internal ULP Toboali operations  
 **Audit findings and remediation tasks:** `docs/SECURITY-AUDIT-STATUS.md`  
-**Last updated:** 29 September 2026, 14:25 WIB
+**Last updated:** 29 September 2026, 14:55 WIB
 
 ## 1. Product contract
 
@@ -23,7 +23,9 @@ The system is fail-closed. Foreign, blank, duplicate, unresolved, or ambiguous o
 - Device tokens expire after 30 days absolute or 7 days idle, whichever comes first, forcing fresh login.
 - Password plaintext is accepted only during an explicit single-use migration window capped at 7 days; after cutoff, verification fails closed and requires migration or reset.
 - Password audit/migration requires Super User authorization, and account password writes have no plaintext fallback.
-- Jadwal Padam reads and writes are same-ULP: master, list, calendar, Master Beban, save, update, status, delete, and WhatsApp-text endpoints require the authenticated ULP scope. Foreign, unresolved, duplicate, or ambiguous rows fail closed before side effects.
+- Jadwal Padam reads and writes are same-ULP: master, list, calendar, Master Beban, save, update, status, delete, and WhatsApp-text endpoints require the authenticated ULP scope. Foreign, unresolved, duplicate, or ambiguous rows fail closed before writes.
+- Inspection and watermark photos are private by default. Upload and watermark paths force private Drive ACLs; photo retrieval requires an authenticated session and same-ULP ownership.
+- Existing public-by-link photos require a controlled batch ACL rotation before production sign-off.
 - Master Gardu snapshot materialization upserts fresh data without deleting pending local edits; `gardu_outbox` patches are replayed atomically.
 - Master Gardu identity is scoped by normalized `(ulp, gardu)` in mobile tables, outbox updates, snapshot deletion, patch replay, and revision storage.
 - Master Gardu optimistic concurrency stores a per-row `serverRevision`; stale edits fail with `MASTER_GARDU_CONFLICT` and remain visible as conflict outbox rows.
@@ -65,14 +67,15 @@ The server authenticates the caller, verifies same-ULP access, resolves exactly 
 - **FR-15:** Master Gardu materialization preserves pending offline edits and replays `gardu_outbox` patches atomically.
 - **FR-16:** Jadwal Padam endpoints enforce same-ULP read/write ownership using effective scope and row resolution by `kode`.
 - **FR-17:** Master Gardu edits require the current per-row server revision; stale revisions are rejected and preserved as non-retryable conflicts.
+- **FR-18:** Inspection and watermark photos are private by default and retrievable only through authenticated same-ULP access.
 
 ## 5. Security, reliability, and definition of done
 
-Fail closed by default. Do not trust client-supplied ULP, role, ownership, identifiers, or URLs without server-side resolution. Do not log secrets or tokens. Use locks for atomic identifiers, bounded retry for queues, and preserve failed records and audit history. Password migration requires a verified backup/version-history point. Master snapshot replacement must not discard pending or conflict local edits, and migration must preserve data, defaults, indexes, and composite identity.
+Fail closed by default. Do not trust client-supplied ULP, role, ownership, identifiers, or URLs without server-side resolution. Do not log secrets or tokens. Use locks for atomic identifiers, bounded retry for queues, and preserve failed records and audit history. Password migration requires a verified backup/version-history point. Master snapshot replacement must not discard pending or conflict local edits, and migration must preserve data, defaults, indexes, and composite identity. Photo privacy changes are not production-ready until existing public files are rotated and staging/real-device access tests pass.
 
-Automated acceptance includes the Audit Gate, backend security tests, Flutter analysis/tests/build, query-string rejection, password cutover coverage, Master Gardu pending-edit coverage, Master Gardu conflict contract coverage, Jadwal Padam endpoint-load and ownership coverage, BA ownership/download coverage, account isolation, secure-storage migration, and offline queue tests.
+Automated acceptance includes the Audit Gate, backend security tests, Flutter analysis/tests/build, query-string rejection, password cutover coverage, Master Gardu pending-edit coverage, Master Gardu conflict contract coverage, photo privacy contract coverage, Jadwal Padam endpoint-load and ownership coverage, BA ownership/download coverage, account isolation, secure-storage migration, and offline queue tests.
 
-Runtime acceptance must cover staging authorization/safe writes, password migration and cutoff, real-device offline Gardu edit followed by fresh Master download and outbox replay, two-device stale-edit conflict detection, cross-ULP Jadwal Padam read/write rejection, restart/retry, account switching, token expiry, and secure-storage behavior. A change is done only when implementation, docs, focused/full tests, CI, deployed-runtime evidence, and real-device evidence are complete.
+Runtime acceptance must cover staging authorization/safe writes, password migration and cutoff, authenticated photo retrieval and wrong-ULP/public-link rejection, controlled public-file ACL rotation, real-device offline Gardu edit followed by fresh Master download and outbox replay, two-device stale-edit conflict detection, cross-ULP Jadwal Padam read/write rejection, restart/retry, account switching, token expiry, and secure-storage behavior. A change is done only when implementation, docs, focused/full tests, CI, deployed-runtime evidence, and real-device evidence are complete.
 
 ## 6. Delivery status
 
@@ -96,5 +99,6 @@ Runtime acceptance must cover staging authorization/safe writes, password migrat
 - **C-05/T-06, PR #28:** Atomic Master Gardu snapshot materialization merged as `66f272eb1799fe8b5220cb0e3db73f72730b5f46`; real-device preservation and sign-off pending.
 - **T-08/H-04, PR #29:** Jadwal Padam final ULP ownership overlay merged as `b15febf7523e4bdb49b645a12c2510f6b1cec76d` on 29 September 2026. Cross-ULP staging, real-device validation, production deployment, and sign-off remain pending.
 - **T-09/H-05, PR #30:** Optimistic concurrency for Master Gardu merged as `0c75ae2b8fc7bf707778ad01f77bd2d5aa6545df` on 29 September 2026. It adds per-row server revisions, stale-edit rejection, conflict-preserving outbox behavior, normalized `(ulp, gardu)` mobile keys, scoped snapshot materialization, explicit legacy SQLite table rebuilds that preserve schema constraints/defaults/indexes, and removal of the UI fallback that could display unscoped cache rows. Two-device real-device conflict validation, conflict UI end-to-end acceptance, staging validation, production deployment, and sign-off remain pending.
+- **T-11/H-07, PR #31:** Private-by-default watermark and inspection photos merged as `de0f532ffbfbc3487490d256037b4861b204edff` on 29 September 2026. It forces private Drive ACLs, sends `makePublic: false` to the watermark engine, adds authenticated same-ULP `getFotoPrivatT11` retrieval, and wires the privacy overlay last. Existing public-file ACL rotation, staging, real-device access validation, and production sign-off remain pending.
 
-**Overall:** Code remediations are merged, but runtime acceptance is incomplete. The system is not production-ready until the documented staging and real-device evidence exists.
+**Overall:** Code remediations are merged, but runtime acceptance is incomplete. The system is not production-ready until the documented staging, ACL rotation, and real-device evidence exists.
