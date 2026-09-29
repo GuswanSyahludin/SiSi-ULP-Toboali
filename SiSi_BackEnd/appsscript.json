@@ -41,6 +41,7 @@
     "Core/ZZZZZZZZZZZZZZZZZZZZ-Dispatch-Final-Guard.js",
     "Core/ZZZZZZZZZZZZZZZZZZZZZ-Device-Token-TTL.js",
     "Core/Migrasi-Password.js",
-    "Core/ZZZZZZZZZZZZZZZZZZZZZZ-Password-Cutover.js"
+    "Core/ZZZZZZZZZZZZZZZZZZZZZZ-Password-Cutover.js",
+    "Core/ZZ-T08-Jadwal-Ownership.js"
   ]
 }
