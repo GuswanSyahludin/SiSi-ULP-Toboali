@@ -11,6 +11,7 @@ const repo = fs.readFileSync(path.join(root, 'SiSi_Mobile/lib/db/repositories/ma
 const materializer = fs.readFileSync(path.join(root, 'SiSi_Mobile/lib/db/repositories/local_master_materializer.dart'), 'utf8');
 const dao = fs.readFileSync(path.join(root, 'SiSi_Mobile/lib/db/daos/master_gardu_dao.dart'), 'utf8');
 const database = fs.readFileSync(path.join(root, 'SiSi_Mobile/lib/db/app_database.dart'), 'utf8');
+const screen = fs.readFileSync(path.join(root, 'SiSi_Mobile/lib/screens/gardu_screen.dart'), 'utf8');
 const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
 
 assert.match(conflict, /serverRevision/);
@@ -22,12 +23,18 @@ assert.match(conflict, /serverRevision = next/);
 assert.match(conflict, /encodeURIComponent/);
 assert.match(conflict, /getMasterGarduMobile = function/);
 assert.match(conflict, /updateMasterGarduMobile = function/);
-assert.match(gateway, /serverRevision: revision/);
+assert.match(gateway, /serverRevision: serverRevision/);
+assert.match(gateway, /tahunPhbTr/);
 assert.match(repo, /serverRevision/);
+assert.match(repo, /tahunPhbTr/);
 assert.match(repo, /gantiSemua\(rows, revisions: revisions\)/);
 assert.match(repo, /serverRevision\(asli\.gardu, ulp: asli\.ulp\)/);
+assert.match(materializer, /tahunPhbTr/);
 assert.match(materializer, /gantiSemua\(rows, revisions: revisions\)/);
+assert.match(dao, /tahunPhbTr/);
 assert.match(dao, /status\.equals\('konflik'\)\.not\(\)/);
 assert.match(database, /PRIMARY KEY \(ulp, gardu\)/);
+assert.match(screen, /conflict/);
+assert.match(screen, /perubahan Gardu konflik/);
 assert.match(packageJson.scripts.test, /t09-master-gardu-conflict\.test\.cjs/);
 console.log('T-09 Master Gardu conflict contract passed.');
