@@ -1,6 +1,6 @@
 # SiSi ULP Toboali: Audit dan Status Remediasi
 
-_Terakhir diperbarui: 29 September 2026 15:25 WIB · T-07/H-03 MERGED in PR #32; staging, client compatibility, real-device validation, and production sign-off remain pending_
+_Terakhir diperbarui: 29 September 2026 19:27 WIB · PR #35 MERGED; staging, client compatibility, real-device validation, and production sign-off remain pending_
 
 File ini adalah satu-satunya tempat mencatat temuan audit, status perbaikan, dan task remediasi SiSi.
 
@@ -19,8 +19,42 @@ File ini adalah satu-satunya tempat mencatat temuan audit, status perbaikan, dan
 | T-08/H-04 Jadwal Padam ownership overlay | ✅ MERGED | b15febf7523e4bdb49b645a12c2510f6b1cec76d |
 | T-09/H-05 Master Gardu conflict detection and scoped identity | ✅ MERGED | 0c75ae2b8fc7bf707778ad01f77bd2d5aa6545df |
 | T-07/H-03 Mobile ROW safe-write boundary | ✅ MERGED | 8d88970d6ef0b52549e26c8b84d9bbfe862fecb4 |
+| T-14/T-15/T-18/T-21/T-22/T-24 Source-only hardening batch | ✅ MERGED | 28c2849750a2355c9e0c734c98dfe0adc4b4dc83 |
 
 **Overall:** Critical remediation code merged; staging, client compatibility, production deployment, and real-device evidence remain open. **Security posture:** remediations merged, runtime acceptance incomplete.
+
+## T-14/T-15/T-18/T-21/T-22/T-24: Source-only hardening batch
+
+### Completion: ✅ Merged, runtime acceptance pending
+
+**PR:** [#35](https://github.com/GuswanSyahludin/SiSi-ULP-Toboali/pull/35)  
+**Merged commit:** `28c2849750a2355c9e0c734c98dfe0adc4b4dc83`  
+**Merged:** 29 September 2026
+
+### Scope and contract
+
+- T-14 adds a device/client identifier throttle for login attempts when the client supplies an identifier. The existing username controls remain in place.
+- T-15 normalizes known unknown-user and wrong-password responses to `Username atau password salah.` so account existence is not disclosed by `doLogin`.
+- T-18 sets production webhook timestamp validation to `enforce`; only the legacy synthetic fixture explicitly opts into `warn` compatibility mode.
+- T-21/T-24 refresh mobile documentation, release checks, debug hygiene, and deployment overlay ordering.
+- T-22 makes the mobile API deployment URL build-time configurable via `SISI_API_URL` while retaining the checked-in internal default.
+- The final overlay is loaded last in both `.clasp.json` and `appsscript.json`.
+
+### Automated validation
+
+- Backend syntax/security tests: green.
+- Query-string token rejection: green.
+- Flutter analyze/compile: green.
+- Flutter analyze/debug build: green.
+- The replacement PR #34 was closed as superseded and was not merged; its dirty, high-churn diff remains excluded from `main`.
+
+### Runtime acceptance pending
+
+- Validate device/client throttle behavior and recovery in isolated staging without locking out unrelated users.
+- Validate AppSheet timestamp enforcement with production-shaped signed requests and reject stale/replayed timestamps.
+- Validate staging and real-device mobile builds using explicit approved `SISI_API_URL` values.
+- Confirm deployed overlay order and endpoint behavior after Apps Script deployment; do not treat local CI as deployed-runtime evidence.
+- Production deployment and sign-off remain pending.
 
 ## T-07/H-03: Mobile ROW safe-write boundary
 
@@ -107,10 +141,10 @@ The overlay covers `getJadwalPadamMaster`, `getJadwalPadamList`, `getJadwalPadam
 
 ## Cumulative security coverage
 
-- ✅ Top-level guards, ULP scoping, token transport rejection, device expiry, password cutoff, Master Gardu materialization safety, Master Gardu conflict detection, Jadwal Padam ownership enforcement, and mobile ROW safe-write controls are merged.
+- ✅ Top-level guards, ULP scoping, token transport rejection, device expiry, password cutoff, Master Gardu materialization safety, Master Gardu conflict detection, Jadwal Padam ownership enforcement, mobile ROW safe-write controls, login hardening, webhook replay enforcement, and configurable mobile endpoint selection are merged.
 - ✅ T-09 covers per-row server revision checks, composite mobile identity, scoped snapshot deletion, conflict-row preservation, safe legacy table reconstruction, and no unscoped UI fallback.
 - ✅ T-07 covers the mobile ROW authorization, validation, sanitization, lock, and idempotency boundary.
-- ⏳ Runtime staging and real-device evidence remains open for H-03/T-07, H-08, C-05, T-05, H-06, T-08, and T-09.
+- ⏳ Runtime staging and real-device evidence remains open for H-03/T-07, H-08, C-05, T-05, H-06, T-08, T-09, and the PR #35 hardening batch.
 
 ## Remaining open items
 
@@ -121,6 +155,7 @@ The overlay covers `getJadwalPadamMaster`, `getJadwalPadamList`, `getJadwalPadam
 5. 🟡 H-06 real-device expiry, forced login, secure-storage clearing, and cleanup evidence.
 6. 🟡 T-08 cross-ULP staging, same-ULP real-device read/write, duplicate-code rejection, and production sign-off.
 7. 🟡 T-09 two-device conflict behavior, conflict UI, upgraded-database migration evidence, staging validation, and production sign-off.
+8. 🟡 T-14/T-15/T-18/T-21/T-22/T-24 staging, deployed-runtime verification, client compatibility, and real-device evidence.
 
 ## Monitoring checklist
 
@@ -131,6 +166,8 @@ The overlay covers `getJadwalPadamMaster`, `getJadwalPadamList`, `getJadwalPadam
 - [x] PR #29 merged with all CI checks green, including overlay and endpoint load-contract checks.
 - [x] PR #30 merged with all CI checks green, including Flutter tests, scoped materialization regression, migration contract, and query-string rejection.
 - [x] PR #32 merged with backend syntax/security, Flutter analyze/compile, query-string rejection, and T-07/T-11 contract checks green.
+- [x] PR #35 merged with backend/security, query-string, Flutter analyze/compile, and Flutter debug-build checks green.
+- [x] PR #34 closed as superseded by PR #35.
 - [ ] Create verified staging backup/version history before H-08 migration.
 - [ ] Deploy H-06 to isolated staging only.
 - [ ] Verify T-07 mobile ROW invalid/foreign session, formula injection, coordinate/diameter bounds, concurrent append, retry/idempotency, and client payload compatibility.
@@ -138,8 +175,9 @@ The overlay covers `getJadwalPadamMaster`, `getJadwalPadamList`, `getJadwalPadam
 - [ ] Verify C-05 pending-edit preservation and outbox patch replay.
 - [ ] Verify T-09 two-device conflict, upgraded-database migration, and conflict UI behavior.
 - [ ] Verify T-08 cross-ULP staging and real-device read/write behavior.
+- [ ] Verify PR #35 device throttle, webhook replay window, deployment endpoint selection, and debug hygiene in staging/real devices.
 - [ ] Update runbook after staging evidence.
 
 ## Kesimpulan
 
-T-07/H-03 code remediation is merged and all automated checks are green. Staging authorization, concurrent append/retry, client compatibility, real-device validation, production deployment, and production sign-off remain pending; T-07 is not production-ready. Other merged remediations remain operationally open until their documented runtime evidence is recorded.
+PR #35 hardening code is merged and all automated checks are green. Staging authorization, deployed-runtime verification, concurrent append/retry, client compatibility, real-device validation, production deployment, and production sign-off remain pending; PR #35 is not production-ready. Other merged remediations remain operationally open until their documented runtime evidence is recorded.
