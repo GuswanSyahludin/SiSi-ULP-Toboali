@@ -1,174 +1,87 @@
 # SiSi ULP Toboali: Audit dan Status Remediasi
 
-_Terakhir diperbarui: 29 September 2026 00:30 WIB · C-05 COMPLETE in PR #28; real-device acceptance and production sign-off remain pending_
+_Terakhir diperbarui: 29 September 2026 08:20 WIB · T-08/H-04 MERGED in PR #29; cross-ULP staging, real-device acceptance, and production sign-off remain pending_
 
-File ini adalah **satu-satunya** tempat mencatat temuan audit, status perbaikan, dan task remediasi SiSi.
-
----
+File ini adalah satu-satunya tempat mencatat temuan audit, status perbaikan, dan task remediasi SiSi.
 
 ## Status Ringkas
 
-| Task | Deskripsi | Status | Commits |
-|------|-----------|--------|---------|
-| T-01 | C-03: Token removal dari URL web | ✅ MERGED | bbea500 |
-| T-02 | H-01: Query string token rejection | ✅ MERGED | 38279b2 |
-| T-03 | C-02 Phase 1-2: Delta sync ULP scoping | ✅ MERGED | e79b2fc, 2c966e1 |
-| T-04 | C-04: Guard enforcement top-level (16 functions) | ✅ MERGED | d76ce5c, 855e276, 18e3df7 |
-| C-01 | Master Gardu edit regression | ✅ MERGED | 35806d2 |
-| H-02/T-05 | Master sync timeout, dispatch hardening, batch snapshots | ✅ MERGED | 6c29b7c |
-| H-07 | Watermark foto guard enforcement | ✅ MERGED | 88eb6a0 |
-| **H-06/T-10** | **Device-token absolute/idle expiry and scheduled cleanup** | **✅ MERGED** | **d59c4f3** |
-| H-08 | Password plaintext tanpa time limit | ✅ MERGED | b46c8775bef39b28fae6fd74c7cdc45c300b0110 |
-| C-05 | Materialisasi data deletion | ✅ MERGED | 66f272eb1799fe8b5220cb0e3db73f72730b5f46 |
+| Task | Status | Commit |
+|---|---|---|
+| T-01/T-02 Token exposure/query auth | ✅ MERGED | bbea500, 38279b2 |
+| T-03/T-04 ULP scoping and guards | ✅ MERGED | e79b2fc, 2c966e1, d76ce5c, 855e276, 18e3df7 |
+| C-01 Master Gardu edit regression | ✅ MERGED | 35806d2 |
+| H-02/T-05 Master sync batching and dispatch hardening | ✅ MERGED | 6c29b7c |
+| H-06/T-10 Device-token expiry and cleanup | ✅ MERGED | d59c4f3 |
+| H-07 Watermark access guards | ✅ MERGED | 88eb6a0 |
+| H-08 Password plaintext cutover | ✅ MERGED | b46c8775bef39b28fae6fd74c7cdc45c300b0110 |
+| C-05/T-06 Master Gardu materialization safety | ✅ MERGED | 66f272eb1799fe8b5220cb0e3db73f72730b5f46 |
+| T-08/H-04 Jadwal Padam ownership overlay | ✅ MERGED | b15febf7523e4bdb49b645a12c2510f6b1cec76d |
 
-**Overall:** Critical remediation code merged; staging, production deployment, and real-device evidence remain open.  
-**Security Posture:** 🟡 Remediations merged, runtime acceptance incomplete
+**Overall:** Critical remediation code merged; staging, production deployment, and real-device evidence remain open. **Security posture:** remediations merged, runtime acceptance incomplete.
 
----
+## T-08/H-04: Jadwal Padam final ULP ownership overlay
 
-## H-06/T-10: Device-token lifetime enforcement
+### Completion: ✅ Merged, runtime acceptance pending
 
-### Completion: ✅ Merged, runtime validation pending
-
-**PR:** [#26](https://github.com/GuswanSyahludin/SiSi-ULP-Toboali/pull/26)  
-**Merged commit:** `d59c4f3f5695ac7e8838b4aa475826203adeeef3`  
-**Merged:** 28 September 2026
-
-### Contract
-
-- Absolute TTL: **30 days** from `loginPerangkat` issuance.
-- Idle TTL: **7 days** from `lastSeenAt`.
-- If either limit is exceeded, `cekPerangkat` deletes the device-token record and returns `DEVICE_TOKEN_EXPIRED`.
-- The client clears secure session state and forces `loginPerangkat()` again.
-- No automatic token rotation occurs after expiry.
-- Daily cleanup runs through `harianPusatSiSi`.
-
-### Implementation
-
-- New deterministic TTL compatibility layer stores `expiresAt`, `lastSeenAt`, and legacy-compatible `terakhirDipakai`.
-- Legacy records derive their absolute expiry from `dibuatPada`; records without usable issuance metadata fail closed.
-- Cleanup removes expired or idle records.
-- Flutter clears secure credentials when backend returns an expired, revoked, missing-account, changed-password, or missing-token code.
-- Regression coverage includes issuance metadata, absolute expiry, idle expiry, cleanup, and forced re-login behavior.
-
-### Acceptance still pending
-
-- Deploy to isolated staging only.
-- Validate expiry and forced login on real Android/iOS devices.
-- Confirm secure-storage/session clearing after `DEVICE_TOKEN_EXPIRED`.
-- Verify scheduled daily cleanup is installed and observed in Apps Script logs.
-- Do not call production-ready for H-06 until those evidence items exist.
-
----
-
-## H-07: Watermark Foto Public Access - Guard Enforcement
-
-### Completion: ✅ 4 Guard Enforcement Points (100%)
-
-**Merged:** 27 September 2026  
-**Commit:** 88eb6a0
-
-Watermark creation, URL normalization, sized URL rendering, and ROW URL normalization are guarded with session and ULP checks. Drive sharing remains compatible with AppSheet rendering; endpoint access is fail-closed.
-
----
-
-## H-08: Password plaintext cutover
-
-### Completion: ✅ Merged, runtime migration acceptance pending
-
-**PR:** [#27](https://github.com/GuswanSyahludin/SiSi-ULP-Toboali/pull/27)  
-**Merged commit:** `b46c8775bef39b28fae6fd74c7cdc45c300b0110`  
-**Merged:** 28 September 2026
-
-### Contract and implementation
-
-- Plaintext verification is allowed only inside an explicit, single-use migration window capped at 7 days.
-- Without a valid window, or after its cutoff, plaintext verification fails closed with `PASSWORD_MIGRATION_REQUIRED` at the login boundary.
-- Hash verification remains available after cutoff.
-- Password audit and mass migration require a Super User session.
-- Account creation, reset, and password-change paths fail closed if the hash module is unavailable; no plaintext fallback remains.
-- The emergency plaintext rollback endpoint is blocked permanently.
-- Regression coverage verifies no-window rejection, pre-cutoff compatibility, post-cutoff rejection, hash continuity, authorization, bounded single-use window, and rollback blocking.
-- Automated backend/security and query-string checks passed on the merged PR.
-
-### Runtime migration acceptance still pending
-
-- Isolated staging backup/version-history evidence before writing `db_Users`.
-- Staging audit and dry-run count of remaining plaintext records.
-- Staging batch migration and verification that all eligible records are hashed.
-- Cutoff activation and proof that residual plaintext accounts fail closed and require reset/migration.
-- Post-cutover login, password reset, and account-management smoke tests.
-- Production deployment is not authorized by this change; do not call H-08 production-ready until runtime evidence exists.
-
----
-
-## C-05 / T-06: Master Gardu snapshot materialization safety
-
-### Completion: ✅ Merged, real-device acceptance pending
-
-**PR:** [#28](https://github.com/GuswanSyahludin/SiSi-ULP-Toboali/pull/28)  
-**Merged commit:** `66f272eb1799fe8b5220cb0e3db73f72730b5f46`  
+**PR:** [#29](https://github.com/GuswanSyahludin/SiSi-ULP-Toboali/pull/29)  
+**Merged commit:** `b15febf7523e4bdb49b645a12c2510f6b1cec76d`  
 **Merged:** 29 September 2026
 
-### Contract and implementation
+### Scope and contract
 
-- Fresh Master Gardu snapshots are materialized in one database transaction.
-- Incoming rows are upserted; stale rows are deleted only when they have no pending `gardu_outbox` entry.
-- A pending row absent from the fresh snapshot is preserved rather than deleted.
-- Pending `gardu_outbox` JSON patches are replayed after snapshot upsert and before commit.
-- The previous full-table `delete(masterGardus)` path is removed.
-- Regression coverage checks pending-row protection, stale-row safety, and patch replay; backend and Flutter CI checks passed.
+The overlay covers `getJadwalPadamMaster`, `getJadwalPadamList`, `getJadwalPadamCalendarMonth`, `getJadwalPadamMasterBeban`, `simpanJadwalPadam`, `updateJadwalPadam`, `updateStatusJadwalPadam`, `hapusJadwalPadam`, and `getJadwalPadamWaText`.
 
-### Acceptance still pending
+- Every endpoint derives effective ULP with `ulpScope_(g, ...)`; client-supplied foreign ULP is not trusted.
+- Update, status, and delete resolve the target by `kode` and require `barisUlpCocok_(g, target.ulp)` before writes. Duplicate or ambiguous targets fail closed.
+- Save and update validate selected master Penyulang/Section ownership before the underlying write.
+- The mobile gateway requires a non-empty token in the JSON body; query-string-only authorization is rejected.
+- Loader order is corrected: `Jadwal-Padam-Mobile.js` before the implementation, `Jadwal-Padam-Delete.js` before the overlay, and the overlay last.
+- The endpoint load contract confirms the mobile router and all covered endpoints load without backend errors.
+- Backend/security, query-string rejection, Flutter analyze/compile, debug build, and T-08 regression checks are green.
 
-- On a real Android/iOS device, edit a Gardu while offline.
-- Download a fresh Master Gardu snapshot and verify the local edit remains.
-- Restart or interrupt sync and verify the outbox remains retryable.
-- Send the outbox and verify the server update succeeds without losing the local row.
-- Production deployment and sign-off remain pending; do not call C-05 production-ready.
+### Runtime acceptance pending
 
----
+- Validate cross-ULP reads and writes in isolated staging for every covered endpoint.
+- Validate same-ULP save/update/status/delete and duplicate-code fail-closed behavior.
+- Validate Android/iOS behavior with real sessions and JSON-body tokens.
+- Production deployment and sign-off remain pending; T-08 is not production-ready.
 
-## Cumulative Security Coverage
+## Other merged remediations
 
-- ✅ 16 top-level functions guarded (T-04).
-- ✅ 4 foto access points guarded (H-07).
-- ✅ Token exposure remediated (T-01/T-02).
-- ✅ Delta sync ULP-scoped (T-03).
-- ✅ Master sync batching, recursion prevention, and deterministic load order merged (T-05).
-- ✅ Device-token absolute/idle expiry and cleanup merged (H-06).
-- ✅ Password plaintext cutover merged with a single-use, time-limited migration and fail-closed verification (H-08); runtime migration acceptance remains pending.
-- ✅ C-05/T-06 Master Gardu snapshot materialization merged with atomic upsert, pending-outbox preservation, stale-row deletion safety, and JSON patch replay; real-device acceptance and production sign-off remain pending.
-- ⏳ Staging and real-device evidence remains open for T-05/H-06/C-05.
+- **H-06/T-10:** 30-day absolute and 7-day idle device-token expiry, scheduled cleanup, and forced re-login. Staging and real-device evidence pending.
+- **H-08:** Single-use 7-day password migration window, fail-closed plaintext cutoff, hash-only writes, and blocked plaintext rollback. Staging migration evidence pending.
+- **C-05/T-06:** Atomic Master Gardu upsert, pending-outbox preservation, stale-row safety, and JSON patch replay. Real-device preservation and sign-off pending.
+- **H-02/T-05:** Master sync batching, recursion prevention, and deterministic load order. Staging and real-device acceptance pending.
 
----
+## Cumulative security coverage
 
-## Remaining Open Items
+- ✅ Top-level guards, ULP scoping, token transport rejection, device expiry, password cutoff, Master Gardu materialization safety, and Jadwal Padam ownership enforcement are merged.
+- ✅ T-08 covers all nine Jadwal Padam endpoint boundaries listed above and the mobile router dependency chain.
+- ⏳ Runtime staging and real-device evidence remains open for H-08, C-05, T-05, H-06, and T-08.
 
-1. 🟡 **Runtime migration acceptance**: H-08 staging migration, verified backup, migration cutoff/fail-closed verification, and post-cutover validation.
-2. 🟡 **C-05 real-device acceptance**: Validate pending local edit preservation, atomic `gardu_outbox` JSON patch replay, retry/restart behavior, and production sign-off evidence.
-3. 🟡 **H-02/T-05 QA**: Staging and real-device Master download without retry.
-4. 🟡 **H-06 QA**: Real-device expiry, forced login, secure-storage clearing, and scheduled cleanup evidence.
+## Remaining open items
 
----
+1. 🟡 H-08 staging migration, verified backup, cutoff/fail-closed verification, and post-cutover validation.
+2. 🟡 C-05 real-device pending-edit preservation, outbox replay, retry/restart, and production sign-off.
+3. 🟡 H-02/T-05 staging and real-device Master download without retry.
+4. 🟡 H-06 real-device expiry, forced login, secure-storage clearing, and cleanup evidence.
+5. 🟡 T-08 cross-ULP staging, same-ULP real-device read/write, duplicate-code rejection, and production sign-off.
 
-## Monitoring Checklist
+## Monitoring checklist
 
 - [x] PR #25 merged with CI green.
 - [x] PR #26 merged with CI green.
 - [x] PR #27 merged with automated backend/security and query-string checks green.
 - [x] PR #28 merged with backend, Flutter, and query-string checks green.
+- [x] PR #29 merged with all CI checks green, including overlay and endpoint load-contract checks.
 - [ ] Create verified staging backup/version history before H-08 migration.
 - [ ] Deploy H-06 to isolated staging only.
-- [ ] Observe daily cleanup trigger in Apps Script logs.
 - [ ] Verify real-device expired/idle token behavior.
-- [ ] Verify C-05 real-device pending-edit preservation and `gardu_outbox` patch replay.
+- [ ] Verify C-05 pending-edit preservation and outbox patch replay.
+- [ ] Verify T-08 cross-ULP staging and real-device read/write behavior.
 - [ ] Update runbook after staging evidence.
-
----
 
 ## Kesimpulan
 
-H-08 code remediation is merged and covered by automated tests. It is **not yet production-deployed** and is not closed operationally until staging migration evidence confirms the database is hashed, the cutoff rejects residual plaintext, and reset/migration recovery works. H-06 likewise remains open operationally until staging and real-device evidence confirms expired tokens are rejected and users are forced through fresh device login.
-
-C-05/T-06 code remediation is merged in PR #28 with green automated CI. Real-device acceptance and production sign-off remain pending, so the change is **not production-ready**.
+T-08/H-04 code remediation is merged and all automated checks are green. Cross-ULP staging, real-device acceptance, production deployment, and production sign-off remain pending; T-08 is not production-ready. Other merged remediations remain operationally open until their documented runtime evidence is recorded.
