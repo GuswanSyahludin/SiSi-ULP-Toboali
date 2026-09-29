@@ -1,6 +1,6 @@
 # SiSi ULP Toboali: Audit dan Status Remediasi
 
-_Terakhir diperbarui: 29 September 2026 14:25 WIB · T-09/H-05 MERGED in PR #30; two-device conflict validation, staging, and production sign-off remain pending_
+_Terakhir diperbarui: 29 September 2026 15:25 WIB · T-07/H-03 MERGED in PR #32; staging, client compatibility, real-device validation, and production sign-off remain pending_
 
 File ini adalah satu-satunya tempat mencatat temuan audit, status perbaikan, dan task remediasi SiSi.
 
@@ -18,8 +18,33 @@ File ini adalah satu-satunya tempat mencatat temuan audit, status perbaikan, dan
 | C-05/T-06 Master Gardu materialization safety | ✅ MERGED | 66f272eb1799fe8b5220cb0e3db73f72730b5f46 |
 | T-08/H-04 Jadwal Padam ownership overlay | ✅ MERGED | b15febf7523e4bdb49b645a12c2510f6b1cec76d |
 | T-09/H-05 Master Gardu conflict detection and scoped identity | ✅ MERGED | 0c75ae2b8fc7bf707778ad01f77bd2d5aa6545df |
+| T-07/H-03 Mobile ROW safe-write boundary | ✅ MERGED | 8d88970d6ef0b52549e26c8b84d9bbfe862fecb4 |
 
-**Overall:** Critical remediation code merged; staging, production deployment, and real-device evidence remain open. **Security posture:** remediations merged, runtime acceptance incomplete.
+**Overall:** Critical remediation code merged; staging, client compatibility, production deployment, and real-device evidence remain open. **Security posture:** remediations merged, runtime acceptance incomplete.
+
+## T-07/H-03: Mobile ROW safe-write boundary
+
+### Completion: ✅ Merged, runtime acceptance pending
+
+**PR:** [#32](https://github.com/GuswanSyahludin/SiSi-ULP-Toboali/pull/32)  
+**Merged commit:** `8d88970d6ef0b52549e26c8b84d9bbfe862fecb4`  
+**Merged:** 29 September 2026
+
+### Scope and contract
+
+- `simpanMobileEksekusiRow` now requires `guard_(arguments, { ulp: true })` before the legacy writer runs.
+- Text fields are bounded and passed through `safeCell_`; latitude/longitude and diameter are range-checked before Sheet side effects.
+- Code generation, append, and enqueue/retry handling execute under `withLock_` to prevent concurrent row collisions.
+- A username-scoped idempotency key is persisted in Script Properties; a successful retry returns the original result instead of appending another row.
+- T-07 loads before T-11 so the private-photo wrapper remains outermost and can revoke public ACLs on legacy ROW results.
+- Backend syntax/security, Flutter analyze/compile, query-string rejection, and T-07/T-11 contract tests are green on the merged head.
+
+### Runtime acceptance pending
+
+- Validate invalid session, blank/foreign ULP, malformed payload, coordinate bounds, diameter bounds, and formula/CSV injection rejection in isolated staging.
+- Validate two concurrent append requests produce distinct rows and a repeated idempotency key returns the original result without a duplicate.
+- Confirm the deployed mobile client sends `idempotencyKey` or `clientRequestId`; legacy clients without either key are intentionally rejected.
+- Validate Android/iOS real-device behavior, timeout/retry/restart recovery, and production sign-off only after staging evidence.
 
 ## T-09/H-05: Master Gardu optimistic concurrency and scoped materialization
 
@@ -82,18 +107,20 @@ The overlay covers `getJadwalPadamMaster`, `getJadwalPadamList`, `getJadwalPadam
 
 ## Cumulative security coverage
 
-- ✅ Top-level guards, ULP scoping, token transport rejection, device expiry, password cutoff, Master Gardu materialization safety, Master Gardu conflict detection, and Jadwal Padam ownership enforcement are merged.
+- ✅ Top-level guards, ULP scoping, token transport rejection, device expiry, password cutoff, Master Gardu materialization safety, Master Gardu conflict detection, Jadwal Padam ownership enforcement, and mobile ROW safe-write controls are merged.
 - ✅ T-09 covers per-row server revision checks, composite mobile identity, scoped snapshot deletion, conflict-row preservation, safe legacy table reconstruction, and no unscoped UI fallback.
-- ⏳ Runtime staging and real-device evidence remains open for H-08, C-05, T-05, H-06, T-08, and T-09.
+- ✅ T-07 covers the mobile ROW authorization, validation, sanitization, lock, and idempotency boundary.
+- ⏳ Runtime staging and real-device evidence remains open for H-03/T-07, H-08, C-05, T-05, H-06, T-08, and T-09.
 
 ## Remaining open items
 
-1. 🟡 H-08 staging migration, verified backup, cutoff/fail-closed verification, and post-cutover validation.
-2. 🟡 C-05 real-device pending-edit preservation, outbox replay, retry/restart, and production sign-off.
-3. 🟡 H-02/T-05 staging and real-device Master download without retry.
-4. 🟡 H-06 real-device expiry, forced login, secure-storage clearing, and cleanup evidence.
-5. 🟡 T-08 cross-ULP staging, same-ULP real-device read/write, duplicate-code rejection, and production sign-off.
-6. 🟡 T-09 two-device conflict behavior, conflict UI, upgraded-database migration evidence, staging validation, and production sign-off.
+1. 🟡 H-03/T-07 staging authorization, validation, concurrent append, retry/idempotency, client compatibility, and real-device evidence.
+2. 🟡 H-08 staging migration, verified backup, cutoff/fail-closed verification, and post-cutover validation.
+3. 🟡 C-05 real-device pending-edit preservation, outbox replay, retry/restart, and production sign-off.
+4. 🟡 H-02/T-05 staging and real-device Master download without retry.
+5. 🟡 H-06 real-device expiry, forced login, secure-storage clearing, and cleanup evidence.
+6. 🟡 T-08 cross-ULP staging, same-ULP real-device read/write, duplicate-code rejection, and production sign-off.
+7. 🟡 T-09 two-device conflict behavior, conflict UI, upgraded-database migration evidence, staging validation, and production sign-off.
 
 ## Monitoring checklist
 
@@ -103,8 +130,10 @@ The overlay covers `getJadwalPadamMaster`, `getJadwalPadamList`, `getJadwalPadam
 - [x] PR #28 merged with backend, Flutter, and query-string checks green.
 - [x] PR #29 merged with all CI checks green, including overlay and endpoint load-contract checks.
 - [x] PR #30 merged with all CI checks green, including Flutter tests, scoped materialization regression, migration contract, and query-string rejection.
+- [x] PR #32 merged with backend syntax/security, Flutter analyze/compile, query-string rejection, and T-07/T-11 contract checks green.
 - [ ] Create verified staging backup/version history before H-08 migration.
 - [ ] Deploy H-06 to isolated staging only.
+- [ ] Verify T-07 mobile ROW invalid/foreign session, formula injection, coordinate/diameter bounds, concurrent append, retry/idempotency, and client payload compatibility.
 - [ ] Verify real-device expired/idle token behavior.
 - [ ] Verify C-05 pending-edit preservation and outbox patch replay.
 - [ ] Verify T-09 two-device conflict, upgraded-database migration, and conflict UI behavior.
@@ -113,4 +142,4 @@ The overlay covers `getJadwalPadamMaster`, `getJadwalPadamList`, `getJadwalPadam
 
 ## Kesimpulan
 
-T-09/H-05 code remediation is merged and all automated checks are green. Two-device conflict validation, upgraded-installation migration evidence, cross-ULP staging, real-device acceptance, production deployment, and production sign-off remain pending; T-09 is not production-ready. Other merged remediations remain operationally open until their documented runtime evidence is recorded.
+T-07/H-03 code remediation is merged and all automated checks are green. Staging authorization, concurrent append/retry, client compatibility, real-device validation, production deployment, and production sign-off remain pending; T-07 is not production-ready. Other merged remediations remain operationally open until their documented runtime evidence is recorded.
