@@ -17,7 +17,7 @@ assert.match(privacy, /guard_\(arguments, \{ ulp: true/);
 assert.match(privacy, /barisUlpCocok_\(g, row\.ulp\)/);
 assert.match(privacy, /DriveApp\.Access\.PRIVATE/);
 assert.match(privacy, /apiRouter_ = function/);
-assert.match(privacy, /_uploadFotoTemuan = function/);
+assert.match(privacy, /function\s+_uploadFotoTemuan\s*\(/);
 assert.match(privacy, /simpanMobileEksekusiRow = function/);
 assert.match(privacy, /updateMobileEksekusiRow = function/);
 assert.match(watermark, /makePublic:\s*true/);
