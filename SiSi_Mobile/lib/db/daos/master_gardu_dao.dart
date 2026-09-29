@@ -21,7 +21,8 @@ class MasterGarduDao extends DatabaseAccessor<AppDatabase>
     List<Map<String, dynamic>> revisions = const [],
     String? ulpScope,
   }) => transaction(() async {
-        final pending = await antrean();
+        // Conflict rows are still local edits and must survive a snapshot.
+        final pending = await antrean(includeConflict: true);
         final pendingKeys = pending.map((row) => _key(row.ulp, row.gardu)).toSet();
         final incomingKeys = data
             .map((row) => _key(row.ulp.value, row.gardu.value))
@@ -133,11 +134,15 @@ class MasterGarduDao extends DatabaseAccessor<AppDatabase>
     return q.getSingleOrNull();
   }
 
-  Future<List<GarduOutbox>> antrean() =>
-      (select(garduOutboxes)
-            ..where((t) => t.status.equals('konflik').not())
-            ..orderBy([(t) => OrderingTerm.asc(t.diubahPada)]))
-          .get();
+  Future<List<GarduOutbox>> antrean({bool includeConflict = true}) {
+    final q = select(garduOutboxes);
+    if (!includeConflict) {
+      q.where((t) => t.status.equals('konflik').not());
+    }
+    q.orderBy([(t) => OrderingTerm.asc(t.diubahPada)]);
+    return q.get();
+  }
+
   Stream<List<GarduOutbox>> pantauAntrean() => select(garduOutboxes).watch();
 
   Future<void> simpanEditLokal({required String gardu, required String ulp, required MasterGardusCompanion data, required GarduOutboxesCompanion outbox}) =>

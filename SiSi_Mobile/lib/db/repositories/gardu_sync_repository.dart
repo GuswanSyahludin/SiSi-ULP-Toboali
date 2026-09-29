@@ -23,7 +23,7 @@ class GarduSyncRepository {
     final dao = _db.masterGarduDao;
     var ok = 0, gagal = 0, konflik = 0;
     try {
-      final list = await dao.antrean();
+      final list = await dao.antrean(includeConflict: false);
       for (final o in list) {
         try {
           final raw = Map<String, dynamic>.from(jsonDecode(o.perubahanJson));
