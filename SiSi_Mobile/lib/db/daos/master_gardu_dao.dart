@@ -13,8 +13,10 @@ class MasterGarduDao extends DatabaseAccessor<AppDatabase>
     with _$MasterGarduDaoMixin {
   MasterGarduDao(super.db);
 
-  Future<void> gantiSemua(List<MasterGardusCompanion> data) =>
-      transaction(() async {
+  Future<void> gantiSemua(
+    List<MasterGardusCompanion> data, {
+    List<Map<String, dynamic>> revisions = const [],
+  }) => transaction(() async {
         final pending = await antrean();
         final pendingGardus = pending.map((row) => row.gardu).toSet();
         final incomingGardus = data.map((row) => row.gardu.value).toSet();
@@ -32,6 +34,18 @@ class MasterGarduDao extends DatabaseAccessor<AppDatabase>
         }
         for (final row in pending) {
           await _replayPatch(row);
+        }
+        for (final revision in revisions) {
+          final gardu = '${revision['gardu'] ?? ''}'.trim();
+          if (gardu.isEmpty || !revision.containsKey('serverRevision')) continue;
+          final value = revision['serverRevision'];
+          final parsed = value is int ? value : int.tryParse('$value');
+          if (parsed == null || parsed < 0) continue;
+          await setServerRevision(
+            gardu,
+            '${revision['ulp'] ?? ''}'.trim(),
+            parsed,
+          );
         }
       });
 
@@ -71,10 +85,10 @@ class MasterGarduDao extends DatabaseAccessor<AppDatabase>
     );
   }
 
-  Future<int> serverRevision(String gardu) async {
+  Future<int> serverRevision(String gardu, {String ulp = ''}) async {
     final rows = await customSelect(
-      'SELECT revision FROM gardu_server_revision WHERE gardu=?',
-      variables: [Variable<String>(gardu)],
+      'SELECT revision FROM gardu_server_revision WHERE gardu=? AND ulp=?',
+      variables: [Variable<String>(gardu), Variable<String>(ulp)],
     ).get();
     return rows.isEmpty ? 0 : (rows.first.data['revision'] as int? ?? 0);
   }
@@ -82,7 +96,7 @@ class MasterGarduDao extends DatabaseAccessor<AppDatabase>
   Future<void> setServerRevision(String gardu, String ulp, int revision) async {
     await customStatement(
       'INSERT INTO gardu_server_revision(gardu,ulp,revision) VALUES(?,?,?) '
-      'ON CONFLICT(gardu) DO UPDATE SET ulp=excluded.ulp, revision=excluded.revision',
+      'ON CONFLICT(ulp,gardu) DO UPDATE SET revision=excluded.revision',
       [gardu, ulp, revision],
     );
   }
@@ -106,7 +120,10 @@ class MasterGarduDao extends DatabaseAccessor<AppDatabase>
   Future<MasterGardu?> detail(String nomor) =>
       (select(masterGardus)..where((t) => t.gardu.equals(nomor))).getSingleOrNull();
   Future<List<GarduOutbox>> antrean() =>
-      (select(garduOutboxes)..orderBy([(t) => OrderingTerm.asc(t.diubahPada)])).get();
+      (select(garduOutboxes)
+            ..where((t) => t.status.equals('konflik').not())
+            ..orderBy([(t) => OrderingTerm.asc(t.diubahPada)]))
+          .get();
   Stream<List<GarduOutbox>> pantauAntrean() => select(garduOutboxes).watch();
 
   Future<void> simpanEditLokal({required String gardu, required MasterGardusCompanion data, required GarduOutboxesCompanion outbox}) =>

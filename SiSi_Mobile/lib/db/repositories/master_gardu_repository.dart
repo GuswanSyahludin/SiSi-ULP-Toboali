@@ -14,11 +14,15 @@ class MasterGarduRepository {
       final res = Map<String, dynamic>.from(jsonDecode(r.body));
       if (res['success'] != true) return res;
       final rows = <MasterGardusCompanion>[];
+      final revisions = <Map<String, dynamic>>[];
       for (final raw in List.from(res['list'] ?? [])) {
         final m = Map<String, dynamic>.from(raw);
         if ('${m['gardu']}'.trim().isNotEmpty) rows.add(_c(m));
+        if (m.containsKey('serverRevision')) {
+          revisions.add({'gardu': '${m['gardu'] ?? ''}'.trim(), 'ulp': '${m['ulp'] ?? ''}', 'serverRevision': m['serverRevision']});
+        }
       }
-      await _dao.gantiSemua(rows);
+      await _dao.gantiSemua(rows, revisions: revisions);
       return {'success': true, 'jumlah': rows.length};
     } catch (e) { return {'success': false, 'message': 'Gagal sinkron Master Gardu: $e'}; }
   }
@@ -26,15 +30,15 @@ class MasterGarduRepository {
   MasterGardusCompanion _c(Map<String, dynamic> m) {
     String s(String k) => (m[k] ?? '').toString();
     return MasterGardusCompanion.insert(
-      ulp: Value(s('ulp')), gardu: s('gardu'), alamat: Value(s('alamat')), latitude: Value(s('latitude')), longitude: Value(s('longitude')), penyulang: Value(s('penyulang')), section: Value(s('section')), jenisGardu: Value(s('jenisGardu')), merk: Value(s('merk')), kapasitasKva: Value(s('kapasitasKva')), noSeri: Value(s('noSeri')), tahunTrafo: Value(s('tahunTrafo')), typeSeal: Value(s('typeSeal')), beratTrafo: Value(s('beratTrafo')), volumeMinyak: Value(s('volumeMinyak')), merkPhbTr: Value(s('merkPhbTr')), nomorSeriPhbTr: Value(s('nomorSeriPhbTr')), tahunPhbTr: Value(s('tahunPhbTr')), jamUkurWbp: Value(s('jamUkurWbp')), tanggalPengukuran: Value(s('tanggalPengukuran')), kepemilikan: Value(s('kepemilikan')), wbpRs: Value(s('wbpRs')), wbpSt: Value(s('wbpSt')), wbpTr: Value(s('wbpTr')), wbpRn: Value(s('wbpRn')), wbpSn: Value(s('wbpSn')), wbpTn: Value(s('wbpTn')), wbpR: Value(s('wbpR')), wbpS: Value(s('wbpS')), wbpT: Value(s('wbpT')), wbpN: Value(s('wbpN')), lwbpRs: Value(s('lwbpRs')), lwbpSt: Value(s('lwbpSt')), lwbpTr: Value(s('lwbpTr')), lwbpRn: Value(s('lwbpRn')), lwbpSn: Value(s('lwbpSn')), lwbpTn: Value(s('lwbpTn')), lwbpR: Value(s('lwbpR')), lwbpS: Value(s('lwbpS')), lwbpT: Value(s('lwbpT')), lwbpN: Value(s('lwbpN')), arusMaxPerFasa: Value(s('arusMaxPerFasa')), pembebananKva: Value(s('pembebananKva')), pembebananKw: Value(s('pembebananKw')), persentaseBeban: Value(s('persentaseBeban')), kategoriBeban: Value(s('kategoriBeban')),
+      ulp: Value(s('ulp')), gardu: s('gardu'), alamat: Value(s('alamat')), latitude: Value(s('latitude')), longitude: Value(s('longitude')), penyulang: Value(s('penyulang')), section: Value(s('section')), jenisGardu: Value(s('jenisGardu')), merk: Value(s('merk')), kapasitasKva: Value(s('kapasitasKva')), noSeri: Value(s('noSeri')), tahunTrafo: Value(s('tahunTrafo')), typeSeal: Value(s('typeSeal')), beratTrafo: Value(s('beratTrafo')), volumeMinyak: Value(s('volumeMinyak')), merkPhbTr: Value(s('merkPhbTr')), nomorSeriPhbTr: Value(s('nomorSeriPhbTr')), tahunTrafo: Value(s('tahunTrafo')), jamUkurWbp: Value(s('jamUkurWbp')), tanggalPengukuran: Value(s('tanggalPengukuran')), kepemilikan: Value(s('kepemilikan')), wbpRs: Value(s('wbpRs')), wbpSt: Value(s('wbpSt')), wbpTr: Value(s('wbpTr')), wbpRn: Value(s('wbpRn')), wbpSn: Value(s('wbpSn')), wbpTn: Value(s('wbpTn')), wbpR: Value(s('wbpR')), wbpS: Value(s('wbpS')), wbpT: Value(s('wbpT')), wbpN: Value(s('wbpN')), lwbpRs: Value(s('lwbpRs')), lwbpSt: Value(s('lwbpSt')), lwbpTr: Value(s('lwbpTr')), lwbpRn: Value(s('lwbpRn')), lwbpSn: Value(s('lwbpSn')), lwbpTn: Value(s('lwbpTn')), lwbpR: Value(s('lwbpR')), lwbpS: Value(s('lwbpS')), lwbpT: Value(s('lwbpT')), lwbpN: Value(s('lwbpN')), arusMaxPerFasa: Value(s('arusMaxPerFasa')), pembebananKva: Value(s('pembebananKva')), pembebananKw: Value(s('pembebananKw')), persentaseBeban: Value(s('persentaseBeban')), kategoriBeban: Value(s('kategoriBeban')),
     );
   }
 
   Future<Map<String, dynamic>> editLokal({required MasterGardu asli, required Map<String, dynamic> perubahan, required String username}) async {
     String s(String k) => (perubahan[k] ?? '').toString();
     Value<String> v(String k) => perubahan.containsKey(k) ? Value(s(k)) : const Value.absent();
-    final u = MasterGardusCompanion(alamat: v('alamat'), penyulang: v('penyulang'), section: v('section'), jenisGardu: v('jenisGardu'), merk: v('merk'), kapasitasKva: v('kapasitasKva'), noSeri: v('noSeri'), tahunTrafo: v('tahunTrafo'), typeSeal: v('typeSeal'), beratTrafo: v('beratTrafo'), volumeMinyak: v('volumeMinyak'), merkPhbTr: v('merkPhbTr'), nomorSeriPhbTr: v('nomorSeriPhbTr'), tahunPhbTr: v('tahunPhbTr'), jamUkurWbp: v('jamUkurWbp'), tanggalPengukuran: v('tanggalPengukuran'), kepemilikan: v('kepemilikan'), wbpRs: v('wbpRs'), wbpSt: v('wbpSt'), wbpTr: v('wbpTr'), wbpRn: v('wbpRn'), wbpSn: v('wbpSn'), wbpTn: v('wbpTn'), wbpR: v('wbpR'), wbpS: v('wbpS'), wbpT: v('wbpT'), wbpN: v('wbpN'), lwbpRs: v('lwbpRs'), lwbpSt: v('lwbpSt'), lwbpTr: v('lwbpTr'), lwbpRn: v('lwbpRn'), lwbpSn: v('lwbpSn'), lwbpTn: v('lwbpTn'), lwbpR: v('lwbpR'), lwbpS: v('lwbpS'), lwbpT: v('lwbpT'), lwbpN: v('lwbpN'), arusMaxPerFasa: v('arusMaxPerFasa'), pembebananKva: v('pembebananKva'), pembebananKw: v('pembebananKw'), persentaseBeban: v('persentaseBeban'), kategoriBeban: v('kategoriBeban'));
-    final revision = await _dao.serverRevision(asli.gardu);
+    final u = MasterGardusCompanion(alamat: v('alamat'), penyulang: v('penyulang'), section: v('section'), jenisGardu: v('jenisGardu'), merk: v('merk'), kapasitasKva: v('kapasitasKva'), noSeri: v('noSeri'), tahunTrafo: v('tahunTrafo'), typeSeal: v('typeSeal'), beratTrafo: v('beratTrafo'), volumeMinyak: v('volumeMinyak'), merkPhbTr: v('merkPhbTr'), nomorSeriPhbTr: v('nomorSeriPhbTr'), jamUkurWbp: v('jamUkurWbp'), tanggalPengukuran: v('tanggalPengukuran'), kepemilikan: v('kepemilikan'), wbpRs: v('wbpRs'), wbpSt: v('wbpSt'), wbpTr: v('wbpTr'), wbpRn: v('wbpRn'), wbpSn: v('wbpSn'), wbpTn: v('wbpTn'), wbpR: v('wbpR'), wbpS: v('wbpS'), wbpT: v('wbpT'), wbpN: v('wbpN'), lwbpRs: v('lwbpRs'), lwbpSt: v('lwbpSt'), lwbpTr: v('lwbpTr'), lwbpRn: v('lwbpRn'), lwbpSn: v('lwbpSn'), lwbpTn: v('lwbpTn'), lwbpR: v('lwbpR'), lwbpS: v('lwbpS'), lwbpT: v('lwbpT'), lwbpN: v('lwbpN'), arusMaxPerFasa: v('arusMaxPerFasa'), pembebananKva: v('pembebananKva'), pembebananKw: v('pembebananKw'), persentaseBeban: v('persentaseBeban'), kategoriBeban: v('kategoriBeban'));
+    final revision = await _dao.serverRevision(asli.gardu, ulp: asli.ulp);
     final patch = Map<String, dynamic>.from(perubahan)..['_serverRevision'] = revision;
     final o = GarduOutboxesCompanion.insert(gardu: asli.gardu, ulp: Value(asli.ulp), perubahanJson: Value(jsonEncode(patch)), diubahOleh: Value(username), diubahPada: Value(DateTime.now().toIso8601String()));
     await _dao.simpanEditLokal(gardu: asli.gardu, data: u, outbox: o);

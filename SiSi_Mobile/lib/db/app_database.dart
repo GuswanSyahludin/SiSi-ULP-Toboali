@@ -106,8 +106,27 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> _ensureGarduRevisionTable() async {
-    await customStatement(
-        'CREATE TABLE IF NOT EXISTS gardu_server_revision (gardu TEXT PRIMARY KEY NOT NULL, ulp TEXT NOT NULL DEFAULT "", revision INTEGER NOT NULL DEFAULT 0)');
+    final tables = await _tables();
+    const create = 'CREATE TABLE IF NOT EXISTS gardu_server_revision (ulp TEXT NOT NULL DEFAULT "", gardu TEXT NOT NULL, revision INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (ulp, gardu))';
+    if (!tables.contains('gardu_server_revision')) {
+      await customStatement(create);
+      return;
+    }
+    final info = await customSelect('PRAGMA table_info(gardu_server_revision)').get();
+    final primary = info
+        .where((row) => (row.data['pk'] as num? ?? 0) > 0)
+        .toList()
+      ..sort((a, b) => ((a.data['pk'] as num?) ?? 0)
+          .compareTo((b.data['pk'] as num?) ?? 0));
+    final primaryNames = primary.map((row) => row.data['name']).toList();
+    if (primaryNames.length == 2 &&
+        primaryNames[0] == 'ulp' &&
+        primaryNames[1] == 'gardu') return;
+    await customStatement('DROP TABLE IF EXISTS gardu_server_revision_v2');
+    await customStatement('CREATE TABLE gardu_server_revision_v2 (ulp TEXT NOT NULL DEFAULT "", gardu TEXT NOT NULL, revision INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (ulp, gardu))');
+    await customStatement('INSERT OR REPLACE INTO gardu_server_revision_v2(ulp,gardu,revision) SELECT COALESCE(ulp,""), gardu, revision FROM gardu_server_revision');
+    await customStatement('DROP TABLE gardu_server_revision');
+    await customStatement('ALTER TABLE gardu_server_revision_v2 RENAME TO gardu_server_revision');
   }
 
   Future<void> _ensureTeknikToTables() async {

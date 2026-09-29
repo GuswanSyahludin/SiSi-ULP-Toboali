@@ -36,7 +36,7 @@ class LocalMasterMaterializer {
         tahunTrafo: Value(value('tahunTrafo')), typeSeal: Value(value('typeSeal')),
         beratTrafo: Value(value('beratTrafo')), volumeMinyak: Value(value('volumeMinyak')),
         merkPhbTr: Value(value('merkPhbTr')), nomorSeriPhbTr: Value(value('nomorSeriPhbTr')),
-        tahunPhbTr: Value(value('tahunPhbTr')), jamUkurWbp: Value(value('jamUkurWbp')),
+        tahunTrafo: Value(value('tahunTrafo')), jamUkurWbp: Value(value('jamUkurWbp')),
         tanggalPengukuran: Value(value('tanggalPengukuran')), kepemilikan: Value(value('kepemilikan')),
         wbpRs: Value(value('wbpRs')), wbpSt: Value(value('wbpSt')), wbpTr: Value(value('wbpTr')),
         wbpRn: Value(value('wbpRn')), wbpSn: Value(value('wbpSn')), wbpTn: Value(value('wbpTn')),
@@ -48,16 +48,11 @@ class LocalMasterMaterializer {
         pembebananKw: Value(value('pembebananKw')), persentaseBeban: Value(value('persentaseBeban')),
         kategoriBeban: Value(value('kategoriBeban')),
       ));
-      revisions.add({'gardu': gardu, 'ulp': value('ulp'), 'revision': int.tryParse(value('serverRevision')) ?? 0});
+      if (item.containsKey('serverRevision')) {
+        revisions.add({'gardu': gardu, 'ulp': value('ulp'), 'serverRevision': item['serverRevision']});
+      }
     }
-    await db.masterGarduDao.gantiSemua(rows);
-    for (final revision in revisions) {
-      await db.masterGarduDao.setServerRevision(
-        revision['gardu'] as String,
-        revision['ulp'] as String,
-        revision['revision'] as int,
-      );
-    }
+    await db.masterGarduDao.gantiSemua(rows, revisions: revisions);
   }
 
   Future<void> listTemuan(List<dynamic> rawRows) async {
