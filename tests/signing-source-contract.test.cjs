@@ -10,7 +10,8 @@ const audit = fs.readFileSync(path.join(root, 'scripts/audit_signing.py'), 'utf8
 
 test('Android backup and release signing fail closed', () => {
   assert.match(manifest, /android:allowBackup="false"/);
-  assert.match(manifest, /android:dataExtractionRules="@xml\/backup_rules"/);
+  assert.match(manifest, /android:fullBackupContent="false"/);
+  assert.match(manifest, /android:dataExtractionRules="@xml\/data_extraction_rules"/);
   assert.match(gradle, /Release signing is required/);
   assert.match(audit, /tracked signing material/);
 });
