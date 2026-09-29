@@ -20,6 +20,7 @@ const LOAD_ORDER = [
   "Core/Migrasi-Password.js",
   "Core/Audit-Guard.js",
   "Core/Auth-Perangkat.js",
+  "Core/Jadwal-Padam-Mobile.js",
   "Core/Delta-Sync-Mobile.js",
   "Core/Master-Gardu-Mobile.js",
   "Core/Master-Gardu-Sync-Mobile.js",
