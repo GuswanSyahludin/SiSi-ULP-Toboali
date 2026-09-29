@@ -22,7 +22,7 @@ class MasterGarduRepository {
           revisions.add({'gardu': '${m['gardu'] ?? ''}'.trim(), 'ulp': '${m['ulp'] ?? ''}', 'serverRevision': m['serverRevision']});
         }
       }
-      await _dao.gantiSemua(rows, revisions: revisions);
+      await _dao.gantiSemua(rows, revisions: revisions, ulpScope: ulp.isEmpty ? null : ulp);
       return {'success': true, 'jumlah': rows.length};
     } catch (e) { return {'success': false, 'message': 'Gagal sinkron Master Gardu: $e'}; }
   }
@@ -41,12 +41,12 @@ class MasterGarduRepository {
     final revision = await _dao.serverRevision(asli.gardu, ulp: asli.ulp);
     final patch = Map<String, dynamic>.from(perubahan)..['_serverRevision'] = revision;
     final o = GarduOutboxesCompanion.insert(gardu: asli.gardu, ulp: Value(asli.ulp), perubahanJson: Value(jsonEncode(patch)), diubahOleh: Value(username), diubahPada: Value(DateTime.now().toIso8601String()));
-    await _dao.simpanEditLokal(gardu: asli.gardu, data: u, outbox: o);
+    await _dao.simpanEditLokal(gardu: asli.gardu, ulp: asli.ulp, data: u, outbox: o);
     return {'ok': true, 'serverRevision': revision};
   }
 
-  Future<int> jumlah() => _dao.jumlah();
+  Future<int> jumlah({String? ulp}) => _dao.jumlah(ulp: ulp);
   Future<List<MasterGardu>> cari(String k, {String ulp = '', int limit = 500}) => _dao.cari(k, ulp: ulp, limit: limit);
-  Future<MasterGardu?> detail(String n) => _dao.detail(n);
+  Future<MasterGardu?> detail(String n, {String ulp = ''}) => _dao.detail(n, ulp: ulp);
   Stream<List<GarduOutbox>> pantauAntrean() => _dao.pantauAntrean();
 }
