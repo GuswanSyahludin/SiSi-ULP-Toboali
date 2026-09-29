@@ -2,3 +2,5 @@ node_modules/
 .DS_Store
 *.log
 .clasprc.json
+PREDEPLOY_AUDIT_PASSED.txt
+*_TRIGGER.txt
