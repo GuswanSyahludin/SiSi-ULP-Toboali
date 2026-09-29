@@ -13,22 +13,31 @@ class MasterGarduDao extends DatabaseAccessor<AppDatabase>
     with _$MasterGarduDaoMixin {
   MasterGarduDao(super.db);
 
+  String _norm(String value) => value.trim().toLowerCase();
+  String _key(String ulp, String gardu) => '${_norm(ulp)}|${_norm(gardu)}';
+
   Future<void> gantiSemua(
     List<MasterGardusCompanion> data, {
     List<Map<String, dynamic>> revisions = const [],
+    String? ulpScope,
   }) => transaction(() async {
         final pending = await antrean();
-        final pendingGardus = pending.map((row) => row.gardu).toSet();
-        final incomingGardus = data.map((row) => row.gardu.value).toSet();
+        final pendingKeys = pending.map((row) => _key(row.ulp, row.gardu)).toSet();
+        final incomingKeys = data
+            .map((row) => _key(row.ulp.value, row.gardu.value))
+            .toSet();
         if (data.isNotEmpty) {
           await batch((b) => b.insertAllOnConflictUpdate(masterGardus, data));
         }
+        final scope = ulpScope == null ? null : _norm(ulpScope);
         final existing = await select(masterGardus).get();
         for (final row in existing) {
-          if (!incomingGardus.contains(row.gardu) &&
-              !pendingGardus.contains(row.gardu)) {
+          final inScope = scope == null || _norm(row.ulp) == scope;
+          if (inScope &&
+              !incomingKeys.contains(_key(row.ulp, row.gardu)) &&
+              !pendingKeys.contains(_key(row.ulp, row.gardu))) {
             await (delete(masterGardus)
-                  ..where((t) => t.gardu.equals(row.gardu)))
+                  ..where((t) => t.ulp.equals(row.ulp) & t.gardu.equals(row.gardu)))
                 .go();
           }
         }
@@ -37,11 +46,12 @@ class MasterGarduDao extends DatabaseAccessor<AppDatabase>
         }
         for (final revision in revisions) {
           final gardu = '${revision['gardu'] ?? ''}'.trim();
+          final ulp = '${revision['ulp'] ?? ''}'.trim();
           if (gardu.isEmpty || !revision.containsKey('serverRevision')) continue;
           final value = revision['serverRevision'];
           final parsed = value is int ? value : int.tryParse('$value');
           if (parsed == null || parsed < 0) continue;
-          await setServerRevision(gardu, '${revision['ulp'] ?? ''}'.trim(), parsed);
+          await setServerRevision(gardu, ulp, parsed);
         }
       });
 
@@ -76,8 +86,8 @@ class MasterGarduDao extends DatabaseAccessor<AppDatabase>
     }
     if (assignments.isEmpty) return;
     await customStatement(
-      'UPDATE master_gardu SET ${assignments.join(', ')} WHERE gardu = ?',
-      [...values, outbox.gardu],
+      'UPDATE master_gardu SET ${assignments.join(', ')} WHERE ulp = ? AND gardu = ?',
+      [...values, outbox.ulp, outbox.gardu],
     );
   }
 
@@ -97,10 +107,14 @@ class MasterGarduDao extends DatabaseAccessor<AppDatabase>
     );
   }
 
-  Future<int> jumlah() async {
-    final c = masterGardus.gardu.count();
-    final row = await (selectOnly(masterGardus)..addColumns([c])).getSingle();
-    return row.read(c) ?? 0;
+  Future<int> jumlah({String? ulp}) async {
+    final q = selectOnly(masterGardus);
+    final count = masterGardus.gardu.count();
+    if (ulp != null && ulp.trim().isNotEmpty) {
+      q.where(masterGardus.ulp.equals(ulp.trim()));
+    }
+    final row = await (q..addColumns([count])).getSingle();
+    return row.read(count) ?? 0;
   }
 
   Future<List<MasterGardu>> cari(String kata,
@@ -113,8 +127,12 @@ class MasterGarduDao extends DatabaseAccessor<AppDatabase>
     return q.get();
   }
 
-  Future<MasterGardu?> detail(String nomor) =>
-      (select(masterGardus)..where((t) => t.gardu.equals(nomor))).getSingleOrNull();
+  Future<MasterGardu?> detail(String nomor, {String ulp = ''}) {
+    final q = select(masterGardus)..where((t) => t.gardu.equals(nomor));
+    if (ulp.isNotEmpty) q.where((t) => t.ulp.equals(ulp));
+    return q.getSingleOrNull();
+  }
+
   Future<List<GarduOutbox>> antrean() =>
       (select(garduOutboxes)
             ..where((t) => t.status.equals('konflik').not())
@@ -122,22 +140,33 @@ class MasterGarduDao extends DatabaseAccessor<AppDatabase>
           .get();
   Stream<List<GarduOutbox>> pantauAntrean() => select(garduOutboxes).watch();
 
-  Future<void> simpanEditLokal({required String gardu, required MasterGardusCompanion data, required GarduOutboxesCompanion outbox}) =>
+  Future<void> simpanEditLokal({required String gardu, required String ulp, required MasterGardusCompanion data, required GarduOutboxesCompanion outbox}) =>
       transaction(() async {
-        await (update(masterGardus)..where((t) => t.gardu.equals(gardu))).write(data);
+        await (update(masterGardus)
+              ..where((t) => t.ulp.equals(ulp) & t.gardu.equals(gardu)))
+            .write(data);
         await into(garduOutboxes).insertOnConflictUpdate(outbox);
       });
 
-  Future<void> hapusAntrean(String gardu, String diubahPada) =>
-      (delete(garduOutboxes)..where((t) => t.gardu.equals(gardu) & t.diubahPada.equals(diubahPada))).go();
+  Future<void> hapusAntrean(String ulp, String gardu, String diubahPada) =>
+      (delete(garduOutboxes)
+            ..where((t) => t.ulp.equals(ulp) & t.gardu.equals(gardu) & t.diubahPada.equals(diubahPada)))
+          .go();
 
-  Future<void> tandaiGagal(String gardu, String diubahPada, int percobaan, String pesan) =>
-      (update(garduOutboxes)..where((t) => t.gardu.equals(gardu) & t.diubahPada.equals(diubahPada))).write(
-        GarduOutboxesCompanion(status: const Value('gagal'), percobaan: Value(percobaan), pesanGagal: Value(pesan)),
-      );
+  Future<void> tandaiGagal(String ulp, String gardu, String diubahPada, int percobaan, String pesan) =>
+      (update(garduOutboxes)
+            ..where((t) => t.ulp.equals(ulp) & t.gardu.equals(gardu) & t.diubahPada.equals(diubahPada)))
+          .write(GarduOutboxesCompanion(
+            status: const Value('gagal'),
+            percobaan: Value(percobaan),
+            pesanGagal: Value(pesan),
+          ));
 
-  Future<void> tandaiKonflik(String gardu, String diubahPada, String pesan) =>
-      (update(garduOutboxes)..where((t) => t.gardu.equals(gardu) & t.diubahPada.equals(diubahPada))).write(
-        GarduOutboxesCompanion(status: const Value('konflik'), pesanGagal: Value(pesan)),
-      );
+  Future<void> tandaiKonflik(String ulp, String gardu, String diubahPada, String pesan) =>
+      (update(garduOutboxes)
+            ..where((t) => t.ulp.equals(ulp) & t.gardu.equals(gardu) & t.diubahPada.equals(diubahPada)))
+          .write(GarduOutboxesCompanion(
+            status: const Value('konflik'),
+            pesanGagal: Value(pesan),
+          ));
 }
