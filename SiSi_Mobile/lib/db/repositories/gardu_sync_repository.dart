@@ -27,14 +27,20 @@ class GarduSyncRepository {
       for (final o in list) {
         try {
           final raw = Map<String, dynamic>.from(jsonDecode(o.perubahanJson));
-          final expected = int.tryParse('${raw.remove('_serverRevision') ?? 0}') ?? 0;
+          final base = raw.remove('_serverRevision');
+          final expected = base == null ? null : int.tryParse('$base');
+          if (expected == null || expected < 0) {
+            await dao.tandaiKonflik(o.gardu, o.diubahPada, 'Revisi dasar tidak tersedia. Sinkronkan ulang Master Gardu sebelum mengirim perubahan.');
+            konflik++;
+            continue;
+          }
           final r = await http.post(Uri.parse('${ApiService.baseUrl}?mobile=1'), headers: const {'Content-Type': 'application/json'}, body: jsonEncode({'action': 'getMasterGarduMobile', 'mode': 'update', 'token': token, 'payload': {'gardu': o.gardu, 'ulp': o.ulp, 'serverRevision': expected, 'data': raw}})).timeout(const Duration(seconds: 45));
           final res = Map<String, dynamic>.from(jsonDecode(r.body));
           if (res['success'] == true) {
             await dao.setServerRevision(o.gardu, o.ulp, int.tryParse('${res['serverRevision'] ?? expected + 1}') ?? expected + 1);
             await dao.hapusAntrean(o.gardu, o.diubahPada);
             ok++;
-          } else if (res['conflict'] == true || res['code'] == 'MASTER_GARDU_CONFLICT') {
+          } else if (res['conflict'] == true || res['code'] == 'MASTER_GARDU_CONFLICT' || res['code'] == 'MASTER_GARDU_REVISION_REQUIRED') {
             await dao.tandaiKonflik(o.gardu, o.diubahPada, (res['message'] ?? 'Konflik revisi Master Gardu.').toString());
             konflik++;
           } else {
