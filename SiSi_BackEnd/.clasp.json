@@ -38,7 +38,14 @@
     "Core/ZZZZZZZZZZZZZZZZZZ-Mobile-Master-Sync-Route.js",
     "Core/ZZZZZZZZZZZZZZZZZZZ-Auth-Perangkat-No-Recursion.js",
     "Core/ZZZZZZZZZZZZZZZZZZZZ-Dispatch-Final-Guard.js",
-    "Core/ZZZZZZZZZZZZZZZZZZZZZ-Device-Token-TTL.js"
+    "Core/ZZZZZZZZZZZZZZZZZZZZZ-Device-Token-TTL.js",
+    "Core/Migrasi-Password.js",
+    "Core/ZZZZZZZZZZZZZZZZZZZZZZ-Password-Cutover.js",
+    "Core/ZZ-T08-Jadwal-Ownership.js",
+    "Core/ZZ-T09-Master-Gardu-Conflict.js",
+    "Core/ZZ-T07-ROW-Mobile-Safe-Write.js",
+    "Core/ZZ-T11-Photo-Privacy.js",
+    "Core/ZZ-T13-ULP-Closed.js"
   ],
   "skipSubdirectories": false
 }
