@@ -43,9 +43,11 @@ const LOAD_ORDER = [
   "Inspeksi_Jaringan/Tek-InsJar-Code.js",
   "Teknik/SIE-Teknik-Code.js",
   "Teknik/Jadwal-Padam-Code.js",
+  "Teknik/Jadwal-Padam-Delete.js",
   "Teknik/Tek-Data-Chechpoint-Code.js",
   "Teknik/Tek-LapUP3UIWHarian.js",
   "Teknik/ZZ-Gaspol-DualRead.js",
+  "Core/ZZ-T08-Jadwal-Ownership.js",
 ];
 
 export function listBackendFiles(backendRoot) {
