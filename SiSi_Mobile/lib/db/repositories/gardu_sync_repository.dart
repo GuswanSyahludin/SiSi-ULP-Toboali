@@ -30,7 +30,7 @@ class GarduSyncRepository {
           final base = raw.remove('_serverRevision');
           final expected = base == null ? null : int.tryParse('$base');
           if (expected == null || expected < 0) {
-            await dao.tandaiKonflik(o.gardu, o.diubahPada, 'Revisi dasar tidak tersedia. Sinkronkan ulang Master Gardu sebelum mengirim perubahan.');
+            await dao.tandaiKonflik(o.ulp, o.gardu, o.diubahPada, 'Revisi dasar tidak tersedia. Sinkronkan ulang Master Gardu sebelum mengirim perubahan.');
             konflik++;
             continue;
           }
@@ -38,18 +38,18 @@ class GarduSyncRepository {
           final res = Map<String, dynamic>.from(jsonDecode(r.body));
           if (res['success'] == true) {
             await dao.setServerRevision(o.gardu, o.ulp, int.tryParse('${res['serverRevision'] ?? expected + 1}') ?? expected + 1);
-            await dao.hapusAntrean(o.gardu, o.diubahPada);
+            await dao.hapusAntrean(o.ulp, o.gardu, o.diubahPada);
             ok++;
           } else if (res['conflict'] == true || res['code'] == 'MASTER_GARDU_CONFLICT' || res['code'] == 'MASTER_GARDU_REVISION_REQUIRED') {
-            await dao.tandaiKonflik(o.gardu, o.diubahPada, (res['message'] ?? 'Konflik revisi Master Gardu.').toString());
+            await dao.tandaiKonflik(o.ulp, o.gardu, o.diubahPada, (res['message'] ?? 'Konflik revisi Master Gardu.').toString());
             konflik++;
           } else {
             gagal++;
-            await dao.tandaiGagal(o.gardu, o.diubahPada, o.percobaan + 1, (res['message'] ?? 'Ditolak server').toString());
+            await dao.tandaiGagal(o.ulp, o.gardu, o.diubahPada, o.percobaan + 1, (res['message'] ?? 'Ditolak server').toString());
           }
         } catch (_) {
           gagal++;
-          await dao.tandaiGagal(o.gardu, o.diubahPada, o.percobaan + 1, 'timeout/jaringan');
+          await dao.tandaiGagal(o.ulp, o.gardu, o.diubahPada, o.percobaan + 1, 'timeout/jaringan');
         }
       }
       return {'ok': gagal == 0 && konflik == 0, 'terkirim': ok, 'gagal': gagal, 'konflik': konflik, 'message': conflictoMessage(ok, gagal, konflik)};
