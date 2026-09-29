@@ -8,7 +8,7 @@ class MasterGardus extends Table {
   String get tableName => 'master_gardu';
 
   @override
-  Set<Column> get primaryKey => {gardu};
+  Set<Column> get primaryKey => {ulp, gardu};
 
   TextColumn get ulp => text().withDefault(const Constant(''))();
   TextColumn get gardu => text()();
