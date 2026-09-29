@@ -174,7 +174,7 @@ function getMasterGarduMobile(token, ulpDiminta) {
         typeSeal: ident[i][14],
         merkPhbTr: ident[i][15],
         nomorSeriPhbTr: ident[i][16],
-        tahunTrafo: ident[i][17],
+        tahunPhbTr: ident[i][17],
         jamUkurWbp: ident[i][18],
         tanggalPengukuran: ident[i][19],
         kepemilikan: ident[i][20],
