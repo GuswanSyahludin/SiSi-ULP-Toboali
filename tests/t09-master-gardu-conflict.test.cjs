@@ -36,10 +36,14 @@ assert.match(materializer, /gantiSemua\(rows, revisions: revisions, ulpScope: sc
 assert.match(dao, /WHERE ulp = \? AND gardu = \?/);
 assert.match(dao, /ulpScope/);
 assert.match(dao, /status\.equals\('konflik'\)\.not\(\)/);
-assert.match(database, /CREATE UNIQUE INDEX IF NOT EXISTS/);
+assert.match(database, /PRIMARY KEY \(ulp, gardu\)/);
+assert.doesNotMatch(database, /CREATE TABLE \$staged AS SELECT \* FROM \$table/);
+assert.match(database, /INSERT INTO \$staged\(\$columns\) SELECT \$columns FROM \$table/);
 assert.match(database, /_ensureScopedGarduTables/);
 assert.match(masterTable, /primaryKey => \{ulp, gardu\}/);
 assert.match(outboxTable, /primaryKey => \{ulp, gardu\}/);
+assert.doesNotMatch(screen, /if \(rows\.isEmpty && ulp\.isNotEmpty/);
+assert.match(screen, /_repo\.cari\('', ulp: ulp, limit: 5000\)/);
 assert.match(screen, /conflict/);
 assert.match(screen, /perubahan Gardu konflik/);
 assert.match(packageJson.scripts.test, /t09-master-gardu-conflict\.test\.cjs/);
