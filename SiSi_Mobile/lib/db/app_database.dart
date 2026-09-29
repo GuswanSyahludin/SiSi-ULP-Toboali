@@ -129,6 +129,34 @@ class AppDatabase extends _$AppDatabase {
     await customStatement('ALTER TABLE gardu_server_revision_v2 RENAME TO gardu_server_revision');
   }
 
+  Future<void> _ensureScopedGarduTables() async {
+    for (final spec in [
+      ('master_gardu', 'idx_master_gardu_ulp_gardu'),
+      ('gardu_outbox', 'idx_gardu_outbox_ulp_gardu'),
+    ]) {
+      final table = spec.$1;
+      final index = spec.$2;
+      final info = await customSelect('PRAGMA table_info($table)').get();
+      if (info.isEmpty) continue;
+      final primary = info
+          .where((row) => (row.data['pk'] as num? ?? 0) > 0)
+          .toList()
+        ..sort((a, b) => ((a.data['pk'] as num?) ?? 0)
+            .compareTo((b.data['pk'] as num?) ?? 0));
+      final names = primary.map((row) => row.data['name']?.toString()).toList();
+      if (names.length == 2 && names[0] == 'ulp' && names[1] == 'gardu') {
+        await customStatement('CREATE UNIQUE INDEX IF NOT EXISTS $index ON $table(ulp,gardu)');
+        continue;
+      }
+      final staged = '${table}_scoped_v2';
+      await customStatement('DROP TABLE IF EXISTS $staged');
+      await customStatement('CREATE TABLE $staged AS SELECT * FROM $table');
+      await customStatement('DROP TABLE $table');
+      await customStatement('ALTER TABLE $staged RENAME TO $table');
+      await customStatement('CREATE UNIQUE INDEX IF NOT EXISTS $index ON $table(ulp,gardu)');
+    }
+  }
+
   Future<void> _ensureTeknikToTables() async {
     await customStatement(
         'CREATE TABLE IF NOT EXISTS teknik_to_cache (kode_pekerjaan TEXT NOT NULL, mode TEXT NOT NULL, tanggal TEXT NOT NULL DEFAULT "", payload TEXT NOT NULL, updated_at TEXT NOT NULL, PRIMARY KEY (kode_pekerjaan, mode))');
@@ -146,6 +174,7 @@ class AppDatabase extends _$AppDatabase {
           await _ensureTeknikToTables();
           await _ensureLocalMirrorTables();
           await _ensureGarduRevisionTable();
+          await _ensureScopedGarduTables();
         },
         onUpgrade: (m, from, to) async {
           var tables = await _tables();
@@ -198,6 +227,7 @@ class AppDatabase extends _$AppDatabase {
               await m.createTable(listTemuans);
           }
           await _ensureGarduRevisionTable();
+          await _ensureScopedGarduTables();
         },
       );
 }
