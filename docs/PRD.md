@@ -6,7 +6,7 @@
 **Repository:** `GuswanSyahludin/SiSi-ULP-Toboali`  
 **Primary operating scope:** Internal ULP Toboali operations  
 **Audit findings and remediation tasks:** `docs/SECURITY-AUDIT-STATUS.md`  
-**Last updated:** 29 September 2026, 15:25 WIB
+**Last updated:** 29 September 2026, 19:27 WIB
 
 ## 1. Product contract
 
@@ -34,6 +34,9 @@ The system is fail-closed. Foreign, blank, duplicate, unresolved, or ambiguous o
 - SharedPreferences, Workmanager inputs, SQLite tables, outboxes, caches, and local mirrors remain isolated by account namespace.
 - Legacy shared database files are quarantined, not silently assigned to another account.
 - Pending records and photos remain retryable; recovery must not require deleting local SQLite.
+- Login failures use a generic response, and supplied device/client identifiers receive an additional device-level throttle.
+- AppSheet webhook timestamps are enforced by default in production to prevent replay; legacy warning-mode fixtures opt in explicitly.
+- The mobile API deployment URL is build-time configurable with `SISI_API_URL`; no production token or signing material is committed.
 
 ## 3. Core workflows
 
@@ -74,6 +77,9 @@ The server authenticates the caller, verifies same-ULP access, resolves exactly 
 - **FR-17:** Master Gardu edits require the current per-row server revision; stale revisions are rejected and preserved as non-retryable conflicts.
 - **FR-18:** Inspection and watermark photos are private by default and retrievable only through authenticated same-ULP access.
 - **FR-19:** Mobile ROW append enforces session/ULP authorization, safe input validation, atomic append serialization, and idempotent retry behavior.
+- **FR-20:** Production webhook requests require a valid timestamp within the replay-protection window.
+- **FR-21:** Login throttling includes the supplied device/client identifier, and authentication errors do not reveal account existence.
+- **FR-22:** Mobile builds can target approved staging or production deployments through `SISI_API_URL`.
 
 ## 5. Security, reliability, and definition of done
 
@@ -87,7 +93,7 @@ Runtime acceptance must cover staging authorization/safe writes, mobile ROW inva
 
 - Stage 0 P0 Audit Gate: implemented and merged.
 - Stage 1 BA atomicity: implemented and merged.
-- Stage 2 same-ULP authorization: implemented and merged for covered boundaries.
+- Stage 2 same-ULP authorization: implemented and merged for covered scope.
 - Stage 3 BA ownership/file binding: implemented and merged.
 - Stage 4 compatibility and Sheet-write hardening: implemented and merged for covered scope.
 - Stage 5 account-isolated local storage, legacy auth cleanup, and secure-session migration: implemented, tested, audited, and merged; remaining runtime evidence is tracked separately.
@@ -107,5 +113,6 @@ Runtime acceptance must cover staging authorization/safe writes, mobile ROW inva
 - **T-09/H-05, PR #30:** Optimistic concurrency for Master Gardu merged as `0c75ae2b8fc7bf707778ad01f77bd2d5aa6545df` on 29 September 2026. It adds per-row server revisions, stale-edit rejection, conflict-preserving outbox behavior, normalized `(ulp, gardu)` mobile keys, scoped snapshot materialization, explicit legacy SQLite table rebuilds that preserve schema constraints/defaults/indexes, and removal of the UI fallback that could display unscoped cache rows. Two-device real-device conflict validation, conflict UI end-to-end acceptance, staging validation, production deployment, and sign-off remain pending.
 - **T-11/H-07, PR #31:** Private-by-default watermark and inspection photos merged as `de0f532ffbfbc3487490d256037b4861b204edff` on 29 September 2026. It forces private Drive ACLs, sends `makePublic: false` to the watermark engine, adds authenticated same-ULP `getFotoPrivatT11` retrieval, and wires the privacy overlay last. Existing public-file ACL rotation, staging, real-device access validation, and production sign-off remain pending.
 - **T-07/H-03, PR #32:** Mobile ROW safe-write boundary merged as `8d88970d6ef0b52549e26c8b84d9bbfe862fecb4` on 29 September 2026. It adds fail-closed session/ULP authorization, text sanitization, coordinate and diameter validation, lock-protected append/enqueue, and username-scoped idempotency replay. Staging concurrency, retry behavior, real-device validation, client payload compatibility, and production sign-off remain pending.
+- **T-14/T-15/T-18/T-21/T-22/T-24, PR #35:** Source-only hardening batch merged as `28c2849750a2355c9e0c734c98dfe0adc4b4dc83` on 29 September 2026. It adds device/client login throttling, generic login failures, production-default webhook timestamp enforcement, build-time mobile API configuration, mobile README/release guidance, debug hygiene, and deployment overlay ordering. Automated backend, query-string, Flutter analyze/compile, and Flutter debug-build checks are green; staging, deployed-runtime, compatibility, and real-device evidence remain pending.
 
-**Overall:** Code remediations are merged, but runtime acceptance is incomplete. The system is not production-ready until the documented staging, ACL rotation, concurrency/retry, client compatibility, and real-device evidence exists.
+**Overall:** Code remediations are merged, including PR #35. Runtime acceptance is incomplete. The system is not production-ready until the documented staging, ACL rotation, concurrency/retry, client compatibility, and real-device evidence exists.
