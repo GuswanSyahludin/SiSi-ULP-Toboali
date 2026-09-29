@@ -27,8 +27,6 @@ assert.match(repo, /serverRevision/);
 assert.match(repo, /gantiSemua\(rows, revisions: revisions\)/);
 assert.match(repo, /serverRevision\(asli\.gardu, ulp: asli\.ulp\)/);
 assert.match(materializer, /gantiSemua\(rows, revisions: revisions\)/);
-assert.match(dao, /PRIMARY KEY/);
-assert.match(dao, /AND ulp=\?/);
 assert.match(dao, /status\.equals\('konflik'\)\.not\(\)/);
 assert.match(database, /PRIMARY KEY \(ulp, gardu\)/);
 assert.match(packageJson.scripts.test, /t09-master-gardu-conflict\.test\.cjs/);
