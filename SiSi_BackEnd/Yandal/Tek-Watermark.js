@@ -49,7 +49,9 @@ function watermarkFoto_(fileId, outputFolderId, info, outName) {
     folderId: outputFolderId,
     fileName: outNm,
     idempotencyKey: idem,
-    makePublic: true,
+    // Watermark evidence is private by default. Retrieval must use the
+    // authenticated, same-ULP endpoint; never rely on a public-by-link URL.
+    makePublic: false,
 
     // Enam data inti Watermark Compact V4.
     kodePekerjaan: String(
