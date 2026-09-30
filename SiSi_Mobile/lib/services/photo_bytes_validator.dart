@@ -2,11 +2,12 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:image/image.dart' as img;
+import 'evidence_photo_header.dart';
 
 /// Shared client-side boundary for evidence-image bytes.
-/// It validates the decoded image, not only a filename or MIME label.
+/// Header limits are checked before any library decoder is invoked.
 class PhotoBytesValidator {
-  static const maxBytes = 40 * 1024 * 1024;
+  static const maxBytes = EvidencePhotoHeader.maxBytes;
   static const minEdge = 320;
 
   /// Preflight size before opening the stream, then bound retained bytes again.
@@ -48,34 +49,42 @@ class PhotoBytesValidator {
     return bytes;
   }
 
-  static img.Image validateOriginal(Uint8List bytes) {
-    if (bytes.isEmpty || bytes.length > maxBytes) {
-      throw const FormatException('Foto kosong atau melebihi batas 40 MB.');
-    }
+  static img.Image _decode(Uint8List bytes, EvidencePhotoHeader header) {
     final img.Image? decoded;
     try {
-      decoded = img.decodeImage(bytes);
+      // Explicit decoder selection prevents format sniffing from invoking an
+      // unbounded decoder for a format whose headers were not inspected.
+      decoded = header.format == EvidencePhotoFormat.jpeg
+          ? img.JpegDecoder().decode(bytes)
+          : img.PngDecoder().decode(bytes, frame: 0);
     } catch (_) {
       throw const FormatException('Foto tidak dapat didekode. Gunakan JPEG/PNG yang valid.');
     }
-    if (decoded == null) throw const FormatException('Foto tidak dapat didekode. Gunakan JPEG/PNG yang valid.');
-    if (decoded.width < minEdge || decoded.height < minEdge) {
-      throw const FormatException('Resolusi foto terlalu kecil, minimal 320x320.');
+    if (decoded == null) {
+      throw const FormatException('Foto tidak dapat didekode. Gunakan JPEG/PNG yang valid.');
+    }
+    // JPEG EXIF orientation can swap dimensions; it cannot increase the area.
+    final same = decoded.width == header.width && decoded.height == header.height;
+    final rotated = decoded.width == header.height && decoded.height == header.width;
+    if ((!same && !rotated) || decoded.numFrames != 1) {
+      throw const FormatException('Dimensi/frame foto tidak cocok dengan header.');
     }
     return decoded;
   }
 
+  static img.Image validateOriginal(Uint8List bytes) {
+    final header = EvidencePhotoHeader.inspect(bytes);
+    if (header.width < minEdge || header.height < minEdge) {
+      throw const FormatException('Resolusi foto terlalu kecil, minimal 320x320.');
+    }
+    return _decode(bytes, header);
+  }
+
   static void validateJpeg(Uint8List bytes) {
-    if (bytes.length < 4 || bytes.length > maxBytes || bytes[0] != 0xff || bytes[1] != 0xd8 ||
-        bytes[bytes.length - 2] != 0xff || bytes[bytes.length - 1] != 0xd9) {
-      throw const FormatException('Struktur JPEG tidak lengkap atau melebihi batas 40 MB.');
+    final header = EvidencePhotoHeader.inspect(bytes);
+    if (header.format != EvidencePhotoFormat.jpeg) {
+      throw const FormatException('Hasil watermark harus berupa JPEG.');
     }
-    try {
-      if (img.decodeImage(bytes) == null) {
-        throw const FormatException('JPEG tidak dapat didekode.');
-      }
-    } catch (_) {
-      throw const FormatException('JPEG tidak dapat didekode.');
-    }
+    _decode(bytes, header);
   }
 }
