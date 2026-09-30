@@ -34,7 +34,11 @@ function _baWebSafe_(value) {
     });
     return out;
   }
-  if (typeof value === "string" && /^[\s-\u001f]*[=+\-@]/.test(value)) return "'" + value;
+  if (typeof value === "string") {
+    var offset = 0;
+    while (offset < value.length && (value.charCodeAt(offset) < 33 || /\s/.test(value.charAt(offset)))) offset++;
+    if (offset < value.length && "=+-@".indexOf(value.charAt(offset)) >= 0) return "'" + value;
+  }
   return value;
 }
 function _baWebColumn_(headers, aliases) {
