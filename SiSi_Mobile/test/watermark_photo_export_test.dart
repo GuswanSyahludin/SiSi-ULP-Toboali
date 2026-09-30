@@ -3,6 +3,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 import 'package:sisi_mobile/services/local_watermark_data.dart';
 import 'package:sisi_mobile/services/local_watermark_renderer.dart';
 import 'package:sisi_mobile/services/watermark_photo_export.dart';
@@ -10,6 +11,7 @@ import 'package:sisi_mobile/services/watermark_photo_export.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+  final validJpeg = Uint8List.fromList(img.encodeJpg(img.Image(width: 320, height: 320), quality: 90));
   Map<String,dynamic> metadata(WatermarkTeam team) => LocalWatermarkData(
     team:team,code:team==WatermarkTeam.yandal?'Y-P0.001':team==WatermarkTeam.row?'EXE-001':'TEM-001',
     ulp:'Toboali',capturedAt:DateTime.utc(2026,9,6,1),createdAt:DateTime.utc(2026,9,6),
@@ -17,7 +19,7 @@ void main() {
     jenisPekerjaan:'Pemeliharaan',daerah:'Palas',subTim:'Yandal 13',petugas:'Petugas uji',nomorGardu:'TB-021',segmen:'Segmen 1',temuan:'Sambungan longgar',
   ).toJson()..['renderer']='flutter-local';
   LocalWatermarkResult photo({Map<String,dynamic>? data, Uint8List? bytes}) {
-    final jpeg=bytes??Uint8List.fromList([255,216,255,217]);
+    final jpeg=bytes??validJpeg;
     return LocalWatermarkResult(jpeg:jpeg,metadata:{...metadata(WatermarkTeam.inspeksiGardu),'watermarkSha256':sha256.convert(jpeg).toString(),...?data});
   }
   setUp(() { debugDefaultTargetPlatformOverride = TargetPlatform.android; });

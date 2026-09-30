@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'local_watermark_data.dart';
 import 'local_watermark_renderer.dart';
+import 'photo_bytes_validator.dart';
 
 /// Completeness is a client UX safeguard, not proof of server authorization.
 /// Domain callers remain responsible for supplying the actual official ID.
@@ -80,9 +81,7 @@ class WatermarkPhotoExport {
     final missing = missingIndicators(photo.metadata);
     if (missing.isNotEmpty) throw StateError('Download belum tersedia. Lengkapi: ${missing.join(', ')}.');
     final Uint8List bytes = photo.jpeg;
-    if (bytes.length < 4 || bytes.length > 40 * 1024 * 1024 || bytes[0] != 0xff || bytes[1] != 0xd8) {
-      throw const FormatException('Hasil watermark JPEG tidak valid atau terlalu besar.');
-    }
+    PhotoBytesValidator.validateJpeg(bytes);
     // Detect accidental result/file mismatch, not malicious client modification.
     if (photo.metadata['watermarkSha256'] != sha256.convert(bytes).toString()) {
       throw StateError('Foto tidak cocok dengan hasil render. Buat ulang watermark dari foto asli dan metadata lengkap.');
