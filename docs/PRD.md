@@ -6,7 +6,7 @@
 **Repository:** `GuswanSyahludin/SiSi-ULP-Toboali`  
 **Primary operating scope:** Internal ULP Toboali operations  
 **Audit findings and remediation tasks:** `docs/SECURITY-AUDIT-STATUS.md`  
-**Last updated:** 30 September 2026, 08:16 WIB
+**Last updated:** 30 September 2026, 08:29 WIB
 
 ## 1. Product contract
 
@@ -35,6 +35,7 @@ The system is fail-closed. Foreign, blank, duplicate, unresolved, or ambiguous o
 - SharedPreferences, Workmanager inputs, SQLite tables, outboxes, caches, and local mirrors remain isolated by account namespace.
 - Legacy shared database files are quarantined, not silently assigned to another account.
 - Pending records and photos remain retryable; recovery must not require deleting local SQLite.
+- Yandal originals are copied into account-scoped private app storage and registered in a durable `photo-outbox.jsonl` receipt before capture success is reported; official-code binding never rewrites original metadata.
 - Login failures use a generic response, and supplied device/client identifiers receive an additional device-level throttle.
 - AppSheet webhook timestamps are enforced by default in production to prevent replay; legacy warning-mode fixtures opt in explicitly.
 - The mobile API deployment URL is build-time configurable with `SISI_API_URL`; no production token or signing material is committed.
@@ -58,6 +59,10 @@ The server rejects unauthenticated, foreign-ULP, malformed, or unsafe ROW append
 ### Berita Acara
 
 The server authenticates the caller, verifies same-ULP access, resolves exactly one `idBA` row, validates ownership, and only then generates, uploads, syncs, or returns a file. Direct Drive fallback is not allowed.
+
+### Yandal photo capture
+
+Camera captures are copied to private account storage with frozen metadata and a SHA-256 checksum. The file-backed outbox permits recovery after ImagePicker cache cleanup and restart; official-code references are written atomically and do not alter capture time, GPS, or original bytes. Remote upload/lifecycle processing and real-device acceptance remain separate release gates.
 
 ## 4. Functional requirements
 
@@ -86,6 +91,7 @@ The server authenticates the caller, verifies same-ULP access, resolves exactly 
 - **FR-23:** The live `main` branch protection configuration is auditable and must enforce the required security/release gates before merge.
 - **FR-24:** Android release signing and backup policy fail closed by source and CI contract.
 - **FR-25:** Master Gardu formula and immutable-cell protections are enforced before source writes.
+- **FR-26:** Yandal original photos remain recoverable from account-private storage after source-cache cleanup and restart.
 
 ## 5. Security, reliability, and definition of done
 
@@ -93,7 +99,7 @@ Fail closed by default. Do not trust client-supplied ULP, role, ownership, ident
 
 Automated acceptance includes the Audit Gate, backend security tests, Flutter analysis/tests/build, query-string rejection, password cutover coverage, Master Gardu pending-edit coverage, Master Gardu conflict contract coverage, REL-03 formula-safe write coverage, photo privacy contract coverage, mobile ROW safe-write coverage, Jadwal Padam endpoint-load and ownership coverage, BA ownership/download coverage, account isolation, secure-storage migration, and offline queue tests.
 
-Runtime acceptance must cover staging authorization/safe writes, mobile ROW invalid-session/foreign-ULP rejection, CSV/formula injection rejection, invalid coordinate/diameter rejection, concurrent append and retry idempotency, password migration and cutoff, authenticated photo retrieval and wrong-ULP/public-link rejection, controlled public-file ACL rotation, real-device offline Gardu edit followed by fresh Master download and outbox replay, two-device stale-edit conflict detection, cross-ULP Jadwal Padam read/write rejection, restart/retry, account switching, token expiry, secure-storage behavior, Android backup/restore denial, and signed internal release installation. A change is done only when implementation, docs, focused/full tests, CI, deployed-runtime evidence, and real-device evidence are complete.
+Runtime acceptance must cover staging authorization/safe writes, mobile ROW invalid-session/foreign-ULP rejection, CSV/formula injection rejection, invalid coordinate/diameter rejection, concurrent append and retry idempotency, password migration and cutoff, authenticated photo retrieval and wrong-ULP/public-link rejection, controlled public-file ACL rotation, real-device offline Gardu edit followed by fresh Master download and outbox replay, two-device stale-edit conflict detection, cross-ULP Jadwal Padam read/write rejection, restart/retry, account switching, token expiry, secure-storage behavior, Android backup/restore denial, and signed internal release installation. Yandal must additionally prove cache cleanup, restart recovery, account isolation, camera/GPS edge cases, and signed-device behavior. A change is done only when implementation, docs, focused/full tests, CI, deployed-runtime evidence, and real-device evidence are complete.
 
 ## 6. Delivery status
 
@@ -111,20 +117,21 @@ Runtime acceptance must cover staging authorization/safe writes, mobile ROW inva
 - **T-01/T-02:** Token exposure and query-string authentication closed.
 - **T-03/T-04:** Delta sync ULP scoping and top-level guards merged.
 - **C-01:** Master Gardu edit upload regression fixed and covered.
-- **H-02/T-05, PR #25:** Master sync batching, recursion prevention, and deterministic load order merged as `6c29b7ca71f3c83deab721efaa75cb72e2608d35`; staging/real-device acceptance pending.
-- **H-06/T-10, PR #26:** 30-day absolute and 7-day idle device-token expiry merged as `d59c4f3f5695ac7e8838b4aa475826203adeeef3`; staging/real-device acceptance pending.
-- **H-08, PR #27:** Time-limited password plaintext cutover merged as `b46c8775bef39b28fae6fd74c7cdc45c300b0110`; staging migration and cutoff evidence pending.
-- **C-05/T-06, PR #28:** Atomic Master Gardu snapshot materialization merged as `66f272eb1799fe8b5220cb0e3db73f72730b5f46`; real-device preservation and sign-off pending.
-- **T-08/H-04, PR #29:** Jadwal Padam final ULP ownership overlay merged as `b15febf7523e4bdb49b645a12c2510f6b1cec76d` on 29 September 2026. Cross-ULP staging, real-device validation, production deployment, and sign-off remain pending.
-- **T-09/H-05, PR #30:** Optimistic concurrency for Master Gardu merged as `0c75ae2b8fc7bf707778ad01f77bd2d5aa6545df` on 29 September 2026. It adds per-row server revisions, stale-edit rejection, conflict-preserving outbox behavior, normalized `(ulp, gardu)` mobile keys, scoped snapshot materialization, explicit legacy SQLite table rebuilds that preserve schema constraints/defaults/indexes, and removal of the UI fallback that could display unscoped cache rows. Two-device real-device conflict validation, conflict UI end-to-end acceptance, staging validation, production deployment, and sign-off remain pending.
-- **T-11/H-07, PR #31:** Private-by-default watermark and inspection photos merged as `de0f532ffbfbc3487490d256037b4861b204edff` on 29 September 2026. It forces private Drive ACLs, sends `makePublic: false` to the watermark engine, adds authenticated same-ULP `getFotoPrivatT11` retrieval, and wires the privacy overlay last. Existing public-file ACL rotation, staging, real-device access validation, and production sign-off remain pending.
-- **T-07/H-03, PR #32:** Mobile ROW safe-write boundary merged as `8d88970d6ef0b52549e26c8b84d9bbfe862fecb4` on 29 September 2026. It adds fail-closed session/ULP authorization, text sanitization, coordinate and diameter validation, lock-protected append, and username-scoped idempotency replay. Staging concurrency, retry behavior, real-device validation, client payload compatibility, and production sign-off remain pending.
-- **T-14/T-15/T-18/T-21/T-22/T-24, PR #35:** Source-only hardening batch merged as `28c2849750a2355c9e0c734c98dfe0adc4b4dc83` on 29 September 2026. It adds device/client login throttling, generic login failures, production-default webhook timestamp enforcement, build-time mobile API configuration, mobile README/release guidance, debug hygiene, and deployment overlay ordering. Automated backend, query-string, Flutter analyze/compile, and Flutter debug-build checks are green; staging, deployed-runtime, compatibility, and real-device evidence remain pending.
-- **T-29, PR #36:** Branch-protection audit tooling merged as `0b17197f84a4d2ad6dcd5eef9d71a905a964bd5c` on 29 September 2026. It adds `scripts/verify_branch_protection.py` and `docs/GITHUB-BRANCH-PROTECTION.md` to verify live required checks, review policy, stale-review dismissal, admin enforcement, disabled force-push/deletion, and conversation resolution. The source/CI portion is complete; the live ruleset result and evidence capture remain pending.
-- **Source-only SiSi batch, PR #37:** Android release signing fail-closed checks, explicit deny backup/data-extraction policy, signing-source audit, and regression contract merged as `7b3a74b75eb1d40ca84762f1096e5c10ee42e2c4` on 29 September 2026. All PR checks were green; staging secret-store verification, signed internal APK installation, and real-device backup/restore evidence remain pending.
-- **Android resource correction, PR #38:** Android 12+ `dataExtractionRules` now points to the correct deny-all `data_extraction_rules.xml` resource; its regression contract was updated and all required PR checks were green. Merged as `a698e4ca3c74fce79ab79ab1182bf803187a06fd` on 29 September 2026.
-- **REL-03 formula-safe writes, PR #39:** Master Gardu HI writes now preflight immutable/formula cells and reject unsafe targets before the first write; `db_InsDu_Realisasi` recalculation uses targeted `jumlahTemuan` writes instead of whole-range replacement. Deployment-order and source contracts are green. Merged as `ab6270724ee21ee4efcd6d7b2e20cdca25e8e66e` on 29 September 2026; sanitized staging formula mapping and two-device/runtime validation remain pending.
-- **T-21/T-20 source hygiene, PR #40:** Removed the committed stale `flutter-audit.txt`, added a regression contract to prevent its return, and registered the contract in the backend test harness. All PR checks were green and the PR merged as `eeed5a52979191d277edc2fe628ee6f0448903a9` on 30 September 2026. T-21 is complete; T-20 remains open for the full lint/deprecated API cleanup, strict analyzer flags, generated Drift checks, and real-device validation.
-- **T-16/T-17 source security boundary, PR #41:** Added rendered-HTML sanitization to `getPageContent()` and the initial `doGet()` response, removed the delivered `Main.html` query-string token fallback, and pinned Font Awesome 6.5.1 with SRI, `crossorigin`, and `referrerpolicy`. All PR checks were green and the PR merged as `176e6fb45b2fc6054da570f3f2c27bcce73af4e9` on 30 September 2026. Full strict-CSP migration and complete `innerHTML`/inline-handler refactor remain open.
+- **H-02/T-05, PR #25:** Master sync batching, recursion prevention, and deterministic load order merged; staging/real-device acceptance pending.
+- **H-06/T-10, PR #26:** 30-day absolute and 7-day idle device-token expiry merged; staging/real-device acceptance pending.
+- **H-08, PR #27:** Time-limited password plaintext cutover merged; staging migration and cutoff evidence pending.
+- **C-05/T-06, PR #28:** Atomic Master Gardu snapshot materialization merged; real-device preservation and sign-off pending.
+- **T-08/H-04, PR #29:** Jadwal Padam final ULP ownership overlay merged; cross-ULP staging, real-device validation, production deployment, and sign-off remain pending.
+- **T-09/H-05, PR #30:** Optimistic concurrency for Master Gardu merged; two-device real-device conflict validation, conflict UI end-to-end acceptance, staging validation, production deployment, and sign-off remain pending.
+- **T-11/H-07, PR #31:** Private-by-default watermark and inspection photos merged; existing public-file ACL rotation, staging, real-device access validation, and production sign-off remain pending.
+- **T-07/H-03, PR #32:** Mobile ROW safe-write boundary merged; staging concurrency, retry behavior, real-device validation, client payload compatibility, and production sign-off remain pending.
+- **T-14/T-15/T-18/T-21/T-22/T-24, PR #35:** Source-only hardening batch merged; staging, deployed-runtime, compatibility, and real-device evidence remain pending.
+- **T-29, PR #36:** Branch-protection audit tooling merged; live ruleset result and evidence capture remain pending.
+- **Source-only SiSi batch, PR #37:** Android release signing fail-closed checks and explicit backup/data-extraction policy merged; staging secret-store verification, signed internal APK installation, and real-device backup/restore evidence remain pending.
+- **Android resource correction, PR #38:** Android 12+ data extraction resource correction merged; runtime evidence remains pending.
+- **REL-03 formula-safe writes, PR #39:** Formula/immutable-cell preflight and targeted writes merged; sanitized staging formula mapping and two-device/runtime validation remain pending.
+- **T-21/T-20 source hygiene, PR #40:** Stale Flutter audit cleanup and regression contract merged. T-21 is complete; T-20 remains open for full lint/deprecated API cleanup, strict analyzer flags, generated Drift checks, and real-device validation.
+- **T-16/T-17 source security boundary, PR #41:** Rendered-HTML sanitization, delivered query-string token fallback removal, Font Awesome SRI, and regression contract merged. Full strict-CSP migration and complete DOM/inline-handler refactor remain open.
+- **T-19/T-32 source durability, PR #42:** Yandal originals now have account-scoped private copies, frozen metadata/checksums, durable `photo-outbox.jsonl` receipts, atomic official-code binding, and regression coverage. Remote upload/lifecycle processing, signed APK, and real-device validation remain open.
 
-**Overall:** Code remediations are merged through PR #41, including the web security boundary. Runtime acceptance and live branch-protection verification are incomplete. The system is not production-ready until the documented staging, ACL rotation, concurrency/retry, client compatibility, real-device, signing, and GitHub ruleset evidence exists.
+**Overall:** Code remediations are merged through PR #42. Runtime acceptance and live branch-protection verification are incomplete. The system is not production-ready until the documented staging, ACL rotation, concurrency/retry, client compatibility, real-device, signing, photo-lifecycle, and GitHub ruleset evidence exists.
