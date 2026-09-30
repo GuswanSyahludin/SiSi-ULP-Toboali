@@ -30,6 +30,58 @@ class EvidencePhotoHeader {
   static int _u32(Uint8List b, int p) =>
       b[p] * 16777216 + b[p + 1] * 65536 + b[p + 2] * 256 + b[p + 3];
 
+  static Never _invalidChunk() =>
+      throw const FormatException('Struktur chunk PNG tidak valid.');
+
+  // image 4.9.2 reads several metadata chunks by fixed fields rather than
+  // their declared size. Validate those fields BEFORE invoking startDecode;
+  // checking the decoded dimensions afterwards is too late for allocation.
+  static void _pngMetadata(Uint8List b, int type, int data, int size,
+      int color, int paletteEntries) {
+    switch (type) {
+      case 0x624b4744: // bKGD
+        final expected = color == 3 ? 1 : (color == 0 || color == 4 ? 2 : 6);
+        if (size != expected) _invalidChunk();
+        if (color == 3 && (paletteEntries == 0 || b[data] >= paletteEntries)) {
+          _invalidChunk();
+        }
+        break;
+      case 0x70485973: // pHYs
+        if (size != 9 || b[data + 8] > 1) _invalidChunk();
+        break;
+      case 0x67414d41: // gAMA
+        if (size != 4 || _u32(b, data) == 0) _invalidChunk();
+        break;
+      case 0x63494350: // cICP
+        if (size != 4) _invalidChunk();
+        break;
+      case 0x69434350: // iCCP: bounded ASCII name + NUL + method + profile
+        var nameLength = 0;
+        while (nameLength < size && b[data + nameLength] != 0) {
+          final c = b[data + nameLength];
+          // ASCII makes decoder String.length equal encoded name length.
+          if (nameLength >= 79 || c < 32 || c > 126) _invalidChunk();
+          nameLength++;
+        }
+        if (nameLength == 0 || nameLength + 2 >= size ||
+            b[data + nameLength] != 0 || b[data + nameLength + 1] != 0) {
+          _invalidChunk();
+        }
+        break;
+      case 0x74524e53: // tRNS
+        if (color == 0) {
+          if (size != 2) _invalidChunk();
+        } else if (color == 2) {
+          if (size != 6) _invalidChunk();
+        } else if (color == 3) {
+          if (size == 0 || size > paletteEntries) _invalidChunk();
+        } else {
+          _invalidChunk();
+        }
+        break;
+    }
+  }
+
   static EvidencePhotoHeader inspect(Uint8List bytes) {
     if (bytes.isEmpty || bytes.length > maxBytes) {
       throw const FormatException('Foto kosong atau melebihi batas 40 MB.');
@@ -51,6 +103,7 @@ class EvidencePhotoHeader {
   static EvidencePhotoHeader _png(Uint8List b) {
     var p = 8;
     int? width, height;
+    var color = -1, paletteEntries = 0;
     var hasData = false;
     while (p < b.length) {
       if (b.length - p < 12) _invalid();
@@ -58,6 +111,11 @@ class EvidencePhotoHeader {
       if (size > b.length - p - 12) _invalid();
       final type = _u32(b, p + 4);
       final data = p + 8;
+      for (var i = p + 4; i < data; i++) {
+        final c = b[i];
+        if (!((c >= 65 && c <= 90) || (c >= 97 && c <= 122))) _invalidChunk();
+      }
+      if ((b[p + 6] & 32) != 0) _invalidChunk(); // reserved bit
       if (p == 8 && type != 0x49484452) _invalid(); // IHDR first
       switch (type) {
         case 0x49484452: // IHDR: reject duplicates, even after IDAT
@@ -65,7 +123,8 @@ class EvidencePhotoHeader {
           width = _u32(b, data);
           height = _u32(b, data + 4);
           _dimensions(width, height);
-          final bits = b[data + 8], color = b[data + 9];
+          final bits = b[data + 8];
+          color = b[data + 9];
           final validBits = switch (color) {
             0 => const [1, 2, 4, 8, 16],
             2 || 4 || 6 => const [8, 16],
@@ -75,17 +134,30 @@ class EvidencePhotoHeader {
           if (!validBits.contains(bits) || b[data + 10] != 0 ||
               b[data + 11] != 0 || b[data + 12] > 1) _invalid();
           break;
+        case 0x504c5445: // PLTE
+          if (hasData || paletteEntries != 0 || size == 0 ||
+              size > 768 || size % 3 != 0 || color == 0 || color == 4) {
+            _invalidChunk();
+          }
+          paletteEntries = size ~/ 3;
+          break;
         case 0x6163544c: // acTL
         case 0x6663544c: // fcTL, including inconsistent one-frame APNG
         case 0x66644154: // fdAT
           throw const FormatException('Foto animasi/APNG tidak didukung.');
         case 0x49444154: // IDAT
+          if (color == 3 && paletteEntries == 0) _invalidChunk();
           hasData = true;
           break;
         case 0x49454e44: // IEND
           if (size != 0 || !hasData || width == null || height == null ||
               p + 12 != b.length) _invalid();
           return EvidencePhotoHeader._(EvidencePhotoFormat.png, width, height);
+        default:
+          // Unknown critical chunks cannot be treated as harmless metadata.
+          if ((b[p + 4] & 32) == 0) _invalidChunk();
+          _pngMetadata(b, type, data, size, color, paletteEntries);
+          break;
       }
       // Skip, never inflate metadata or image data during preflight.
       p += size + 12;
