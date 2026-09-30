@@ -25,6 +25,23 @@ class YandalLocalRepository {
   String _text(List<dynamic> row, int index) =>
       index < row.length ? (row[index] ?? '').toString().trim() : '';
 
+  String _date(List<dynamic> row, int index) {
+    final value = _text(row, index);
+    return value.length >= 10 ? value.substring(0, 10) : value;
+  }
+
+  bool _isShift(List<dynamic> row, int expected) {
+    final value = _text(row, 7).toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+    if (value == '$expected' || value == 'shift $expected') return true;
+    if (value.startsWith('shift $expected ')) return true;
+    return switch (expected) {
+      1 => value == 'pagi',
+      2 => value == 'siang',
+      3 => value == 'malam',
+      _ => false,
+    };
+  }
+
   Future<List<String>> masterPekerjaan() async =>
       (await _rows(listP0))
           .map((r) => _text(r, 1))
@@ -63,11 +80,75 @@ class YandalLocalRepository {
   Future<List<Map<String, dynamic>>> drafts(String shiftKey) async {
     final p = await SharedPreferences.getInstance();
     final all = List.from(jsonDecode(p.getString(_draftKey) ?? '[]'));
-    return all
+    final localDrafts = all
         .whereType<Map>()
         .map((e) => Map<String, dynamic>.from(e))
         .where((e) => e['shiftKey'] == shiftKey)
         .toList();
+    final parts = shiftKey.split('|');
+    if (parts.length != 4) return localDrafts;
+    final ulp = parts[0].trim();
+    final subTim = parts[1].trim();
+    final tanggal = parts[2].trim();
+    final shiftNumber = int.tryParse(parts[3]);
+    if (ulp.isEmpty || subTim.isEmpty || tanggal.isEmpty ||
+        shiftNumber == null || shiftNumber < 1 || shiftNumber > 3) {
+      return localDrafts;
+    }
+
+    final headers = await _rows(globalHeader);
+    final headerCodes = headers.where((row) =>
+        _text(row, 2).toLowerCase() == ulp.toLowerCase() &&
+        _text(row, 6).toLowerCase() == subTim.toLowerCase() &&
+        _date(row, 4) == tanggal)
+        .map((row) => _text(row, 1))
+        .where((code) => code.isNotEmpty)
+        .toSet();
+    if (headerCodes.isEmpty) return localDrafts;
+
+    final shifts = await _rows(shift);
+    final shiftCodes = shifts.where((row) =>
+        headerCodes.contains(_text(row, 1)) &&
+        _text(row, 5).toLowerCase() == ulp.toLowerCase() &&
+        _date(row, 4) == tanggal &&
+        _isShift(row, shiftNumber))
+        .map((row) => _text(row, 2))
+        .where((code) => code.isNotEmpty)
+        .toSet();
+    if (shiftCodes.isEmpty) return localDrafts;
+
+    final synced = <Map<String, dynamic>>[];
+    final seenCodes = <String>{};
+    for (final row in await _rows(p0)) {
+      final kodeShift = _text(row, 2);
+      final kodeP0 = _text(row, 3);
+      if (!shiftCodes.contains(kodeShift) || kodeP0.isEmpty ||
+          !seenCodes.add(kodeP0) ||
+          _text(row, 4).toLowerCase() != ulp.toLowerCase() ||
+          _date(row, 6) != tanggal) {
+        continue;
+      }
+      final hasWorkPhoto = _text(row, 28).isNotEmpty;
+      final hasDonePhoto = _text(row, 33).isNotEmpty;
+      synced.add({
+        'localId': 'SERVER-P0-$kodeP0',
+        'shiftKey': shiftKey,
+        'kodeP0': kodeP0,
+        'pekerjaan': _text(row, 7).isNotEmpty
+            ? _text(row, 7)
+            : (_text(row, 8).isNotEmpty ? _text(row, 8) : 'Pekerjaan P0'),
+        'penyulang': _text(row, 9),
+        'section': _text(row, 10),
+        'daerah': _text(row, 11),
+        // Non-null empty sentinels let the existing card show accurate progress
+        // while keeping remote Drive paths out of the local-file photo viewer.
+        'fotoPekerjaan': hasWorkPhoto ? '' : null,
+        'fotoSelesai': hasDonePhoto ? '' : null,
+        'petugas': _text(row, 21),
+        'synced': true,
+      });
+    }
+    return [...localDrafts, ...synced];
   }
 
   Future<void> saveDraft(Map<String, dynamic> draft) async {

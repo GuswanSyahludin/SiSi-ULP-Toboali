@@ -114,6 +114,14 @@
       if (name === 'db_List_Petugas_Yandal') {
         return _sisiMobileYandalPetugasRows_(guard);
       }
+      if (name === 'db_Yandal_Shift' || name === 'db_Yandal_P0' ||
+          name === 'db_Yandal_Pengecekan_Switching') {
+        var correctedConfig = {};
+        Object.keys(config || {}).forEach(function (key) { correctedConfig[key] = config[key]; });
+        correctedConfig.ulpCol = name === 'db_Yandal_Shift' ? 5 :
+          (name === 'db_Yandal_P0' ? 4 : 5);
+        return _sisiMobileReportsPreviousDeltaRows_(guard, token, name, correctedConfig);
+      }
       return _sisiMobileReportsPreviousDeltaRows_(guard, token, name, config);
     };
   }

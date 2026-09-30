@@ -18,3 +18,15 @@ test('Yandal roster is scoped to the authenticated ULP and Sub-Tim', () => {
   assert.match(source, /_text\(row, 2\)\.toLowerCase\(\) != subTim\.toLowerCase\(\)/);
   assert.match(source, /final person = _text\(row, 3\);/);
 });
+
+test('P0 report combines synchronized db_Yandal_P0 rows with local drafts for the exact shift', () => {
+  assert.match(source, /final localDrafts = all/);
+  assert.match(source, /final headers = await _rows\(globalHeader\)/);
+  assert.match(source, /final shifts = await _rows\(shift\)/);
+  assert.match(source, /for \(final row in await _rows\(p0\)\)/);
+  assert.match(source, /shiftCodes\.contains\(kodeShift\)/);
+  assert.match(source, /_text\(row, 4\).*ulp/i);
+  assert.match(source, /_date\(row, 6\) != tanggal/);
+  assert.match(source, /return \[\.\.\.localDrafts, \.\.\.synced\];/);
+  assert.match(source, /'SERVER-P0-\$kodeP0'/);
+});

@@ -66,8 +66,8 @@ function harness(options = {}) {
       calls.push({ type: 'save', params });
       return params.token === 'valid-session' ? { ok: true } : { ok: false, message: 'Sesi habis' };
     },
-    _deltaRows_(guard, token, name) {
-      calls.push({ type: 'delta', guard, token, name });
+    _deltaRows_(guard, token, name, config) {
+      calls.push({ type: 'delta', guard, token, name, config });
       return [{ legacy: true }];
     },
   };
@@ -186,6 +186,19 @@ test('Yandal roster sync preserves ULP and Sub-Tim and excludes foreign ULP rows
   assert.match(yandalRepositorySource, /SesiStore\.muat\(\)/);
   assert.match(yandalRepositorySource, /_text\(row, 1\).*ulp/i);
   assert.match(yandalRepositorySource, /_text\(row, 2\).*subTim/i);
+});
+
+test('Yandal shift, P0, and switching delta sync use their actual ULP columns', () => {
+  const h = harness();
+  const names = [
+    ['db_Yandal_Shift', 5],
+    ['db_Yandal_P0', 4],
+    ['db_Yandal_Pengecekan_Switching', 5],
+  ];
+  for (const [name, ulpCol] of names) {
+    h.context._deltaRows_({ ulp: 'Toboali' }, 'session', name, { ulpCol: 2 });
+    assert.equal(h.calls.at(-1).config.ulpCol, ulpCol);
+  }
 });
 
 
