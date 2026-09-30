@@ -14,7 +14,6 @@ const watermark = readBackend(watermarkPath);
 const yandalAcl = readBackend('Core/ZZ-T11-Yandal-Watermark-ACL.js');
 const temuan = readBackend('Core/Tek-Temuan-Code.js');
 const row = readBackend('Core/WO-ROW-Mobile.js');
-const appsscript = JSON.parse(readBackend('appsscript.json'));
 const clasp = JSON.parse(readBackend('.clasp.json'));
 
 assert.match(privacy, /makePublic:\s*false/);
@@ -40,6 +39,7 @@ assert.equal(clasp.scriptId, '1oYUuH0hDAezgFS9XAjm3SDfGlQSWBPuW1kIsFUUgK2kJPHl82
   'Deployment target must not change during load-order hardening');
 
 function assertPrivacyOrder(order, label) {
+  assert.ok(Array.isArray(order), `${label}: filePushOrder must be an array`);
   const required = ['Yandal/Tek-Yandal-Code.js', watermarkPath, privacyPath,
     'Core/ZZ-T13-ULP-Closed.js', 'Core/ZZ-T11-Yandal-Watermark-ACL.js'];
   for (const file of required) {
@@ -105,11 +105,13 @@ function assertWatermarkBoundary(order, label, combined) {
   run(true);
 }
 
-for (const [label, order] of [['appsscript', appsscript.filePushOrder], ['clasp', clasp.filePushOrder]]) {
-  assertPrivacyOrder(order, label);
-  assertWatermarkBoundary(order, label, false);
-  assertWatermarkBoundary(order, label, true);
-  // Mutation control: prove the behavioral test rejects the old unsafe order.
-  assert.throws(() => assertWatermarkBoundary([privacyPath, watermarkPath], label, true));
-}
+// Ordering metadata is read from .clasp.json only; it is not a manifest field
+// and these fixtures do not establish the order actually served by Apps Script.
+const label = 'clasp';
+const order = clasp.filePushOrder;
+assertPrivacyOrder(order, label);
+assertWatermarkBoundary(order, label, false);
+assertWatermarkBoundary(order, label, true);
+// Mutation control: prove the behavioral test rejects the old unsafe order.
+assert.throws(() => assertWatermarkBoundary([privacyPath, watermarkPath], label, true));
 console.log('T-11 private photo contract passed.');
