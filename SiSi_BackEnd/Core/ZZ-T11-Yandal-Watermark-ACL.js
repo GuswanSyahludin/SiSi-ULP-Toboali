@@ -58,10 +58,12 @@
     }
   }
   function boundPrivateFile_(id, folder) {
+    _assertCurrentRow_();
     var file = DriveApp.getFileById(id);
     var parents = file.getParents(), belongs = false;
     while (parents.hasNext()) if (parents.next().getId() === folder.getId()) belongs = true;
     if (!belongs) fail_('WRONG_FOLDER');
+    _assertCurrentRow_();
     file = need_('_h07PrivateFile_')(id);
     if (!file || file.getSharingAccess() !== DriveApp.Access.PRIVATE) fail_('ACL_NOT_PRIVATE');
     privateParents_(file);
@@ -95,14 +97,53 @@
     return folder;
   }
   function writeText_(sh, row, col, value) {
+    _assertCurrentRow_();
     need_('_setTextY_')(sh, row, col, value);
+  }
+  function _sha256_(value) {
+    var bytes = typeof value === 'string'
+      ? Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, value, Utilities.Charset.UTF_8)
+      : Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, value);
+    return bytes.map(function (b) { return ('0' + (b & 255).toString(16)).slice(-2); }).join('');
+  }
+  function _sourceVersion_(file) {
+    var blob = file.getBlob();
+    return _sha256_(JSON.stringify([file.getId(), file.getName(), blob.getContentType(),
+      _sha256_(blob.getBytes())]));
+  }
+  function _canonical_(value) {
+    if (value === null || typeof value !== 'object') return JSON.stringify(value);
+    if (value instanceof Date) return JSON.stringify(value.toISOString());
+    if (Array.isArray(value)) return '[' + value.map(_canonical_).join(',') + ']';
+    return '{' + Object.keys(value).sort().map(function (key) {
+      return JSON.stringify(key) + ':' + _canonical_(value[key]);
+    }).join(',') + '}';
+  }
+  // Identity is checked under the script lock, again before ACL/Sheet writes.
+  // Locks coordinate Apps Script writers, not external AppSheet/Drive edits.
+  function _assertCurrentRow_() {
+    if (!frame || !frame.schema || !LockService.getScriptLock().hasLock()) fail_('LOCK_REQUIRED');
+    // Read only the bound row here, not the entire Sheet before every write.
+    // Full uniqueness scans run at entry and after the legacy processor.
+    var row = frame.sh.getRange(frame.rowNum, 1, 1, frame.width).getValues()[0];
+    if (!row || text_(row[frame.schema.id]) !== frame.kode ||
+        text_(row[frame.schema.cols.folderPath]) !== frame.folderRel)
+      fail_('ROW_BINDING_CHANGED');
+    if (text_(row[frame.schema.cols.ulp]).toLowerCase().replace(/\s+/g, ' ') !== 'ulp toboali')
+      fail_('ULP_UNRESOLVED_OR_FOREIGN');
+    Object.keys(frame.expected).forEach(function (key) {
+      var slot = frame.expected[key];
+      if (text_(row[slot.col]) !== slot.source) fail_('SOURCE_CHANGED');
+    });
+    return { sh: frame.sh, row: row, rowNum: frame.rowNum };
   }
   function _privatePhoto_(sh, rowNum, kSrc, kWm, kUrl, info, rowFolder, folderRel) {
     var key = rowNum + ':' + kSrc;
     if (!frame || frame.sheetId !== sh.getSheetId() || !frame.expected[key]) fail_('PROCESSOR_CONTEXT_REQUIRED');
     try {
       frame.attempted = true;
-      if (!LockService.getScriptLock().hasLock()) fail_('LOCK_REQUIRED');
+      _assertCurrentRow_();
+      if (text_(folderRel) !== frame.folderRel) fail_('ROW_BINDING_CHANGED');
       var source = text_(sh.getRange(rowNum, kSrc + 1).getValue());
       if (source !== frame.expected[key].source) fail_('SOURCE_CHANGED');
       var oldWm = text_(sh.getRange(rowNum, kWm + 1).getValue());
@@ -117,8 +158,11 @@
       });
       if (repairFailed) fail_('EXISTING_ACL_FAILED');
       if (!source) {
+        _assertCurrentRow_();
         sh.getRange(rowNum, kWm + 1).clearContent();
+        _assertCurrentRow_();
         sh.getRange(rowNum, kUrl + 1).clearContent();
+        SpreadsheetApp.flush();
         frame.done[key] = true;
         return;
       }
@@ -126,26 +170,40 @@
         ? DriveApp.getFolderById(root.YANDAL_IMG_FOLDER_ID) : folder);
       var sourceId = resolve_(source, sourceFolder, folderRel);
       var sourceFile = boundPrivateFile_(sourceId, sourceFolder);
-      var wmName = 'WM_' + sourceFile.getName() + '.jpg';
+      var version = _sourceVersion_(sourceFile);
+      var metadata = {};
+      Object.keys(info || {}).forEach(function (k) {
+        if (k !== 'idempotencyKey') metadata[k] = info[k];
+      });
+      // Versioned output namespace: legacy WM_<name> files are privatized but
+      // NEVER treated as proof of a match. Full source ID/content and rendering
+      // context determine both the output name and provider idempotency key.
+      var binding = _sha256_(_canonical_({ version: 2, source: version,
+        folder: folder.getId(), sheet: frame.sheetId, kode: frame.kode,
+        slot: kSrc, info: metadata }));
+      var wmName = 'WM_v2_' + binding + '.jpg';
+      metadata.idempotencyKey = 'yandal:v2:' + binding;
       var prefix = text_(folderRel).replace(/\/+$/, '');
       var expected = prefix ? prefix + '/' + wmName : '';
       var outputId = namedId_(folder, wmName);
       if (!outputId) {
-        var metadata = {};
-        Object.keys(info || {}).forEach(function (k) { metadata[k] = info[k]; });
-        metadata.idempotencyKey = 'yandal:' + folder.getId() + ':' + sourceId + ':' + kSrc;
+        _assertCurrentRow_();
         // Authentication and same-ULP checks already ran before any reads.
         // The private transport avoids forging a user session for scheduled work.
         outputId = fileId_(need_('_h07WatermarkImpl_')(sourceId, folder.getId(), metadata, wmName));
         if (!outputId) fail_('INVALID_ENGINE_RESULT');
       }
+      _assertCurrentRow_();
       var output = boundPrivateFile_(outputId, folder);
       if (output.getName() !== wmName) fail_('WRONG_OUTPUT_NAME');
+      if (resolve_(source, sourceFolder, folderRel) !== sourceId ||
+          _sourceVersion_(DriveApp.getFileById(sourceId)) !== version) fail_('SOURCE_CHANGED');
       if (text_(sh.getRange(rowNum, kSrc + 1).getValue()) !== source) fail_('SOURCE_CHANGED');
       var url = 'https://drive.usercontent.google.com/download?id=' + outputId + '&export=download';
       // Stored identifiers only: ACL stays private. Completion marker is last.
       writeText_(sh, rowNum, kUrl, url);
       writeText_(sh, rowNum, kWm, expected || url);
+      SpreadsheetApp.flush();
       frame.done[key] = true;
     } catch (error) {
       frame.failed = true;
@@ -201,21 +259,40 @@
     root[name] = function (kode, target) {
       var previous = frame;
       var current = { failed: false, expected: {}, done: {} };
+      var lock = null;
       frame = current;
       try {
         current.principal = _principal_(arguments, name, false);
         if (typeof original !== 'function') fail_('PROCESSOR_MISSING');
         need_('_h07PrivateFile_');
+        // Authenticate first, then acquire BEFORE resolving ownership or
+        // allowing any legacy preprocessing. Never continue after timeout.
+        lock = LockService.getScriptLock();
+        lock.waitLock(30000);
+        if (!lock.hasLock()) fail_('LOCK_REQUIRED');
         var schema = spec_(switching), before = _row_(schema, kode);
+        current.schema = schema;
+        current.kode = text_(kode);
+        current.sh = before.sh;
+        current.width = before.row.length;
         current.sheetId = before.sh.getSheetId();
+        current.rowNum = before.rowNum;
+        current.folderRel = text_(before.row[schema.cols.folderPath]);
         var wanted = text_(target).toLowerCase();
         var slots = schema.slots.filter(function (slot) { return !wanted || wanted === slot.key; });
         if (!slots.length) fail_('INVALID_SLOT');
         slots.forEach(function (slot) {
-          current.expected[before.rowNum + ':' + slot.src] = { source: text_(before.row[slot.src]) };
+          current.expected[before.rowNum + ':' + slot.src] = { col: slot.src, source: text_(before.row[slot.src]) };
         });
+        _assertCurrentRow_();
+        // waitLock is a no-op when this execution already owns the lock.
+        // Legacy processors release it in finally, so reacquire before repair.
         var result = original.apply(this, arguments);
+        lock.waitLock(30000);
         var after = _row_(schema, kode);
+        if (after.rowNum !== current.rowNum || after.sh.getSheetId() !== current.sheetId)
+          fail_('ROW_BINDING_CHANGED');
+        _assertCurrentRow_();
         // Only repair after the original processor entered the guarded photo
         // path. Do not introduce Drive side effects before its own guards.
         if (current.attempted) repairRow_(schema, after);
@@ -232,6 +309,7 @@
       } catch (error) {
         throw new Error('T11_YANDAL_PROCESS_FAILED');
       } finally {
+        try { if (lock && lock.hasLock()) lock.releaseLock(); } catch (releaseError) {}
         frame = previous;
       }
     };

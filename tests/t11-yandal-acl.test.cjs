@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const crypto = require('node:crypto');
 const { test } = require('node:test');
 const backend = path.join(__dirname, '../SiSi_BackEnd');
 const boundary = fs.readFileSync(path.join(backend, 'Core/ZZ-T11-Yandal-Watermark-ACL.js'), 'utf8');
@@ -28,7 +29,8 @@ function fixture(switching = false, options = {}) {
   row[cols.ulp] = 'ULP Toboali'; row[49] = 'row-folder';
   const rows = [Array(50).fill('header'), row];
   const events = [], files = new Map();
-  let serial = 0, engineCalls = 0, locked = false, reads = 0, queueCalls = 0;
+  let serial = 0, engineCalls = 0, locked = false, reads = 0, queueCalls = 0, processorCalls = 0;
+  const engineKeys = [];
   const folder = { id: 'folder_12345678901234567890', access: 'PRIVATE',
     getId() { return this.id; }, getSharingAccess() { return this.access; },
     getParents: () => iterator(options.publicAncestor ? [{
@@ -38,8 +40,9 @@ function fixture(switching = false, options = {}) {
   const otherFolder = { ...folder, id: 'other_folder_12345678901234567890', getParents: () => iterator([]) };
   function addFile(name, access = 'PRIVATE', parent = folder) {
     const id = 'file_' + String(++serial).padStart(24, '0');
-    const f = { id, name, access, parent,
+    const f = { id, name, access, parent, bytes: [1, 2, 3], mime: 'image/jpeg',
       getId() { return this.id; }, getName() { return this.name; },
+      getBlob() { return { getBytes: () => this.bytes.slice(), getContentType: () => this.mime }; },
       getSharingAccess() { if (options.readAclFails) throw Error('acl read'); return this.access; },
       getParents() { return iterator([this.parent]); },
       setSharing(accessValue, permission) {
@@ -57,18 +60,25 @@ function fixture(switching = false, options = {}) {
   const sh = {
     getSheetId: () => 123, getName: () => switching ? 'switching' : 'p0',
     getDataRange: () => ({ getValues: () => rows.map(r => r.slice()) }),
-    getRange: (r, c) => ({
+    getRange: (r, c, nr = 1, nc = 1) => ({
       getValue: () => rows[r - 1][c - 1],
+      getValues: () => rows.slice(r - 1, r - 1 + nr).map(v => v.slice(c - 1, c - 1 + nc)),
       setNumberFormat() { return this; },
       setValue(v) {
         events.push(['write', c - 1]);
         if (options.writeFails === c - 1) throw Error('sheet write failed');
         rows[r - 1][c - 1] = v;
       },
-      clearContent() { rows[r - 1][c - 1] = ''; }
+      clearContent() { events.push(['clear', c - 1]); rows[r - 1][c - 1] = ''; }
     })
   };
   const ctx = vm.createContext({
+    SpreadsheetApp: { flush: () => { if (options.flushFails) throw Error('flush failed'); } },
+    Utilities: {
+      DigestAlgorithm: { SHA_256: 'sha256' }, Charset: { UTF_8: 'utf8' },
+      computeDigest: (algorithm, value) => [...crypto.createHash(algorithm)
+        .update(typeof value === 'string' ? value : Buffer.from(value)).digest()]
+    },
     guard_: (args, opts) => {
       const list = Array.from(args || []);
       if (!list.some(v => v && typeof v === 'object' && v.token === 'valid-session'))
@@ -82,8 +92,16 @@ function fixture(switching = false, options = {}) {
     YANDAL_WM_FOLDER_ID: folder.id, YANDAL_IMG_FOLDER_ID: '',
     Logger: { log: () => {} },
     LockService: { getScriptLock: () => ({
-      waitLock: () => { if (options.lockFails) throw Error('lock denied'); locked = true; },
-      hasLock: () => locked, releaseLock: () => { locked = false; }
+      waitLock: () => {
+        if (locked) return;
+        if (options.beforeAcquire) options.beforeAcquire({ row, rows, cols, slots });
+        if (options.lockFails) throw Error('lock denied');
+        locked = true;
+      },
+      hasLock: () => locked, releaseLock: () => {
+        locked = false;
+        if (options.afterRelease) options.afterRelease({ row, rows, cols, slots });
+      }
     }) },
     DriveApp: { Access: { PRIVATE: 'PRIVATE' }, Permission: { VIEW: 'VIEW' },
       getFileById: (id) => { if (!files.has(id)) throw Error('missing file'); return files.get(id); },
@@ -96,22 +114,27 @@ function fixture(switching = false, options = {}) {
       f.setSharing('PRIVATE', 'VIEW'); return f; },
     watermarkFoto_: (_id, outFolder, info, name) => {
       engineCalls++; assert.equal(outFolder, folder.id);
+      engineKeys.push(info.idempotencyKey);
       assert.match(info.idempotencyKey, /^yandal:/);
       if (options.engineFails) throw Error('provider token should not leak');
       const f = addFile(name, options.silentAclFailure ? 'ANYONE_WITH_LINK' : 'PRIVATE',
         options.wrongOutputFolder ? otherFolder : folder);
       if (options.sourceChanges) row[slots[0].src] = 'row-folder/replaced.jpg';
+      if (options.duringEngine) options.duringEngine({ row, cols, files, source: files.get(_id) });
       return options.invalidEngine ? 'https://evil.example/?id=' + f.id : 'https://drive.google.com/thumbnail?id=' + f.id;
     }
   });
   function original(kode, target) {
+    processorCalls++;
     assert.equal(kode, code);
     const lock = ctx.LockService.getScriptLock();
     try { lock.waitLock(); } catch (_) {}
     try {
+      if (options.beforePhoto) options.beforePhoto({ row, rows, cols, slots });
       if (options.swallowBeforePhoto) throw Error('preprocessing failed');
       for (const slot of slots) if (!target || slot.key === target) {
-        ctx._wmFotoY_({ ...sh }, 2, slot.src, slot.wm, slot.url, { ulp: 'ULP Toboali' }, folder, row[49]);
+        ctx._wmFotoY_({ ...sh }, 2, slot.src, slot.wm, slot.url,
+          { ulp: 'ULP Toboali', ...(options.photoInfo || {}) }, folder, row[49]);
       }
     } catch (_) { /* Model the real legacy catch/log behavior. */ }
     finally { lock.releaseLock(); }
@@ -143,8 +166,9 @@ function fixture(switching = false, options = {}) {
     row[slot.url] = 'https://drive.usercontent.google.com/download?id=' + f.id + '&export=download';
     return f;
   }
-  return { ctx, row, rows, cols, slots, sh, code, invoke, folder, files, events, addFile, existing,
+  return { ctx, row, rows, cols, slots, sh, code, invoke, folder, files, events, addFile, existing, engineKeys,
     options, install, get engineCalls() { return engineCalls; },
+    get locked() { return locked; }, get processorCalls() { return processorCalls; },
     get reads() { return reads; }, get queueCalls() { return queueCalls; } };
 }
 for (const switching of [false, true]) {
@@ -162,9 +186,10 @@ for (const switching of [false, true]) {
     assert.equal(f.row[f.slots[0].wm], ''); assert.equal(f.row[f.slots[0].url], '');
     f.options.aclFails = false; f.invoke(); assert.equal(f.engineCalls, 1, 'retry reuses private orphan');
   });
-  test('boundary: ' + label + ' unchanged old public output is revoked rather than skipped', () => {
+  test('boundary: ' + label + ' legacy output is privatized but not reused without source identity', () => {
     const f = fixture(switching); const old = f.existing(); f.invoke();
-    assert.equal(old.access, 'PRIVATE'); assert.equal(f.engineCalls, 0);
+    assert.equal(old.access, 'PRIVATE'); assert.equal(f.engineCalls, 1);
+    assert.ok(!f.row[f.slots[0].url].includes(old.id));
   });
   test('boundary: ' + label + ' invalid path does not skip a valid download reference', () => {
     const f = fixture(switching); const old = f.existing(); f.row[f.slots[0].wm] = '../bad';
@@ -191,6 +216,12 @@ test('boundary: failed Sheet completion is retryable and does not duplicate outp
   assert.throws(() => f.invoke(), /T11_YANDAL_PROCESS_FAILED/);
   assert.equal(f.row[pslots[0].wm], '');
   f.options.writeFails = null; f.invoke(); assert.equal(f.engineCalls, 1);
+});
+test('boundary: failed flush cannot report completion and retry reuses same version', () => {
+  const f = fixture(false, { flushFails: true });
+  assert.throws(() => f.invoke(), /PROCESS_FAILED/);
+  f.options.flushFails = false; f.invoke();
+  assert.equal(f.engineCalls, 1); assert.equal(f.locked, false);
 });
 test('boundary: ambiguous file lookup rejects rather than taking the first match', () => {
   const f = fixture(); f.addFile('capture0.jpg');
@@ -327,6 +358,128 @@ function legacyFunction(source, name) {
   assert.ok(end > start, 'missing closing body ' + name);
   return source.slice(start, end + 2);
 }
+// Race regressions exercise the real overlay with controlled service timing.
+// External writers do not honor Apps Script locks; rechecks must still reject.
+for (const switching of [false, true]) {
+  const label = switching ? 'Switching' : 'P0';
+  test('race: ' + label + ' ownership changes while waiting: zero side effects', () => {
+    for (const ulp of ['', 'ULP Lain']) {
+      const f = fixture(switching, {
+        beforeAcquire: ({ row, cols }) => { row[cols.ulp] = ulp; }
+      });
+      assert.throws(() => f.invoke(), /PROCESS_FAILED/);
+      assert.equal(f.processorCalls, 0);
+      assert.equal(f.engineCalls, 0);
+      assert.deepEqual(f.events, []);
+      assert.equal(f.locked, false);
+    }
+  });
+  test('race: ' + label + ' lock timeout cannot enter legacy preprocessing', () => {
+    const f = fixture(switching, { lockFails: true });
+    assert.throws(() => f.invoke(), /PROCESS_FAILED/);
+    assert.equal(f.processorCalls, 0); assert.equal(f.reads, 0);
+    assert.deepEqual(f.events, []); assert.equal(f.locked, false);
+  });
+  test('race: ' + label + ' row ownership, key and folder changes before photo reject', () => {
+    for (const field of ['ulp', 'key', 'folder']) {
+      const f = fixture(switching, { beforePhoto: ({ row, cols }) => {
+        if (field === 'ulp') row[cols.ulp] = 'ULP Lain';
+        if (field === 'key') row[switching ? cols.kodeSwitching : cols.kodeP0] = 'OTHER';
+        if (field === 'folder') row[cols.folderPath] = 'other-folder';
+      } });
+      assert.throws(() => f.invoke(), /PROCESS_FAILED/);
+      assert.deepEqual(f.events, []); assert.equal(f.engineCalls, 0);
+      assert.equal(f.locked, false);
+    }
+  });
+  test('race: ' + label + ' ownership change during engine prevents completion writes', () => {
+    const f = fixture(switching, {
+      duringEngine: ({ row, cols }) => { row[cols.ulp] = 'ULP Lain'; }
+    });
+    assert.throws(() => f.invoke(), /PROCESS_FAILED/);
+    assert.equal(f.engineCalls, 1);
+    assert.equal(f.events.filter(e => e[0] === 'write').length, 0);
+    assert.equal(f.row[f.slots[0].wm], '');
+    assert.equal(f.locked, false);
+  });
+  test('race: ' + label + ' post-processor repair reacquires and revalidates ownership', () => {
+    const f = fixture(switching, { all: true, afterRelease: ({ row, cols }) => {
+      row[cols.ulp] = 'ULP Lain';
+    } });
+    const unselected = f.existing(f.slots[1]);
+    assert.throws(() => f.invoke(f.slots[0].key), /PROCESS_FAILED/);
+    assert.equal(unselected.access, 'ANYONE_WITH_LINK', 'no post-release ACL write to newly foreign row');
+    assert.equal(f.locked, false);
+  });
+  test('identity: ' + label + ' same filename with a different source ID regenerates', () => {
+    const f = fixture(switching); f.invoke();
+    const oldUrl = f.row[f.slots[0].url];
+    const source = [...f.files.values()].find(file => !file.name.startsWith('WM_'));
+    f.files.delete(source.id);
+    const replacement = f.addFile(source.name);
+    // Relative Sheet path stays exactly the same, only the resolved ID changed.
+    assert.notEqual(source.id, replacement.id);
+    f.invoke();
+    assert.equal(f.engineCalls, 2);
+    assert.notEqual(f.row[f.slots[0].url], oldUrl);
+    assert.notEqual(f.engineKeys[0], f.engineKeys[1]);
+  });
+  test('identity: ' + label + ' replacement ID supplied as a Drive URL also regenerates', () => {
+    const f = fixture(switching); f.invoke();
+    const oldUrl = f.row[f.slots[0].url];
+    const source = [...f.files.values()].find(file => !file.name.startsWith('WM_'));
+    f.files.delete(source.id);
+    const replacement = f.addFile(source.name);
+    f.row[f.slots[0].src] = 'https://drive.google.com/file/d/' + replacement.id + '/view';
+    f.invoke();
+    assert.equal(f.engineCalls, 2); assert.notEqual(f.row[f.slots[0].url], oldUrl);
+  });
+  test('identity: ' + label + ' modified bytes at the same ID regenerate', () => {
+    const f = fixture(switching); f.invoke();
+    const oldUrl = f.row[f.slots[0].url];
+    const source = [...f.files.values()].find(file => !file.name.startsWith('WM_'));
+    source.bytes = [4, 5, 6];
+    f.invoke();
+    assert.equal(f.engineCalls, 2); assert.notEqual(f.row[f.slots[0].url], oldUrl);
+    assert.notEqual(f.engineKeys[0], f.engineKeys[1]);
+  });
+  test('identity: ' + label + ' changed render context regenerates but key ordering does not', () => {
+    const f = fixture(switching, { photoInfo: { tim: 'A', jam: '10:00' } }); f.invoke();
+    const firstUrl = f.row[f.slots[0].url];
+    f.options.photoInfo = { jam: '10:00', tim: 'A' }; f.invoke();
+    assert.equal(f.engineCalls, 1); assert.equal(f.row[f.slots[0].url], firstUrl);
+    f.options.photoInfo = { jam: '11:00', tim: 'A' }; f.invoke();
+    assert.equal(f.engineCalls, 2); assert.notEqual(f.row[f.slots[0].url], firstUrl);
+  });
+  test('identity: ' + label + ' stable source/context reuses output on retry', () => {
+    const f = fixture(switching, { writeFails: (switching ? sslots : pslots)[0].wm });
+    assert.throws(() => f.invoke(), /PROCESS_FAILED/);
+    const oldUrl = f.row[f.slots[0].url];
+    f.options.writeFails = null; f.invoke(); f.invoke();
+    assert.equal(f.engineCalls, 1); assert.equal(f.row[f.slots[0].url], oldUrl);
+    assert.equal([...f.files.values()].filter(file => file.name.startsWith('WM_v2_')).length, 1);
+  });
+  test('identity: ' + label + ' content changes during engine reject stale completion', () => {
+    const f = fixture(switching, {
+      duringEngine: ({ source }) => { source.bytes = [7, 8, 9]; }
+    });
+    assert.throws(() => f.invoke(), /PROCESS_FAILED/);
+    assert.equal(f.events.filter(e => e[0] === 'write').length, 0);
+    assert.equal(f.row[f.slots[0].wm], '');
+    f.options.duringEngine = null; f.invoke();
+    assert.equal(f.engineCalls, 2);
+    assert.notEqual(f.engineKeys[0], f.engineKeys[1]);
+  });
+  test('identity: ' + label + ' duplicate versioned outputs are never first-match reused', () => {
+    const f = fixture(switching); f.invoke();
+    const output = [...f.files.values()].find(file => file.name.startsWith('WM_v2_'));
+    f.addFile(output.name);
+    f.events.length = 0;
+    assert.throws(() => f.invoke(), /PROCESS_FAILED/);
+    assert.equal(f.engineCalls, 1);
+    assert.equal(f.events.filter(e => e[0] === 'write').length, 0);
+  });
+}
 test('integration: actual Guard rejects missing/expired/foreign session before any read', () => {
   const source = fs.readFileSync(path.join(backend, 'Core/Guard.js'), 'utf8');
   for (const scenario of ['missing', 'expired', 'foreign', 'valid']) {
@@ -338,7 +491,7 @@ test('integration: actual Guard rejects missing/expired/foreign session before a
       ? { username: 'test-user', role: 'Admin', ulp: scenario === 'foreign' ? 'ULP Lain' : 'ULP Toboali' }
       : null;
     if (scenario === 'valid') {
-      f.invoke(); assert.ok(f.reads > 0); assert.equal(f.engineCalls, 0);
+      f.invoke(); assert.ok(f.reads > 0); assert.equal(f.engineCalls, 1);
     } else {
       const call = scenario === 'missing'
         ? () => f.ctx.prosesP0Yandal(f.code, 'sebelum') : () => f.invoke();
@@ -383,6 +536,27 @@ function realLegacy(f) {
   f.install();
 }
 for (const switching of [false, true]) {
+  test('integration: actual legacy processor never starts after ownership changes at lock (' + switching + ')', () => {
+    const f = fixture(switching, {
+      beforeAcquire: ({ row, cols }) => { row[cols.ulp] = 'ULP Lain'; }
+    });
+    realLegacy(f);
+    let preprocessing = 0;
+    f.ctx._setY_ = f.ctx._recalcDurasiRowY_ = () => { preprocessing++; };
+    assert.throws(() => f.invoke(), /PROCESS_FAILED/);
+    assert.equal(preprocessing, 0); assert.equal(f.engineCalls, 0);
+    assert.deepEqual(f.events, []); assert.equal(f.locked, false);
+  });
+  test('integration: actual legacy processor binds new source identity (' + switching + ')', () => {
+    const f = fixture(switching); realLegacy(f); f.invoke();
+    const oldUrl = f.row[f.slots[0].url];
+    const source = [...f.files.values()].find(file => !file.name.startsWith('WM_'));
+    f.files.delete(source.id); f.addFile(source.name);
+    f.invoke(); f.invoke();
+    assert.equal(f.engineCalls, 2);
+    assert.notEqual(f.row[f.slots[0].url], oldUrl);
+    assert.equal(f.locked, false);
+  });
   test('integration: actual legacy processor and queue retain ACL failure (' + switching + ')', () => {
     const f = fixture(switching, { aclFails: true }); realLegacy(f);
     assert.throws(() => f.invoke(), /T11_YANDAL_PROCESS_FAILED/);
