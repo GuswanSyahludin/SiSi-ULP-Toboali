@@ -6,143 +6,145 @@
 **Repository:** `GuswanSyahludin/SiSi-ULP-Toboali`  
 **Primary operating scope:** Internal ULP Toboali operations  
 **Audit findings and remediation tasks:** `docs/SECURITY-AUDIT-STATUS.md`  
-**Last updated:** 30 September 2026, 09:28 WIB
+**Last updated:** 30 September 2026, after PR #47 merge
 
 ## 1. Product contract
 
 SiSi ULP Toboali is an internal operational platform for recording, reviewing, synchronizing, and reporting electrical distribution work for ULP Toboali. It combines Google Apps Script, Google Sheets/Drive, a web interface, and a Flutter mobile application.
 
-The system is fail-closed. Foreign, blank, duplicate, unresolved, or ambiguous ownership is rejected before spreadsheet, Drive, PDF, or write side effects. `idBA` is a row lookup key, never an ownership value.
+The required system policy is fail-closed: foreign, blank, duplicate, unresolved, or ambiguous ownership is rejected before operational spreadsheet, Drive, PDF, or write side effects. `idBA` is a row lookup key, never an ownership value. Requirements below describe the target contract; merged source and outstanding evidence are distinguished in section 6. A requirement is not proof that every legacy path already satisfies it.
 
 ## 2. Authorization and storage requirements
 
 - Protected operations require a valid session and resolved ULP.
 - BA access remains same-ULP; Super User does not automatically bypass BA ownership.
 - Tokens are not accepted through insecure query-string contracts.
-- Device authentication uses `loginPerangkat`, `cekPerangkat`, and `logoutPerangkat` only.
+- Device authentication uses `loginPerangkat`, `cekPerangkat`, and `logoutPerangkat` only; endpoint failure must not activate legacy authentication.
 - Device tokens expire after 30 days absolute or 7 days idle, whichever comes first, forcing fresh login.
 - Password plaintext is accepted only during an explicit single-use migration window capped at 7 days; after cutoff, verification fails closed and requires migration or reset.
-- Password audit/migration requires Super User authorization, and account password writes have no plaintext fallback.
-- Jadwal Padam reads and writes are same-ULP: master, list, calendar, Master Beban, save, update, status, delete, and WhatsApp-text endpoints require the authenticated ULP scope. Foreign, unresolved, duplicate, or ambiguous rows fail closed before writes.
-- Inspection and watermark photos are private by default. Upload and watermark paths force private Drive ACLs; photo retrieval requires an authenticated session and same-ULP ownership.
-- Existing public-by-link photos require a controlled batch ACL rotation before production sign-off.
-- Master Gardu snapshot materialization upserts fresh data without deleting pending local edits; `gardu_outbox` patches are replayed atomically.
-- Master Gardu identity is scoped by normalized `(ulp, gardu)` in mobile tables, outbox updates, snapshot deletion, patch replay, and revision storage.
-- Master Gardu optimistic concurrency stores a per-row `serverRevision`; stale edits fail with `MASTER_GARDU_CONFLICT` and remain visible as conflict outbox rows.
-- REL-03 write paths preflight formula and immutable cells before writes and avoid full-range rewrites that can replace formulas with values.
-- Mobile ROW append requires a valid session and same-ULP scope, validates coordinates and diameter, sanitizes text before Sheet writes, serializes append side effects, and replays a successful request by idempotency key instead of appending a duplicate row.
-- Mobile local databases and queues are account-scoped by normalized username and ULP.
-- SharedPreferences, Workmanager inputs, SQLite tables, outboxes, caches, and local mirrors remain isolated by account namespace.
-- WorkManager periodic and one-off unique names include the active account namespace; mismatched worker payloads are discarded before sync.
-- Legacy shared database files are quarantined, not silently assigned to another account.
-- Pending records and photos remain retryable; recovery must not require deleting local SQLite.
-- Yandal originals are copied into account-scoped private app storage and registered in a durable `photo-outbox.jsonl` receipt before capture success is reported; official-code binding never rewrites original metadata.
-- Legacy Yandal watermark processing is followed by a final ACL repair overlay that resets all generated P0 and Switching watermark/download files to private.
-- Login failures use a generic response, and supplied device/client identifiers receive an additional device-level throttle.
-- AppSheet webhook timestamps are enforced by default in production to prevent replay; legacy warning-mode fixtures opt in explicitly.
-- The mobile API deployment URL is build-time configurable with `SISI_API_URL`; no production token or signing material is committed.
-- Main-branch merges require live-verifiable security and release gates, including backend, Flutter, and auth-transport checks, review approval, stale-review dismissal, administrator enforcement, disabled force-push/deletion, and conversation resolution.
-- Android release builds fail closed when signing inputs are absent or incomplete; app backup and data extraction explicitly exclude sessions, databases, caches, and private photos.
-- Evidence-image bytes are decoded before private persistence or Android export; corrupt, truncated, SOI-only, missing-EOI, oversized, and non-decodable outputs are rejected.
+- Password audit/migration requires Super User authorization; account password writes must not fall back to plaintext.
+- Jadwal Padam master/list/calendar/Master Beban/save/update/status/delete/WhatsApp operations require authenticated ULP scope and unique row resolution.
+- Inspection and watermark photos must be private by default and retrieved through authenticated same-ULP access. Existing public photos require controlled ACL rotation. Source overlays do not prove remote private-at-creation or complete legacy coverage.
+- Master Gardu snapshot materialization preserves pending/conflict local edits, atomically replays `gardu_outbox` patches, and scopes identity by normalized `(ulp, gardu)` across tables, deletion, replay, and revision storage.
+- Master Gardu edits use `serverRevision`; stale edits return `MASTER_GARDU_CONFLICT` and remain visible as conflict outbox rows, not silently retried or discarded.
+- REL-03 writes preflight formula/immutable cells and avoid whole-range rewrites that turn formulas into values.
+- Mobile ROW append requires session/same-ULP scope, coordinate/diameter validation, safe text cells, serialized append side effects, and caller/account-scoped idempotency.
+- Databases, queues, caches, local photos, SharedPreferences, WorkManager inputs and progress must remain account-isolated. Legacy shared databases are quarantined, not assigned silently to another account.
+- Worker names are account-scoped; mismatched worker payloads are rejected. Full session-generation/callback isolation remains a separate requirement, not a guarantee from namespacing alone.
+- Pending records/photos remain retryable without deleting SQLite to recover.
+- Yandal originals are copied to account-private storage with frozen metadata and SHA-256, then recorded in durable `photo-outbox.jsonl`; official-code binding does not alter capture metadata or original bytes.
+- Yandal active server photo processing must never call the legacy public-sharing helper. Missing authorization/ownership, lock failure, invalid references, ACL failure and incomplete writes must remain failures for the queue.
+- Login failures use generic responses and additional supplied-device/client throttling.
+- Production webhook timestamps default to enforce; legacy warning-mode fixtures opt in explicitly.
+- `SISI_API_URL` selects approved deployments at build time; credentials/signing material are not committed.
+- Main protection must be live-verifiable: required security/release checks, review approval, stale-review dismissal, administrator enforcement, no force-push/deletion, conversation resolution.
+- Android release signing fails closed without complete inputs; backup/data extraction exclude credentials, databases, caches and private photos.
+- Evidence validation must bound encoded size and decoded dimensions/pixels, reject corrupt content, and verify original integrity before render/export. Explicit complete JPEG markers apply to rendered JPEG validation; original decoder validation is a distinct contract.
 
 ## 3. Core workflows
 
 ### Authentication and session
 
-The approved device-auth path creates the active session. Session restoration activates exactly one account namespace. Device-token expiry deletes the credential and forces `loginPerangkat()` again. Legacy plaintext passwords require migration or reset after cutoff.
+The approved device-auth path activates one account namespace. Expiry clears credentials and forces login. Plaintext credentials require migration/reset after cutoff. Account-switch, stale callback and database-activation race acceptance remains required.
 
 ### Offline synchronization
 
-Local writes are durable before success is shown. Master Gardu materialization uses an atomic snapshot merge: incoming rows are upserted, stale rows without pending or conflict outbox edits may be removed, pending and conflict rows are preserved, and pending JSON patches are replayed before commit. Failed outbox items remain visible and retryable. Snapshot deletion and patch replay always use the composite `(ulp, gardu)` identity. Background worker registration, cancellation, account checks, and visible progress state use the active account namespace.
+Local writes are durable before success. Master Gardu snapshot merge upserts incoming data, deletes only eligible stale rows without pending/conflict edits, preserves pending/conflict rows and replays JSON patches before commit. Identity is `(ulp, gardu)`. Registration/cancellation and stored progress use an account namespace; generation-pinned callbacks and visible progress reset remain open source work.
 
 ### Mobile ROW append
 
-The server rejects unauthenticated, foreign-ULP, malformed, or unsafe ROW append requests before the legacy writer runs. Text fields pass through the shared safe-cell boundary, latitude/longitude and diameter are range-checked, and the code generation, Sheet append, and enqueue path run under a script lock. A caller-provided idempotency key is namespaced by authenticated username and returns the original successful result on retry.
+Reject unauthenticated, foreign-ULP and unsafe requests before the legacy writer. Sanitize text, bound numeric inputs, serialize append/enqueue and replay the original successful receipt by account-scoped idempotency key. Upload transaction semantics and progressive-update false-success/orphan handling remain separate open work.
 
 ### Berita Acara
 
-The server authenticates the caller, verifies same-ULP access, resolves exactly one `idBA` row, validates ownership, and only then generates, uploads, syncs, or returns a file. Direct Drive fallback is not allowed.
+Authenticate, resolve exactly one owned `idBA` row, enforce same-ULP including Super User, then generate/upload/sync/return. No direct Drive fallback.
 
-### Yandal photo capture
+### Yandal photo capture and processing
 
-Camera captures are copied to private account storage with frozen metadata and a SHA-256 checksum. The file-backed outbox permits recovery after ImagePicker cache cleanup and restart; official-code references are written atomically and do not alter capture time, GPS, or original bytes. Original and rendered JPEG bytes must pass decoder/content validation before persistence or export. Direct watermark-engine output is private by default, and the legacy processor is followed by an ACL repair that makes all generated P0 and Switching outputs private. Retrieval uses the authenticated same-ULP path. Remote upload/lifecycle processing and real-device acceptance remain separate release gates.
+Mobile stores original bytes privately with frozen capture time/GPS/checksum and a durable outbox; code references are atomic. Decoder-backed originals and marker/decoder-validated rendered JPEGs are separate validation paths. Full local integrity checks, remote lifecycle and real-device acceptance remain tracked work.
+
+PR #47's server boundary authenticates before operational reads, acquires the script lock before ownership resolution and legacy preprocessing, and rechecks row key/ULP/folder/source before photo ACL/Sheet writes. It reacquires the lock after legacy processing before ACL repair and propagates swallowed failures through completion tracking.
+
+Output reuse uses `WM_v2_<SHA-256>.jpg` and a matching provider idempotency identity derived from source ID/content/name/MIME, destination folder, Sheet/row key, slot and canonical render metadata. Legacy name-only outputs are privatized but not reused as proof of identity. Partial write/flush retries reuse unchanged versioned outputs; changed sources require new output identities.
+
+Public manual tick/drain and trigger installation require a Toboali Super User. Private scheduler entries establish execution-local capability, not request flags. Webhook authority comes from verified POST body; mobile mode remains separate. Existing no-session public triggers fail closed and require a controlled staging migration to `_t11TickPusatSiSi_` before production.
+
+Script locks do not lock external AppSheet/Sheet/Drive edits. Rechecks are not a distributed atomic transaction. Versioned output names are not cryptographic attestation against malicious output replacement by a Drive collaborator. Runtime ACL/collaborator governance, engine private-at-creation, idempotency/naming compatibility, latency/quotas and served load order must be verified.
 
 ## 4. Functional requirements
 
 - **FR-01:** Protected reads/writes require a valid session.
-- **FR-02:** Authorization verifies caller ULP before operational data access.
-- **FR-03:** Foreign, blank, unresolved, or ambiguous ownership fails closed.
-- **FR-04:** Tokens are rejected from insecure query strings.
-- **FR-05:** Authorization failures occur before side effects.
-- **FR-06:** Mobile writes are durable before reported success.
-- **FR-07:** Pending corrections, approvals, uploads, and downloads remain retryable.
-- **FR-08:** Account switching cannot expose another account's local data or workers.
+- **FR-02:** Verify caller ULP before operational data access.
+- **FR-03:** Foreign, blank, unresolved, duplicate or ambiguous ownership fails closed.
+- **FR-04:** Reject tokens from insecure query strings.
+- **FR-05:** Authorization failures occur before operational side effects.
+- **FR-06:** Mobile writes are durable before success.
+- **FR-07:** Pending corrections, approvals, uploads and downloads remain retryable.
+- **FR-08:** Account switching cannot expose/submit another account's data or workers.
 - **FR-09:** BA operations require a uniquely resolved owned row.
-- **FR-10:** Device-auth endpoint failure cannot trigger legacy fallback.
-- **FR-11:** CI, deployed-runtime, and real-device evidence is required before production sign-off.
-- **FR-12:** Credentials are not persisted in plaintext SharedPreferences after secure-storage migration.
+- **FR-10:** Device-auth failure cannot trigger legacy fallback.
+- **FR-11:** CI, deployed-runtime and real-device evidence precede production sign-off.
+- **FR-12:** No plaintext credential SharedPreferences after secure migration.
 - **FR-13:** Device credentials expire after 30 days absolute or 7 days idle.
-- **FR-14:** Plaintext password verification is rejected after the explicit migration cutoff.
-- **FR-15:** Master Gardu materialization preserves pending offline edits and replays `gardu_outbox` patches atomically.
-- **FR-16:** Jadwal Padam endpoints enforce same-ULP read/write ownership using effective scope and row resolution by `kode`.
-- **FR-17:** Master Gardu edits require the current per-row server revision; stale revisions are rejected and preserved as non-retryable conflicts.
-- **FR-18:** Inspection and watermark photos are private by default and retrievable only through authenticated same-ULP access.
-- **FR-19:** Mobile ROW append enforces session/ULP authorization, safe input validation, atomic append serialization, and idempotent retry behavior.
-- **FR-20:** Production webhook requests require a valid timestamp within the replay-protection window.
-- **FR-21:** Login throttling includes the supplied device/client identifier, and authentication errors do not reveal account existence.
-- **FR-22:** Mobile builds can target approved staging or production deployments through `SISI_API_URL`.
-- **FR-23:** The live `main` branch protection configuration is auditable and must enforce the required security/release gates before merge.
-- **FR-24:** Android release signing and backup policy fail closed by source and CI contract.
-- **FR-25:** Master Gardu formula and immutable-cell protections are enforced before source writes.
-- **FR-26:** Yandal original photos remain recoverable from account-private storage after source-cache cleanup and restart.
-- **FR-27:** Original and rendered evidence images are validated by actual decode and complete JPEG marker checks before private persistence or export.
-- **FR-28:** Direct watermark-engine output must be created private; public-by-link output is not an accepted default.
-- **FR-29:** Background sync workers and progress indicators are partitioned by active account identity and reject stale account payloads.
-- **FR-30:** Legacy Yandal watermark processors cannot leave generated watermark/download files public after processing.
+- **FR-14:** Reject plaintext verification after the explicit migration cutoff.
+- **FR-15:** Atomic Master Gardu materialization preserves and replays pending edits.
+- **FR-16:** Jadwal Padam enforces same-ULP ownership with unique `kode` resolution.
+- **FR-17:** Stale Gardu revisions are rejected and preserved as non-retryable conflicts.
+- **FR-18:** Photos private by default; authenticated same-ULP retrieval.
+- **FR-19:** Mobile ROW session/ULP, safe inputs, serialization and idempotent retry.
+- **FR-20:** Production webhook timestamp within the allowed window.
+- **FR-21:** Generic login errors plus supplied-device/client throttling.
+- **FR-22:** Build-time `SISI_API_URL` for approved staging/production targets.
+- **FR-23:** Auditable live main-branch protection enforcement.
+- **FR-24:** Android release signing and backup policy fail closed.
+- **FR-25:** Preflight Gardu formula/immutable cells before writes.
+- **FR-26:** Recover Yandal originals after cache cleanup/restart.
+- **FR-27:** Decode/size/dimension/integrity validation before evidence persistence/render/export; rendered JPEG additionally requires complete SOI/EOI markers.
+- **FR-28:** Direct watermark output is created private, never public-by-link by default.
+- **FR-29:** Workers/progress partition by account and reject stale session work.
+- **FR-30:** Active Yandal processing never invokes public-sharing helpers and never reports successful completion after privacy/write failure.
+- **FR-31:** Validate Yandal ownership under lock before legacy preprocessing; recheck row/folder/source bindings at photo writes.
+- **FR-32:** Reuse watermark only for matching versioned source/content/render identity; retries must not silently reuse stale name-only output.
 
 ## 5. Security, reliability, and definition of done
 
-Fail closed by default. Do not trust client-supplied ULP, role, ownership, identifiers, or URLs without server-side resolution. Do not log secrets or tokens. Use locks for atomic identifiers, bounded retry for queues, and preserve failed records and audit history. Password migration requires a verified backup/version-history point. Master snapshot replacement must not discard pending or conflict local edits, and migration must preserve data, defaults, indexes, and composite identity. Photo privacy changes are not production-ready until existing public files are rotated and staging/real-device access tests pass.
+Do not trust client ULP/role/ownership/URLs without server resolution; do not log secrets. Use serialization, bounded retry and durable failure history. Password migration needs verified backup/version history; database migration preserves data/defaults/indexes/composite identity.
 
-Automated acceptance includes the Audit Gate, backend security tests, Flutter analysis/tests/build, query-string rejection, password cutover coverage, Master Gardu pending-edit coverage, Master Gardu conflict contract coverage, REL-03 formula-safe write coverage, photo privacy contract coverage, mobile ROW safe-write coverage, Jadwal Padam endpoint-load and ownership coverage, BA ownership/download coverage, account isolation, secure-storage migration, and offline queue tests. Photo acceptance additionally includes decoded-original, truncated/corrupt, SOI-only, missing-EOI, and rendered-JPEG export coverage, plus a contract that direct watermark output and post-processing ACL repair remain private. Account-sync acceptance includes worker namespace separation, mismatched payload rejection, logout cancellation, and progress-state isolation.
+Automated acceptance includes Audit Gate, backend security, Flutter analyze/tests/build, auth transport, password cutover, pending-edit materialization, conflicts, REL-03, photo privacy, ROW safe writes, Jadwal Padam and BA ownership. Yandal coverage includes ACL/lock failures, auth-before-read, source ID/content replacement, metadata identity, partial writes/flush, queue retry and private scheduler context. Mocked services are not deployed-runtime evidence.
 
-Runtime acceptance must cover staging authorization/safe writes, mobile ROW invalid-session/foreign-ULP rejection, CSV/formula injection rejection, invalid coordinate/diameter rejection, concurrent append and retry idempotency, password migration and cutoff, authenticated photo retrieval and wrong-ULP/public-link rejection, controlled public-file ACL rotation, real-device offline Gardu edit followed by fresh Master download and outbox replay, two-device stale-edit conflict detection, cross-ULP Jadwal Padam read/write rejection, restart/retry, account switching, token expiry, secure-storage behavior, Android backup/restore denial, and signed internal release installation. Yandal must additionally prove cache cleanup, restart recovery, account isolation, camera/GPS edge cases, decoded-image behavior on device, ACL state after P0/Switching processing, and signed-device behavior. A change is done only when implementation, docs, focused/full tests, CI, deployed-runtime evidence, and real-device evidence are complete.
+Staging/device acceptance must cover same/foreign/invalid sessions, formula injection, coordinate bounds, ROW concurrency/retry, password migration, token expiry, secure storage, two-device Gardu conflicts and upgraded migration, pending edits/restart, account switching and callback races, Android backup/data transfer denial, signed internal APK, camera/GPS/cache recovery, native decoder parity, authenticated photo display/download and public-link rejection.
+
+PR #47 also requires served load-order evidence, controlled private-trigger migration with backup/rollback, Cloud Run private-at-creation and versioned naming/idempotency compatibility, Drive inheritance/collaborators, latency/quota measurements and historical ACL rotation. No production deployment or trigger/ACL migration is authorized by source merge. Done requires implementation, accurate docs, focused/full tests, CI, deployed-runtime and real-device evidence.
 
 ## 6. Delivery status
 
-- Stage 0 P0 Audit Gate: implemented and merged.
-- Stage 1 BA atomicity: implemented and merged.
-- Stage 2 same-ULP authorization: implemented and merged for covered scope.
-- Stage 3 BA ownership/file binding: implemented and merged.
-- Stage 4 compatibility and Sheet-write hardening: implemented and merged for covered scope.
-- Stage 5 account-isolated local storage, legacy auth cleanup, and secure-session migration: implemented, tested, audited, and merged; remaining runtime evidence is tracked separately.
+Stages 0-4: P0 Audit Gate, BA atomicity, same-ULP authorization, ownership/file binding and Sheet-write compatibility are merged for covered scope. Stage 5 has merged account-scoped storage and secure-session foundations, but full concurrent session isolation and remaining legacy compatibility paths are not complete.
 
-### Stage 6: Full-Stack Audit Remediation
+### Stage 6: Full-stack audit remediation, 26-30 September 2026
 
-**Audit period:** 26-30 September 2026. **Scope:** backend, web, and mobile.
+- **T-01/T-02:** Token exposure/query authentication source remediations merged.
+- **T-03/T-04:** Delta sync ULP scoping and endpoint guard source merged.
+- **C-01:** Gardu edit-upload regression fixed and covered.
+- **#25, H-02/T-05:** Batching, recursion prevention, deterministic load order; runtime pending.
+- **#26, H-06/T-10:** 30-day absolute/7-day idle expiry; device evidence pending.
+- **#27, H-08:** Time-limited plaintext cutover; staging migration/cutoff pending.
+- **#28, C-05/T-06:** Atomic materialization/pending-edit preservation; device proof pending.
+- **#29, T-08/H-04:** Jadwal ownership overlay; cross-ULP/duplicate/staging/device proof pending.
+- **#30, T-09/H-05:** Composite identity/revision conflicts; two-device/UI/migration proof pending.
+- **#31, T-11/H-07:** Privacy source foundations; historical ACL/runtime acceptance pending.
+- **#32, T-07/H-03:** ROW safe-write boundary; concurrency/retry/client/device proof pending.
+- **#35, T-14/T-15/T-18/T-21/T-22/T-24:** Source hardening, superseding #34; runtime/compatibility pending.
+- **#36, T-29:** Branch-protection audit tooling; live ruleset evidence pending.
+- **#37:** Android signing/backup source guards; secret store/signed APK/device proof pending.
+- **#38:** Android 12+ extraction resource correction; runtime pending.
+- **#39, REL-03:** Formula/immutable preflight and targeted writes; sanitized formula/header map and runtime proof pending.
+- **#40, T-21/T-20:** Stale Flutter audit removal and contract. T-21 complete; strict lint/deprecated APIs/generated Drift and device work still open.
+- **#41, T-16/T-17:** Rendered HTML boundary, query-token fallback removal and SRI, commit `176e6fb45b2fc6054da570f3f2c27bcce73af4e9`. Full CSP/DOM/inline-handler refactor open.
+- **#42, T-19/T-32:** Account-private originals, frozen metadata/checksums, durable outbox and atomic code binding. Remote lifecycle and device proof open.
+- **#43:** Decoder-backed original validation and explicit rendered JPEG SOI/EOI validation, commit `cceebdc8e8c75541cb1b35043afd335e1c5ac7a2`. Original validation is not a universal complete-JPEG-marker guarantee. Decoded pixel limits, pre-read size guard, checksum-before-render, native parity, upload transactions and orphan cleanup remain open.
+- **#44:** Direct watermark payload `makePublic: false`, commit `8edb64fcd11531075ddeb28f6177bffa1134013e`; remote configuration and historical ACL proof open.
+- **#45:** Account-scoped WorkManager names and progress preference keys, commit `e5d6077506ed2cafc1d38e3a4c04d85a0d0095dd`. Worker mismatch rejection predated this PR. Full session-generation isolation, stale callbacks, progress reset and DB activation races remain open.
+- **#46:** Best-effort Yandal ACL repair, commit `338e4b00d5b3e8d9380e2028d97e9803869c88d8`. This swallowed errors and was not fail-closed; superseded by #47.
+- **#47:** Active Yandal fail-closed photo boundary, auth-first/private scheduler source, lock-before-ownership/preprocessing, versioned source-content-bound output reuse and tests. Squash commit `2f46cb4898a7296c27ef12a22f99b4f77d53be9c`; reviewed head `1c0fd2b3efff64aee6c114889f8792f388c5c873`. All three head CI checks passed. 66 local mocked tests plus 4 local transport/URL-helper scenarios passed; 8 repository integration cases are registered in CI. No merge-related deployment, trigger execution, ACL rotation, file deletion or runtime-task closure.
 
-- **T-01/T-02:** Token exposure and query-string authentication closed.
-- **T-03/T-04:** Delta sync ULP scoping and top-level guards merged.
-- **C-01:** Master Gardu edit upload regression fixed and covered.
-- **H-02/T-05, PR #25:** Master sync batching, recursion prevention, and deterministic load order merged; staging/real-device acceptance pending.
-- **H-06/T-10, PR #26:** 30-day absolute and 7-day idle device-token expiry merged; staging/real-device acceptance pending.
-- **H-08, PR #27:** Time-limited password plaintext cutover merged; staging migration and cutoff evidence pending.
-- **C-05/T-06, PR #28:** Atomic Master Gardu snapshot materialization merged; real-device preservation and sign-off pending.
-- **T-08/H-04, PR #29:** Jadwal Padam final ULP ownership overlay merged; cross-ULP staging, real-device validation, production deployment, and sign-off remain pending.
-- **T-09/H-05, PR #30:** Optimistic concurrency for Master Gardu merged; two-device real-device conflict validation, conflict UI end-to-end acceptance, staging validation, production deployment, and sign-off remain pending.
-- **T-11/H-07, PR #31:** Private-by-default watermark and inspection photos merged; existing public-file ACL rotation, staging, real-device access validation, and production sign-off remain pending.
-- **T-07/H-03, PR #32:** Mobile ROW safe-write boundary merged; staging concurrency, retry behavior, real-device validation, client payload compatibility, and production sign-off remain pending.
-- **T-14/T-15/T-18/T-21/T-22/T-24, PR #35:** Source-only hardening batch merged; staging, deployed-runtime, compatibility, and real-device evidence remain pending.
-- **T-29, PR #36:** Branch-protection audit tooling merged; live ruleset result and evidence capture remain pending.
-- **Source-only SiSi batch, PR #37:** Android release signing fail-closed checks and explicit backup/data-extraction policy merged; staging secret-store verification, signed internal APK installation, and real-device backup/restore evidence remain pending.
-- **Android resource correction, PR #38:** Android 12+ data extraction resource correction merged; runtime evidence remains pending.
-- **REL-03 formula-safe writes, PR #39:** Formula/immutable-cell preflight and targeted writes merged; sanitized staging formula mapping and two-device/runtime validation remain pending.
-- **T-21/T-20 source hygiene, PR #40:** Stale Flutter audit cleanup and regression contract merged. T-21 is complete; T-20 remains open for full lint/deprecated API cleanup, strict analyzer flags, generated Drift checks, and real-device validation.
-- **T-16/T-17 source security boundary, PR #41:** Rendered-HTML sanitization, delivered query-string token fallback removal, Font Awesome SRI, and regression contract merged. Full strict-CSP migration and complete DOM/inline-handler refactor remain open.
-- **T-19/T-32 source durability, PR #42:** Yandal originals now have account-scoped private copies, frozen metadata/checksums, durable `photo-outbox.jsonl` receipts, atomic official-code binding, and regression coverage. Remote upload/lifecycle processing, signed APK, and real-device validation remain open.
-- **JPEG validation and photo failure contract, PR #43:** Decoder-backed original validation and complete JPEG SOI/EOI validation are merged. Corrupt, truncated, SOI-only, missing-EOI, oversized, and non-decodable evidence bytes are rejected before private persistence or Android export, with Flutter regression coverage. Apps Script upload transaction semantics, orphan cleanup, remote watermark-engine behavior, native decoder parity, and real-device validation remain open.
-- **Direct watermark privacy, PR #44:** The direct `Tek-Watermark.js` Cloud Run payload now sends `makePublic: false`, and the T-11 contract rejects any direct `makePublic: true` regression. Existing public-file ACL rotation, Cloud Run configuration verification, staging, and real-device validation remain open.
-- **Account-scoped sync workers, PR #45:** WorkManager periodic and one-off names now include the active account database namespace; background jobs reject mismatched account payloads, logout cancels scoped and legacy names, and sync progress is stored per account. Real-device account-switch, restart, WorkManager persistence, and duplicate-delivery validation remain open.
-- **Legacy Yandal watermark ACL repair, PR #46:** A final overlay re-applies private ACLs after legacy P0 and Switching watermark processing, and the deployment order/test contract ensures it loads after the existing privacy and containment overlays. Historical public-file rotation, Cloud Run verification, staging, and real-device ACL validation remain open.
-
-**Overall:** Code remediations are merged through PR #46. Runtime acceptance and live branch-protection verification are incomplete. The system is not production-ready until the documented staging, ACL rotation, concurrency/retry, client compatibility, real-device, signing, photo-lifecycle, and GitHub ruleset evidence exists.
+**Overall:** Source remediations merged through PR #47. Runtime acceptance, live branch protection, full account isolation, remaining photo lifecycle/validation and strict CSP work are incomplete. The system is not production-ready.
