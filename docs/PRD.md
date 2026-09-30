@@ -6,7 +6,7 @@
 **Repository:** `GuswanSyahludin/SiSi-ULP-Toboali`  
 **Primary operating scope:** Internal ULP Toboali operations  
 **Audit findings and remediation tasks:** `docs/SECURITY-AUDIT-STATUS.md`  
-**Last updated:** 30 September 2026, after PR #47 merge
+**Last updated:** 30 September 2026, after PR #48 merge
 
 ## 1. Product contract
 
@@ -61,7 +61,13 @@ Authenticate, resolve exactly one owned `idBA` row, enforce same-ULP including S
 
 ### Yandal photo capture and processing
 
-Mobile stores original bytes privately with frozen capture time/GPS/checksum and a durable outbox; code references are atomic. Decoder-backed originals and marker/decoder-validated rendered JPEGs are separate validation paths. Full local integrity checks, remote lifecycle and real-device acceptance remain tracked work.
+PR #48 connects `YandalScreen._take` to `PetugasPhotoStore.saveOriginal`. The originating owner/form fields are captured before asynchronous camera/GPS work. After successful validation, private original/sidecar persistence and outbox append, the screen publishes the returned private path and frozen metadata/checksum together. Draft serialization carries `originalSha256` in `photoMetadata[slot]`. Failure leaves the previous UI slot intact; failed-write orphan cleanup is not guaranteed.
+
+`readBoundedFile` checks declared length before opening a stream, rejects empty or greater-than-40-MiB inputs, caps accumulated input bytes while streaming, and rejects stat/read length mismatch. Yandal rendering requires a 64-hex frozen checksum before file access, verifies SHA-256 over the bounded-read bytes, validates decoding/minimum dimensions, then passes those same bytes to the renderer without reopening the path. Missing historical hashes are rejected, never backfilled from current bytes. Raw `Image.file` preview is unchanged, and checksum absence is surfaced at render rather than by the existing completeness-button predicate.
+
+These are input-byte and accidental-replacement protections, not a peak-memory/decoded-pixel bound, atomic filesystem snapshot, protection against editing both file and hash, or complete account/session isolation. Other viewer read paths are not converted. Remote upload/official-receipt lifecycle, concurrent outbox handling, native parity and device acceptance remain open. Original decoder validation and explicit marker/decoder validation of rendered JPEGs remain distinct.
+
+Correction to earlier #42 wording: the private photo-store/outbox/binding foundations had merged, but the actual Yandal camera screen still used the picker path without a checksum until #48. Foundation availability alone was not evidence of an integrated capture path. Official-code binding foundations do not establish a complete remote receipt workflow.
 
 PR #47's server boundary authenticates before operational reads, acquires the script lock before ownership resolution and legacy preprocessing, and rechecks row key/ULP/folder/source before photo ACL/Sheet writes. It reacquires the lock after legacy processing before ACL repair and propagates swallowed failures through completion tracking.
 
@@ -105,6 +111,7 @@ Script locks do not lock external AppSheet/Sheet/Drive edits. Rechecks are not a
 - **FR-30:** Active Yandal processing never invokes public-sharing helpers and never reports successful completion after privacy/write failure.
 - **FR-31:** Validate Yandal ownership under lock before legacy preprocessing; recheck row/folder/source bindings at photo writes.
 - **FR-32:** Reuse watermark only for matching versioned source/content/render identity; retries must not silently reuse stale name-only output.
+- **FR-33:** Publish Yandal capture path/checksum only after successful private persistence; use the exact bounded, checksum-verified original bytes for rendering without historical hash backfill.
 
 ## 5. Security, reliability, and definition of done
 
@@ -112,7 +119,9 @@ Do not trust client ULP/role/ownership/URLs without server resolution; do not lo
 
 Automated acceptance includes Audit Gate, backend security, Flutter analyze/tests/build, auth transport, password cutover, pending-edit materialization, conflicts, REL-03, photo privacy, ROW safe writes, Jadwal Padam and BA ownership. Yandal coverage includes ACL/lock failures, auth-before-read, source ID/content replacement, metadata identity, partial writes/flush, queue retry and private scheduler context. Mocked services are not deployed-runtime evidence.
 
-Staging/device acceptance must cover same/foreign/invalid sessions, formula injection, coordinate bounds, ROW concurrency/retry, password migration, token expiry, secure storage, two-device Gardu conflicts and upgraded migration, pending edits/restart, account switching and callback races, Android backup/data transfer denial, signed internal APK, camera/GPS/cache recovery, native decoder parity, authenticated photo display/download and public-link rejection.
+PR #48 adds bounded-read/checksum regression tests and seven capture-integrity cases: three slot-specific private-store -> persisted draft reload -> verified bytes -> actual Flutter renderer paths; replaced original rejection; missing historical checksum rejection; invalid replacement without prior-data/outbox overwrite; and screen call-site wiring. Tests use real temporary files and production store/repository/adapter/validator/renderer code, with native directory lookup and SharedPreferences backend mocked. Receipt assignment is simulated and camera/GPS UI wiring is checked statically, not exercised end-to-end. All four reviewed-head CI checks passed; see the audit status document for exact evidence links. No local Flutter or real-device execution is claimed.
+
+Staging/device acceptance must cover same/foreign/invalid sessions, formula injection, coordinate bounds, ROW concurrency/retry, password migration, token expiry, secure storage, two-device Gardu conflicts and upgraded migration, pending edits/restart, account switching and callback races, Android backup/data transfer denial, signed internal APK, camera/GPS/cache recovery, native decoder parity, authenticated photo display/download and public-link rejection. For #48 also verify native private-directory support, missing legacy hashes, checksum rejection without metadata rewrite, storage/outbox failures, and memory/latency.
 
 PR #47 also requires served load-order evidence, controlled private-trigger migration with backup/rollback, Cloud Run private-at-creation and versioned naming/idempotency compatibility, Drive inheritance/collaborators, latency/quota measurements and historical ACL rotation. No production deployment or trigger/ACL migration is authorized by source merge. Done requires implementation, accurate docs, focused/full tests, CI, deployed-runtime and real-device evidence.
 
@@ -140,11 +149,12 @@ Stages 0-4: P0 Audit Gate, BA atomicity, same-ULP authorization, ownership/file 
 - **#39, REL-03:** Formula/immutable preflight and targeted writes; sanitized formula/header map and runtime proof pending.
 - **#40, T-21/T-20:** Stale Flutter audit removal and contract. T-21 complete; strict lint/deprecated APIs/generated Drift and device work still open.
 - **#41, T-16/T-17:** Rendered HTML boundary, query-token fallback removal and SRI, commit `176e6fb45b2fc6054da570f3f2c27bcce73af4e9`. Full CSP/DOM/inline-handler refactor open.
-- **#42, T-19/T-32:** Account-private originals, frozen metadata/checksums, durable outbox and atomic code binding. Remote lifecycle and device proof open.
-- **#43:** Decoder-backed original validation and explicit rendered JPEG SOI/EOI validation, commit `cceebdc8e8c75541cb1b35043afd335e1c5ac7a2`. Original validation is not a universal complete-JPEG-marker guarantee. Decoded pixel limits, pre-read size guard, checksum-before-render, native parity, upload transactions and orphan cleanup remain open.
+- **#42, T-19/T-32:** Account-private original, frozen metadata/checksum, durable outbox and atomic code-binding foundations. Actual Yandal camera-screen connection was missing until #48; remote lifecycle and device proof remain open.
+- **#43:** Decoder-backed original validation and explicit rendered JPEG SOI/EOI validation, commit `cceebdc8e8c75541cb1b35043afd335e1c5ac7a2`. Original validation is not a universal complete-JPEG-marker guarantee. #48 supplies pre-read bounds for `saveOriginal` and checksum-before-render for Yandal; decoded pixel limits, other viewer paths, native parity, upload transactions and orphan cleanup remain open.
 - **#44:** Direct watermark payload `makePublic: false`, commit `8edb64fcd11531075ddeb28f6177bffa1134013e`; remote configuration and historical ACL proof open.
 - **#45:** Account-scoped WorkManager names and progress preference keys, commit `e5d6077506ed2cafc1d38e3a4c04d85a0d0095dd`. Worker mismatch rejection predated this PR. Full session-generation isolation, stale callbacks, progress reset and DB activation races remain open.
 - **#46:** Best-effort Yandal ACL repair, commit `338e4b00d5b3e8d9380e2028d97e9803869c88d8`. This swallowed errors and was not fail-closed; superseded by #47.
 - **#47:** Active Yandal fail-closed photo boundary, auth-first/private scheduler source, lock-before-ownership/preprocessing, versioned source-content-bound output reuse and tests. Squash commit `2f46cb4898a7296c27ef12a22f99b4f77d53be9c`; reviewed head `1c0fd2b3efff64aee6c114889f8792f388c5c873`. All three head CI checks passed. 66 local mocked tests plus 4 local transport/URL-helper scenarios passed; 8 repository integration cases are registered in CI. No merge-related deployment, trigger execution, ACL rotation, file deletion or runtime-task closure.
+- **#48:** Bounded capture reads, frozen-checksum validation over exact render bytes, and Yandal camera-to-private-store/draft integration. Six-file diff reviewed; all four reviewed-head CI checks passed. Squash merge `6f6ac23320a4fc2803aca3c0174b5301ac35145e`; reviewed head `b5b7e4229adf93e96ae6fe05e3d112778b557a51`. Merged after explicit user approval on 30 September 2026. No deployment, historical metadata migration, runtime-task closure or follow-up PR.
 
-**Overall:** Source remediations merged through PR #47. Runtime acceptance, live branch protection, full account isolation, remaining photo lifecycle/validation and strict CSP work are incomplete. The system is not production-ready.
+**Overall:** Source remediations merged through [PR #48](https://github.com/GuswanSyahludin/SiSi-ULP-Toboali/pull/48). Runtime acceptance, live branch protection, full account isolation, remaining photo lifecycle/validation and strict CSP work are incomplete. The system is not production-ready.

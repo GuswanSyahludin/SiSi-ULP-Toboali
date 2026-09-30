@@ -1,6 +1,6 @@
 # SiSi ULP Toboali: Audit dan Status Remediasi
 
-_Terakhir diperbarui: 30 September 2026, setelah merge PR #47. Source merged tidak sama dengan runtime acceptance atau production sign-off._
+_Terakhir diperbarui: 30 September 2026, setelah merge PR #48. Source merged tidak sama dengan runtime acceptance atau production sign-off._
 
 File ini mencatat temuan, status source, dan pekerjaan remediasi SiSi. Root `SECURITY-AUDIT-STATUS.md` adalah file terpisah; pembaruan ini berlaku untuk dokumen di `docs/`.
 
@@ -26,14 +26,53 @@ File ini mencatat temuan, status source, dan pekerjaan remediasi SiSi. Root `SEC
 | #39 REL-03 formula-safe writes | SOURCE MERGED | ab6270724ee21ee4efcd6d7b2e20cdca25e8e66e |
 | #40 T-21/T-20 hygiene | T-21 COMPLETE; T-20 OPEN | eeed5a52979191d277edc2fe628ee6f0448903a |
 | #41 Web security boundary | SOURCE MERGED; CSP OPEN | 176e6fb45b2fc6054da570f3f2c27bcce73af4e9 |
-| #42 Yandal durability | SOURCE MERGED; lifecycle OPEN | 721542ef74e44eb0a9bdc276329801fe2dfcaeee |
+| #42 Photo-store/outbox foundations | SOURCE MERGED; Yandal screen connected by #48; lifecycle OPEN | 721542ef74e44eb0a9bdc276329801fe2dfcaeee |
 | #43 JPEG validation/export | SOURCE MERGED; further validation OPEN | cceebdc8e8c75541cb1b35043afd335e1c5ac7a2 |
 | #44 Direct watermark privacy | SOURCE MERGED | 8edb64fcd11531075ddeb28f6177bffa1134013e |
 | #45 Account-scoped worker/progress names | SOURCE MERGED; full isolation OPEN | e5d6077506ed2cafc1d38e3a4c04d85a0d0095dd |
 | #46 Best-effort Yandal ACL repair | MERGED; superseded by #47 | 338e4b00d5b3e8d9380e2028d97e9803869c88d8 |
 | #47 Active Yandal ACL/auth/identity boundary | SOURCE MERGED; runtime OPEN | 2f46cb4898a7296c27ef12a22f99b4f77d53be9c |
+| #48 Bounded capture read / Yandal checksum and capture integration | SOURCE MERGED; runtime and wider pipeline OPEN | 6f6ac23320a4fc2803aca3c0174b5301ac35145e |
 
-**Overall:** Source remediation merged through #47; staging, compatibility, live branch protection, signed-device evidence and production sign-off remain incomplete. No production-readiness claim.
+**Overall:** Source remediation merged through #48; staging, compatibility, live branch protection, signed-device evidence and production sign-off remain incomplete. No production-readiness claim.
+
+## PR #48: Bounded photo reads and Yandal capture integrity
+
+**PR:** https://github.com/GuswanSyahludin/SiSi-ULP-Toboali/pull/48  
+**Squash merge:** `6f6ac23320a4fc2803aca3c0174b5301ac35145e`  
+**Reviewed head:** `b5b7e4229adf93e96ae6fe05e3d112778b557a51`  
+**Merged:** 30 September 2026, after explicit user confirmation. Six changed files.
+
+### Source changes and audit correction
+
+- `readBoundedFile` checks declared length before opening the stream, rejects empty/greater-than-40-MiB inputs, caps accumulated input bytes during streaming, and rejects stat/read length mismatch. `PetugasPhotoStore.saveOriginal` uses it before decoding, platform storage requests, private persistence or outbox append.
+- `readVerifiedOriginal` requires a 64-hex frozen checksum before file access, verifies SHA-256 over bounded-read bytes, validates decoding/minimum dimensions, and returns those same bytes. Yandal render consumes them without reopening the source path.
+- Initial green-head audit found the actual Yandal camera producer still published an ImagePicker cache path and metadata without `originalSha256`. The approved correction connects `_take` to the existing private store, freezes originating owner/form fields before async capture, and publishes the returned private path and returned checksum metadata together only after save succeeds.
+- Existing slot metadata serialization carries the checksum into persisted drafts. Failed validation/storage/outbox completion leaves the previous UI slot intact; it does not guarantee cleanup of newly orphaned partial files.
+- Missing historical checksums are rejected, not backfilled. Existing raw preview and completeness-button logic are unchanged; legacy checksum failure appears when render is attempted if other indicators are complete.
+
+**Correction to earlier #42 claims:** private-store, outbox and code-binding foundations were available, but this was not proof the Yandal camera screen used them. The screen still used the picker path until #48. Remote upload/official-receipt lifecycle is not completed by connecting local storage.
+
+### Evidence
+
+All four checks passed on the reviewed corrective head, not merely the earlier green head:
+
+- Backend syntax/security: https://github.com/GuswanSyahludin/SiSi-ULP-Toboali/actions/runs/36677235060/job/109764731843
+- Flutter analyze/compile: https://github.com/GuswanSyahludin/SiSi-ULP-Toboali/actions/runs/36677235060/job/109764731574
+- Query-token rejection: https://github.com/GuswanSyahludin/SiSi-ULP-Toboali/actions/runs/36677235059/job/109764728395
+- Flutter analyze/debug build: https://github.com/GuswanSyahludin/SiSi-ULP-Toboali/actions/runs/36677234900/job/109764727712
+
+The Release Quality Gate runs all Flutter regression tests before its successful debug build. Added validator cases cover preflight/stream bounds, cancellation, changed length, exact byte order, checksum format/mismatch, decode rejection, actual file replacement and no storage access on rejected input. Seven additional capture-integrity cases cover all three slots through private persistence, draft save/reload, verification and actual renderer; replaced original; missing legacy checksum; invalid replacement; and screen wiring.
+
+Capture tests use real temporary files and production photo-store/draft-repository/adapter/validator/renderer code. Native private-directory lookup and SharedPreferences backend are mocked; the server mirror is an unused throwing fake. Receipt assignment is simulated. Camera/GPS UI itself is not exercised end-to-end; its store connection is checked statically. Android manifest/namespace and active `MainActivity` were inspected: `privatePhotoDirectory` is registered and returns an app-private `filesDir/petugas_photos` directory. This is source evidence, not native-device acceptance. No local Flutter execution is claimed.
+
+### Remaining gates and limitations
+
+The 40 MiB cap is an input-byte limit, not a peak-memory or decoded-pixel/allocation limit. Stat and read are not an atomic filesystem snapshot. SHA-256 detects replacement relative to frozen metadata, not an attacker changing both. Raw viewer decoding, other viewer read paths, MIME/EXIF abuse and native parity remain open.
+
+Originating-owner capture is not a full session-generation guard. Stale callbacks, account switching, path authorization, shared draft isolation, concurrent outbox persistence, failed-write orphan cleanup, remote upload/official-code receipt lifecycle and output export integrity remain separate work. Code references/binding foundations do not prove a remote receipt pipeline.
+
+Verify native private-directory support, camera/GPS, legacy records, cache cleanup, restart/retry, checksum rejection without metadata rewrite, storage/outbox failure, memory/latency and account transitions on signed devices in isolated staging. No deployment, historical metadata migration, ACL rotation, runtime-task closure or follow-up PR accompanies this merge.
 
 ## PR #47: Yandal fail-closed boundary and deployment order
 
@@ -82,7 +121,7 @@ Script locks do not coordinate direct AppSheet/Sheet/Drive edits; rechecks are n
 
 Original validation uses an actual decoder and minimum dimensions; rendered `validateJpeg()` additionally enforces encoded size and explicit SOI/EOI markers. Do not apply the complete-marker claim to every original image. Yandal preview widget syntax and valid 320x320 JPEG test fixtures were corrected. Flutter/backend/auth transport checks passed for that PR.
 
-Open source gaps include decoded pixel bounds, pre-read file-size guarding, and checksum verification before rendering. Native decoder parity, MIME/EXIF abuse assessment, signed-device corrupt/truncated input rejection, MediaStore cancel/failure/retry, upload transaction semantics, orphan cleanup and remote engine behavior remain open. A checksum test is not proof every render caller performs checksum validation.
+#48 now supplies pre-read bounds in `saveOriginal` and frozen-checksum verification before Yandal rendering. Decoded pixel bounds and other viewer read paths remain open. Native decoder parity, MIME/EXIF abuse assessment, signed-device corrupt/truncated input rejection, MediaStore cancel/failure/retry, upload transaction semantics, orphan cleanup and remote engine behavior remain open. A checksum test is not proof every render caller performs checksum validation.
 
 ## PR #38: Android 12+ extraction correction
 
@@ -120,7 +159,7 @@ Source contract remains conservative until sanitized staging `getFormulas()`/hea
 
 ## Remaining source-code work
 
-REL-03 source merged; formula-map expansion/runtime proof pending. Full strict-CSP/DOM/inline-handler migration remains open. Photo pipeline needs upload failure state machine, checksum-before-render, size/pixel bounds, native parity, orphan cleanup and remote lifecycle tests. Account isolation needs session-generation guards, origin-pinned callbacks, progress reset and database activation race coverage. Flutter lint/deprecated APIs/generated Drift and offline/retry integration remain open. Engine migration/cost guard and signing secret/artifact scans remain separate work. Kopitiam Auth T-132 through T-136/SEC-04 belong to a separate repository and PR.
+REL-03 source merged; formula-map expansion/runtime proof pending. Full strict-CSP/DOM/inline-handler migration remains open. Photo pipeline still needs upload failure state machine, bounds/integrity on other viewer paths, decoded-pixel limits, native parity, concurrent outbox handling, orphan cleanup and remote lifecycle tests. #48 addresses the bounded `saveOriginal` read and Yandal verified render/capture connection, not every photo pipeline. Account isolation needs session-generation guards, origin-pinned callbacks across remaining flows, shared-draft isolation, progress reset and database activation race coverage. Flutter lint/deprecated APIs/generated Drift and offline/retry integration remain open. Engine migration/cost guard and signing secret/artifact scans remain separate work. Kopitiam Auth T-132 through T-136/SEC-04 belong to a separate repository and PR.
 
 ## Monitoring checklist
 
@@ -129,9 +168,10 @@ REL-03 source merged; formula-map expansion/runtime proof pending. Full strict-C
 - [x] PR #35/#36/#37 source/tools merged; #34 closed as superseded.
 - [x] PR #38/#39 Android resource and REL-03 merged with passing checks.
 - [x] PR #40/#41 hygiene/web boundary merged with passing checks.
-- [x] PR #42/#43 durability/validation source merged with passing checks.
+- [x] PR #42/#43 storage foundations/validation source merged with passing checks.
 - [x] PR #44/#45/#46 source merged; limited guarantees clarified above.
 - [x] PR #47 audited head merged after user confirmation and all three CI checks passed.
+- [x] PR #48 corrected six-file head merged after user confirmation and all four CI checks passed.
 - [ ] Verified staging backup/version history before H-08 migration.
 - [ ] H-06 staging expiry/idle/forced-login proof.
 - [ ] REL-03 sanitized formula/header map and rejection proof.
@@ -141,10 +181,11 @@ REL-03 source merged; formula-map expansion/runtime proof pending. Full strict-C
 - [ ] PR #35 runtime throttle/replay/build-endpoint/debug proof.
 - [ ] PR #43 native decoder/export and complete photo transaction/lifecycle verification.
 - [ ] PR #47 private scheduler staging migration with backup/rollback, served order, remote private-at-creation/idempotency and historical ACL rotation.
+- [ ] PR #48 native capture/private storage, cache cleanup/restart, legacy hash rejection, memory/latency and signed-device proof.
 - [ ] Account-switch callback/generation/DB race source and real-device acceptance.
 - [ ] Android signing, backup/data-transfer denial and live branch protection evidence.
 - [ ] Update runbooks with actual staging/device results before production sign-off.
 
 ## Kesimpulan
 
-PR #47 source sudah merged. Dua blocker terbaru yang direproduksi (ownership berubah ketika menunggu lock dan reuse watermark berdasarkan nama file lama) memiliki perbaikan dan regresi pada head yang lulus CI. Ini tidak menutup seluruh source backlog atau menjamin runtime production; semua gate staging, ACL historis, trigger, engine, concurrency, signing dan perangkat nyata tetap berlaku.
+PR #48 source sudah merged setelah audit ulang enam file, verifikasi empat CI pada head perbaikan, dan persetujuan pengguna. Celah producer checksum yang ditemukan pada head awal sudah diperbaiki: capture Yandal memakai private store dan meneruskan path/checksum hasil save ke draft. Ini menambah batas pembacaan dan integritas lokal pada scope yang disebutkan, bukan menutup seluruh pipeline foto atau isolasi akun. Source #47 tetap merged; seluruh gate staging, ACL historis, trigger, engine, concurrency, signing dan perangkat nyata tetap berlaku. Tidak ada deployment atau penutupan task runtime.
