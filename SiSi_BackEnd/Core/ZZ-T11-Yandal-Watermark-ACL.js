@@ -6,6 +6,19 @@
  */
 (function _installYandalPrivateAclBoundary_(root) {
   var frame = null;
+  // Not derived from event/request fields. Only private server entry points
+  // below can establish this execution-local queue context.
+  var queueContext = null;
+  var queueCapability = {};
+  function _principal_(args, action, superOnly) {
+    if (queueContext === queueCapability) return { ulp: 'ULP Toboali', scheduled: true };
+    var opts = { ulp: true, aksi: action };
+    if (superOnly) opts.role = ['SUPER'];
+    var g = need_('guard_')(args, opts);
+    if (!g || text_(g.ulp).toLowerCase().replace(/\s+/g, ' ') !== 'ulp toboali')
+      fail_('CALLER_ULP_DENIED');
+    return g;
+  }
   function fail_(code) {
     var error = new Error('T11_YANDAL_' + code);
     if (frame) frame.failed = true;
@@ -121,7 +134,9 @@
         var metadata = {};
         Object.keys(info || {}).forEach(function (k) { metadata[k] = info[k]; });
         metadata.idempotencyKey = 'yandal:' + folder.getId() + ':' + sourceId + ':' + kSrc;
-        outputId = fileId_(need_('watermarkFoto_')(sourceId, folder.getId(), metadata, wmName));
+        // Authentication and same-ULP checks already ran before any reads.
+        // The private transport avoids forging a user session for scheduled work.
+        outputId = fileId_(need_('_h07WatermarkImpl_')(sourceId, folder.getId(), metadata, wmName));
         if (!outputId) fail_('INVALID_ENGINE_RESULT');
       }
       var output = boundPrivateFile_(outputId, folder);
@@ -188,6 +203,7 @@
       var current = { failed: false, expected: {}, done: {} };
       frame = current;
       try {
+        current.principal = _principal_(arguments, name, false);
         if (typeof original !== 'function') fail_('PROCESSOR_MISSING');
         need_('_h07PrivateFile_');
         var schema = spec_(switching), before = _row_(schema, kode);
@@ -222,4 +238,68 @@
   }
   install_('prosesP0Yandal', false);
   install_('prosesSwitchingYandal', true);
+
+  // Public manual queue/scheduler calls require an authenticated Super User.
+  // Old no-argument public triggers intentionally fail closed. Migrate their
+  // handler names in staging to the private entry points before deployment.
+  var originalDrain = root.drainAntreanP0;
+  var originalTick = root.tickPusatSiSi;
+  root.drainAntreanP0 = function () {
+    _principal_(arguments, 'drainAntreanP0', true);
+    return _runQueue_(originalDrain);
+  };
+  root.tickPusatSiSi = function () {
+    _principal_(arguments, 'tickPusatSiSi', true);
+    return _runQueue_(originalTick);
+  };
+  function _runQueue_(fn, args) {
+    if (typeof fn !== 'function') fail_('QUEUE_HANDLER_MISSING');
+    var previous = queueContext;
+    queueContext = queueCapability;
+    try { return fn.apply(root, args || []); }
+    finally { queueContext = previous; }
+  }
+  // Trailing underscores are private under google.script.run. Do not expose
+  // these helpers through any generic HTTP action/function-name dispatcher.
+  root._t11ScheduledQueueDispatch_ = function (kind) {
+    if (kind === 'tick') return _runQueue_(originalTick);
+    if (kind === 'drain') return _runQueue_(originalDrain);
+    fail_('UNKNOWN_SCHEDULED_HANDLER');
+  };
+  var originalRouter = root.apiRouter_;
+  if (typeof originalRouter === 'function') {
+    root.apiRouter_ = function (e, body) {
+      var p = (e && e.parameter) || {};
+      var actions = [p.action, body && body.action];
+      if (actions.some(function (a) { return /^_t11|^_h07WatermarkImpl_$/.test(text_(a)); }))
+        throw new Error('T11_PRIVATE_ACTION_DENIED');
+      return originalRouter.apply(this, arguments);
+    };
+  }
+  // Webhooks have their own credential, never a caller-provided internal flag.
+  // Verify the actual POST body before establishing execution-local authority.
+  var originalPost = root.doPost;
+  if (typeof originalPost === 'function') {
+    root.doPost = function (e) {
+      if (e && e.parameter && e.parameter.mobile) return originalPost.apply(this, arguments);
+      var body;
+      try { body = JSON.parse((e && e.postData && e.postData.contents) || '{}'); }
+      catch (error) { throw new Error('T11_WEBHOOK_BODY_INVALID'); }
+      var action = text_(body && body.action);
+      if (/^_t11|^_h07WatermarkImpl_$/.test(action)) throw new Error('T11_PRIVATE_ACTION_DENIED');
+      if (action === 'prosesP0Yandal' || action === 'prosesSwitchingYandal') {
+        var verified = need_('webhookVerifikasi_')(body);
+        if (!verified || verified.ok !== true) throw new Error('T11_WEBHOOK_DENIED');
+        return _runQueue_(originalPost, arguments);
+      }
+      return originalPost.apply(this, arguments);
+    };
+  }
 })(typeof globalThis !== 'undefined' ? globalThis : this);
+
+function _t11TickPusatSiSi_() {
+  return _t11ScheduledQueueDispatch_('tick');
+}
+function _t11DrainAntreanP0_() {
+  return _t11ScheduledQueueDispatch_('drain');
+}
