@@ -9,9 +9,7 @@ import 'sesi_store.dart';
 import 'sync_progress_service.dart';
 
 const _periodicTaskName = 'sisi.sync.periodik';
-const _periodicUniqueName = 'sisi-background-sync';
 const _manualTaskName = 'sisi.sync.manual.resume';
-const _manualUniqueName = 'sisi-manual-master-sync';
 const _enabledKey = 'autoSyncEnabled';
 const _manualPendingKey = 'manualSyncPending';
 const _manualModuleKey = 'manualSyncModule';
@@ -35,9 +33,9 @@ void callbackDispatcher() {
       final sesi = await SesiStore.muat();
       if (sesi == null) return true;
       if (data?[_accountKey]?.toString() != _account(sesi)) return true;
+      await SyncProgressService.instance.restore();
       final enabledKey = _key(_enabledKey, sesi);
       if (!manual && prefs.getBool(enabledKey) != true) return true;
-      await SyncProgressService.instance.restore();
       final token = (sesi['token'] ?? '').toString();
       if (token.isEmpty) return true;
       if (!manual) {
@@ -51,10 +49,10 @@ void callbackDispatcher() {
       final fallback =
           (data?['module'] ?? prefs.getString(moduleKey))?.toString();
       var modules = _queuedModules(prefs, modulesKey, fallback: fallback);
-      
+
       // Mark that we're in manual sync mode
       await prefs.setBool(manualSyncModeKey, true);
-      
+
       try {
         while (modules.isNotEmpty) {
           final module = modules.first;
@@ -78,7 +76,7 @@ void callbackDispatcher() {
         // Clear manual sync mode flag
         await prefs.remove(manualSyncModeKey);
       }
-      
+
       await prefs.setBool(enabledKey, true);
       return true;
     } catch (_) {
@@ -126,6 +124,7 @@ class AutoSyncService {
     await Workmanager().initialize(callbackDispatcher);
     final sesi = await SesiStore.muat();
     if (sesi == null) return;
+    await SyncProgressService.instance.restore();
     final prefs = await SharedPreferences.getInstance();
     final pendingKey = _key(_manualPendingKey, sesi);
     final moduleKey = _key(_manualModuleKey, sesi);
@@ -212,7 +211,7 @@ class AutoSyncService {
     final inputData = {'module': module};
     inputData[_accountKey] = _account(session);
     return Workmanager().registerOneOffTask(
-      _manualUniqueName,
+      SesiStore.manualWorkerName(session),
       _manualTaskName,
       inputData: inputData,
       existingWorkPolicy: ExistingWorkPolicy.keep,
@@ -249,18 +248,25 @@ class AutoSyncService {
         _key(_manualModulesKey, sesi),
         const [],
       );
+      await _cancelWorkersFor(sesi);
     }
     await cancelAllWorkers();
   }
 
+  static Future<void> _cancelWorkersFor(Map<String, dynamic> session) async {
+    final workmanager = Workmanager();
+    await workmanager.cancelByUniqueName(SesiStore.periodicWorkerName(session));
+    await workmanager.cancelByUniqueName(SesiStore.manualWorkerName(session));
+  }
+
   static Future<void> cancelAllWorkers() async {
-    await Workmanager().cancelByUniqueName(_periodicUniqueName);
-    await Workmanager().cancelByUniqueName(_manualUniqueName);
+    final sesi = await SesiStore.muat();
+    if (sesi != null) await _cancelWorkersFor(sesi);
   }
 
   static Future<void> _registerPeriodic(Map<String, dynamic> session) =>
       Workmanager().registerPeriodicTask(
-        _periodicUniqueName,
+        SesiStore.periodicWorkerName(session),
         _periodicTaskName,
         inputData: {_accountKey: _account(session)},
         frequency: const Duration(minutes: 15),
