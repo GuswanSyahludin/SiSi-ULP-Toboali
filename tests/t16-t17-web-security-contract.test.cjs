@@ -11,10 +11,11 @@ const doGet = fs.readFileSync(path.join(root, 'SiSi_BackEnd/Core/ZZ-Web-Security
 const manifest = fs.readFileSync(path.join(root, 'SiSi_BackEnd/appsscript.json'), 'utf8');
 
 assert.match(loader, /_sanitizeWebHtmlSecurity_\(html\)/);
-assert.match(hardening, /font-awesome\\/6\\.5\\.1\\/css\\/all\\.min\\.css/);
-assert.match(hardening, /integrity=\"sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl\+Vegovlnee1c9QX4TctnWMn13TZye\+giMm8e2LwA==\"/);
+// Match the delivered URL, not the escaped slash notation in the source regex.
+assert.match(hardening, /font-awesome\/6\.5\.1\/css\/all\.min\.css/);
+assert.match(hardening, /integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl\+Vegovlnee1c9QX4TctnWMn13TZye\+giMm8e2LwA=="/);
 assert.match(hardening, /window\\\.location\\\.search\\\.match/);
 assert.match(doGet, /_doGetOriginalWebSecurity_/);
-assert.match(manifest, /Core\\/ZZ-Web-Security-Hardening\\.js/);
-assert.match(manifest, /Core\\/ZZ-Web-Security-DoGet\\.js/);
+assert.match(manifest, /Core\/ZZ-Web-Security-Hardening\.js/);
+assert.match(manifest, /Core\/ZZ-Web-Security-DoGet\.js/);
 console.log('T-16/T-17 rendered web security contract passed.');
