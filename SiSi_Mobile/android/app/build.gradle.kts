@@ -12,24 +12,42 @@ val localProperties = Properties().apply {
 
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
-val requiredSigningKeys = listOf("keyAlias", "keyPassword", "storeFile", "storePassword")
-val hasReleaseSigning = keystorePropertiesFile.exists()
-if (hasReleaseSigning) {
-    keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
-    val missingSigningKeys = requiredSigningKeys.filter { keystoreProperties.getProperty(it).isNullOrBlank() }
-    require(missingSigningKeys.isEmpty()) {
-        "Release signing configuration is incomplete. Missing: ${missingSigningKeys.joinToString(", ")}"
-    }
-    require(rootProject.file(keystoreProperties.getProperty("storeFile")).isFile) {
-        "Release signing keystore does not exist at the configured storeFile"
+var signingPropertiesReadError: String? = null
+if (keystorePropertiesFile.exists()) {
+    try {
+        keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
+    } catch (_: Exception) {
+        // A local release-signing setup must not prevent building an unsigned
+        // debug APK. A release task reports this configuration error below.
+        signingPropertiesReadError = "Release signing configuration could not be read."
     }
 }
+val requiredSigningKeys = listOf("keyAlias", "keyPassword", "storeFile", "storePassword")
+val missingSigningKeys = requiredSigningKeys.filter { keystoreProperties.getProperty(it).isNullOrBlank() }
+val signingStoreFile = keystoreProperties.getProperty("storeFile")
+    ?.takeIf { it.isNotBlank() }
+    ?.let { rootProject.file(it) }
+val hasReleaseSigning = keystorePropertiesFile.isFile &&
+    signingPropertiesReadError == null &&
+    missingSigningKeys.isEmpty() &&
+    signingStoreFile?.isFile == true
 
 // Never allow a release artifact to silently fall back to unsigned output.
+// Keep all signing validation behind a release task so debug builds do not
+// depend on a developer's local release keystore.
 gradle.taskGraph.whenReady {
     val releaseRequested = allTasks.any { it.name.contains("Release", ignoreCase = true) }
-    if (releaseRequested && !hasReleaseSigning) {
-        error("Release signing is required. Provide a complete key.properties and keystore outside the repository.")
+    if (releaseRequested) {
+        when {
+            !keystorePropertiesFile.isFile ->
+                error("Release signing is required. Provide a complete key.properties and keystore outside the repository.")
+            signingPropertiesReadError != null ->
+                error(signingPropertiesReadError!!)
+            missingSigningKeys.isNotEmpty() ->
+                error("Release signing configuration is incomplete. Missing: ${missingSigningKeys.joinToString(", ")}")
+            signingStoreFile?.isFile != true ->
+                error("Release signing keystore does not exist at the configured storeFile")
+        }
     }
 }
 
@@ -57,7 +75,7 @@ android {
             create("release") {
                 keyAlias = keystoreProperties.getProperty("keyAlias")
                 keyPassword = keystoreProperties.getProperty("keyPassword")
-                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storeFile = signingStoreFile!!
                 storePassword = keystoreProperties.getProperty("storePassword")
             }
         }
