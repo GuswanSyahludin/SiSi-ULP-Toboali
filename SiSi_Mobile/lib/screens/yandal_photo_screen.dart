@@ -1,9 +1,7 @@
 import 'dart:io';
-import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import '../services/local_watermark_data.dart';
 import '../services/local_watermark_renderer.dart';
-import '../services/photo_bytes_validator.dart';
 import '../services/watermark_photo_export.dart';
 import 'local_watermark_preview_screen.dart';
 
@@ -61,13 +59,8 @@ class _PhotoState extends State<YandalPhotoScreen> {
         daerah: '${m['daerah']}', subTim: '${m['subTim']}', petugas: '${m['petugas']}', tahap: '${m['tahap']}',
       );
       final file = File(widget.path);
-      final bytes = await file.readAsBytes();
-      PhotoBytesValidator.validateOriginal(bytes);
-      final expectedHash = m['originalSha256'];
-      if (expectedHash is String && expectedHash.isNotEmpty && sha256.convert(bytes).toString() != expectedHash) {
-        throw StateError('Foto asli berubah. Watermark tidak dibuat.');
-      }
-      final result = await LocalWatermarkRenderer.render(originalBytes: bytes, data: data);
+      if (await file.length() > 40 * 1024 * 1024) throw StateError('Ukuran foto melebihi 40 MB.');
+      final result = await LocalWatermarkRenderer.render(originalBytes: await file.readAsBytes(), data: data);
       if (!mounted) return;
       await Navigator.push(context, MaterialPageRoute(builder: (_) => LocalWatermarkPreviewScreen(photo: result)));
     } catch (e) {
