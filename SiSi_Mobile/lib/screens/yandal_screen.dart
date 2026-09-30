@@ -6,6 +6,8 @@ import '../db/repositories/master_repository.dart';
 import '../db/repositories/master_gardu_repository.dart';
 import '../db/repositories/yandal_local_repository.dart';
 import '../services/accurate_location_service.dart';
+import '../services/local_watermark_data.dart';
+import '../services/petugas_photo_store.dart';
 import '../widgets/mock_gps_warning_dialog.dart';
 import '../theme/app_colors.dart';
 import 'yandal_photo_screen.dart';
@@ -98,7 +100,7 @@ class _P0FormState extends State<_P0Form> {
     return PopScope(canPop:!busy,child:Scaffold(appBar:AppBar(title:const Text('Tambah Penugasan Khusus')),body:ListView(padding:const EdgeInsets.all(16),children:[
       DropdownButtonFormField<String>(value:job,isExpanded:true,decoration:const InputDecoration(labelText:'Nama Pekerjaan',border:OutlineInputBorder()),items:widget.parent.jobs.map((v)=>DropdownMenuItem(value:v,child:Text(v,overflow:TextOverflow.ellipsis))).toList(),onChanged:busy?null:(v)=>setState(()=>job=v)),
       if((job??'').toLowerCase()=='lain - lain')...[const SizedBox(height:12),TextField(controller:other,enabled:!busy,decoration:const InputDecoration(labelText:'Pekerjaan Lainnya',border:OutlineInputBorder()))],
-      const SizedBox(height:12),DropdownButtonFormField<String>(value:feeder,isExpanded:true,decoration:const InputDecoration(labelText:'Penyulang',border:OutlineInputBorder()),items:widget.parent.feeders.map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(),onChanged:busy?null:(v){setState((){feeder=v;section=null;gardu=null;gardus=[];});_loadGardus(v);}),
+      const SizedBox(height:12),DropdownButtonFormField<String>(value:feeder,isExpanded:true,decoration:const InputDecoration(labelText:'Penyulang',border:OutlineInputBorder()),items:widget.parent.feeders.map((v)=>DropdownMenuItem(value:v,child:Text(v,overflow:TextOverflow.ellipsis))).toList(),onChanged:busy?null:(v){setState((){feeder=v;section=null;gardu=null;gardus=[];});_loadGardus(v);}),
       const SizedBox(height:12),DropdownButtonFormField<String>(value:sections.contains(section)?section:null,isExpanded:true,decoration:const InputDecoration(labelText:'Section',border:OutlineInputBorder()),items:sections.map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(),onChanged:busy?null:(v)=>setState(()=>section=v)),const SizedBox(height:12),
       if((job??'').toLowerCase()=='pengecekan gardu')DropdownButtonFormField<String>(value:gardus.any((g)=>g.gardu==gardu)?gardu:null,isExpanded:true,decoration:const InputDecoration(labelText:'Nomor Gardu',border:OutlineInputBorder()),items:gardus.map((g)=>DropdownMenuItem(value:g.gardu,child:Text(g.gardu))).toList(),onChanged:busy||gardus.isEmpty?null:(v)=>setState(()=>gardu=v)),
       if((job??'').toLowerCase()=='pengecekan gardu')const SizedBox(height:12),TextField(controller:area,enabled:!busy,decoration:const InputDecoration(labelText:'Daerah',border:OutlineInputBorder())),
@@ -117,6 +119,16 @@ class _P0FormState extends State<_P0Form> {
   Future<void> _take(String slot)async{
     if(busy)return;setState(()=>busy=true);
     try{
+      // Freeze the originating owner and form fields before asynchronous capture.
+      // This is not a substitute for the separate session-generation guard.
+      final session=Map<String,dynamic>.from(widget.parent.widget.sesi);
+      final owner=PetugasPhotoStore.owner(session);
+      final fields=<String,dynamic>{
+        'ulp':'${session['ulp']??''}','subTim':'${session['subTim']??''}',
+        'petugas':widget.crew.join(', '),'penyulang':feeder??'','section':section??'',
+        'jenisPekerjaan':job??'','daerah':area.text.trim(),
+        'createdAt':createdAt.toIso8601String(),
+      };
       // Check mock GPS before opening camera; sample again immediately on return
       // so an arbitrarily long camera session does not reuse the old location.
       await AccurateLocationService.capture();
@@ -125,15 +137,27 @@ class _P0FormState extends State<_P0Form> {
       final cameraReturnedAt=DateTime.now().toUtc();
       final loc=await AccurateLocationService.capture();
       if(!mounted)return;
-      final metadata=<String,dynamic>{
-        'capturedAt':cameraReturnedAt.toIso8601String(),'captureTimeSource':'camera-return',
-        'gpsCapturedAt':loc.position.timestamp.toUtc().toIso8601String(),
-        'latitude':loc.position.latitude,'longitude':loc.position.longitude,'accuracyMeters':loc.accuracy,'isMocked':loc.position.isMocked,
-        'ulp':'${widget.parent.widget.sesi['ulp']??''}','subTim':'${widget.parent.widget.sesi['subTim']??''}',
-        'petugas':widget.crew.join(', '),'penyulang':feeder??'','section':section??'',
-        'jenisPekerjaan':job??'','daerah':area.text.trim(),'photoSource':'camera',
-      };
-      setState((){photos[slot]=File(image.path);coords[slot]=loc.coordinates;accuracy[slot]=loc.accuracyLabel;captureMetadata[slot]=metadata;});
+      final metadata=PetugasPhotoStore.descriptor(
+        team:WatermarkTeam.yandal,slot:slot,fields:{
+          ...fields,
+          'capturedAt':cameraReturnedAt.toIso8601String(),'captureTimeSource':'camera-return',
+          'gpsCapturedAt':loc.position.timestamp.toUtc().toIso8601String(),
+          'latitude':loc.position.latitude,'longitude':loc.position.longitude,'accuracyMeters':loc.accuracy,'isMocked':loc.position.isMocked,
+          'photoSource':'camera',
+        },
+      );
+      // Publish only the durable path and checksum returned by the same save.
+      // A failed validation/write/outbox append leaves the previous slot intact.
+      final saved=await PetugasPhotoStore.saveOriginal(
+        owner:owner,source:File(image.path),metadata:metadata,
+      );
+      if(!mounted)return;
+      setState((){
+        photos[slot]=File(saved.path);
+        coords[slot]=loc.coordinates;
+        accuracy[slot]=loc.accuracyLabel;
+        captureMetadata[slot]=Map<String,dynamic>.from(saved.metadata);
+      });
     }on MockLocationException{if(mounted)await MockGpsWarningDialog.show(context);}
     catch(e){_message('Foto belum diganti: $e');}
     finally{if(mounted)setState(()=>busy=false);}
