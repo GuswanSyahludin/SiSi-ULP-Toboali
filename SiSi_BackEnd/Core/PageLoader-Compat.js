@@ -51,6 +51,7 @@ function getPageContent(token, pageName, injectedPageName) {
     ) {
       html += _dashboardJadwalDeleteClientScript_();
     }
+    html = _sanitizeWebHtmlSecurity_(html);
     return {
       success: true,
       html: html,
