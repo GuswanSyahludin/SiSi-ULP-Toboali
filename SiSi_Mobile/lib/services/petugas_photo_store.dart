@@ -87,7 +87,7 @@ class PetugasPhotoStore {
     if (m['originalSha256'] is! String) 'Identitas file asli',
   ];
   static Future<PetugasPhoto> saveOriginal({required String owner, required File source, required Map<String,dynamic> metadata}) async {
-    final bytes = await source.readAsBytes();
+    final bytes = await PhotoBytesValidator.readBoundedFile(source);
     PhotoBytesValidator.validateOriginal(bytes);
     final dir = await (await root(owner)).createTemp('capture-');
     final extension = source.path.toLowerCase().endsWith('.png') ? 'png' : 'jpg';

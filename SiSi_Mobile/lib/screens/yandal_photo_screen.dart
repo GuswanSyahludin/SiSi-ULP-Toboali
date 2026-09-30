@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../services/local_watermark_data.dart';
 import '../services/local_watermark_renderer.dart';
+import '../services/photo_bytes_validator.dart';
 import '../services/watermark_photo_export.dart';
 import 'local_watermark_preview_screen.dart';
 
@@ -87,12 +88,15 @@ class _PhotoState extends State<YandalPhotoScreen> {
         petugas: '${m['petugas']}',
         tahap: '${m['tahap']}',
       );
-      final file = File(widget.path);
-      if (await file.length() > 40 * 1024 * 1024) {
-        throw StateError('Ukuran foto melebihi 40 MB.');
-      }
+      // Verify frozen capture identity before rendering. Missing legacy hashes
+      // are not reconstructed from potentially replaced bytes.
+      final originalBytes = await PhotoBytesValidator.readVerifiedOriginal(
+        File(widget.path),
+        m['originalSha256'],
+      );
+      if (!mounted) return;
       final result = await LocalWatermarkRenderer.render(
-        originalBytes: await file.readAsBytes(),
+        originalBytes: originalBytes,
         data: data,
       );
       if (!mounted) return;
