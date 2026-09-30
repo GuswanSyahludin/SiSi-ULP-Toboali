@@ -4,7 +4,7 @@
  * Failures survive legacy catch/log blocks and reach the existing retry queue.
  * No historical batch ACL rotation or deployed-runtime verification happens here.
  */
-(function installYandalPrivateAclBoundary_(root) {
+(function _installYandalPrivateAclBoundary_(root) {
   var frame = null;
   function fail_(code) {
     var error = new Error('T11_YANDAL_' + code);
@@ -84,7 +84,7 @@
   function writeText_(sh, row, col, value) {
     need_('_setTextY_')(sh, row, col, value);
   }
-  function privatePhoto_(sh, rowNum, kSrc, kWm, kUrl, info, rowFolder, folderRel) {
+  function _privatePhoto_(sh, rowNum, kSrc, kWm, kUrl, info, rowFolder, folderRel) {
     var key = rowNum + ':' + kSrc;
     if (!frame || frame.sheetId !== sh.getSheetId() || !frame.expected[key]) fail_('PROCESSOR_CONTEXT_REQUIRED');
     try {
@@ -138,7 +138,7 @@
     }
   }
   // Assignment, not a competing declaration: legacy _wmFotoY_ is never invoked.
-  root._wmFotoY_ = privatePhoto_;
+  root._wmFotoY_ = _privatePhoto_;
 
   function spec_(switching) {
     var cols = switching ? root.COL_SWITCHING : root.COL_P0;
@@ -152,7 +152,7 @@
         return { key: keys[i], src: cols['foto' + s], wm: cols['foto' + s + 'Wm'], url: cols['linkDownload' + s] };
       }) };
   }
-  function row_(spec, kode) {
+  function _row_(spec, kode) {
     var sh = need_('_shY_')(spec.sheet);
     if (!sh || !text_(kode)) fail_('ROW_MISSING');
     var rows = sh.getDataRange().getValues(), found = null;
@@ -190,7 +190,7 @@
       try {
         if (typeof original !== 'function') fail_('PROCESSOR_MISSING');
         need_('_h07PrivateFile_');
-        var schema = spec_(switching), before = row_(schema, kode);
+        var schema = spec_(switching), before = _row_(schema, kode);
         current.sheetId = before.sh.getSheetId();
         var wanted = text_(target).toLowerCase();
         var slots = schema.slots.filter(function (slot) { return !wanted || wanted === slot.key; });
@@ -199,7 +199,7 @@
           current.expected[before.rowNum + ':' + slot.src] = { source: text_(before.row[slot.src]) };
         });
         var result = original.apply(this, arguments);
-        var after = row_(schema, kode);
+        var after = _row_(schema, kode);
         // Only repair after the original processor entered the guarded photo
         // path. Do not introduce Drive side effects before its own guards.
         if (current.attempted) repairRow_(schema, after);
