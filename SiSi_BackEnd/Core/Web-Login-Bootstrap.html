@@ -1,0 +1,171 @@
+<script>
+/*
+ * Stay in the current HtmlService frame. A clean-URL navigation goes through
+ * doGet without a session and may also change the frame's storage context.
+ * Never send credentials/tokens through query strings, fragments or window.name.
+ */
+(function () {
+  "use strict";
+  var form = document.getElementById("frmLogin");
+  if (!form) {
+    // Core/Main keeps its layout, login fallback and data authorization.
+    // Select an allowed dashboard after its existing startup/splash completes.
+    var originalStart = window._munculkanMain;
+    if (typeof originalStart !== "function") {
+      throw new Error("Bootstrap halaman utama tidak tersedia.");
+    }
+    window._munculkanMain = function () {
+      originalStart();
+      var bidang = String((_state.sesi && _state.sesi.bidang) || "").trim().toLowerCase();
+      var preferred = { teknik: "Tek", pp: "PP", te: "TE", k3: "K3" }[bidang] || "Tek";
+      var navs = [preferred].concat(["Tek", "PP", "TE", "K3"].filter(function (n) {
+        return n !== preferred;
+      }));
+      for (var i = 0; i < navs.length; i++) {
+        if (_isPageAllowed(navs[i] + "-Dashboard")) {
+          onNavClick(navs[i]);
+          return;
+        }
+      }
+      // Accounts without dashboard access land only on a permitted menu.
+      for (var j = 0; j < navs.length; j++) {
+        if (_navHasAccess(navs[j])) {
+          onNavClick(navs[j]);
+          return;
+        }
+      }
+      // No allowed menus: retain welcome view, never grant extra access.
+    };
+    return;
+  }
+
+  var inpUser = document.getElementById("inpUser");
+  var inpPass = document.getElementById("inpPass");
+  var btn = document.getElementById("btnLogin");
+  var label = document.getElementById("btnLoginLabel");
+  var error = document.getElementById("errBox");
+  var card = document.getElementById("loginCard");
+  var splash = document.getElementById("splash");
+  var go = document.getElementById("splashGo");
+  var scriptUrl = document.getElementById("hdnScriptUrl").value;
+  var busy = false;
+  var pendingToken = "";
+
+  function loading(on) {
+    busy = on;
+    btn.disabled = on;
+    label.textContent = on ? "Memverifikasi…" : "Sign in";
+  }
+  function showError(message) {
+    loading(false);
+    if (splash) splash.classList.remove("show");
+    error.textContent = message;
+    error.classList.add("show");
+    if (card) card.classList.add("open");
+  }
+  function clearSession() {
+    pendingToken = "";
+    try { sessionStorage.removeItem("sisiSesi"); } catch (_) {}
+  }
+  function requestShell(token) {
+    if (busy || !token) return;
+    pendingToken = token;
+    loading(true);
+    if (splash) splash.classList.add("show");
+    if (go) go.style.display = "none";
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!busy || pendingToken !== token) return;
+        if (!res || res.success !== true || !res.sesi ||
+            res.sesi.token !== token || typeof res.html !== "string" || !res.html) {
+          clearSession();
+          showError("Sesi tidak dapat dipulihkan. Silakan login ulang.");
+          return;
+        }
+        try {
+          // Store server-verified identity only, never trust cached role/ULP.
+          var saved = JSON.stringify(res.sesi);
+          sessionStorage.setItem("sisiSesi", saved);
+          sessionStorage.setItem("sisiScriptUrl", scriptUrl);
+          if (sessionStorage.getItem("sisiSesi") !== saved) {
+            throw new Error("storage unavailable");
+          }
+        } catch (_) {
+          clearSession();
+          showError("Penyimpanan sesi browser tidak tersedia. Izinkan penyimpanan situs lalu coba lagi.");
+          return;
+        }
+        // Only authenticated, sanitized Core/Main HTML is written.
+        // Reuse this frame, its google.script bridge and sessionStorage.
+        pendingToken = "";
+        document.open();
+        document.write(res.html);
+        document.close();
+      })
+      .withFailureHandler(function () {
+        if (!busy || pendingToken !== token) return;
+        // Do not loop automatically or expose server errors/session tokens.
+        clearSession();
+        showError("Halaman utama gagal dimuat atau sesi habis. Silakan login ulang.");
+      })
+      .getWebAppShell(token);
+  }
+
+  if (error.textContent.trim()) {
+    error.classList.add("show");
+    if (card) card.classList.add("open");
+  }
+  document.getElementById("btnTogglePw").addEventListener("click", function () {
+    var show = inpPass.type === "password";
+    inpPass.type = show ? "text" : "password";
+    this.innerHTML = show
+      ? '<i class="fa-regular fa-eye-slash"></i>'
+      : '<i class="fa-regular fa-eye"></i>';
+  });
+  if (go) {
+    go.removeAttribute("href");
+    go.removeAttribute("target");
+    go.style.display = "none";
+  }
+  form.addEventListener("submit", function (event) {
+    event.preventDefault();
+    if (busy) return;
+    error.textContent = "";
+    error.classList.remove("show");
+    var u = String(inpUser.value || "").trim();
+    var p = String(inpPass.value || "").trim();
+    if (!u || !p) {
+      showError("Username dan password wajib diisi.");
+      return;
+    }
+    loading(true);
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!busy) return;
+        if (!res || res.success !== true || typeof res.token !== "string" || !res.token) {
+          showError("Username atau password salah, atau login belum dapat diproses.");
+          return;
+        }
+        inpPass.value = "";
+        var user = document.getElementById("splashUser");
+        if (user) user.textContent = "Memuat halaman utama…";
+        if (splash) splash.classList.add("show");
+        loading(false);
+        requestShell(res.token);
+      })
+      .withFailureHandler(function () {
+        showError("Login gagal diproses. Periksa koneksi lalu coba lagi.");
+      })
+      .doLogin(u, p);
+  });
+
+  // Refresh starts at the same login document; validate stored token by RPC.
+  // Missing/blocked/malformed storage stays on the usable login form.
+  var restored = null;
+  try { restored = JSON.parse(sessionStorage.getItem("sisiSesi") || "null"); }
+  catch (_) { clearSession(); }
+  if (restored && typeof restored.token === "string" && restored.token) {
+    requestShell(restored.token);
+  }
+})();
+</script>
