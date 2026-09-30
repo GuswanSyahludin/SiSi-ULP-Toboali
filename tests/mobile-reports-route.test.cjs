@@ -16,7 +16,7 @@ const claspPath = path.join(repoRoot, 'SiSi_BackEnd', '.clasp.json');
 const loaderPath = path.join(__dirname, 'harness', 'loader.js');
 
 const COL_ROW_RLZ = { kodeHeader: 1, kodePekerjaan: 2, tim: 5, tanggal: 4, penyulang: 6, section: 7, rabas: 8, sedang: 9, besar: 10 };
-const COL_ROW = { kodeHeader: 1, kodePekerjaan: 2, kodeEksekusi: 3, ulp: 4, tanggal: 6, tim: 7, penyulang: 8, section: 9, nomorTiang: 10, fotoSebelumUrl: 18, fotoPekerjaanUrl: 20, fotoSesudahUrl: 22, diameter: 23, jenisPekerjaan: 24 };
+const COL_ROW = { kodeHeader: 1, kodePekerjaan: 2, kodeEksekusi: 3, ulp: 4, tanggal: 6, tim: 7, penyulang: 8, section: 9, nomorTiang: 10, fotoSebelumUrl: 18, fotoPekerjaanUrl: 20, fotoSesudahUrl: 22, diameter: 23, jenisPekerjaan: 24, inputOleh: 28 };
 
 function fakeSheet(rows, width) {
   return {
@@ -159,6 +159,125 @@ test('ROW execution without its linked realisasi parent is not synthesized into 
   });
   const result = h.context.getMobileLaporanHarian('t', '', '', '', 10).data[0].realisasi;
   assert.deepEqual(responseValue(result), []);
+});
+
+test('ROW headers without explicit ULP never receive realization or execution details', () => {
+  for (const ulp of [undefined, null, '', ' \t ']) {
+    const header = { kodeHeader: 'H1', ulp };
+    const h = harness({
+      rowResponse: { success: true, data: [header] },
+      sheets: {
+        db_ROW_Realisasi: fakeSheet([makeRealization({
+          kodeHeader: 'H1', kodePekerjaan: 'P1', penyulang: 'must-not-return',
+        })], 13),
+        db_ROW_Eksekusi: fakeSheet([makeExecution({
+          kodeHeader: 'H1', kodePekerjaan: 'P1', kodeEksekusi: 'E1', ulp: 'Toboali',
+        })], 30),
+      },
+    });
+    const result = h.context.getMobileLaporanHarian('session');
+    assert.deepEqual(responseValue(result.data[0].realisasi), []);
+    assert.equal(JSON.stringify(result).includes('must-not-return'), false);
+  }
+});
+
+test('ROW executions require a nonempty matching ULP even when both parent identifiers match', () => {
+  const invalidUlps = [undefined, null, '', ' \t ', 'ULP Lain'];
+  const executions = invalidUlps.map((ulp, i) => makeExecution({
+    kodeHeader: 'H1', kodePekerjaan: 'P1', kodeEksekusi: `REJECT-${i}`, ulp,
+  }));
+  executions.push(makeExecution({
+    kodeHeader: 'H1', kodePekerjaan: 'P1', kodeEksekusi: 'VALID', ulp: 'tObOaLi',
+  }));
+  const h = harness({
+    rowResponse: { success: true, data: [{ kodeHeader: 'H1', ulp: ' Toboali ' }] },
+    sheets: {
+      db_ROW_Realisasi: fakeSheet([makeRealization({ kodeHeader: 'H1', kodePekerjaan: 'P1' })], 13),
+      db_ROW_Eksekusi: fakeSheet(executions, 30),
+    },
+  });
+  const detail = h.context.getMobileLaporanHarian('session').data[0].realisasi;
+  assert.equal(detail.length, 1);
+  assert.deepEqual(responseValue(detail[0].eksekusi.map(e => e.kodeEksekusi)), ['VALID']);
+});
+
+test('ROW duplicate header identifiers are ambiguous regardless of order or ULP', () => {
+  for (const otherUlp of ['ULP Lain', '', 'Toboali']) {
+    for (const reverse of [false, true]) {
+      const headers = [
+        { kodeHeader: 'H1', ulp: 'Toboali' },
+        { kodeHeader: 'H1', ulp: otherUlp },
+      ];
+      if (reverse) headers.reverse();
+      const h = harness({
+        rowResponse: { success: true, data: headers },
+        sheets: {
+          db_ROW_Realisasi: fakeSheet([makeRealization({ kodeHeader: 'H1', kodePekerjaan: 'P1' })], 13),
+          db_ROW_Eksekusi: fakeSheet([makeExecution({
+            kodeHeader: 'H1', kodePekerjaan: 'P1', kodeEksekusi: 'E1', ulp: 'Toboali',
+          })], 30),
+        },
+      });
+      const result = h.context.getMobileLaporanHarian('session');
+      assert.deepEqual(responseValue(result.data.map(h => h.realisasi)), [[], []]);
+    }
+  }
+});
+
+test('ROW rejects blank or duplicate realization identifiers without hiding a valid parent', () => {
+  const parents = [
+    makeRealization({ kodeHeader: 'H1', kodePekerjaan: '' }),
+    makeRealization({ kodeHeader: 'H1', kodePekerjaan: 'P1', penyulang: 'ambiguous-a' }),
+    makeRealization({ kodeHeader: 'H1', kodePekerjaan: 'P1', penyulang: 'ambiguous-b' }),
+    makeRealization({ kodeHeader: 'H1', kodePekerjaan: 'P2', penyulang: 'valid' }),
+  ];
+  const h = harness({
+    rowResponse: { success: true, data: [{ kodeHeader: 'H1', ulp: 'Toboali' }] },
+    sheets: {
+      db_ROW_Realisasi: fakeSheet(parents, 13),
+      db_ROW_Eksekusi: fakeSheet(['', 'P1', 'P2'].map(kodePekerjaan => makeExecution({
+        kodeHeader: 'H1', kodePekerjaan, kodeEksekusi: 'E-' + kodePekerjaan, ulp: 'Toboali',
+      })), 30),
+    },
+  });
+  const detail = h.context.getMobileLaporanHarian('session').data[0].realisasi;
+  assert.deepEqual(responseValue(detail.map(r => r.kodePekerjaan)), ['P2']);
+  assert.deepEqual(responseValue(detail[0].eksekusi.map(e => e.kodeEksekusi)), ['E-P2']);
+});
+
+test('ROW exact parent pairs cannot collide through a delimiter or another header', () => {
+  const h = harness({
+    rowResponse: { success: true, data: [
+      { kodeHeader: 'H1', ulp: 'Toboali' },
+      { kodeHeader: 'H1|P1', ulp: 'Toboali' },
+      { kodeHeader: 'H2', ulp: 'Toboali' },
+    ] },
+    sheets: {
+      db_ROW_Realisasi: fakeSheet([
+        makeRealization({ kodeHeader: 'H1', kodePekerjaan: 'P1|P2' }),
+        makeRealization({ kodeHeader: 'H1|P1', kodePekerjaan: 'P2' }),
+        makeRealization({ kodeHeader: 'H2', kodePekerjaan: 'P2' }),
+      ], 13),
+      db_ROW_Eksekusi: fakeSheet([
+        makeExecution({ kodeHeader: 'H1', kodePekerjaan: 'P1|P2', kodeEksekusi: 'E1', ulp: 'Toboali' }),
+        makeExecution({ kodeHeader: 'H1|P1', kodePekerjaan: 'P2', kodeEksekusi: 'E2', ulp: 'Toboali' }),
+        makeExecution({ kodeHeader: 'H2', kodePekerjaan: 'P2', kodeEksekusi: 'E3', ulp: 'Toboali' }),
+        makeExecution({ kodeHeader: 'H1', kodePekerjaan: 'P2', kodeEksekusi: 'WRONG-PAIR', ulp: 'Toboali' }),
+      ], 30),
+    },
+  });
+  const result = h.context.getMobileLaporanHarian('session');
+  assert.deepEqual(responseValue(result.data.map(h =>
+    h.realisasi[0].eksekusi.map(e => e.kodeEksekusi))), [['E1'], ['E2'], ['E3']]);
+});
+
+test('ROW adapter preserves failed authorization responses and forwards original arguments', () => {
+  const response = { success: false, message: 'Sesi habis' };
+  const h = harness({ rowResponse: response });
+  h.context.SpreadsheetApp.openById = () => { throw new Error('must not read sheets'); };
+  const args = ['expired', 'ROW 01', '', '2026-09-30', 100];
+  assert.strictEqual(h.context.getMobileLaporanHarian(...args), response);
+  assert.deepEqual(h.calls[0].args, args);
 });
 
 test('Yandal roster sync preserves ULP and Sub-Tim and excludes foreign ULP rows', () => {

@@ -138,26 +138,48 @@
     if (typeof COL_ROW === 'undefined' || typeof COL_ROW_RLZ === 'undefined') return response;
 
     var visibleHeaders = Object.create(null);
+    var headerCounts = Object.create(null);
     var data = response.data;
     for (var h = 0; h < data.length; h++) {
       var header = data[h];
       if (!header || typeof header !== 'object') continue;
       header.realisasi = [];
       var headerCode = _sisiMobileText_(header.kodeHeader);
-      if (headerCode) visibleHeaders[headerCode] = header;
+      if (!headerCode) continue;
+      headerCounts[headerCode] = (headerCounts[headerCode] || 0) + 1;
+      // Authorization stays with the previous reader. Detail enrichment still
+      // requires explicit ownership, even for legacy/admin-visible headers.
+      if (_sisiMobileText_(header.ulp)) visibleHeaders[headerCode] = header;
     }
+    Object.keys(visibleHeaders).forEach(function (code) {
+      // Never select a last-wins owner for an ambiguous header identifier.
+      if (headerCounts[code] !== 1) delete visibleHeaders[code];
+    });
+    if (!Object.keys(visibleHeaders).length) return response;
 
     try {
       var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
       var rlzRows = _sisiMobileReadRows_(ss, 'db_ROW_Realisasi', COL_ROW_RLZ_N);
       var execRows = _sisiMobileReadRows_(ss, 'db_ROW_Eksekusi', COL_ROW_N);
       var realisasiByParent = Object.create(null);
+      var parentCounts = Object.create(null);
+      for (var p = 0; p < rlzRows.length; p++) {
+        var countHeader = _sisiMobileText_(_sisiMobileCell_(rlzRows[p], COL_ROW_RLZ.kodeHeader));
+        var countParent = _sisiMobileText_(_sisiMobileCell_(rlzRows[p], COL_ROW_RLZ.kodePekerjaan));
+        if (!visibleHeaders[countHeader] || !countParent) continue;
+        var countKey = JSON.stringify([countHeader, countParent]);
+        parentCounts[countKey] = (parentCounts[countKey] || 0) + 1;
+      }
       for (var r = 0; r < rlzRows.length; r++) {
         var rr = rlzRows[r];
         var linkedHeader = _sisiMobileText_(_sisiMobileCell_(rr, COL_ROW_RLZ.kodeHeader));
         var parentHeader = visibleHeaders[linkedHeader];
-        if (!parentHeader) continue; // exact link to an authorized header only
+        if (!parentHeader) continue; // exact link to an authorized, explicitly owned header
         var parentCode = _sisiMobileText_(_sisiMobileCell_(rr, COL_ROW_RLZ.kodePekerjaan));
+        var realizationKey = JSON.stringify([linkedHeader, parentCode]);
+        // Realisasi has no ULP column: ownership comes only from its unique
+        // header link. Missing/duplicate parent IDs cannot identify a safe join.
+        if (!parentCode || parentCounts[realizationKey] !== 1) continue;
         var item = {
           kodePekerjaan: parentCode,
           penyulang: _sisiMobileText_(_sisiMobileCell_(rr, COL_ROW_RLZ.penyulang)),
@@ -168,7 +190,7 @@
           eksekusi: [],
         };
         parentHeader.realisasi.push(item);
-        if (parentCode) realisasiByParent[linkedHeader + '|' + parentCode] = item;
+        realisasiByParent[realizationKey] = item;
       }
 
       for (var x = 0; x < execRows.length; x++) {
@@ -177,10 +199,11 @@
         var exUlp = _sisiMobileText_(_sisiMobileCell_(ex, COL_ROW.ulp));
         var targetHeader = exHeaderCode ? visibleHeaders[exHeaderCode] : null;
         if (!targetHeader) continue;
-        if (exUlp && _sisiMobileText_(targetHeader.ulp) && exUlp.toLowerCase() !== _sisiMobileText_(targetHeader.ulp).toLowerCase()) continue;
+        var headerUlp = _sisiMobileText_(targetHeader.ulp);
+        if (!exUlp || !headerUlp || exUlp.toLowerCase() !== headerUlp.toLowerCase()) continue;
 
-        var parentKey = _sisiMobileText_(targetHeader.kodeHeader) + '|' +
-          _sisiMobileText_(_sisiMobileCell_(ex, COL_ROW.kodePekerjaan));
+        var parentKey = JSON.stringify([exHeaderCode,
+          _sisiMobileText_(_sisiMobileCell_(ex, COL_ROW.kodePekerjaan))]);
         var targetRealisasi = realisasiByParent[parentKey];
         if (!targetRealisasi) continue;
         targetRealisasi.eksekusi.push({
