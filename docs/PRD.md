@@ -6,7 +6,7 @@
 **Repository:** `GuswanSyahludin/SiSi-ULP-Toboali`  
 **Primary operating scope:** Internal ULP Toboali operations  
 **Audit findings and remediation tasks:** `docs/SECURITY-AUDIT-STATUS.md`  
-**Last updated:** 29 September 2026, 21:06 WIB
+**Last updated:** 30 September 2026, 07:53 WIB
 
 ## 1. Product contract
 
@@ -106,7 +106,7 @@ Runtime acceptance must cover staging authorization/safe writes, mobile ROW inva
 
 ### Stage 6: Full-Stack Audit Remediation
 
-**Audit period:** 26-29 September 2026. **Scope:** backend, web, and mobile.
+**Audit period:** 26-30 September 2026. **Scope:** backend, web, and mobile.
 
 - **T-01/T-02:** Token exposure and query-string authentication closed.
 - **T-03/T-04:** Delta sync ULP scoping and top-level guards merged.
@@ -124,5 +124,6 @@ Runtime acceptance must cover staging authorization/safe writes, mobile ROW inva
 - **Source-only SiSi batch, PR #37:** Android release signing fail-closed checks, explicit deny backup/data-extraction policy, signing-source audit, and regression contract merged as `7b3a74b75eb1d40ca84762f1096e5c10ee42e2c4` on 29 September 2026. All PR checks were green; staging secret-store verification, signed internal APK installation, and real-device backup/restore evidence remain pending.
 - **Android resource correction, PR #38:** Android 12+ `dataExtractionRules` now points to the correct deny-all `data_extraction_rules.xml` resource; its regression contract was updated and all required PR checks were green. Merged as `a698e4ca3c74fce79ab79ab1182bf803187a06fd` on 29 September 2026.
 - **REL-03 formula-safe writes, PR #39:** Master Gardu HI writes now preflight immutable/formula cells and reject unsafe targets before the first write; `db_InsDu_Realisasi` recalculation uses targeted `jumlahTemuan` writes instead of whole-range replacement. Deployment-order and source contracts are green. Merged as `ab6270724ee21ee4efcd6d7b2e20cdca25e8e66e` on 29 September 2026; sanitized staging formula mapping and two-device/runtime validation remain pending.
+- **T-21/T-20 source hygiene, PR #40:** Removed the committed stale `flutter-audit.txt`, added a regression contract to prevent its return, and registered the contract in the backend test harness. All PR checks were green and the PR merged as `eeed5a52979191d277edc2fe628ee6f0448903a9` on 30 September 2026. T-21 is complete; T-20 remains open for the full lint/deprecated API cleanup, strict analyzer flags, generated Drift checks, and real-device validation.
 
-**Overall:** Code remediations are merged, including PRs #38 and #39. Runtime acceptance and live branch-protection verification are incomplete. The system is not production-ready until the documented staging, ACL rotation, concurrency/retry, client compatibility, real-device, signing, and GitHub ruleset evidence exists.
+**Overall:** Code remediations are merged through PR #40, including stale Flutter audit cleanup. Runtime acceptance and live branch-protection verification are incomplete. The system is not production-ready until the documented staging, ACL rotation, concurrency/retry, client compatibility, real-device, signing, and GitHub ruleset evidence exists.
