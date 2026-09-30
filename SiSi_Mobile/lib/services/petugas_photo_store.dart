@@ -7,7 +7,8 @@ import 'watermark_photo_export.dart';
 
 /// Immutable original + frozen capture metadata in private Android storage.
 /// Receipt binding is separate: adding an official code never overwrites GPS/time.
-/// No files are uploaded or deleted by this store.
+/// The private file-backed outbox keeps captures discoverable after cache cleanup,
+/// restart, and later upload/lifecycle processing.
 class PetugasPhoto {
   final String path;
   final Map<String,dynamic> metadata;
@@ -22,6 +23,61 @@ class PetugasPhotoStore {
     final base = await _channel.invokeMethod<String>('privatePhotoDirectory');
     if (base == null || base.isEmpty) throw StateError('Folder privat belum tersedia. Perbarui APK.');
     return Directory('$base/${key(owner)}')..createSync(recursive:true);
+  }
+  static Future<File> _outboxFile(String owner) async => File('${(await root(owner)).path}/photo-outbox.jsonl');
+  static String outboxId(String path, String checksum) => key('$path|$checksum');
+  static Map<String,dynamic> outboxRecord({required String owner, required String path, required Map<String,dynamic> metadata, String state = 'pending', String? code}) => {
+    'id': outboxId(path, '${metadata['originalSha256'] ?? ''}'),
+    'owner': owner,
+    'path': path,
+    'state': state,
+    'code': code ?? '',
+    'createdAt': DateTime.now().toUtc().toIso8601String(),
+    'metadata': Map<String,dynamic>.from(metadata),
+  };
+  static Future<void> _appendOutbox(String owner, Map<String,dynamic> record) async {
+    final file = await _outboxFile(owner);
+    await file.writeAsString('${jsonEncode(record)}\n', mode: FileMode.append, flush: true);
+  }
+  static Future<List<Map<String,dynamic>>> pendingOutbox(String owner) async {
+    try {
+      final file = await _outboxFile(owner);
+      if (!await file.exists()) return [];
+      final rows = <Map<String,dynamic>>[];
+      for (final line in await file.readAsLines()) {
+        if (line.trim().isEmpty) continue;
+        try {
+          final row = Map<String,dynamic>.from(jsonDecode(line) as Map);
+          if (row['state'] == 'pending' && await File('${row['path'] ?? ''}').exists()) rows.add(row);
+        } catch (_) {}
+      }
+      return rows;
+    } catch (_) {
+      return [];
+    }
+  }
+  static Future<void> _markOutbox(String owner, String path, {required String state, String code = ''}) async {
+    final file = await _outboxFile(owner);
+    if (!await file.exists()) return;
+    final lines = await file.readAsLines();
+    final updated = <String>[];
+    for (final line in lines) {
+      if (line.trim().isEmpty) continue;
+      try {
+        final row = Map<String,dynamic>.from(jsonDecode(line) as Map);
+        if (row['path'] == path) {
+          row['state'] = state;
+          row['code'] = code;
+          row['updatedAt'] = DateTime.now().toUtc().toIso8601String();
+        }
+        updated.add(jsonEncode(row));
+      } catch (_) {
+        updated.add(line);
+      }
+    }
+    final temp = File('${file.path}.${DateTime.now().microsecondsSinceEpoch}.tmp');
+    await temp.writeAsString('${updated.join('\n')}\n', flush: true);
+    await temp.rename(file.path);
   }
   static Map<String,dynamic> withReceipt(Map<String,dynamic> frozen, String code) => {
     ...frozen, 'code': code,
@@ -40,6 +96,9 @@ class PetugasPhotoStore {
     final m={...metadata,'originalSha256':sha256.convert(bytes).toString()};
     await File(path).writeAsBytes(bytes,flush:true);
     await File('${dir.path}/capture.json').writeAsString(jsonEncode(m),flush:true);
+    // The capture is not successful until both the private copy and its durable
+    // outbox receipt exist. A failed receipt leaves the copy recoverable on disk.
+    await _appendOutbox(owner, outboxRecord(owner:owner,path:path,metadata:m));
     return PetugasPhoto(path,Map.unmodifiable(m));
   }
   static Future<PetugasPhoto?> byPath(String owner,String path) async {
@@ -60,6 +119,7 @@ class PetugasPhotoStore {
     final temp=File('${ref.path}.${DateTime.now().microsecondsSinceEpoch}.tmp');
     await temp.writeAsString(jsonEncode({'path':photo.path,'metadata':withReceipt(photo.metadata,code)}),flush:true);
     await temp.rename(ref.path);
+    await _markOutbox(owner, photo.path, state:'bound', code:code);
   }
   static Future<PetugasPhoto?> find({required String owner,required WatermarkTeam team,required String code,required String slot}) async {
     try{
