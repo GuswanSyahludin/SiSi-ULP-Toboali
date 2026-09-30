@@ -6,7 +6,7 @@
 **Repository:** `GuswanSyahludin/SiSi-ULP-Toboali`  
 **Primary operating scope:** Internal ULP Toboali operations  
 **Audit findings and remediation tasks:** `docs/SECURITY-AUDIT-STATUS.md`  
-**Last updated:** 30 September 2026, 09:19 WIB
+**Last updated:** 30 September 2026, 09:28 WIB
 
 ## 1. Product contract
 
@@ -37,6 +37,7 @@ The system is fail-closed. Foreign, blank, duplicate, unresolved, or ambiguous o
 - Legacy shared database files are quarantined, not silently assigned to another account.
 - Pending records and photos remain retryable; recovery must not require deleting local SQLite.
 - Yandal originals are copied into account-scoped private app storage and registered in a durable `photo-outbox.jsonl` receipt before capture success is reported; official-code binding never rewrites original metadata.
+- Legacy Yandal watermark processing is followed by a final ACL repair overlay that resets all generated P0 and Switching watermark/download files to private.
 - Login failures use a generic response, and supplied device/client identifiers receive an additional device-level throttle.
 - AppSheet webhook timestamps are enforced by default in production to prevent replay; legacy warning-mode fixtures opt in explicitly.
 - The mobile API deployment URL is build-time configurable with `SISI_API_URL`; no production token or signing material is committed.
@@ -64,7 +65,7 @@ The server authenticates the caller, verifies same-ULP access, resolves exactly 
 
 ### Yandal photo capture
 
-Camera captures are copied to private account storage with frozen metadata and a SHA-256 checksum. The file-backed outbox permits recovery after ImagePicker cache cleanup and restart; official-code references are written atomically and do not alter capture time, GPS, or original bytes. Original and rendered JPEG bytes must pass decoder/content validation before persistence or export. Direct watermark-engine output is private by default, and retrieval uses the authenticated same-ULP path. Remote upload/lifecycle processing and real-device acceptance remain separate release gates.
+Camera captures are copied to private account storage with frozen metadata and a SHA-256 checksum. The file-backed outbox permits recovery after ImagePicker cache cleanup and restart; official-code references are written atomically and do not alter capture time, GPS, or original bytes. Original and rendered JPEG bytes must pass decoder/content validation before persistence or export. Direct watermark-engine output is private by default, and the legacy processor is followed by an ACL repair that makes all generated P0 and Switching outputs private. Retrieval uses the authenticated same-ULP path. Remote upload/lifecycle processing and real-device acceptance remain separate release gates.
 
 ## 4. Functional requirements
 
@@ -97,14 +98,15 @@ Camera captures are copied to private account storage with frozen metadata and a
 - **FR-27:** Original and rendered evidence images are validated by actual decode and complete JPEG marker checks before private persistence or export.
 - **FR-28:** Direct watermark-engine output must be created private; public-by-link output is not an accepted default.
 - **FR-29:** Background sync workers and progress indicators are partitioned by active account identity and reject stale account payloads.
+- **FR-30:** Legacy Yandal watermark processors cannot leave generated watermark/download files public after processing.
 
 ## 5. Security, reliability, and definition of done
 
 Fail closed by default. Do not trust client-supplied ULP, role, ownership, identifiers, or URLs without server-side resolution. Do not log secrets or tokens. Use locks for atomic identifiers, bounded retry for queues, and preserve failed records and audit history. Password migration requires a verified backup/version-history point. Master snapshot replacement must not discard pending or conflict local edits, and migration must preserve data, defaults, indexes, and composite identity. Photo privacy changes are not production-ready until existing public files are rotated and staging/real-device access tests pass.
 
-Automated acceptance includes the Audit Gate, backend security tests, Flutter analysis/tests/build, query-string rejection, password cutover coverage, Master Gardu pending-edit coverage, Master Gardu conflict contract coverage, REL-03 formula-safe write coverage, photo privacy contract coverage, mobile ROW safe-write coverage, Jadwal Padam endpoint-load and ownership coverage, BA ownership/download coverage, account isolation, secure-storage migration, and offline queue tests. Photo acceptance additionally includes decoded-original, truncated/corrupt, SOI-only, missing-EOI, and rendered-JPEG export coverage, plus a contract that direct watermark output remains private. Account-sync acceptance includes worker namespace separation, mismatched payload rejection, logout cancellation, and progress-state isolation.
+Automated acceptance includes the Audit Gate, backend security tests, Flutter analysis/tests/build, query-string rejection, password cutover coverage, Master Gardu pending-edit coverage, Master Gardu conflict contract coverage, REL-03 formula-safe write coverage, photo privacy contract coverage, mobile ROW safe-write coverage, Jadwal Padam endpoint-load and ownership coverage, BA ownership/download coverage, account isolation, secure-storage migration, and offline queue tests. Photo acceptance additionally includes decoded-original, truncated/corrupt, SOI-only, missing-EOI, and rendered-JPEG export coverage, plus a contract that direct watermark output and post-processing ACL repair remain private. Account-sync acceptance includes worker namespace separation, mismatched payload rejection, logout cancellation, and progress-state isolation.
 
-Runtime acceptance must cover staging authorization/safe writes, mobile ROW invalid-session/foreign-ULP rejection, CSV/formula injection rejection, invalid coordinate/diameter rejection, concurrent append and retry idempotency, password migration and cutoff, authenticated photo retrieval and wrong-ULP/public-link rejection, controlled public-file ACL rotation, real-device offline Gardu edit followed by fresh Master download and outbox replay, two-device stale-edit conflict detection, cross-ULP Jadwal Padam read/write rejection, restart/retry, account switching, token expiry, secure-storage behavior, Android backup/restore denial, and signed internal release installation. Yandal must additionally prove cache cleanup, restart recovery, account isolation, camera/GPS edge cases, decoded-image behavior on device, and signed-device behavior. A change is done only when implementation, docs, focused/full tests, CI, deployed-runtime evidence, and real-device evidence are complete.
+Runtime acceptance must cover staging authorization/safe writes, mobile ROW invalid-session/foreign-ULP rejection, CSV/formula injection rejection, invalid coordinate/diameter rejection, concurrent append and retry idempotency, password migration and cutoff, authenticated photo retrieval and wrong-ULP/public-link rejection, controlled public-file ACL rotation, real-device offline Gardu edit followed by fresh Master download and outbox replay, two-device stale-edit conflict detection, cross-ULP Jadwal Padam read/write rejection, restart/retry, account switching, token expiry, secure-storage behavior, Android backup/restore denial, and signed internal release installation. Yandal must additionally prove cache cleanup, restart recovery, account isolation, camera/GPS edge cases, decoded-image behavior on device, ACL state after P0/Switching processing, and signed-device behavior. A change is done only when implementation, docs, focused/full tests, CI, deployed-runtime evidence, and real-device evidence are complete.
 
 ## 6. Delivery status
 
@@ -141,5 +143,6 @@ Runtime acceptance must cover staging authorization/safe writes, mobile ROW inva
 - **JPEG validation and photo failure contract, PR #43:** Decoder-backed original validation and complete JPEG SOI/EOI validation are merged. Corrupt, truncated, SOI-only, missing-EOI, oversized, and non-decodable evidence bytes are rejected before private persistence or Android export, with Flutter regression coverage. Apps Script upload transaction semantics, orphan cleanup, remote watermark-engine behavior, native decoder parity, and real-device validation remain open.
 - **Direct watermark privacy, PR #44:** The direct `Tek-Watermark.js` Cloud Run payload now sends `makePublic: false`, and the T-11 contract rejects any direct `makePublic: true` regression. Existing public-file ACL rotation, Cloud Run configuration verification, staging, and real-device validation remain open.
 - **Account-scoped sync workers, PR #45:** WorkManager periodic and one-off names now include the active account database namespace; background jobs reject mismatched account payloads, logout cancels scoped and legacy names, and sync progress is stored per account. Real-device account-switch, restart, WorkManager persistence, and duplicate-delivery validation remain open.
+- **Legacy Yandal watermark ACL repair, PR #46:** A final overlay re-applies private ACLs after legacy P0 and Switching watermark processing, and the deployment order/test contract ensures it loads after the existing privacy and containment overlays. Historical public-file rotation, Cloud Run verification, staging, and real-device ACL validation remain open.
 
-**Overall:** Code remediations are merged through PR #45. Runtime acceptance and live branch-protection verification are incomplete. The system is not production-ready until the documented staging, ACL rotation, concurrency/retry, client compatibility, real-device, signing, photo-lifecycle, and GitHub ruleset evidence exists.
+**Overall:** Code remediations are merged through PR #46. Runtime acceptance and live branch-protection verification are incomplete. The system is not production-ready until the documented staging, ACL rotation, concurrency/retry, client compatibility, real-device, signing, photo-lifecycle, and GitHub ruleset evidence exists.
