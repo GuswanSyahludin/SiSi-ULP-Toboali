@@ -10,11 +10,14 @@ const COL_ROW_RLZ = { kodeHeader: 1, kodePekerjaan: 2, penyulang: 6 };
 const COL_ROW = { kodeHeader: 1, kodePekerjaan: 2, kodeEksekusi: 3, ulp: 4, nomorTiang: 10, diameter: 23, jenisPekerjaan: 24 };
 function row(width, values, columns) { const out = Array(width).fill(''); for (const [key, value] of Object.entries(values)) out[columns[key]] = value; return out; }
 function sheet(rows) { return { getLastRow: () => rows.length + 1, getRange: () => ({ getValues: () => rows }) }; }
-function harness({ headers = [], realizations = [], executions = [], rowResponse } = {}) {
+function harness({ headers = [], storedHeaders = headers, realizations = [], executions = [], rowResponse } = {}) {
   const calls = []; let ctx;
   ctx = {
     SPREADSHEET_ID: 'active', COL_ROW, COL_ROW_RLZ, COL_ROW_N: 30, COL_ROW_RLZ_N: 13,
-    SpreadsheetApp: { openById: () => ({ getSheetByName: name => ({ db_ROW_Realisasi: sheet(realizations), db_ROW_Eksekusi: sheet(executions) })[name] || null }) },
+    SpreadsheetApp: { openById: () => ({ getSheetByName: name => ({
+      db_Global_Header: sheet(storedHeaders.map(h => row(3, h, { kodeHeader: 1, ulp: 2 }))),
+      db_ROW_Realisasi: sheet(realizations), db_ROW_Eksekusi: sheet(executions),
+    })[name] || null }) },
     getMobileLaporanHarian() { return rowResponse || { success: true, data: headers }; },
     getMobileLaporanUp3Uiw(p) { calls.push(p); return p.token === 'body-session' ? { success: true, tanggal: p.tanggal } : { success: false }; },
     simpanMobileLaporanC4A(p) { calls.push(p); return p.token === 'body-session' ? { success: true } : { success: false }; },
@@ -49,6 +52,11 @@ test('ROW details require uniquely owned headers, unique parents, and matching n
   const h = harness({ headers, realizations, executions }); const result = h.ctx.getMobileLaporanHarian('session');
   assert.deepEqual(json(result.data[0].realisasi.map(r => r.kodePekerjaan)), ['P1']); assert.deepEqual(json(result.data[0].realisasi[0].eksekusi.map(e => e.kodeEksekusi)), ['GOOD']);
   assert.deepEqual(json(result.data.slice(1).map(r => r.realisasi)), [[], [], []]); assert.doesNotMatch(JSON.stringify(result), /SECRET|FOREIGN|BLANK|HIDDEN|AMBIGUOUS|DUPLICATE-PARENT|fotoSebelumUrl/);
+});
+
+test('ROW details fail closed when the backing header key is duplicated across ULPs', () => {
+  const h = harness({ headers: [{ kodeHeader: 'H1', ulp: 'Toboali' }], storedHeaders: [{ kodeHeader: 'H1', ulp: 'Toboali' }, { kodeHeader: 'H1', ulp: 'ULP Lain' }], realizations: [realization({ kodeHeader: 'H1', kodePekerjaan: 'P1' })], executions: [execution({ kodeHeader: 'H1', kodePekerjaan: 'P1', kodeEksekusi: 'E1', ulp: 'Toboali' })] });
+  assert.deepEqual(json(h.ctx.getMobileLaporanHarian('session').data[0].realisasi), []);
 });
 
 test('ROW enrichment preserves failed authorization result without reading sheet data', () => {

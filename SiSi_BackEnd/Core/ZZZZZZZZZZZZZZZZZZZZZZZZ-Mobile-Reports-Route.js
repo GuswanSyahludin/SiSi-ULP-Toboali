@@ -31,17 +31,10 @@
     if (e && typeof e === 'object') {
       Object.keys(e).forEach(function (key) { normalizedEvent[key] = e[key]; });
     }
-
-    // Never forward session credentials from query parameters to any mobile
-    // action. The request body remains the sole accepted credential source.
     normalizedEvent.parameter = _sisiMobileMergeParams_(e && e.parameter, null);
     if (action !== 'getMobileLaporanUp3Uiw' && action !== 'simpanMobileLaporanC4A') {
       return _sisiMobileReportsPreviousRouter_(normalizedEvent, body);
     }
-
-    // The legacy router passes e.parameter to these handlers. Flutter sends the
-    // token and report fields in JSON, so merge the body over sanitized filters
-    // while delegating through the already-installed dispatch/auth wrappers.
     normalizedEvent.parameter = _sisiMobileMergeParams_(normalizedEvent.parameter, body);
     return _sisiMobileReportsPreviousRouter_(normalizedEvent, body);
   };
@@ -156,18 +149,36 @@
       var headerCode = _sisiMobileText_(header.kodeHeader);
       if (!headerCode) continue;
       headerCounts[headerCode] = (headerCounts[headerCode] || 0) + 1;
-      // Authorization stays with the previous reader. Detail enrichment still
-      // requires explicit ownership, even for legacy/admin-visible headers.
       if (_sisiMobileText_(header.ulp)) visibleHeaders[headerCode] = header;
     }
     Object.keys(visibleHeaders).forEach(function (code) {
-      // Never select a last-wins owner for an ambiguous header identifier.
       if (headerCounts[code] !== 1) delete visibleHeaders[code];
     });
     if (!Object.keys(visibleHeaders).length) return response;
 
     try {
       var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+      // Realisasi has no ULP column. Confirm that every visible key maps to one
+      // and only one stored header owner before trusting it for child records.
+      var allHeaderRows = _sisiMobileReadRows_(ss, 'db_Global_Header', 3);
+      var storedHeaderCounts = Object.create(null);
+      var storedHeaderUlps = Object.create(null);
+      for (var sh = 0; sh < allHeaderRows.length; sh++) {
+        var storedCode = _sisiMobileText_(_sisiMobileCell_(allHeaderRows[sh], 1));
+        if (!storedCode) continue;
+        storedHeaderCounts[storedCode] = (storedHeaderCounts[storedCode] || 0) + 1;
+        storedHeaderUlps[storedCode] = _sisiMobileText_(_sisiMobileCell_(allHeaderRows[sh], 2));
+      }
+      Object.keys(visibleHeaders).forEach(function (code) {
+        var returnedUlp = _sisiMobileText_(visibleHeaders[code].ulp);
+        var storedUlp = _sisiMobileText_(storedHeaderUlps[code]);
+        if (storedHeaderCounts[code] !== 1 || !storedUlp ||
+            returnedUlp.toLowerCase() !== storedUlp.toLowerCase()) {
+          delete visibleHeaders[code];
+        }
+      });
+      if (!Object.keys(visibleHeaders).length) return response;
+
       var rlzRows = _sisiMobileReadRows_(ss, 'db_ROW_Realisasi', COL_ROW_RLZ_N);
       var execRows = _sisiMobileReadRows_(ss, 'db_ROW_Eksekusi', COL_ROW_N);
       var realisasiByParent = Object.create(null);
@@ -183,11 +194,9 @@
         var rr = rlzRows[r];
         var linkedHeader = _sisiMobileText_(_sisiMobileCell_(rr, COL_ROW_RLZ.kodeHeader));
         var parentHeader = visibleHeaders[linkedHeader];
-        if (!parentHeader) continue; // exact link to an authorized, explicitly owned header
+        if (!parentHeader) continue;
         var parentCode = _sisiMobileText_(_sisiMobileCell_(rr, COL_ROW_RLZ.kodePekerjaan));
         var realizationKey = JSON.stringify([linkedHeader, parentCode]);
-        // Realisasi has no ULP column: ownership comes only from its unique
-        // header link. Missing/duplicate parent IDs cannot identify a safe join.
         if (!parentCode || parentCounts[realizationKey] !== 1) continue;
         var item = {
           kodePekerjaan: parentCode,
@@ -210,7 +219,6 @@
         if (!targetHeader) continue;
         var headerUlp = _sisiMobileText_(targetHeader.ulp);
         if (!exUlp || !headerUlp || exUlp.toLowerCase() !== headerUlp.toLowerCase()) continue;
-
         var parentKey = JSON.stringify([exHeaderCode,
           _sisiMobileText_(_sisiMobileCell_(ex, COL_ROW.kodePekerjaan))]);
         var targetRealisasi = realisasiByParent[parentKey];
