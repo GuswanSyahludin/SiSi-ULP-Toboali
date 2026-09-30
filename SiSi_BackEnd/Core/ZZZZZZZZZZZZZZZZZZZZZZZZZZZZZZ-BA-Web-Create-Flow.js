@@ -83,6 +83,10 @@ function _baWebRow_(request, record) {
     throw new Error("Sumber baris BA tidak cocok.");
   }
   var idCol = _baWebColumn_(row.headers, ["idba"]);
+  // The legacy resolver picks the first ULP alias. Every replay/recheck must
+  // also reject a second ownership header, even when both values agree.
+  var ulpCol = _baWebColumn_(row.headers, ["ulp", "namaulp", "unitlayananpelanggan", "kodeulp"]);
+  if (_baWebNorm_(row.values[ulpCol]) !== "ulp toboali") throw new Error("Kepemilikan ULP BA tidak valid.");
   return { row: row, cell: row.sheet.getRange(row.sheetRow, idCol + 1) };
 }
 function _baWebOwned_(g, record, key) {
@@ -198,27 +202,40 @@ function _baWebPhoto_(request) {
   var record = _baWebNote_(checked.row.sheet.getRange(checked.row.sheetRow, idCol + 1));
   _baWebOwned_(g, record, key);
   if (record.result.idBA !== request.idBA) throw new Error("idBA foto tidak cocok.");
-  var map = record.kind === "switching" ? SW_PHOTO_COLUMN :
-    record.kind === "pemeriksaan" ? BA_PRK_FOTO_COLUMN : BA_PHOTO_COLUMN;
+  var bound = _baWebRow_(request, record);
+  var map = {};
+  var baseMap = record.kind === "switching" ? SW_PHOTO_COLUMN : BA_PHOTO_COLUMN;
+  Object.keys(baseMap).forEach(function (s) { map[s] = baseMap[s]; });
+  // Pemeriksaan also shows the common Trafo Awal photo card, not only megger.
+  if (record.kind === "pemeriksaan") {
+    Object.keys(BA_PRK_FOTO_COLUMN).forEach(function (s) { map[s] = BA_PRK_FOTO_COLUMN[s]; });
+  }
   var slot = String(request.slot || "");
   if (!Object.prototype.hasOwnProperty.call(map, slot)) throw new Error("Slot foto BA tidak dikenal.");
+  var receipt = record.photos[slot], column = _baColLetterToIndex_(map[slot]) + 1;
+  var cell = bound.row.sheet.getRange(bound.row.sheetRow, column), previous = String(cell.getValue() || "");
+  if (cell.getFormula() || (previous && (!receipt || previous !== receipt.url))) {
+    throw new Error("Kolom foto BA sudah berubah atau berisi formula.");
+  }
+  function invalidPhoto_(message) {
+    // Only a verified rejection BEFORE Drive/Sheet writes may unlock a picker.
+    // Never authorize replacing an existing receipt or a conflicting row cell.
+    return { ok: false, idBA: request.idBA, slot: slot,
+      code: receipt ? "PHOTO_RETRY_SAME_FILE" : "PHOTO_REPLACE_ALLOWED", message: message };
+  }
   var match = String(request.dataUrl || "").match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]+={0,2})$/);
-  if (!match || match[2].length > 7000000) throw new Error("Foto harus JPEG, PNG, atau WebP maksimal 5 MB.");
-  var bytes = Utilities.base64Decode(match[2]), mime = match[1];
+  if (!match || match[2].length > 7000000) return invalidPhoto_("Foto harus JPEG, PNG, atau WebP maksimal 5 MB.");
+  var bytes, mime = match[1];
+  try { bytes = Utilities.base64Decode(match[2]); }
+  catch (decodeError) { return invalidPhoto_("Data foto tidak dapat dibaca."); }
   var byte = function (i) { return bytes[i] & 255; };
   var signature = mime === "image/jpeg" ? byte(0) === 255 && byte(1) === 216 && byte(2) === 255 :
     mime === "image/png" ? [137,80,78,71,13,10,26,10].every(function (v, i) { return byte(i) === v; }) :
     byte(0) === 82 && byte(1) === 73 && byte(2) === 70 && byte(3) === 70 &&
       byte(8) === 87 && byte(9) === 69 && byte(10) === 66 && byte(11) === 80;
-  if (!signature || bytes.length > 5 * 1024 * 1024) throw new Error("Isi atau ukuran foto tidak valid.");
-  var checksum = _baWebHash_(bytes), receipt = record.photos[slot];
+  if (!signature || bytes.length > 5 * 1024 * 1024) return invalidPhoto_("Isi atau ukuran foto tidak valid.");
+  var checksum = _baWebHash_(bytes);
   if (receipt && receipt.checksum !== checksum) throw new Error("Foto retry berbeda dari foto draft.");
-  var column = _baColLetterToIndex_(map[slot]) + 1;
-  var bound = _baWebRow_(request, record), cell = bound.row.sheet.getRange(bound.row.sheetRow, column);
-  var previous = String(cell.getValue() || "");
-  if (cell.getFormula() || (previous && (!receipt || previous !== receipt.url))) {
-    throw new Error("Kolom foto BA sudah berubah atau berisi formula.");
-  }
   var folder = record.kind === "switching" ? _swPhotoFolder_(record.date, record.jenis, record.name) :
     _baPhotoFolder_(record.date, record.jenis, record.name);
   if (folder.getSharingAccess() !== DriveApp.Access.PRIVATE) throw new Error("Folder foto BA harus privat.");
@@ -262,6 +279,32 @@ function _baWebClient_() {
     window.crypto.getRandomValues(bytes);
     return Array.prototype.map.call(bytes, function (v) { return ("0" + v.toString(16)).slice(-2); }).join("");
   }
+  function validFile_(file) {
+    return !!file && /^image\/(jpeg|png|webp)$/.test(file.type) && file.size > 0 && file.size <= 5 * 1024 * 1024;
+  }
+  // Preserve the original staging/UI handler, but replace only a slot the
+  // server (or a never-sent FileReader failure) explicitly marked recoverable.
+  [["bagUploadFoto", "_BAG"], ["swUploadFoto", "_SW"]].forEach(function (pair) {
+    var original = window[pair[0]];
+    window[pair[0]] = function (slot, input) {
+      var state = window[pair[1]], flow = state && state.baWebFlow;
+      var file = input && input.files && input.files[0];
+      if (!file) return;
+      if (flow && (flow.busy || flow.complete || flow.replaceableSlot !== slot || flow.receipts[slot])) {
+        toast_("Foto ini belum boleh diganti. Ulangi dengan BA dan foto yang sama."); return;
+      }
+      if (!validFile_(file)) { toast_("Pilih foto JPEG, PNG, atau WebP maksimal 5 MB."); input.value = ""; return; }
+      original.apply(this, arguments);
+      var item = state.foto[slot];
+      if (!item || item.file !== file) return;
+      item.inputId = input.id;
+      if (flow) {
+        flow.photos[slot] = item;
+        flow.attempted[slot] = false;
+        toast_("Foto pengganti siap. Klik Coba lagi untuk BA yang sama.", "info");
+      }
+    };
+  });
   window._baWebStart_ = function (payload, state, kind, prefix) {
     var button = document.getElementById(prefix + "BtnSimpan"), flow = state.baWebFlow;
     if (flow && (flow.busy || flow.complete)) return;
@@ -270,13 +313,13 @@ function _baWebClient_() {
       var invalid = false;
       Object.keys(state.foto || {}).forEach(function (slot) {
         var item = state.foto[slot], file = item && item.file;
-        if (!file || !/^image\/(jpeg|png|webp)$/.test(file.type) || file.size > 5 * 1024 * 1024) invalid = true;
+        if (!validFile_(file)) invalid = true;
         photos[slot] = item;
       });
       if (invalid) { toast_("Pilih foto JPEG, PNG, atau WebP maksimal 5 MB sebelum menyimpan BA."); return; }
       payload.foto = {};
       flow = state.baWebFlow = { requestId: uuid_(), payload: JSON.parse(JSON.stringify(payload)),
-        photos: photos, receipts: {}, kind: kind, button: button, inputs: [] };
+        photos: photos, receipts: {}, attempted: {}, kind: kind, button: button, inputs: [] };
       var wrap = document.getElementById(prefix === "bag" ? "bagFormWrap" : "baTab-switching");
       if (wrap) Array.prototype.forEach.call(wrap.querySelectorAll("input,select,textarea"), function (el) {
         flow.inputs.push({ el: el, disabled: el.disabled }); el.disabled = true;
@@ -290,6 +333,14 @@ function _baWebClient_() {
       flow.busy = false; button.disabled = false; button.textContent = "Coba lagi (BA yang sama)";
       toast_((flow.saved ? "BA " + flow.saved.idBA + " sudah tersimpan, foto belum lengkap. " : "Status simpan belum selesai. ") +
         String((err && err.message) || err) + " Jangan membuat BA baru untuk mengulang.");
+    }
+    function replaceable_(slot, message) {
+      failed_(message);
+      if (!current_() || flow.receipts[slot]) return;
+      flow.replaceableSlot = slot;
+      var input = document.getElementById(flow.photos[slot].inputId);
+      if (input) input.disabled = false;
+      toast_("Pilih ulang foto yang gagal, lalu klik Coba lagi. ID BA dan foto yang sukses tetap dipertahankan.", "warning");
     }
     function finished_() {
       if (!current_()) return;
@@ -309,11 +360,20 @@ function _baWebClient_() {
       var slot = slots[index++], item = flow.photos[slot];
       if (flow.receipts[slot]) { next_(); return; }
       var reader = new FileReader();
-      reader.onerror = reader.onabort = function () { failed_("Foto gagal dibaca."); };
+      reader.onerror = reader.onabort = function () {
+        if (!flow.attempted[slot]) replaceable_(slot, "Foto gagal dibaca.");
+        else failed_("Foto gagal dibaca setelah pengiriman. Pilih kembali berkas yang sama setelah statusnya diperiksa.");
+      };
       reader.onload = function (event) {
         if (!current_()) return;
+        flow.attempted[slot] = true;
         SisiRun.withSuccessHandler(function (res) {
           if (!current_()) return;
+          if (res && res.ok === false && res.code === "PHOTO_REPLACE_ALLOWED" &&
+              res.idBA === flow.saved.idBA && res.slot === slot && !flow.receipts[slot]) {
+            flow.attempted[slot] = false;
+            replaceable_(slot, res.message || "Foto ditolak sebelum disimpan."); return;
+          }
           if (!res || !res.ok || res.idBA !== flow.saved.idBA || res.slot !== slot) {
             failed_((res && res.message) || "Respons foto tidak valid."); return;
           }
@@ -322,8 +382,13 @@ function _baWebClient_() {
           requestId: flow.requestId, idBA: flow.saved.idBA, slot: slot, dataUrl: event.target.result
         });
       };
-      try { reader.readAsDataURL(item.file); } catch (error) { failed_(error); }
+      try { reader.readAsDataURL(item.file); } catch (error) {
+        if (!flow.attempted[slot]) replaceable_(slot, "Foto gagal dibaca.");
+        else failed_(error);
+      }
     }
+    flow.replaceableSlot = null;
+    flow.inputs.forEach(function (item) { item.el.disabled = true; });
     flow.busy = true; button.disabled = true; button.textContent = "Menyimpan BA...";
     var pdf = document.getElementById(prefix + "BtnPdf");
     if (pdf) pdf.disabled = true;
@@ -350,6 +415,18 @@ function _baWebClient_() {
         flow.inputs.forEach(function (item) { item.el.disabled = item.disabled; });
         flow.button.disabled = false; flow.button.textContent = "Simpan BA";
         state.baWebFlow = null;
+      }
+      return original.apply(this, arguments);
+    };
+  });
+  // Outer actions used to keep mutating/hiding the form even when reset was
+  // refused. Keep the failed slot reachable until the same BA is completed.
+  ["bagResetSemua", "bagSetMode", "bagPakaiMaster"].forEach(function (name) {
+    var original = window[name];
+    if (typeof original !== "function") return;
+    window[name] = function () {
+      if (window._BAG && _BAG.baWebFlow && !_BAG.baWebFlow.complete) {
+        toast_("Selesaikan draft BA yang sama sebelum mengganti atau mereset formulir."); return;
       }
       return original.apply(this, arguments);
     };

@@ -45,8 +45,8 @@ function fixture(options = {}) {
     }
     return sheets[name] = {
       values, notes, formulas, getRange:range, getName:()=>name,
-      getDataRange:()=>range(1,1,values.length,width),
-      getLastColumn:()=>width, getLastRow:()=>values.length
+      getDataRange:()=>range(1,1,values.length,Math.max(width,...values.map(row=>row.length))),
+      getLastColumn:()=>Math.max(width,...values.map(row=>row.length)), getLastRow:()=>values.length
     };
   }
   const folder = {
@@ -196,7 +196,11 @@ test('public folder, invalid slot, forged type and changed retry image are rejec
   const f=fixture(),res=f.ctx.simpanDraftBaWeb(f.request());
   f.options.publicFolder=true;assert.throws(()=>f.upload(res),/privat/);assert.equal(f.files.length,0);
   f.options.publicFolder=false;
-  for(const extra of [{slot:'__proto__'},{dataUrl:'data:image/svg+xml;base64,AA=='},{dataUrl:'data:image/png;base64,YWJj'}]) assert.throws(()=>f.upload(res,'gardu',extra));
+  assert.throws(()=>f.upload(res,'gardu',{slot:'__proto__'}));
+  for(const dataUrl of ['data:image/svg+xml;base64,AA==','data:image/png;base64,YWJj']) {
+    const rejected=f.upload(res,'gardu',{dataUrl});
+    assert.equal(rejected.ok,false);assert.equal(rejected.code,'PHOTO_REPLACE_ALLOWED');
+  }
   f.upload(res);assert.throws(()=>f.upload(res,'gardu',{dataUrl:'data:image/jpeg;base64,'+Buffer.from([255,216,255,224,3,4,255,217]).toString('base64')}));assert.equal(f.files.length,1);
 });
 test('ownership changes during Drive upload block link and receipt writes',()=>{
@@ -229,6 +233,15 @@ function browserFixture() {
     SisiRun:{withSuccessHandler(success){return{withFailureHandler(failure){return new Proxy({}, {get:(_,method)=>request=>calls.push({method,request,success,failure})});}};}}
   };
   ctx.window=ctx;vm.createContext(ctx);
+  ctx.bagEl=ctx.swEl=id=>elements[id]||null;
+  // Execute the actual active HTML picker functions, not a replacement stub.
+  for(const [name,next] of [['bagUploadFoto','bagUploadFotoSaatSimpan'],['swUploadFoto','swUploadFotoSaatSimpan']]) {
+    const start=baHtml.lastIndexOf('function '+name+'(slot,input){');
+    vm.runInContext(baHtml.slice(start,baHtml.indexOf('function '+next+'(',start)),ctx);
+  }
+  ctx.bagResetSemua=()=>{ctx.outerResetRan=true;};
+  ctx.bagSetMode=()=>{ctx.modeChangeRan=true;};
+  ctx.bagPakaiMaster=()=>{ctx.masterChangeRan=true;};
   const f=fixture();vm.runInContext('('+f.ctx._baWebClient_.toString()+')()',ctx);
   return{ctx,calls,errors,elements};
 }
@@ -265,4 +278,105 @@ test('operation key cannot create again in the other equipment sheet',()=>{
 test('browser rejects unsupported photos before any server draft is created',()=>{
   const f=browserFixture();f.ctx._BAG.foto.nameplateTrafoAwal={file:{type:'image/svg+xml',size:8}};
   f.ctx._baWebStart_({},f.ctx._BAG,'gardu','bag');assert.equal(f.calls.length,0);assert.ok(!f.ctx._BAG.baWebFlow);
+});
+for(const kind of ['gardu','pemeriksaan','switching']) {
+  test(`BA ${kind}: conflicting or duplicate ULP aliases deny upload and replay before side effects`,()=>{
+    for(const alias of ['ULP','Nama ULP','Unit Layanan Pelanggan','Kode ULP']) {
+      for(const value of ['ULP Other','ULP Toboali','']) {
+        const f=fixture(),req=f.request(kind),saved=f.ctx.simpanDraftBaWeb(req);
+        const sheet=f.sheets[kind==='switching'?'Rekap Switching':'Rekap Gardu'];
+        const col=kind==='switching'?42:87;sheet.values[0][col]=alias;sheet.values[1][col]=value;
+        const writes=f.writes.length,notes=JSON.stringify(sheet.notes);
+        assert.throws(()=>f.upload(saved,kind),/ambigu/);
+        assert.throws(()=>f.ctx.simpanDraftBaWeb(req),/ambigu/);
+        assert.equal(f.files.length,0);assert.equal(f.writes.length,writes);assert.equal(JSON.stringify(sheet.notes),notes);
+      }
+    }
+  });
+}
+test('ULP ambiguity introduced during Drive creation denies receipt and URL writes',()=>{
+  const f=fixture(),saved=f.ctx.simpanDraftBaWeb(f.request()),sheet=f.sheets['Rekap Gardu'];
+  const writes=f.writes.length,notes=JSON.stringify(sheet.notes);
+  f.options.afterCreate=()=>{sheet.values[0][87]='Nama ULP';sheet.values[1][87]='ULP Other';};
+  assert.throws(()=>f.upload(saved),/ambigu/);assert.equal(f.writes.length,writes);assert.equal(JSON.stringify(sheet.notes),notes);
+});
+test('Pemeriksaan supports common Trafo Awal photos AND all six megger slots on one BA',()=>{
+  const f=fixture(),saved=f.ctx.simpanDraftBaWeb(f.request('pemeriksaan'));
+  const slots=['nameplateTrafoAwal','fotoFullGarduAwal','megger1','megger2','megger3','megger4','megger5','megger6'];
+  for(const slot of slots) {
+    const uploaded=f.upload(saved,'pemeriksaan',{slot});
+    const map=slot.startsWith('megger')?f.ctx.BA_PRK_FOTO_COLUMN:f.ctx.BA_PHOTO_COLUMN;
+    const col=f.ctx._baColLetterToIndex_(map[slot]);
+    assert.equal(f.sheets['Rekap Gardu'].values[1][col],uploaded.url);
+    assert.equal(f.upload(saved,'pemeriksaan',{slot}).fileId,uploaded.fileId);
+  }
+  assert.equal(f.files.length,8);assert.equal(f.sheets['Rekap Gardu'].values.length,2);
+  assert.throws(()=>f.upload(saved,'pemeriksaan',{slot:'nameplateAwal'}));
+  const g=fixture(),r=g.ctx.simpanDraftBaWeb(g.request());
+  assert.throws(()=>g.upload(r,'gardu',{slot:'megger1'}));
+});
+test('invalid photo can be replaced on same BA but an existing receipt never grants replacement',()=>{
+  const f=fixture(),saved=f.ctx.simpanDraftBaWeb(f.request()),count=f.writes.length;
+  const bad='data:image/jpeg;base64,YWJj';
+  const rejected=f.upload(saved,'gardu',{dataUrl:bad});
+  assert.equal(rejected.code,'PHOTO_REPLACE_ALLOWED');assert.equal(f.files.length,0);assert.equal(f.writes.length,count);
+  assert.equal(f.upload(saved).ok,true);assert.equal(f.files.length,1);
+  assert.equal(f.upload(saved,'gardu',{dataUrl:bad}).code,'PHOTO_RETRY_SAME_FILE');
+  assert.equal(f.sheets['Rekap Gardu'].values.length,2);
+});
+function pick(f,prefix,slot,name='photo.jpg') {
+  const id=prefix+'File_'+slot,input=f.elements[id]||(f.elements[id]={id,disabled:false});
+  input.files=[{name,type:'image/jpeg',size:8}];
+  f.ctx[prefix==='bag'?'bagUploadFoto':'swUploadFoto'](slot,input);
+  return input;
+}
+for(const [prefix,kind,stateName,slot] of [['bag','gardu','_BAG','nameplateTrafoAwal'],['sw','switching','_SW','nameplateAwal']]) {
+  test(`browser ${kind}: replace confirmed invalid photo, preserve saved BA, request and completed slots`,()=>{
+    const f=browserFixture(),state=f.ctx[stateName],input=pick(f,prefix,slot,'bad.jpg');
+    const otherSlot=prefix==='bag'?'fotoFullGarduAwal':'konstruksiAwal',other=pick(f,prefix,otherSlot);
+    const text={disabled:false};
+    f.elements[prefix==='bag'?'bagFormWrap':'baTab-switching']={querySelectorAll:()=>[input,other,text]};
+    f.ctx._baWebStart_({},state,kind,prefix);
+    const key=f.calls[0].request.requestId;
+    f.calls[0].success({ok:true,idBA:'BA-SAME'});
+    f.calls[1].success({ok:false,code:'PHOTO_REPLACE_ALLOWED',idBA:'BA-SAME',slot,message:'invalid photo'});
+    assert.equal(input.disabled,false);assert.equal(text.disabled,true);assert.equal(other.disabled,true);
+    pick(f,prefix,slot,'replacement.jpg');
+    assert.equal(state.baWebFlow.photos[slot].file.name,'replacement.jpg');
+    f.ctx._baWebStart_({},state,kind,prefix);
+    assert.equal(f.calls[2].request.requestId,key);assert.equal(input.disabled,true);
+    f.calls[2].success({ok:true,idBA:'BA-SAME'});
+    f.calls[3].success({ok:true,idBA:'BA-SAME',slot,fileId:'photo1',url:'url1'});
+    f.calls[4].success({ok:false,code:'PHOTO_REPLACE_ALLOWED',idBA:'BA-SAME',slot:otherSlot,message:'invalid second'});
+    assert.equal(input.disabled,true);assert.equal(other.disabled,false);
+    const receipt=state.baWebFlow.receipts[slot];pick(f,prefix,slot,'not-allowed.jpg');
+    assert.equal(state.baWebFlow.receipts[slot],receipt);assert.equal(state.baWebFlow.photos[slot].file.name,'replacement.jpg');
+    pick(f,prefix,otherSlot,'second-fixed.jpg');f.ctx._baWebStart_({},state,kind,prefix);
+    assert.equal(f.calls[5].request.requestId,key);
+    f.calls[5].success({ok:true,idBA:'BA-SAME'});assert.equal(f.calls[6].request.slot,otherSlot);
+    f.calls[6].success({ok:true,idBA:'BA-SAME',slot:otherSlot,fileId:'photo2',url:'url2'});
+    assert.equal(f.elements[prefix+'BtnPdf'].disabled,false);assert.equal(state.baWebFlow.complete,true);
+  });
+}
+test('browser FileReader first-attempt failure unlocks only that picker; outer reset/mode/master do not hide it',()=>{
+  const f=browserFixture(),input=pick(f,'bag','nameplateTrafoAwal');
+  f.elements.bagFormWrap={querySelectorAll:()=>[input]};
+  f.ctx.FileReader=class{readAsDataURL(){this.onerror();}};
+  f.ctx._baWebStart_({},f.ctx._BAG,'gardu','bag');f.calls[0].success({ok:true,idBA:'SAME'});
+  assert.equal(input.disabled,false);assert.equal(f.calls.length,1);
+  f.ctx.bagResetSemua();f.ctx.bagSetMode('manual');f.ctx.bagPakaiMaster('other');
+  assert.equal(f.ctx.outerResetRan,undefined);assert.equal(f.ctx.modeChangeRan,undefined);assert.equal(f.ctx.masterChangeRan,undefined);
+  pick(f,'bag','nameplateTrafoAwal','fixed.jpg');assert.equal(f.ctx._BAG.baWebFlow.photos.nameplateTrafoAwal.file.name,'fixed.jpg');
+});
+test('browser unknown RPC failure or wrong response identity never authorizes photo replacement',()=>{
+  for(const reply of ['timeout','wrong-id','retry-same']) {
+    const f=browserFixture(),input=pick(f,'bag','nameplateTrafoAwal','original.jpg');
+    f.elements.bagFormWrap={querySelectorAll:()=>[input]};
+    f.ctx._baWebStart_({},f.ctx._BAG,'gardu','bag');f.calls[0].success({ok:true,idBA:'SAME'});
+    if(reply==='timeout')f.calls[1].failure(Error('timeout'));
+    else f.calls[1].success({ok:false,code:reply==='retry-same'?'PHOTO_RETRY_SAME_FILE':'PHOTO_REPLACE_ALLOWED',idBA:reply==='wrong-id'?'OTHER':'SAME',slot:'nameplateTrafoAwal'});
+    pick(f,'bag','nameplateTrafoAwal','new.jpg');
+    assert.equal(f.ctx._BAG.baWebFlow.photos.nameplateTrafoAwal.file.name,'original.jpg');
+    assert.equal(input.disabled,true);assert.equal(f.elements.bagBtnPdf.disabled,true);
+  }
 });
