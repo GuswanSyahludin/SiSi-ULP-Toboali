@@ -30,6 +30,13 @@ function _h07PrivateResult_(result) {
 /* Replace the legacy watermark function, whose payload used makePublic:true. */
 function watermarkFoto_(fileId, outputFolderId, info, outName) {
   guard_(arguments, { ulp: true, aksi: 'watermarkFoto_' });
+  return _h07WatermarkImpl_(fileId, outputFolderId, info, outName);
+}
+
+/* Private server transport. Call only after an authenticated/authorized boundary
+ * or the private scheduled queue has resolved ownership and folder binding.
+ * Never expose this helper as an HTTP action. */
+function _h07WatermarkImpl_(fileId, outputFolderId, info, outName) {
   info = info || {};
   var source = DriveApp.getFileById(fileId);
   var outNm = outName || 'WM_' + fileId + '.jpg';
