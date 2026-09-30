@@ -28,7 +28,7 @@ function fixture(switching = false, options = {}) {
   row[cols.ulp] = 'ULP Toboali'; row[49] = 'row-folder';
   const rows = [Array(50).fill('header'), row];
   const events = [], files = new Map();
-  let serial = 0, engineCalls = 0, locked = false;
+  let serial = 0, engineCalls = 0, locked = false, reads = 0, queueCalls = 0;
   const folder = { id: 'folder_12345678901234567890', access: 'PRIVATE',
     getId() { return this.id; }, getSharingAccess() { return this.access; },
     getParents: () => iterator(options.publicAncestor ? [{
@@ -69,6 +69,15 @@ function fixture(switching = false, options = {}) {
     })
   };
   const ctx = vm.createContext({
+    guard_: (args, opts) => {
+      const list = Array.from(args || []);
+      if (!list.some(v => v && typeof v === 'object' && v.token === 'valid-session'))
+        throw Error('UNAUTHENTICATED');
+      if (options.expiredSession) throw Error('EXPIRED_SESSION');
+      if (opts.role && options.notSuper) throw Error('ROLE_DENIED');
+      return { ulp: options.callerUlp === undefined ? 'ULP Toboali' : options.callerUlp,
+        token: 'valid-session', isSuper: !options.notSuper };
+    },
     COL_P0: P, COL_SWITCHING: S, SHEET_YANDAL: { P0: 'p0', SWITCHING: 'switching' },
     YANDAL_WM_FOLDER_ID: folder.id, YANDAL_IMG_FOLDER_ID: '',
     Logger: { log: () => {} },
@@ -80,7 +89,7 @@ function fixture(switching = false, options = {}) {
       getFileById: (id) => { if (!files.has(id)) throw Error('missing file'); return files.get(id); },
       getFolderById: (id) => { assert.equal(id, folder.id); return folder; }
     },
-    _shY_: (name) => name === (switching ? 'switching' : 'p0') ? { ...sh } : null,
+    _shY_: (name) => { reads++; return name === (switching ? 'switching' : 'p0') ? { ...sh } : null; },
     _folderFromRelPathY_: (rel) => { assert.equal(rel, 'row-folder'); return folder; },
     _setTextY_: (sheet, r, c, v) => sheet.getRange(r, c + 1).setValue(v),
     _h07PrivateFile_: (id) => { const f = files.get(id); if (!f) throw Error('missing file');
@@ -109,11 +118,24 @@ function fixture(switching = false, options = {}) {
   }
   ctx.prosesP0Yandal = original;
   ctx.prosesSwitchingYandal = original;
+  ctx._h07WatermarkImpl_ = ctx.watermarkFoto_;
+  ctx.drainAntreanP0 = () => {
+    queueCalls++;
+    if (options.queueThrows) throw Error('QUEUE_FAILED');
+    return ctx[switching ? 'prosesSwitchingYandal' : 'prosesP0Yandal'](code, slots[0].key);
+  };
+  ctx.tickPusatSiSi = () => ctx.drainAntreanP0();
+  ctx.apiRouter_ = () => 'router-result';
+  ctx.webhookVerifikasi_ = (body) => ({ ok: body.secret === 'valid-webhook' && body.ts === 'fresh' });
+  ctx.doPost = (e) => {
+    const body = JSON.parse(e.postData.contents);
+    return ctx[body.action](code, slots[0].key);
+  };
   ctx._wmFotoY_ = () => { throw Error('UNSAFE LEGACY HELPER WAS CALLED'); };
   function install() { vm.runInContext(boundary, ctx, { timeout: 1000 }); }
   install();
   const invoke = (target = options.all ? '' : slots[0].key) =>
-    ctx[switching ? 'prosesSwitchingYandal' : 'prosesP0Yandal'](code, target);
+    ctx[switching ? 'prosesSwitchingYandal' : 'prosesP0Yandal'](code, target, { token: 'valid-session' });
   function existing(slot = slots[0], access = 'ANYONE_WITH_LINK') {
     const sourceName = row[slot.src].split('/').pop();
     const f = addFile('WM_' + sourceName + '.jpg', access);
@@ -122,7 +144,8 @@ function fixture(switching = false, options = {}) {
     return f;
   }
   return { ctx, row, rows, cols, slots, sh, code, invoke, folder, files, events, addFile, existing,
-    options, install, get engineCalls() { return engineCalls; } };
+    options, install, get engineCalls() { return engineCalls; },
+    get reads() { return reads; }, get queueCalls() { return queueCalls; } };
 }
 for (const switching of [false, true]) {
   const label = switching ? 'Switching' : 'P0';
@@ -209,6 +232,94 @@ test('boundary: no direct invocation outside processor context', () => {
 });
 
 // These integration cases execute actual repository function bodies, not copies.
+test('audit: existing-output path must authenticate before ACL or Sheet writes', () => {
+  const f = fixture();
+  f.existing();
+  f.ctx.guard_ = () => { throw new Error('UNAUTHENTICATED'); };
+  f.ctx.watermarkFoto_ = () => { throw new Error('UNAUTHENTICATED'); };
+  let rejected = false;
+  try { f.invoke(); } catch (_) { rejected = true; }
+  assert.equal(rejected, true,
+    'Unauthenticated existing-output path completed; side effects: ' + JSON.stringify(f.events));
+  assert.deepEqual(f.events, [], 'No Drive or Sheet write is allowed before authentication');
+  assert.equal(f.reads, 0, 'Authentication must precede Sheet reads too');
+});
+
+for (const payload of [undefined, {}, { token: 'invalid' }, { internal: true },
+  { scheduled: true, triggerUid: 'forged', authMode: 'FULL' }]) {
+  test('auth: forged/missing credential rejected before reads ' + JSON.stringify(payload), () => {
+    for (const switching of [false, true]) {
+      const f = fixture(switching); f.existing();
+      const name = switching ? 'prosesSwitchingYandal' : 'prosesP0Yandal';
+      assert.throws(() => f.ctx[name](f.code, f.slots[0].key, payload), /T11_YANDAL_PROCESS_FAILED/);
+      assert.equal(f.reads, 0); assert.deepEqual(f.events, []);
+    }
+  });
+}
+for (const callerUlp of ['', 'ULP Lain']) {
+  test('auth: caller ULP denied even when row belongs to Toboali: ' + callerUlp, () => {
+    const f = fixture(false, { callerUlp }); f.existing();
+    assert.throws(() => f.invoke(), /T11_YANDAL_PROCESS_FAILED/);
+    assert.equal(f.reads, 0); assert.deepEqual(f.events, []);
+  });
+}
+test('auth: expired session is rejected on reuse path', () => {
+  const f = fixture(false, { expiredSession: true }); f.existing();
+  assert.throws(() => f.invoke(), /T11_YANDAL_PROCESS_FAILED/);
+  assert.equal(f.reads, 0); assert.deepEqual(f.events, []);
+});
+test('auth: public drain/tick require Super session, not event flags', () => {
+  const f = fixture(false, { notSuper: true });
+  for (const name of ['drainAntreanP0', 'tickPusatSiSi']) {
+    assert.throws(() => f.ctx[name]({ triggerUid: 'forged', internal: true }), /UNAUTHENTICATED/);
+    assert.throws(() => f.ctx[name]({ token: 'valid-session' }), /ROLE_DENIED/);
+  }
+  assert.equal(f.queueCalls, 0); assert.equal(f.reads, 0);
+  f.options.notSuper = false;
+  f.ctx.drainAntreanP0({ token: 'valid-session' });
+  assert.equal(f.engineCalls, 1);
+});
+test('auth: private scheduled entry works without a fabricated session and restores context', () => {
+  const f = fixture();
+  f.ctx.guard_ = () => { throw Error('NO_SESSION_IN_TRIGGER'); };
+  f.ctx._t11TickPusatSiSi_();
+  assert.equal(f.engineCalls, 1);
+  assert.throws(() => f.invoke(), /T11_YANDAL_PROCESS_FAILED/);
+  assert.throws(() => f.ctx.drainAntreanP0(), /NO_SESSION_IN_TRIGGER/);
+  f.options.queueThrows = true;
+  assert.throws(() => f.ctx._t11DrainAntreanP0_(), /QUEUE_FAILED/);
+  assert.throws(() => f.invoke(), /T11_YANDAL_PROCESS_FAILED/);
+});
+test('auth: private handlers cannot be selected by HTTP action', () => {
+  const f = fixture();
+  for (const action of ['_t11TickPusatSiSi_', '_t11DrainAntreanP0_', '_t11ScheduledQueueDispatch_', '_h07WatermarkImpl_']) {
+    assert.throws(() => f.ctx.apiRouter_({}, { action }), /PRIVATE_ACTION_DENIED/);
+    assert.throws(() => f.ctx.apiRouter_({ parameter: { action } }, {}), /PRIVATE_ACTION_DENIED/);
+  }
+  assert.equal(f.ctx.apiRouter_({}, { action: 'existingAction' }), 'router-result');
+  assert.equal(f.queueCalls, 0);
+});
+test('auth: only verified POST secret and timestamp grant webhook context', () => {
+  const f = fixture();
+  const event = (body) => ({ postData: { contents: JSON.stringify(body) } });
+  for (const body of [
+    { action: 'prosesP0Yandal', internal: true },
+    { action: 'prosesP0Yandal', secret: 'valid-webhook', ts: 'stale' },
+    { action: 'prosesP0Yandal', secret: 'wrong', ts: 'fresh' }
+  ]) assert.throws(() => f.ctx.doPost(event(body)), /WEBHOOK_DENIED/);
+  assert.equal(f.reads, 0);
+  f.ctx.doPost(event({ action: 'prosesP0Yandal', secret: 'valid-webhook', ts: 'fresh' }));
+  assert.equal(f.engineCalls, 1);
+  assert.throws(() => f.ctx.prosesP0Yandal(f.code, 'sebelum'), /PROCESS_FAILED/);
+  assert.throws(() => f.ctx.doPost(event({ action: '_t11TickPusatSiSi_' })), /PRIVATE_ACTION_DENIED/);
+});
+test('auth: mobile mode cannot obtain webhook privilege from body fields', () => {
+  const f = fixture();
+  assert.throws(() => f.ctx.doPost({ parameter: { mobile: '1' }, postData: { contents:
+    JSON.stringify({ action: 'prosesP0Yandal', secret: 'valid-webhook', ts: 'fresh' }) } }), /PROCESS_FAILED/);
+  assert.equal(f.reads, 0); assert.deepEqual(f.events, []);
+});
+
 function legacyFunction(source, name) {
   const start = source.indexOf('function ' + name + '(');
   assert.ok(start >= 0, 'missing actual function ' + name);
@@ -216,6 +327,37 @@ function legacyFunction(source, name) {
   assert.ok(end > start, 'missing closing body ' + name);
   return source.slice(start, end + 2);
 }
+test('integration: actual Guard rejects missing/expired/foreign session before any read', () => {
+  const source = fs.readFileSync(path.join(backend, 'Core/Guard.js'), 'utf8');
+  for (const scenario of ['missing', 'expired', 'foreign', 'valid']) {
+    const f = fixture();
+    f.existing();
+    vm.runInContext(source, f.ctx);
+    f.ctx.audit_ = () => {};
+    f.ctx.getSesiByToken = token => token === 'valid-session' && scenario !== 'expired'
+      ? { username: 'test-user', role: 'Admin', ulp: scenario === 'foreign' ? 'ULP Lain' : 'ULP Toboali' }
+      : null;
+    if (scenario === 'valid') {
+      f.invoke(); assert.ok(f.reads > 0); assert.equal(f.engineCalls, 0);
+    } else {
+      const call = scenario === 'missing'
+        ? () => f.ctx.prosesP0Yandal(f.code, 'sebelum') : () => f.invoke();
+      assert.throws(call, /PROCESS_FAILED/); assert.equal(f.reads, 0);
+      assert.deepEqual(f.events, []);
+    }
+  }
+});
+test('integration: guarded watermark entry still rejects before private transport', () => {
+  const f = fixture();
+  const source = fs.readFileSync(path.join(backend, 'Core/ZZ-T11-Photo-Privacy.js'), 'utf8');
+  vm.runInContext(legacyFunction(source, 'watermarkFoto_'), f.ctx);
+  let calls = 0;
+  f.ctx._h07WatermarkImpl_ = () => { calls++; return 'private-output'; };
+  assert.throws(() => f.ctx.watermarkFoto_('source', 'folder', {}, 'name'), /UNAUTHENTICATED/);
+  assert.equal(calls, 0);
+  assert.equal(f.ctx.watermarkFoto_('source', 'folder', { token: 'valid-session' }, 'name'), 'private-output');
+  assert.equal(calls, 1);
+});
 function realLegacy(f) {
   const source = fs.readFileSync(path.join(backend, 'Yandal/Tek-Yandal-Code.js'), 'utf8');
   for (const name of ['COL_P0', 'COL_SWITCHING', 'COL_YANDAL_SHIFT']) {
@@ -254,12 +396,12 @@ for (const switching of [false, true]) {
         setValues: values => queue.splice(0, queue.length, ...values.map(r => r.slice())) }),
       deleteRow: row => queue.splice(row - 1, 1)
     });
-    f.ctx.drainAntreanP0(); assert.equal(queue.length, 2);
+    f.ctx._t11DrainAntreanP0_(); assert.equal(queue.length, 2);
     assert.equal(queue[1][1], 'pending'); assert.equal(queue[1][6], 1);
-    queue[1][6] = 4; f.ctx.drainAntreanP0();
+    queue[1][6] = 4; f.ctx._t11DrainAntreanP0_();
     assert.equal(queue[1][1], 'failed'); assert.equal(queue[1][6], 5);
     f.options.aclFails = false; queue[1][1] = 'pending';
-    f.ctx.drainAntreanP0(); assert.equal(queue.length, 1, 'delete queue row only after success');
+    f.ctx._t11DrainAntreanP0_(); assert.equal(queue.length, 1, 'delete queue row only after success');
     assert.equal(f.engineCalls, 1, 'retry keeps the same output');
   });
 }
