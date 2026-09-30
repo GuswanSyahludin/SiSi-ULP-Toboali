@@ -17,41 +17,26 @@ const IGNORED_BACKEND_FILES = new Set([
 /* Order matters only for load-time syntax/redeclaration issues. Code.js and
    its runtime dependencies load before compatibility wrappers. */
 const LOAD_ORDER = [
-  "Core/Code.js",
-  "Core/Engine-Secrets.js",
-  "Core/Guard.js",
-  "Core/Migrasi-Password.js",
-  "Core/Audit-Guard.js",
-  "Core/Auth-Perangkat.js",
-  "Core/Jadwal-Padam-Mobile.js",
-  "Core/Delta-Sync-Mobile.js",
-  "Core/Master-Gardu-Mobile.js",
-  "Core/Master-Gardu-Sync-Mobile.js",
-  "Core/Inspeksi-Gardu-Mobile.js",
-  "Core/WO-ROW-Mobile.js",
-  "Core/Teknik-TO-Mobile.js",
-  "Core/Tek-MobileDual.js",
-  "Core/Foto-Url.js",
-  "Core/Trigger-Manager.js",
-  "Core/Predeploy-Audit.js",
-  "Core/Tek-Temuan-Code.js",
-  "Core/Tek-WAEngine.js",
-  "Core/Tek-Gangguan.js",
-  "Core/Tek-Watermark.js",
-  "Core/SIE-BA-Code.js",
-  "Core/Tek-Migrasi.js",
-  "ROW/Tek-ROW-Code.js",
-  "Yandal/Tek-Yandal-Code.js",
-  "Hartek/Tek-Hartek-Code.js",
-  "Inspeksi_Gardu/Tek-InsDu-Code.js",
-  "Inspeksi_Jaringan/Tek-InsJar-Code.js",
-  "Teknik/SIE-Teknik-Code.js",
-  "Teknik/Jadwal-Padam-Code.js",
-  "Teknik/Jadwal-Padam-Delete.js",
-  "Teknik/Tek-Data-Chechpoint-Code.js",
-  "Teknik/Tek-LapUP3UIWHarian.js",
-  "Teknik/ZZ-Gaspol-DualRead.js",
+  "Core/Code.js", "Core/Engine-Secrets.js", "Core/Guard.js",
+  "Core/Migrasi-Password.js", "Core/Audit-Guard.js", "Core/Auth-Perangkat.js",
+  "Core/Jadwal-Padam-Mobile.js", "Core/Delta-Sync-Mobile.js",
+  "Core/Master-Gardu-Mobile.js", "Core/Master-Gardu-Sync-Mobile.js",
+  "Core/Inspeksi-Gardu-Mobile.js", "Core/WO-ROW-Mobile.js",
+  "Core/Teknik-TO-Mobile.js", "Core/Tek-MobileDual.js", "Core/Foto-Url.js",
+  "Core/Trigger-Manager.js", "Core/Predeploy-Audit.js", "Core/Tek-Temuan-Code.js",
+  "Core/Tek-WAEngine.js", "Core/Tek-Gangguan.js", "Core/Tek-Watermark.js",
+  "Core/SIE-BA-Code.js", "Core/Tek-Migrasi.js", "ROW/Tek-ROW-Code.js",
+  "Yandal/Tek-Yandal-Code.js", "Hartek/Tek-Hartek-Code.js",
+  "Inspeksi_Gardu/Tek-InsDu-Code.js", "Inspeksi_Jaringan/Tek-InsJar-Code.js",
+  "Teknik/SIE-Teknik-Code.js", "Teknik/Jadwal-Padam-Code.js",
+  "Teknik/Jadwal-Padam-Delete.js", "Teknik/Tek-Data-Chechpoint-Code.js",
+  "Teknik/Tek-LapUP3UIWHarian.js", "Teknik/ZZ-Gaspol-DualRead.js",
   "Core/ZZ-T08-Jadwal-Ownership.js",
+];
+
+/* These adapters must run after every backend module and guard wrapper. */
+const FINAL_LOAD_ORDER = [
+  "Core/ZZZZZZZZZZZZZZZZZZZZZZZZ-Mobile-Reports-Route.js",
 ];
 
 export function listBackendFiles(backendRoot) {
@@ -74,8 +59,11 @@ export function listBackendFiles(backendRoot) {
 export function orderFiles(available) {
   const set = new Set(available);
   const ordered = LOAD_ORDER.filter((f) => set.has(f));
-  const rest = available.filter((f) => !LOAD_ORDER.includes(f)).sort();
-  return [...ordered, ...rest];
+  const final = FINAL_LOAD_ORDER.filter((f) => set.has(f));
+  const rest = available
+    .filter((f) => !LOAD_ORDER.includes(f) && !FINAL_LOAD_ORDER.includes(f))
+    .sort();
+  return [...ordered, ...rest, ...final];
 }
 
 export function loadBackend(options = {}) {
@@ -85,7 +73,6 @@ export function loadBackend(options = {}) {
   const context = createContext(harness.globals);
   const errors = [];
   const loaded = [];
-
   for (const rel of orderFiles(listBackendFiles(backendRoot))) {
     const src = readFileSync(join(backendRoot, ...rel.split("/")), "utf8");
     try {
@@ -95,7 +82,6 @@ export function loadBackend(options = {}) {
       errors.push({ file: rel, message: err.message, stack: (err.stack || "").split("\n").slice(0, 4).join("\n") });
     }
   }
-
   function call(fnName, args = []) {
     const fn = context[fnName];
     if (typeof fn !== "function") return { ok: false, error: `Fungsi tidak ditemukan atau bukan function: ${fnName}` };

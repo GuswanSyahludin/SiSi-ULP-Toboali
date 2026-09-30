@@ -16,8 +16,13 @@ import '../lib/services/local_watermark_renderer.dart';
 import '../lib/services/petugas_photo_store.dart';
 import '../lib/services/photo_bytes_validator.dart';
 
-// Local draft persistence must not access the server mirror or activate a DB.
+// These tests exercise local draft/photo persistence. Model the local mirror as
+// empty so YandalLocalRepository can check for synced P0 rows without activating
+// a database or depending on real synchronized data.
 class _UnusedMirror implements DeltaSyncRepository {
+  @override
+  Future<List<dynamic>> rows(String dataset) async => const <dynamic>[];
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
