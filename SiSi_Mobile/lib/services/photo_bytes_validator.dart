@@ -11,7 +11,12 @@ class PhotoBytesValidator {
     if (bytes.isEmpty || bytes.length > maxBytes) {
       throw const FormatException('Foto kosong atau melebihi batas 40 MB.');
     }
-    final decoded = img.decodeImage(bytes);
+    final img.Image? decoded;
+    try {
+      decoded = img.decodeImage(bytes);
+    } catch (_) {
+      throw const FormatException('Foto tidak dapat didekode. Gunakan JPEG/PNG yang valid.');
+    }
     if (decoded == null) throw const FormatException('Foto tidak dapat didekode. Gunakan JPEG/PNG yang valid.');
     if (decoded.width < minEdge || decoded.height < minEdge) {
       throw const FormatException('Resolusi foto terlalu kecil, minimal 320x320.');
@@ -24,7 +29,12 @@ class PhotoBytesValidator {
         bytes[bytes.length - 2] != 0xff || bytes[bytes.length - 1] != 0xd9) {
       throw const FormatException('Struktur JPEG tidak lengkap atau melebihi batas 40 MB.');
     }
-    final decoded = img.decodeImage(bytes);
-    if (decoded == null) throw const FormatException('JPEG tidak dapat didekode.');
+    try {
+      if (img.decodeImage(bytes) == null) {
+        throw const FormatException('JPEG tidak dapat didekode.');
+      }
+    } catch (_) {
+      throw const FormatException('JPEG tidak dapat didekode.');
+    }
   }
 }
