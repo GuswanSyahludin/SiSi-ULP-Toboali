@@ -88,7 +88,7 @@ class _PhotoState extends State<YandalPhotoScreen> {
               ? const Center(child: CircularProgressIndicator())
               : available ? InteractiveViewer(transformationController: transform, maxScale: 5,
                   child: Center(child: Image.file(File(widget.path), fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => const Text('Foto tidak dapat dibaca.', style: TextStyle(color: Color(0xFFF4F8FA)))))
+                    errorBuilder: (_, __, ___) => const Text('Foto tidak dapat dibaca.', style: TextStyle(color: Color(0xFFF4F8FA))))))
               : const Center(child: Padding(padding: EdgeInsets.all(24), child: Text('File foto tidak tersedia di perangkat. Data laporan tidak diubah.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFFF4F8FA))))),
           ConstrainedBox(constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * .4), child: SingleChildScrollView(child: SafeArea(top: false, child: Padding(
             padding: const EdgeInsets.all(16), child: Column(mainAxisSize: MainAxisSize.min, children: [
