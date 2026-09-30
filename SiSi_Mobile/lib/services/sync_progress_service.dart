@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../db/db_provider.dart';
+
 const syncDatasetLabels = <String, String>{
   'db_Global_Header': 'Master Laporan Utama',
   'db_ROW_Realisasi': 'Master Realisasi ROW',
@@ -18,7 +20,7 @@ const syncDatasetLabels = <String, String>{
   'db_Yandal_P0': 'Master P0 Yandal',
   'db_Yandal_Pengecekan_Switching': 'Master Switching Yandal',
   'db_Yandal_Pengukuran_Gardu': 'Master Gardu Yandal',
-  'Teknik_Laporan_Harian': 'Master Laporan Harian',
+  'Teknik_Laporan_Harian': 'Master Laporan Harian Teknik',
   'db_Users': 'Master User',
   'db_Tim': 'Master Tim',
   'db_Penyulang': 'Master Penyulang',
@@ -26,7 +28,7 @@ const syncDatasetLabels = <String, String>{
   'db_Hartek_List_Pekerjaan': 'Master List Pekerjaan Hartek',
   'db_Material': 'Master List Material',
   'db_Yandal_List_P0': 'Master List P0',
-  'db_List_Petugas_Yandal': 'Master Petugas Yandal',
+  'db_List_Petugas_Yandal': 'Master List Petugas Yandal',
   'db_Section': 'Master Section',
   'Master_Gardu': 'Master Data Gardu',
 };
@@ -105,16 +107,31 @@ class SyncProgressService {
   SyncProgressService._() {
     Timer.periodic(const Duration(milliseconds: 700), (_) => restore());
   }
+
   static final instance = SyncProgressService._();
   static const _key = 'syncProgressStateV3';
   String _last = '';
   Future<void> _pendingWrite = Future.value();
   final ValueNotifier<SyncProgressState> state =
       ValueNotifier(const SyncProgressState());
+
+  String? get _scopedKey {
+    try {
+      return DbProvider.scopedKey(_key, {
+        'username': DbProvider.activeDatabaseName,
+        'ulp': 'active',
+      });
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> restore() async {
+    final storageKey = _scopedKey;
+    if (storageKey == null) return;
     final p = await SharedPreferences.getInstance();
     await p.reload();
-    final raw = p.getString(_key) ?? '';
+    final raw = p.getString(storageKey) ?? '';
     if (raw.isEmpty || raw == _last) return;
     try {
       state.value = SyncProgressState.fromJson(
@@ -127,9 +144,11 @@ class SyncProgressService {
     state.value = next;
     final raw = jsonEncode(next.toJson());
     _last = raw;
+    final storageKey = _scopedKey;
+    if (storageKey == null) return Future.value();
     final write = _pendingWrite.then((_) async {
       final p = await SharedPreferences.getInstance();
-      await p.setString(_key, raw);
+      await p.setString(storageKey, raw);
     }).catchError((_) {});
     _pendingWrite = write;
     return write;
@@ -141,6 +160,7 @@ class SyncProgressService {
           int total = 10}) =>
       _set(SyncProgressState(
           running: true, stage: stage, module: module, total: total));
+
   void update(String stage,
       {String? module,
       String? dataset,
@@ -170,6 +190,7 @@ class SyncProgressService {
       completed: 1,
       total: 1,
       message: message));
+
   Future<void> failure(String message) => _set(SyncProgressState(
       failed: true,
       stage: 'Sinkronisasi dijadwalkan ulang',
