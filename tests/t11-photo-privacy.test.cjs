@@ -11,10 +11,15 @@ const yandalAcl = fs.readFileSync(path.join(root, 'SiSi_BackEnd/Core/ZZ-T11-Yand
 const temuan = fs.readFileSync(path.join(root, 'SiSi_BackEnd/Core/Tek-Temuan-Code.js'), 'utf8');
 const row = fs.readFileSync(path.join(root, 'SiSi_BackEnd/Core/WO-ROW-Mobile.js'), 'utf8');
 const appsscript = JSON.parse(fs.readFileSync(path.join(root, 'SiSi_BackEnd/appsscript.json'), 'utf8'));
+const clasp = JSON.parse(fs.readFileSync(path.join(root, 'SiSi_BackEnd/.clasp.json'), 'utf8'));
 const pushOrder = appsscript.filePushOrder;
+const deployOrder = clasp.filePushOrder;
 const t11Index = pushOrder.indexOf('Core/ZZ-T11-Photo-Privacy.js');
 const yandalAclIndex = pushOrder.indexOf('Core/ZZ-T11-Yandal-Watermark-ACL.js');
 const t13Index = pushOrder.indexOf('Core/ZZ-T13-ULP-Closed.js');
+const yandalSourceIndex = deployOrder.indexOf('Yandal/Tek-Yandal-Code.js');
+const yandalWatermarkIndex = deployOrder.indexOf('Yandal/Tek-Watermark.js');
+const yandalAclDeployIndex = deployOrder.indexOf('Core/ZZ-T11-Yandal-Watermark-ACL.js');
 
 assert.match(privacy, /makePublic:\s*false/);
 assert.match(privacy, /getFotoPrivatT11/);
@@ -38,4 +43,7 @@ assert.ok(yandalAclIndex >= 0, 'Yandal ACL repair overlay must be loaded');
 assert.ok(t13Index >= 0, 'T-13 containment overlay must be loaded');
 assert.ok(yandalAclIndex > t11Index, 'Yandal ACL repair must load after T-11 privacy');
 assert.ok(yandalAclIndex > t13Index, 'Yandal ACL repair must be the final privacy boundary');
+assert.ok(yandalSourceIndex >= 0, 'Yandal processor must be in clasp deploy order');
+assert.ok(yandalWatermarkIndex > yandalSourceIndex, 'Yandal watermark helper must load after processor');
+assert.ok(yandalAclDeployIndex > yandalWatermarkIndex, 'ACL repair must load after all Yandal sources');
 console.log('T-11 private photo contract passed.');
