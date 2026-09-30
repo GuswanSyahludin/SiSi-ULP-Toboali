@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
 import 'local_watermark_data.dart';
+import 'photo_bytes_validator.dart';
 
 class LocalWatermarkResult {
   final Uint8List jpeg;
@@ -63,10 +64,8 @@ class LocalWatermarkRenderer {
     data.validate();
     if (maxEdge < 600 || maxEdge > 4096) throw ArgumentError('maxEdge harus 600 sampai 4096.');
     if (jpegQuality < 70 || jpegQuality > 100) throw ArgumentError('Kualitas JPEG harus 70 sampai 100.');
-    if (originalBytes.length > 40 * 1024 * 1024) throw ArgumentError('Foto melebihi batas 40 MB.');
-    final decoded = img.decodeImage(originalBytes);
-    if (decoded == null) throw ArgumentError('Format gambar belum didukung. Gunakan JPEG/PNG asli.');
-    if (decoded.width < 320 || decoded.height < 320) throw ArgumentError('Resolusi foto terlalu kecil untuk watermark yang terbaca.');
+    // Every renderer caller, not only Yandal, must pass pre-allocation limits.
+    final decoded = PhotoBytesValidator.validateOriginal(originalBytes);
     var photo = img.bakeOrientation(decoded);
     if (math.max(photo.width, photo.height) > maxEdge) {
       photo = photo.width >= photo.height
@@ -120,10 +119,6 @@ class LocalWatermarkRenderer {
       _logo(canvas, pln, Rect.fromLTWH(x, y, logoSize, logoSize));
       header.paint(canvas, Offset(x + logoSize + 16 * scale, y));
       y += headerHeight + 12 * scale;
-      final stroke = Paint()..color = _lime..strokeWidth = 1.6 * scale;
-      canvas.drawLine(Offset(x, y), Offset(x + inner, y), stroke);
-      canvas.drawLine(Offset(x, y + 5 * scale), Offset(x + inner, y + 5 * scale), stroke);
-      y += 18 * scale;
       clock.paint(canvas, Offset(x, y)); y += clock.height + 4 * scale;
       date.paint(canvas, Offset(x, y)); y += date.height + 14 * scale;
       for (final p in fields) { p.paint(canvas, Offset(x, y)); y += p.height + 8 * scale; }
