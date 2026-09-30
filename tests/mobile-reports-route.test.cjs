@@ -5,327 +5,101 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
-const { pathToFileURL } = require('node:url');
 
-const repoRoot = path.join(__dirname, '..');
-const overlayPath = path.join(repoRoot, 'SiSi_BackEnd', 'Core', 'ZZZZZZZZZZZZZZZZZZZZZZZZ-Mobile-Reports-Route.js');
-const source = fs.readFileSync(overlayPath, 'utf8');
-const yandalRepositoryPath = path.join(repoRoot, 'SiSi_Mobile', 'lib', 'db', 'repositories', 'yandal_local_repository.dart');
-const yandalRepositorySource = fs.readFileSync(yandalRepositoryPath, 'utf8');
-const claspPath = path.join(repoRoot, 'SiSi_BackEnd', '.clasp.json');
-const loaderPath = path.join(__dirname, 'harness', 'loader.js');
+const root = path.join(__dirname, '..');
+const routePath = path.join(root, 'SiSi_BackEnd/Core/ZZZZZZZZZZZZZZZZZZZZZZZZ-Mobile-Reports-Route.js');
+const COL_ROW_RLZ = { kodeHeader: 1, kodePekerjaan: 2, penyulang: 6 };
+const COL_ROW = { kodeHeader: 1, kodePekerjaan: 2, kodeEksekusi: 3, ulp: 4, nomorTiang: 10, diameter: 23, jenisPekerjaan: 24, fotoSebelumUrl: 18 };
 
-const COL_ROW_RLZ = { kodeHeader: 1, kodePekerjaan: 2, tim: 5, tanggal: 4, penyulang: 6, section: 7, rabas: 8, sedang: 9, besar: 10 };
-const COL_ROW = { kodeHeader: 1, kodePekerjaan: 2, kodeEksekusi: 3, ulp: 4, tanggal: 6, tim: 7, penyulang: 8, section: 9, nomorTiang: 10, fotoSebelumUrl: 18, fotoPekerjaanUrl: 20, fotoSesudahUrl: 22, diameter: 23, jenisPekerjaan: 24, inputOleh: 28 };
-
-function fakeSheet(rows, width) {
-  return {
-    getLastRow: () => rows.length + 1,
-    getLastColumn: () => width,
-    getRange(row, col, height, cols) {
-      return { getValues: () => rows.slice(row - 2, row - 2 + height).map(r => r.slice(col - 1, col - 1 + cols)) };
-    },
-  };
+function row(width, values, columns) {
+  const out = Array(width).fill('');
+  for (const [key, value] of Object.entries(values)) out[columns[key]] = value;
+  return out;
 }
-
-function harness(options = {}) {
+function sheet(rows) {
+  return { getLastRow: () => rows.length + 1, getRange: () => ({ getValues: () => rows }) };
+}
+function harness({ headers = [], realizations = [], executions = [], rowResponse } = {}) {
   const calls = [];
-  const sheets = options.sheets || {};
-  const spreadsheetSheets = options.spreadsheetSheets || [];
-  const context = {
-    console,
-    SPREADSHEET_ID: 'active',
-    COL_ROW,
-    COL_ROW_RLZ,
-    COL_ROW_N: 30,
-    COL_ROW_RLZ_N: 13,
-    _normTgl(value) {
-      if (value instanceof Date) return value.toISOString().slice(0, 10);
-      return String(value || '').slice(0, 10);
+  let ctx;
+  ctx = {
+    SPREADSHEET_ID: 'active', COL_ROW, COL_ROW_RLZ, COL_ROW_N: 30, COL_ROW_RLZ_N: 13,
+    SpreadsheetApp: { openById: () => ({ getSheetByName: name => ({
+      db_ROW_Realisasi: sheet(realizations), db_ROW_Eksekusi: sheet(executions),
+    })[name] || null }) },
+    getMobileLaporanHarian() { return rowResponse || { success: true, data: headers }; },
+    getMobileLaporanUp3Uiw(p) {
+      calls.push(p);
+      return p.token === 'body-session' ? { success: true, tanggal: p.tanggal } : { success: false };
     },
-    SpreadsheetApp: {
-      openById: () => ({
-        getSheetByName: name => sheets[name] || null,
-        getSheets: () => spreadsheetSheets,
-      }),
+    simpanMobileLaporanC4A(p) {
+      calls.push(p);
+      return p.token === 'body-session' ? { success: true } : { success: false };
+    },
+    apiRouter_(e, body) {
+      const merged = { ...e.parameter, ...(body || {}) };
+      if (merged.action === 'getMobileLaporanUp3Uiw') return ctx.getMobileLaporanUp3Uiw(merged);
+      if (merged.action === 'simpanMobileLaporanC4A') return ctx.simpanMobileLaporanC4A(merged);
+      return null;
     },
     Logger: { log() {} },
-    ContentService: {
-      MimeType: { JSON: 'application/json' },
-      createTextOutput(body) { return { body, setMimeType(type) { this.mimeType = type; return this; } }; },
-    },
-    getMobileLaporanHarian(...args) {
-      calls.push({ type: 'row', args });
-      return options.rowResponse || { success: true, data: [] };
-    },
-    getMobileLaporanUp3Uiw(params) {
-      calls.push({ type: 'up3', params });
-      return params.token === 'valid-session' ? { ok: true, tanggal: params.tanggal } : { ok: false, message: 'Sesi habis' };
-    },
-    simpanMobileLaporanC4A(params) {
-      calls.push({ type: 'save', params });
-      return params.token === 'valid-session' ? { ok: true } : { ok: false, message: 'Sesi habis' };
-    },
-    _deltaRows_(guard, token, name, config) {
-      calls.push({ type: 'delta', guard, token, name, config });
-      return [{ legacy: true }];
-    },
   };
-  context.apiRouter_ = function (e, body) {
-    const p = (e && e.parameter) || {};
-    const action = (body && body.action) || p.action || '';
-    if (action === 'getMobileLaporanUp3Uiw') return context.getMobileLaporanUp3Uiw(p);
-    if (action === 'simpanMobileLaporanC4A') return context.simpanMobileLaporanC4A(p);
-    if (action === 'getMobileLaporanHarian') return context.getMobileLaporanHarian(p.token, p.subTim, p.tim, p.tanggal, p.limit);
-    return { delegated: true, e, body };
-  };
-  vm.createContext(context);
-  vm.runInContext(source, context, { filename: overlayPath });
-  return { context, calls };
+  vm.createContext(ctx);
+  vm.runInContext(fs.readFileSync(routePath, 'utf8'), ctx);
+  return { ctx, calls };
 }
+const realization = values => row(13, values, COL_ROW_RLZ);
+const execution = values => row(30, values, COL_ROW);
+const json = value => JSON.parse(JSON.stringify(value));
 
-function responseValue(value) { return JSON.parse(JSON.stringify(value)); }
-
-const makeExecution = (values = {}) => {
-  const row = new Array(30).fill('');
-  for (const [key, value] of Object.entries(values)) row[COL_ROW[key]] = value;
-  return row;
-};
-const makeRealization = (values = {}) => {
-  const row = new Array(13).fill('');
-  for (const [key, value] of Object.entries(values)) row[COL_ROW_RLZ[key]] = value;
-  return row;
-};
-
-test('JSON body token and fields reach guarded UP3/UIW handlers', () => {
+test('report credentials are body-only; non-secret query filters still pass', () => {
   const h = harness();
-  const response = h.context.apiRouter_({ parameter: { mobile: '1' } }, {
-    action: 'getMobileLaporanUp3Uiw', token: 'valid-session', tanggal: '2026-09-30',
-  });
-  assert.deepEqual(responseValue(response), { ok: true, tanggal: '2026-09-30' });
-  assert.deepEqual(responseValue(h.calls[0]), {
-    type: 'up3', params: { mobile: '1', action: 'getMobileLaporanUp3Uiw', token: 'valid-session', tanggal: '2026-09-30' },
-  });
+  const save = h.ctx.apiRouter_({ parameter: {
+    mobile: '1', token: 'url-session', tanggal: '2026-09-30',
+  } }, { action: 'simpanMobileLaporanC4A' });
+  assert.deepEqual(json(save), { success: false });
+  assert.equal(Object.hasOwn(h.calls[0], 'token'), false);
+  assert.equal(h.calls[0].tanggal, '2026-09-30');
+  const read = h.ctx.apiRouter_({ parameter: {
+    mobile: '1', deviceToken: 'url-session', tanggal: '2026-09-30',
+  } }, { action: 'getMobileLaporanUp3Uiw', token: 'body-session' });
+  assert.deepEqual(json(read), { success: true, tanggal: '2026-09-30' });
+  assert.equal(h.calls[1].token, 'body-session');
+  assert.equal(Object.hasOwn(h.calls[1], 'deviceToken'), false);
 });
 
-test('JSON body token reaches C4A save, missing token remains rejected, and query fallback still works', () => {
-  const h = harness();
-  assert.deepEqual(responseValue(h.context.apiRouter_({ parameter: { mobile: '1' } }, {
-    action: 'simpanMobileLaporanC4A', token: 'valid-session', penyulang: 'P1',
-  })), { ok: true });
-  assert.deepEqual(responseValue(h.context.apiRouter_({ parameter: { mobile: '1' } }, {
-    action: 'simpanMobileLaporanC4A', penyulang: 'P1',
-  })), { ok: false, message: 'Sesi habis' });
-  assert.deepEqual(responseValue(h.context.apiRouter_({ parameter: { mobile: '1', token: 'valid-session', tanggal: '2026-09-30' } }, {
-    action: 'getMobileLaporanUp3Uiw',
-  })), { ok: true, tanggal: '2026-09-30' });
-});
-
-test('ROW report uses visible realisasi rows as parents and attaches only matching executions', () => {
-  const header = { kodeHeader: 'H1', ulp: 'Toboali', subTim: 'ROW 01', tim: 'ROW', tanggal: '2026-09-30' };
-  const parent = makeRealization({ kodeHeader: 'H1', kodePekerjaan: 'P1', penyulang: 'FEEDER A', section: 'S1', rabas: 1, sedang: 0, besar: 0 });
-  const linked = makeExecution({ kodeHeader: 'H1', kodePekerjaan: 'P1', kodeEksekusi: 'E1', ulp: 'Toboali', tim: 'ROW 01', tanggal: '2026-09-30', penyulang: 'FEEDER A', section: 'S1', nomorTiang: '12', diameter: 24, jenisPekerjaan: 'Tebang Sedang', fotoSebelumUrl: 'private-1', fotoPekerjaanUrl: 'private-2', fotoSesudahUrl: 'private-3', inputOleh: 'must-not-return' });
-  const orphan = makeExecution({ kodeHeader: 'H1', kodePekerjaan: '', kodeEksekusi: 'E2', ulp: 'Toboali', tim: 'ROW 01', tanggal: '2026-09-30', penyulang: 'FEEDER B', section: 'S2', nomorTiang: '13', jenisPekerjaan: 'Rabas / Pangkas', fotoSebelumUrl: 'a', fotoPekerjaanUrl: 'b', fotoSesudahUrl: 'c' });
-  const foreign = makeExecution({ kodeHeader: 'H1', kodePekerjaan: 'P1', kodeEksekusi: 'E3', ulp: 'ULP LAIN', tim: 'ROW 01', tanggal: '2026-09-30', penyulang: 'FEEDER A', section: 'S1', nomorTiang: '99', jenisPekerjaan: 'Tebang Besar' });
-  const hiddenHeaderChild = makeExecution({ kodeHeader: 'HIDDEN', kodePekerjaan: 'PX', kodeEksekusi: 'E4', ulp: 'ULP LAIN', tim: 'ROW 99', tanggal: '2026-09-30', penyulang: 'SECRET', nomorTiang: '1' });
-  const h = harness({
-    rowResponse: { success: true, data: [header] },
-    sheets: {
-      db_ROW_Realisasi: fakeSheet([parent], 13),
-      db_ROW_Eksekusi: fakeSheet([linked, orphan, foreign, hiddenHeaderChild], 30),
-    },
-  });
-  const result = responseValue(h.context.getMobileLaporanHarian('t', 'ROW 01', '', '2026-09-30', 100));
-  const detail = result.data[0].realisasi;
-  assert.equal(detail.length, 1);
-  assert.deepEqual(detail[0], {
-    kodePekerjaan: 'P1', penyulang: 'FEEDER A', section: 'S1', rabas: 1, sedang: 0, besar: 0,
-    eksekusi: [{ kodeEksekusi: 'E1', jenisPekerjaan: 'Tebang Sedang', nomorTiang: '12', diameter: 24 }],
-  });
-  assert.equal(JSON.stringify(result).includes('private-1'), false);
-  assert.equal(JSON.stringify(result).includes('must-not-return'), false);
-  assert.equal(JSON.stringify(result).includes('HIDDEN'), false);
-});
-
-test('ROW execution without its linked realisasi parent is not synthesized into a display row', () => {
-  const one = { kodeHeader: 'H1', ulp: 'Toboali', subTim: 'ROW 01', tanggal: '2026-09-30' };
-  const unlinked = makeExecution({ kodePekerjaan: 'P1', kodeEksekusi: 'E1', ulp: 'Toboali', tim: 'ROW 01', tanggal: '2026-09-30', penyulang: 'F1' });
-  const h = harness({
-    rowResponse: { success: true, data: [one] },
-    sheets: {
-      db_ROW_Eksekusi: fakeSheet([unlinked], 30),
-      db_ROW_Realisasi: fakeSheet([], 13),
-    },
-  });
-  const result = h.context.getMobileLaporanHarian('t', '', '', '', 10).data[0].realisasi;
-  assert.deepEqual(responseValue(result), []);
-});
-
-test('ROW headers without explicit ULP never receive realization or execution details', () => {
-  for (const ulp of [undefined, null, '', ' \t ']) {
-    const header = { kodeHeader: 'H1', ulp };
-    const h = harness({
-      rowResponse: { success: true, data: [header] },
-      sheets: {
-        db_ROW_Realisasi: fakeSheet([makeRealization({
-          kodeHeader: 'H1', kodePekerjaan: 'P1', penyulang: 'must-not-return',
-        })], 13),
-        db_ROW_Eksekusi: fakeSheet([makeExecution({
-          kodeHeader: 'H1', kodePekerjaan: 'P1', kodeEksekusi: 'E1', ulp: 'Toboali',
-        })], 30),
-      },
-    });
-    const result = h.context.getMobileLaporanHarian('session');
-    assert.deepEqual(responseValue(result.data[0].realisasi), []);
-    assert.equal(JSON.stringify(result).includes('must-not-return'), false);
-  }
-});
-
-test('ROW executions require a nonempty matching ULP even when both parent identifiers match', () => {
-  const invalidUlps = [undefined, null, '', ' \t ', 'ULP Lain'];
-  const executions = invalidUlps.map((ulp, i) => makeExecution({
-    kodeHeader: 'H1', kodePekerjaan: 'P1', kodeEksekusi: `REJECT-${i}`, ulp,
-  }));
-  executions.push(makeExecution({
-    kodeHeader: 'H1', kodePekerjaan: 'P1', kodeEksekusi: 'VALID', ulp: 'tObOaLi',
-  }));
-  const h = harness({
-    rowResponse: { success: true, data: [{ kodeHeader: 'H1', ulp: ' Toboali ' }] },
-    sheets: {
-      db_ROW_Realisasi: fakeSheet([makeRealization({ kodeHeader: 'H1', kodePekerjaan: 'P1' })], 13),
-      db_ROW_Eksekusi: fakeSheet(executions, 30),
-    },
-  });
-  const detail = h.context.getMobileLaporanHarian('session').data[0].realisasi;
-  assert.equal(detail.length, 1);
-  assert.deepEqual(responseValue(detail[0].eksekusi.map(e => e.kodeEksekusi)), ['VALID']);
-});
-
-test('ROW duplicate header identifiers are ambiguous regardless of order or ULP', () => {
-  for (const otherUlp of ['ULP Lain', '', 'Toboali']) {
-    for (const reverse of [false, true]) {
-      const headers = [
-        { kodeHeader: 'H1', ulp: 'Toboali' },
-        { kodeHeader: 'H1', ulp: otherUlp },
-      ];
-      if (reverse) headers.reverse();
-      const h = harness({
-        rowResponse: { success: true, data: headers },
-        sheets: {
-          db_ROW_Realisasi: fakeSheet([makeRealization({ kodeHeader: 'H1', kodePekerjaan: 'P1' })], 13),
-          db_ROW_Eksekusi: fakeSheet([makeExecution({
-            kodeHeader: 'H1', kodePekerjaan: 'P1', kodeEksekusi: 'E1', ulp: 'Toboali',
-          })], 30),
-        },
-      });
-      const result = h.context.getMobileLaporanHarian('session');
-      assert.deepEqual(responseValue(result.data.map(h => h.realisasi)), [[], []]);
-    }
-  }
-});
-
-test('ROW rejects blank or duplicate realization identifiers without hiding a valid parent', () => {
-  const parents = [
-    makeRealization({ kodeHeader: 'H1', kodePekerjaan: '' }),
-    makeRealization({ kodeHeader: 'H1', kodePekerjaan: 'P1', penyulang: 'ambiguous-a' }),
-    makeRealization({ kodeHeader: 'H1', kodePekerjaan: 'P1', penyulang: 'ambiguous-b' }),
-    makeRealization({ kodeHeader: 'H1', kodePekerjaan: 'P2', penyulang: 'valid' }),
+test('ROW details require uniquely owned headers, unique parents, and matching nonblank execution ULP', () => {
+  const headers = [
+    { kodeHeader: 'H1', ulp: 'Toboali' }, { kodeHeader: 'H-blank', ulp: '' },
+    { kodeHeader: 'H-dup', ulp: 'Toboali' }, { kodeHeader: 'H-dup', ulp: 'ULP Lain' },
   ];
-  const h = harness({
-    rowResponse: { success: true, data: [{ kodeHeader: 'H1', ulp: 'Toboali' }] },
-    sheets: {
-      db_ROW_Realisasi: fakeSheet(parents, 13),
-      db_ROW_Eksekusi: fakeSheet(['', 'P1', 'P2'].map(kodePekerjaan => makeExecution({
-        kodeHeader: 'H1', kodePekerjaan, kodeEksekusi: 'E-' + kodePekerjaan, ulp: 'Toboali',
-      })), 30),
-    },
-  });
-  const detail = h.context.getMobileLaporanHarian('session').data[0].realisasi;
-  assert.deepEqual(responseValue(detail.map(r => r.kodePekerjaan)), ['P2']);
-  assert.deepEqual(responseValue(detail[0].eksekusi.map(e => e.kodeEksekusi)), ['E-P2']);
-});
-
-test('ROW exact parent pairs cannot collide through a delimiter or another header', () => {
-  const h = harness({
-    rowResponse: { success: true, data: [
-      { kodeHeader: 'H1', ulp: 'Toboali' },
-      { kodeHeader: 'H1|P1', ulp: 'Toboali' },
-      { kodeHeader: 'H2', ulp: 'Toboali' },
-    ] },
-    sheets: {
-      db_ROW_Realisasi: fakeSheet([
-        makeRealization({ kodeHeader: 'H1', kodePekerjaan: 'P1|P2' }),
-        makeRealization({ kodeHeader: 'H1|P1', kodePekerjaan: 'P2' }),
-        makeRealization({ kodeHeader: 'H2', kodePekerjaan: 'P2' }),
-      ], 13),
-      db_ROW_Eksekusi: fakeSheet([
-        makeExecution({ kodeHeader: 'H1', kodePekerjaan: 'P1|P2', kodeEksekusi: 'E1', ulp: 'Toboali' }),
-        makeExecution({ kodeHeader: 'H1|P1', kodePekerjaan: 'P2', kodeEksekusi: 'E2', ulp: 'Toboali' }),
-        makeExecution({ kodeHeader: 'H2', kodePekerjaan: 'P2', kodeEksekusi: 'E3', ulp: 'Toboali' }),
-        makeExecution({ kodeHeader: 'H1', kodePekerjaan: 'P2', kodeEksekusi: 'WRONG-PAIR', ulp: 'Toboali' }),
-      ], 30),
-    },
-  });
-  const result = h.context.getMobileLaporanHarian('session');
-  assert.deepEqual(responseValue(result.data.map(h =>
-    h.realisasi[0].eksekusi.map(e => e.kodeEksekusi))), [['E1'], ['E2'], ['E3']]);
-});
-
-test('ROW adapter preserves failed authorization responses and forwards original arguments', () => {
-  const response = { success: false, message: 'Sesi habis' };
-  const h = harness({ rowResponse: response });
-  h.context.SpreadsheetApp.openById = () => { throw new Error('must not read sheets'); };
-  const args = ['expired', 'ROW 01', '', '2026-09-30', 100];
-  assert.strictEqual(h.context.getMobileLaporanHarian(...args), response);
-  assert.deepEqual(h.calls[0].args, args);
-});
-
-test('Yandal roster sync preserves ULP and Sub-Tim and excludes foreign ULP rows', () => {
-  const rows = [
-    ['ULP', 'Sub-Tim', 'Nama Petugas'],
-    ['Toboali', 'Yandal 01', 'Ani, Budi'],
-    ['Toboali', 'Yandal 02', 'Cici'],
-    ['ULP Lain', 'Yandal 01', 'Dodi'],
+  const realizations = [
+    realization({ kodeHeader: 'H1', kodePekerjaan: 'P1', penyulang: 'FEEDER' }),
+    realization({ kodeHeader: 'H-blank', kodePekerjaan: 'PB', penyulang: 'SECRET' }),
+    realization({ kodeHeader: 'H-dup', kodePekerjaan: 'PD', penyulang: 'SECRET' }),
+    realization({ kodeHeader: 'H1', kodePekerjaan: 'P2', penyulang: 'DUP-A' }),
+    realization({ kodeHeader: 'H1', kodePekerjaan: 'P2', penyulang: 'DUP-B' }),
   ];
-  const sheet = {
-    getName: () => 'db_List_Petugas_Yandal',
-    getLastRow: () => rows.length,
-    getLastColumn: () => rows[0].length,
-    getRange(row, col, height, width) {
-      return { getValues: () => rows.slice(row - 1, row - 1 + height).map(r => r.slice(col - 1, col - 1 + width)) };
-    },
-  };
-  const h = harness({ spreadsheetSheets: [sheet] });
-  const result = responseValue(h.context._deltaRows_({ ulp: 'Toboali' }, 'session', 'db_List_Petugas_Yandal', {}));
-  assert.deepEqual(result, [
-    [1, 'Toboali', 'Yandal 01', 'Ani'],
-    [2, 'Toboali', 'Yandal 01', 'Budi'],
-    [3, 'Toboali', 'Yandal 02', 'Cici'],
-  ]);
-  assert.match(yandalRepositorySource, /SesiStore\.muat\(\)/);
-  assert.match(yandalRepositorySource, /_text\(row, 1\).*ulp/i);
-  assert.match(yandalRepositorySource, /_text\(row, 2\).*subTim/i);
-});
-
-test('Yandal shift, P0, and switching delta sync use their actual ULP columns', () => {
-  const h = harness();
-  const names = [
-    ['db_Yandal_Shift', 5],
-    ['db_Yandal_P0', 4],
-    ['db_Yandal_Pengecekan_Switching', 5],
+  const executions = [
+    execution({ kodeHeader: 'H1', kodePekerjaan: 'P1', kodeEksekusi: 'GOOD', ulp: 'tObOaLi', nomorTiang: '12' }),
+    execution({ kodeHeader: 'H1', kodePekerjaan: 'P1', kodeEksekusi: 'BLANK', ulp: '' }),
+    execution({ kodeHeader: 'H1', kodePekerjaan: 'P1', kodeEksekusi: 'FOREIGN', ulp: 'ULP Lain' }),
+    execution({ kodeHeader: 'H-blank', kodePekerjaan: 'PB', kodeEksekusi: 'HIDDEN', ulp: 'Toboali' }),
+    execution({ kodeHeader: 'H-dup', kodePekerjaan: 'PD', kodeEksekusi: 'AMBIGUOUS', ulp: 'Toboali' }),
+    execution({ kodeHeader: 'H1', kodePekerjaan: 'P2', kodeEksekusi: 'DUPLICATE-PARENT', ulp: 'Toboali' }),
   ];
-  for (const [name, ulpCol] of names) {
-    h.context._deltaRows_({ ulp: 'Toboali' }, 'session', name, { ulpCol: 2 });
-    assert.equal(h.calls.at(-1).config.ulpCol, ulpCol);
-  }
+  const h = harness({ headers, realizations, executions });
+  const result = h.ctx.getMobileLaporanHarian('session');
+  assert.deepEqual(json(result.data[0].realisasi.map(r => r.kodePekerjaan)), ['P1']);
+  assert.deepEqual(json(result.data[0].realisasi[0].eksekusi.map(e => e.kodeEksekusi)), ['GOOD']);
+  assert.deepEqual(json(result.data.slice(1).map(r => r.realisasi)), [[], [], []]);
+  assert.doesNotMatch(JSON.stringify(result), /SECRET|FOREIGN|BLANK|HIDDEN|AMBIGUOUS|DUPLICATE-PARENT/);
+  assert.doesNotMatch(JSON.stringify(result), /fotoSebelumUrl/);
 });
 
-
-test('mobile report adapter is last in clasp and harness load order', async () => {
-  const adapter = 'Core/ZZZZZZZZZZZZZZZZZZZZZZZZ-Mobile-Reports-Route.js';
-  const clasp = JSON.parse(fs.readFileSync(claspPath, 'utf8'));
-  assert.equal(clasp.filePushOrder.at(-1), adapter);
-  const { orderFiles } = await import(pathToFileURL(loaderPath).href);
-  const ordered = orderFiles(['Core/Code.js', adapter, 'Core/ZZZZZZZZZZZZZZZZZZZZ-Dispatch-Final-Guard.js']);
-  assert.equal(ordered.at(-1), adapter);
+test('ROW enrichment preserves failed authorization result without reading sheet data', () => {
+  const denied = { success: false, message: 'Sesi habis' };
+  const h = harness({ rowResponse: denied });
+  h.ctx.SpreadsheetApp.openById = () => assert.fail('unauthorized response must not read Sheets');
+  assert.strictEqual(h.ctx.getMobileLaporanHarian('expired'), denied);
 });

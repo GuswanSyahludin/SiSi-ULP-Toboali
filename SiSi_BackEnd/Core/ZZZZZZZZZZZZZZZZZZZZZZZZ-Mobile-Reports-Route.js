@@ -15,7 +15,12 @@
     var merged = Object.create(null);
     query = query || {};
     body = body || {};
-    Object.keys(query).forEach(function (key) { merged[key] = query[key]; });
+    Object.keys(query).forEach(function (key) {
+      // Session credentials must never be accepted from the URL, where they
+      // can leak into browser history, proxies, and request logs.
+      if (/^(token|devicetoken)$/i.test(key)) return;
+      merged[key] = query[key];
+    });
     Object.keys(body).forEach(function (key) { merged[key] = body[key]; });
     return merged;
   }
@@ -29,6 +34,7 @@
     // The legacy router passes e.parameter to these handlers. Flutter sends the
     // token and report fields in JSON, so expose a merged parameter view while
     // still delegating through the already-installed dispatch/auth wrappers.
+    // Query parameters may carry ordinary filters, never session credentials.
     var normalizedEvent = {};
     if (e && typeof e === 'object') {
       Object.keys(e).forEach(function (key) { normalizedEvent[key] = e[key]; });
