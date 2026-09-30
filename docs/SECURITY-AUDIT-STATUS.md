@@ -1,6 +1,6 @@
 # SiSi ULP Toboali: Audit dan Status Remediasi
 
-_Terakhir diperbarui: 29 September 2026 21:06 WIB · PR #38 dan #39 MERGED; staging, client compatibility, real-device validation, and production sign-off remain pending_
+_Terakhir diperbarui: 30 September 2026 08:58 WIB · PR #43 MERGED; staging, client compatibility, real-device validation, and production sign-off remain pending_
 
 File ini adalah satu-satunya tempat mencatat temuan audit, status perbaikan, dan task remediasi SiSi.
 
@@ -22,8 +22,44 @@ File ini adalah satu-satunya tempat mencatat temuan audit, status perbaikan, dan
 | T-14/T-15/T-18/T-21/T-22/T-24 Source-only hardening batch | ✅ MERGED | 28c2849750a2355c9e0c734c98dfe0adc4b4dc83 |
 | Android backup/data-extraction resource correction | ✅ MERGED | a698e4ca3c74fce79ab79ab1182bf803187a06fd |
 | REL-03 formula-safe Master Gardu writes | ✅ MERGED | ab6270724ee21ee4efcd6d7b2e20cdca25e8e66e |
+| T-21/T-20 source hygiene | ✅ MERGED / T-20 OPEN | eeed5a52979191d277edc2fe628ee6f0448903a |
+| T-16/T-17 web security boundary | ✅ MERGED / runtime work OPEN | 176e6fb45b2fc6054da5703f2c27bcce73af4e9 |
+| T-19/T-32 Yandal photo durability | ✅ SOURCE MERGED / runtime work OPEN | 721542ef74e44eb0a9bdc276329801fe2dfcaeee |
+| JPEG validation and photo failure contract | ✅ SOURCE MERGED / runtime work OPEN | cceebdc8e8c75541cb1b35043afd335e1c5ac7a2 |
 
-**Overall:** Critical remediation code merged; staging, client compatibility, production deployment, and real-device evidence remain open. **Security posture:** remediations merged, runtime acceptance incomplete.
+**Overall:** Critical remediation code merged through PR #43; staging, client compatibility, production deployment, and real-device evidence remain open. **Security posture:** source remediations merged, runtime acceptance incomplete.
+
+## PR #43: JPEG validation and photo failure contract
+
+### Completion: ✅ Merged, runtime acceptance pending
+
+**PR:** [#43](https://github.com/GuswanSyahludin/SiSi-ULP-Toboali/pull/43)  
+**Merged commit:** `cceebdc8e8c75541cb1b35043afd335e1c5ac7a2`  
+**Merged:** 30 September 2026
+
+### Scope and contract
+
+- Original evidence bytes are decoded before private persistence; corrupt, truncated, oversized, and non-decodable originals are rejected.
+- Rendered watermark output must be a complete, decodable JPEG with size limits and SOI/EOI marker checks before Android export.
+- Yandal preview structure was simplified to remove the nested-widget syntax failure that blocked Flutter analysis/build.
+- Regression tests cover valid images, corrupt/non-image bytes, truncated/SOI-only data, missing EOI, checksum mismatch, cancel semantics, native failure retry, and the no-side-effect-before-validation contract.
+- The PR intentionally does not change Apps Script upload transaction semantics, remote watermark-engine behavior, orphan cleanup, or native Android decoder parity.
+
+### Automated validation
+
+- Flutter analyze and compile: green.
+- Flutter analyze and debug build: green.
+- Backend syntax/security tests: green.
+- Query-string rejection: green.
+- Photo validator and watermark export regression tests: green.
+
+### Runtime acceptance pending
+
+- Validate native Android decoder behavior against the Dart decoder on a signed internal APK.
+- Verify original persistence rejection on real Android devices for corrupt, truncated, oversized, and MIME-mismatch files.
+- Verify watermark export cancel/failure/retry behavior with the Android MediaStore implementation.
+- Audit Apps Script upload transaction semantics, progressive update failure handling, and orphan cleanup.
+- Audit remote watermark-engine behavior and ensure failed processing cannot report success.
 
 ## PR #38: Android 12+ data extraction resource correction
 
@@ -82,14 +118,19 @@ File ini adalah satu-satunya tempat mencatat temuan audit, status perbaikan, dan
 - **H-06/T-10:** real-device expiry, forced login, secure-storage clearing, and cleanup evidence.
 - **T-08/H-04:** cross-ULP staging, same-ULP real-device read/write, duplicate-code rejection, and production sign-off.
 - **T-09/H-05:** two-device conflict behavior, conflict UI, upgraded-database migration evidence, staging validation, and production sign-off.
-- **T-14/T-15/T-18/T-21/T-22/T-24:** staging, deployed-runtime verification, client compatibility, and real-device evidence.
+- **T-14/T-15/T-18/T-22/T-24:** staging, deployed-runtime verification, client compatibility, and real-device evidence.
+- **T-16/T-17:** strict CSP/DOM refactor and deployed-runtime verification.
+- **T-19/T-32:** remote photo upload/lifecycle processing, signed APK, cache cleanup, restart recovery, and real-device evidence.
+- **T-20/T-30:** full Flutter lint cleanup, offline/retry/duplicate-delivery integration coverage, and real-device evidence.
+- **T-23:** external engine migration and shared cost guard redesign.
+- **T-125/T-126:** concurrent account-switch isolation and removal of remaining legacy auth compatibility paths.
 - **Android signing/backup:** secret-store verification, signed APK installation, API 31+ backup/data-transfer denial, and real-device evidence.
 
 ## Remaining source-code work not covered by merged PRs
 
 - REL-03 source is merged; only formula-map expansion and runtime proof remain.
-- T-16/T-17: SRI/CSP and XSS/inline-handler refactor.
-- T-19/T-31/T-32/T-123/T-124: durable Yandal photo outbox, JPEG validation, upload failure state machine, local-watermark integration, and tests.
+- T-16/T-17: full strict-CSP/DOM and inline-handler refactor.
+- T-19/T-31/T-32/T-123/T-124: upload failure state machine, local-watermark integration, orphan cleanup, and tests.
 - T-20/T-30: Flutter lint cleanup and offline/retry/duplicate-delivery integration coverage.
 - T-23: external engine migration and shared cost guard redesign.
 - T-125/T-126: concurrent account-switch isolation and removal of remaining legacy auth compatibility paths.
@@ -110,6 +151,10 @@ File ini adalah satu-satunya tempat mencatat temuan audit, status perbaikan, dan
 - [x] PR #37 merged with backend, Flutter, and query-string checks green.
 - [x] PR #38 merged with backend, Flutter, and query-string checks green.
 - [x] PR #39 merged with backend, Flutter, and query-string checks green.
+- [x] PR #40 merged with Flutter quality hygiene and security checks green.
+- [x] PR #41 merged with web security and query-string checks green.
+- [x] PR #42 merged with Yandal durability and security checks green.
+- [x] PR #43 merged with photo validation, Flutter, backend, and query-string checks green.
 - [x] PR #34 closed as superseded by PR #35.
 - [ ] Create verified staging backup/version history before H-08 migration.
 - [ ] Deploy H-06 to isolated staging only.
@@ -121,8 +166,9 @@ File ini adalah satu-satunya tempat mencatat temuan audit, status perbaikan, dan
 - [ ] Verify T-09 two-device conflict, upgraded-database migration, and conflict UI behavior.
 - [ ] Verify T-08 cross-ULP staging and real-device read/write behavior.
 - [ ] Verify PR #35 device throttle, webhook replay window, deployment endpoint selection, and debug hygiene in staging/real devices.
+- [ ] Verify PR #43 native decoder parity, Android export cancellation/failure/retry, upload transaction failure handling, orphan cleanup, and remote watermark failure semantics.
 - [ ] Update runbook after staging evidence.
 
 ## Kesimpulan
 
-PR #38 Android resource correction and PR #39 REL-03 source hardening are merged and all automated checks are green. Staging formula mapping, deployed-runtime verification, concurrent append/retry, client compatibility, signed Android validation, real-device testing, production deployment, and production sign-off remain pending.
+PR #43 is merged and all automated checks are green. Source-level JPEG validation and export failure contracts are now covered, but staging formula mapping, deployed-runtime verification, upload transaction semantics, concurrent append/retry, client compatibility, signed Android validation, real-device testing, production deployment, and production sign-off remain pending.
