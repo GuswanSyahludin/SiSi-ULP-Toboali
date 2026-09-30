@@ -119,6 +119,10 @@ class LocalWatermarkRenderer {
       _logo(canvas, pln, Rect.fromLTWH(x, y, logoSize, logoSize));
       header.paint(canvas, Offset(x + logoSize + 16 * scale, y));
       y += headerHeight + 12 * scale;
+      final stroke = Paint()..color = _lime..strokeWidth = 1.6 * scale;
+      canvas.drawLine(Offset(x, y), Offset(x + inner, y), stroke);
+      canvas.drawLine(Offset(x, y + 5 * scale), Offset(x + inner, y + 5 * scale), stroke);
+      y += 18 * scale;
       clock.paint(canvas, Offset(x, y)); y += clock.height + 4 * scale;
       date.paint(canvas, Offset(x, y)); y += date.height + 14 * scale;
       for (final p in fields) { p.paint(canvas, Offset(x, y)); y += p.height + 8 * scale; }
