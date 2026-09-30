@@ -27,19 +27,22 @@
 
   apiRouter_ = function (e, body) {
     var action = _sisiMobileReportAction_(e, body);
-    if (action !== 'getMobileLaporanUp3Uiw' && action !== 'simpanMobileLaporanC4A') {
-      return _sisiMobileReportsPreviousRouter_(e, body);
-    }
-
-    // The legacy router passes e.parameter to these handlers. Flutter sends the
-    // token and report fields in JSON, so expose a merged parameter view while
-    // still delegating through the already-installed dispatch/auth wrappers.
-    // Query parameters may carry ordinary filters, never session credentials.
     var normalizedEvent = {};
     if (e && typeof e === 'object') {
       Object.keys(e).forEach(function (key) { normalizedEvent[key] = e[key]; });
     }
-    normalizedEvent.parameter = _sisiMobileMergeParams_(e && e.parameter, body);
+
+    // Never forward session credentials from query parameters to any mobile
+    // action. The request body remains the sole accepted credential source.
+    normalizedEvent.parameter = _sisiMobileMergeParams_(e && e.parameter, null);
+    if (action !== 'getMobileLaporanUp3Uiw' && action !== 'simpanMobileLaporanC4A') {
+      return _sisiMobileReportsPreviousRouter_(normalizedEvent, body);
+    }
+
+    // The legacy router passes e.parameter to these handlers. Flutter sends the
+    // token and report fields in JSON, so merge the body over sanitized filters
+    // while delegating through the already-installed dispatch/auth wrappers.
+    normalizedEvent.parameter = _sisiMobileMergeParams_(normalizedEvent.parameter, body);
     return _sisiMobileReportsPreviousRouter_(normalizedEvent, body);
   };
 
