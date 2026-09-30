@@ -9,14 +9,22 @@ import '../db/db_provider.dart';
 /// SesiStore keeps session and device credentials in platform secure storage.
 /// SharedPreferences is retained only as a one-time migration source.
 class SesiStore {
+  SesiStore._();
+
   static const _kSesi = 'sesiJson';
   static const _kDevice = 'deviceToken';
   static const _kKredLama = ['kredU', 'kredP'];
-  static const _periodicUniqueName = 'sisi-background-sync';
-  static const _manualUniqueName = 'sisi-manual-master-sync';
+  static const _legacyPeriodicUniqueName = 'sisi-background-sync';
+  static const _legacyManualUniqueName = 'sisi-manual-master-sync';
   static const _secureSession = 'sisi.secure.session';
   static const _secureDevice = 'sisi.secure.deviceToken';
   static const _secureStorage = FlutterSecureStorage();
+
+  static String periodicWorkerName(Map<String, dynamic> session) =>
+      'sisi-background-sync.${DbProvider.databaseNameForSession(session)}';
+
+  static String manualWorkerName(Map<String, dynamic> session) =>
+      'sisi-manual-master-sync.${DbProvider.databaseNameForSession(session)}';
 
   static Future<void> simpan(
     Map<String, dynamic> sesi, {
@@ -134,8 +142,22 @@ class SesiStore {
 
   static Future<void> hapus() async {
     final workmanager = Workmanager();
-    await workmanager.cancelByUniqueName(_periodicUniqueName);
-    await workmanager.cancelByUniqueName(_manualUniqueName);
+    final rawSession = await _secureStorage.read(key: _secureSession);
+    if (rawSession != null && rawSession.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(rawSession);
+        if (decoded is Map) {
+          final session = Map<String, dynamic>.from(decoded);
+          if ((session['username'] ?? '').toString().trim().isNotEmpty &&
+              (session['ulp'] ?? '').toString().trim().isNotEmpty) {
+            await workmanager.cancelByUniqueName(periodicWorkerName(session));
+            await workmanager.cancelByUniqueName(manualWorkerName(session));
+          }
+        }
+      } catch (_) {}
+    }
+    await workmanager.cancelByUniqueName(_legacyPeriodicUniqueName);
+    await workmanager.cancelByUniqueName(_legacyManualUniqueName);
     final prefs = await SharedPreferences.getInstance();
     await _secureStorage.delete(key: _secureSession);
     await _secureStorage.delete(key: _secureDevice);
