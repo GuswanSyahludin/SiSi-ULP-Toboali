@@ -15,3 +15,11 @@ test('Android backup and release signing fail closed', () => {
   assert.match(gradle, /Release signing is required/);
   assert.match(audit, /tracked signing material/);
 });
+
+test('debug builds do not validate a local release keystore', () => {
+  assert.match(gradle, /val hasReleaseSigning =[\s\S]*?signingStoreFile\?\.isFile == true/);
+  assert.match(gradle, /if \(releaseRequested\) \{\s*when \{/);
+  assert.match(gradle, /signingStoreFile\?\.isFile != true[\s\S]*?Release signing keystore does not exist/);
+  assert.match(gradle, /if \(hasReleaseSigning\) \{\s*create\("release"\)/);
+  assert.doesNotMatch(gradle, /require\(rootProject\.file\(keystoreProperties\.getProperty\("storeFile"\)\)\.isFile\)/);
+});
