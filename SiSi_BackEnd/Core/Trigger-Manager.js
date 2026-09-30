@@ -1,34 +1,24 @@
 /* ============================================================================
    Trigger-Manager.js — SATU SUMBER TRIGGER BACKEND SiSi
-   Rev 24 Agu 2026
+   Rev 24 Agu 2026; T-11 auth boundary 30 Sep 2026
    ---------------------------------------------------------------------------
-   HASIL AUDIT SELURUH SiSi_BackEnd:
-   - Ditemukan 40 pemanggilan ScriptApp.newTrigger tersebar di modul lama.
-   - Sebagian saling tumpang tindih (recalcTick vs fastTick, approval drain,
-     refresh WA/ROW/laporan, migrasi per-sheet, dan job sekali jalan).
-   - Fungsi ini menggantikan pemasangan terpisah dengan 2 trigger permanen:
-       1) tickPusatSiSi   : setiap 1 menit, menjadwalkan semua tugas berkala.
+   Installer mengelola 2 trigger permanen:
+       1) _t11TickPusatSiSi_ : setiap 1 menit, private server scheduler.
        2) harianPusatSiSi : setiap hari sekitar 00:30 WIB.
-   - migrasiSemuaTick tetap boleh muncul SEMENTARA. Ia dibuat oleh
-     mulaiMigrasiSemua(), lalu menghapus dirinya sendiri setelah migrasi selesai.
+   migrasiSemuaTick tetap boleh muncul SEMENTARA.
 
-   CARA PAKAI SETELAH CLASP PUSH + DEPLOY:
-     1. Jalankan pasangSemuaTriggerSiSi() SEKALI dari editor Apps Script.
-     2. Izinkan otorisasi bila diminta.
-     3. Jalankan auditTriggerSiSi() untuk verifikasi. Target: ok=true,
-        permanen=2, kurang=[], lebih=[], duplikat=[] (migrasiSemuaTick boleh ada
-        sementara setelah jadwal migrasi dimulai).
+   T-11: trigger lama tickPusatSiSi/drainAntreanP0 TANPA sesi sekarang ditolak.
+   Migrasikan handler ke _t11TickPusatSiSi_ di STAGING sebelum production.
+   Jangan memasang trigger drain terpisah bila scheduler pusat sudah aktif.
+   Public installer pasangSemuaTriggerSiSi({token: ...}) wajib Super User
+   ULP Toboali. _pasangSemuaTriggerSiSi_ hanya untuk editor/server privat.
+   Tidak ada trigger yang diubah hanya karena source ini dimuat.
 
-   PENTING:
-   - Installer melakukan preflight dulu. Bila handler wajib ada yang hilang,
-     TIDAK ADA trigger yang dihapus atau dibuat.
-   - Bila preflight lolos, seluruh trigger milik user pada project ini dihapus,
-     lalu tepat 2 trigger permanen dibuat. Ini sengaja agar tidak ada trigger
-     lebih/kurang dan tidak ada peninggalan konfigurasi lama.
-   - pingEngineY SENGAJA tidak dijadwalkan. Keep-warm melawan min-instances=0,
-     memicu request terus-menerus, dan merusak strategi hemat/free-tier.
-   - Job sekali jalan (migrasi/perbaikan massal/recalc massal) tidak dijadikan
-     trigger permanen. Jalankan fungsi mulai* terkait hanya saat memang perlu.
+   Installer melakukan preflight sebelum menghapus/membuat trigger. Setelah
+   preflight, seluruh trigger milik operator pada project dihapus dan tepat
+   2 permanen dibuat. Jalankan hanya setelah backup konfigurasi dan persetujuan
+   migrasi; auditTriggerSiSi() harus menghasilkan ok=true.
+   pingEngineY sengaja tidak dijadwalkan. Job sekali-jalan bukan permanen.
    ============================================================================ */
 
 var TRIGGER_SISI_TZ = "Asia/Jakarta";
@@ -67,7 +57,7 @@ var TRIGGER_SISI_HARIAN = [
   "mulaiMigrasiSemua",
 ];
 
-var TRIGGER_SISI_PERMANEN = ["tickPusatSiSi", "harianPusatSiSi"];
+var TRIGGER_SISI_PERMANEN = ["_t11TickPusatSiSi_", "harianPusatSiSi"];
 var TRIGGER_SISI_SEMENTARA = [
   "migrasiSemuaTick",
   "jalankanRecalcPointBertahap",
@@ -102,6 +92,8 @@ function _triggerSisiHandlerWajib_() {
 
 // Worker pusat per menit. Tidak memegang LockService agar lock internal tiap modul
 // tetap independen. Mutex property mencegah tick bertumpuk; basi >6,5 menit diambil alih.
+// Public function is authenticated by the final T-11 overlay; timers target its
+// private _t11TickPusatSiSi_ entry, which captures this implementation.
 function tickPusatSiSi() {
   var props = PropertiesService.getScriptProperties();
   var now = Date.now();
@@ -185,8 +177,17 @@ function harianPusatSiSi() {
   return hasil;
 }
 
-// SATU-SATUNYA fungsi pemasang trigger yang perlu dijalankan setelah deploy.
-function pasangSemuaTriggerSiSi() {
+// Public installer requires an authenticated Super User. Never accept a client
+// internal/trigger flag as permission to create an authorized scheduled job.
+function pasangSemuaTriggerSiSi(params) {
+  var g = guard_(arguments, { ulp: true, role: ["SUPER"], aksi: "pasangSemuaTriggerSiSi" });
+  if (String(g.ulp || "").trim().toLowerCase().replace(/\s+/g, " ") !== "ulp toboali")
+    throw new Error("T11_CALLER_ULP_DENIED");
+  return _pasangSemuaTriggerSiSi_();
+}
+
+// Editor/server-only installer. No runtime migration occurs unless called.
+function _pasangSemuaTriggerSiSi_() {
   var wajib = _triggerSisiHandlerWajib_();
   var kurangHandler = [];
   for (var i = 0; i < wajib.length; i++)
@@ -214,7 +215,7 @@ function pasangSemuaTriggerSiSi() {
   props.deleteProperty(TRIGGER_SISI_TICK_PROP);
   props.deleteProperty(TRIGGER_SISI_MUTEX_PROP);
 
-  ScriptApp.newTrigger("tickPusatSiSi").timeBased().everyMinutes(1).create();
+  ScriptApp.newTrigger("_t11TickPusatSiSi_").timeBased().everyMinutes(1).create();
   ScriptApp.newTrigger("harianPusatSiSi")
     .timeBased()
     .everyDays(1)
@@ -252,7 +253,6 @@ function auditTriggerSiSi() {
       kurang.push(TRIGGER_SISI_PERMANEN[j]);
 
   for (var fn in perHandler) {
-    if (perHandler[fn] > 1) duplikat.push({ fn: fn, jumlah: perHandler[fn] });
     if (TRIGGER_SISI_PERMANEN.indexOf(fn) >= 0) continue;
     if (TRIGGER_SISI_SEMENTARA.indexOf(fn) >= 0) {
       sementara.push(fn);
@@ -260,6 +260,7 @@ function auditTriggerSiSi() {
     }
     lebih.push(fn);
   }
+  for (var name in perHandler) if (perHandler[name] > 1) duplikat.push(name);
 
   var hasil = {
     ok: kurang.length === 0 && lebih.length === 0 && duplikat.length === 0,
@@ -281,7 +282,7 @@ function auditTriggerSiSi() {
 function lihatJadwalTriggerSiSi() {
   return {
     permanen: [
-      { fn: "tickPusatSiSi", jadwal: "setiap 1 menit" },
+      { fn: "_t11TickPusatSiSi_", jadwal: "setiap 1 menit" },
       { fn: "harianPusatSiSi", jadwal: "setiap hari sekitar 00:30 WIB" },
     ],
     tugasBerkala: TRIGGER_SISI_TUGAS,
