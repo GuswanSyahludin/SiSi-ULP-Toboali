@@ -253,6 +253,7 @@ function auditTriggerSiSi() {
       kurang.push(TRIGGER_SISI_PERMANEN[j]);
 
   for (var fn in perHandler) {
+    if (perHandler[fn] > 1) duplikat.push({ fn: fn, jumlah: perHandler[fn] });
     if (TRIGGER_SISI_PERMANEN.indexOf(fn) >= 0) continue;
     if (TRIGGER_SISI_SEMENTARA.indexOf(fn) >= 0) {
       sementara.push(fn);
@@ -260,7 +261,6 @@ function auditTriggerSiSi() {
     }
     lebih.push(fn);
   }
-  for (var name in perHandler) if (perHandler[name] > 1) duplikat.push(name);
 
   var hasil = {
     ok: kurang.length === 0 && lebih.length === 0 && duplikat.length === 0,
