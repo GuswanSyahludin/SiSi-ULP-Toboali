@@ -7,6 +7,200 @@ const { test } = require('node:test');
 const backend = path.join(__dirname, '../SiSi_BackEnd');
 const read = file => fs.readFileSync(path.join(backend, file), 'utf8');
 const jobs = ['refreshLaporanHarianHariIni', 'sweepDurasiJarakYandalP0', 'validasiUlangFotoTemuan'];
+const rowJob = '_t11PerbaikanKodeROW_';
+function rowFixture(options = {}) {
+  const f = fixture(), events = [], ctx = f.context;
+  let locked = false;
+  ctx.LockService.getScriptLock = () => ({
+    waitLock() { if (options.lockFails) throw Error('lock secret'); locked = true; },
+    hasLock: () => locked, releaseLock() { locked = false; }
+  });
+  const sheets = {};
+  function sheet(name, rows) {
+    const sh = {
+      rows, getLastRow: () => rows.length,
+      getDataRange: () => ({ getValues: () => rows.map(r => r.slice()) }),
+      getRange(r, c, nr = 1, nc = 1) {
+        return {
+          getValues() {
+            if (options.beforeRowRead) options.beforeRowRead(name, rows, r, nc);
+            return rows.slice(r - 1, r - 1 + nr).map(row => row.slice(c - 1, c - 1 + nc));
+          },
+          setValue(value) {
+            assert.ok(locked, 'every mutation must own script lock');
+            if (options.writeFails) throw Error('sensitive Sheet error');
+            events.push(['write', name, r, c, value]); rows[r - 1][c - 1] = value;
+          }
+        };
+      }
+    };
+    sheets[name] = sh;
+    return sh;
+  }
+  ctx.COL_INS.HEADER = { kodeHeader: 1, ulp: 2, tim: 5, subTim: 6 };
+  ctx.SHEET_INS.HEADER = 'header';
+  ctx.COL_ROW = { kodeHeader: 1, kodePekerjaan: 2, kodeEksekusi: 3, ulp: 4, tim: 7 };
+  ctx.COL_ROW_RLZ = { kodeHeader: 1, kodePekerjaan: 2 };
+  const header = sheet('header', [Array(16).fill('header'),
+    ['', 'R01-ABC', ' Toboali ', '', '', 'ROW', 'ROW 02', '', '', '', '', '', '', '', '', '']]);
+  const realisation = sheet('db_ROW_Realisasi', [Array(13).fill('header'),
+    ['', 'R01-ABC', 'R01-ABC-PNY.007', '', '', '', '', '', '', '', '', '', '']]);
+  const execution = sheet('db_ROW_Eksekusi', [Array(30).fill('header'),
+    ['', 'R01-ABC', 'R01-ABC-PNY.007', 'R01-ABC-PNY.007-EKS.009', 'ULP Toboali', '', '', 'ROW 02',
+      '', '', '', '', '', '', '', '', '', 'keep-photo', 'keep-url', '', '', '', '', '', '', '', '', '', '', '']]);
+  const ss = { getSheetByName: name => sheets[name] };
+  ctx.SpreadsheetApp.openById = () => ss;
+  ctx.markWaDirty_ = key => { assert.ok(locked); events.push(['dirty', key]); };
+  ctx.originalrefreshLaporanHarianROW = () => { assert.ok(locked); events.push(['refresh']); };
+  ctx.prosesEksekusiROW = key => {
+    assert.ok(locked); events.push(['raw', key]);
+    if (options.rawChangesUlp) execution.rows[1][4] = 'ULP Lain';
+    if (!options.rawFails) execution.rows.find(row => row[3] === key)[3] = 'R02-ABC-PNY.007-EKS.010';
+    locked = false; // Real legacy processor releases the script lock.
+    return { ok: !options.rawFails, message: 'secret must not escape' };
+  };
+  const source = read('ROW/Tek-ROW-Code.js');
+  for (const name of ['_adaPekerjaanPerbaikanROW_', '_isTimROW_']) {
+    const start = source.indexOf('function ' + name + '('), end = source.indexOf('\n}', start);
+    assert.ok(start >= 0 && end > start);
+    vm.runInContext(source.slice(start, end + 2), ctx);
+  }
+  ctx.TRIGGER_SISI_TUGAS = [{ fn: rowJob, tiapMenit: 1, berat: true }];
+  return { ...f, ctx, header, realisation, execution, events, options,
+    get locked() { return locked; } };
+}
+test('ROW source removes exactly the three legacy callable functions', () => {
+  const row = read('ROW/Tek-ROW-Code.js');
+  for (const name of ['perbaikanMassalKodeROW', 'jalankanPerbaikanMassalKodeROWMenit', 'setupTriggerPerbaikanMassalMenit']) {
+    assert.doesNotMatch(row, new RegExp('function\\s+' + name + '\\s*\\('));
+    assert.ok(!read('Core/ZZZZ-P0-Remaining-Guards.js').includes('"' + name + '"'));
+  }
+  assert.ok(!read('Core/Trigger-Manager.js').includes('"jalankanPerbaikanMassalKodeROWMenit"'));
+  const source = read('Core/Trigger-Manager.js');
+  assert.ok(source.indexOf('fn: "drainAntreanP0"') < source.indexOf('fn: "' + rowJob + '"'));
+});
+test('ROW requires private capability; request flags and HTTP actions cannot forge it', () => {
+  const f = rowFixture();
+  assert.throws(() => f.ctx[rowJob]({ scheduled: true, internal: true, token: 'valid' }), /CONTEXT_REQUIRED/);
+  assert.throws(() => f.ctx._triggerSisiHandler_(rowJob)(), /CONTEXT_REQUIRED/);
+  assert.throws(() => f.ctx.apiRouter_({ parameter: { action: rowJob } }, {}), /PRIVATE_ACTION_DENIED/);
+  assert.throws(() => f.ctx.doPost({ postData: { contents: JSON.stringify({ action: rowJob }) } }), /PRIVATE_ACTION_DENIED/);
+  assert.equal(f.events.length, 0);
+});
+test('ROW cascade preserves suffixes, photo identities, and is idempotent', () => {
+  const f = rowFixture();
+  assert.equal(f.ctx._t11TickPusatSiSi_().gagal.length, 0);
+  assert.equal(f.header.rows[1][1], 'R02-ABC');
+  assert.equal(f.realisation.rows[1][2], 'R02-ABC-PNY.007');
+  assert.equal(f.execution.rows[1][3], 'R02-ABC-PNY.007-EKS.009');
+  assert.deepEqual(f.execution.rows[1].slice(17, 19), ['keep-photo', 'keep-url']);
+  assert.deepEqual(f.events.filter(x => x[0] === 'dirty'), [['dirty', 'R02-ABC']]);
+  assert.equal(f.events.filter(x => x[0] === 'refresh').length, 1);
+  f.props.clear(); f.events.length = 0;
+  assert.equal(f.ctx._t11TickPusatSiSi_().gagal.length, 0);
+  assert.equal(f.events.length, 0);
+  assert.equal(f.locked, false);
+  assert.throws(() => f.ctx[rowJob](), /CONTEXT_REQUIRED/);
+});
+for (const scenario of ['foreignHeader', 'foreignExecution', 'blankUlp', 'orphan', 'duplicateHeader', 'duplicateExecution', 'badSchema', 'lockFails']) {
+  test('ROW fail closed before writes: ' + scenario, () => {
+    const f = rowFixture({ lockFails: scenario === 'lockFails' });
+    if (scenario === 'foreignHeader') f.header.rows[1][2] = 'ULP Lain';
+    if (scenario === 'foreignExecution') f.execution.rows[1][4] = 'ULP Lain';
+    if (scenario === 'blankUlp') f.execution.rows[1][4] = '';
+    if (scenario === 'orphan') f.realisation.rows[1][1] = 'missing';
+    if (scenario === 'duplicateHeader') f.header.rows.push(f.header.rows[1].slice());
+    if (scenario === 'duplicateExecution') f.execution.rows.push(f.execution.rows[1].slice());
+    if (scenario === 'badSchema') f.ctx.COL_ROW.ulp = undefined;
+    const result = f.ctx._t11TickPusatSiSi_();
+    assert.equal(result.gagal.length, 1);
+    assert.equal(f.events.length, 0);
+    assert.ok(!JSON.stringify(result).includes('secret'));
+    assert.equal(JSON.parse(f.props.get('TRIGGER_SISI_LAST_RUN_V2'))[rowJob], undefined);
+    assert.equal(f.locked, false);
+  });
+}
+test('ROW target collision does not overwrite either chain', () => {
+  const f = rowFixture();
+  const second = f.header.rows[1].slice(); second[1] = 'R02-ABC';
+  f.header.rows.push(second);
+  assert.equal(f.ctx._t11TickPusatSiSi_().gagal.length, 0);
+  assert.equal(f.events.length, 0);
+  assert.equal(f.execution.rows[1][3], 'R01-ABC-PNY.007-EKS.009');
+});
+test('ROW raw processing reacquires lock and failures do not stamp success', () => {
+  for (const options of [{}, { rawFails: true }, { rawChangesUlp: true }]) {
+    const f = rowFixture(options); f.execution.rows[1][3] = 'raw-key';
+    const result = f.ctx._t11TickPusatSiSi_();
+    assert.equal(f.events.filter(x => x[0] === 'raw').length, 1);
+    assert.equal(result.gagal.length, options.rawFails || options.rawChangesUlp ? 1 : 0);
+    if (result.gagal.length) {
+      assert.equal(JSON.parse(f.props.get('TRIGGER_SISI_LAST_RUN_V2'))[rowJob], undefined);
+      assert.ok(!JSON.stringify(result).includes('secret'));
+      assert.ok(!f.events.some(x => x[0] === 'refresh'));
+    }
+    assert.equal(f.locked, false);
+  }
+});
+test('ROW detects row mutation immediately before cascade write', () => {
+  const f = rowFixture({ beforeRowRead(name, rows, rowNumber, width) {
+    if (name === 'header' && width === 16) rows[1][2] = 'ULP Lain';
+  } });
+  const result = f.ctx._t11TickPusatSiSi_();
+  assert.equal(result.gagal.length, 1); assert.match(result.gagal[0].error, /ROW_CHANGED/);
+  assert.equal(f.events.length, 0);
+});
+test('ROW follows WM synchronously in the same scheduler tick', () => {
+  const f = rowFixture(), order = [];
+  // Resolver returns functions synchronously; no independent timer is created.
+  f.ctx.wmOrderProbe = () => { order.push('wm-start', 'wm-end'); };
+  const mark = f.ctx.markWaDirty_;
+  f.ctx.markWaDirty_ = key => { order.push('row'); mark(key); };
+  f.ctx.TRIGGER_SISI_TUGAS.unshift({ fn: 'wmOrderProbe', tiapMenit: 5 });
+  assert.equal(f.ctx._t11TickPusatSiSi_().gagal.length, 0);
+  assert.deepEqual(order, ['wm-start','wm-end','row']);
+});
+test('ROW missing dependency and Sheet errors fail closed without leaking details', () => {
+  for (const kind of ['missing', 'write']) {
+    const f = rowFixture({ writeFails: kind === 'write' });
+    if (kind === 'missing') f.ctx.markWaDirty_ = undefined;
+    const result = f.ctx._t11TickPusatSiSi_();
+    assert.equal(result.gagal.length, 1);
+    assert.match(result.gagal[0].error, /T11_ROW_MAINTENANCE_FAILED/);
+    assert.equal(f.events.length, 0);
+    assert.equal(f.locked, false);
+  }
+});
+test('ROW actual raw processor executes inside private tick and retains photo fields', () => {
+  const f = rowFixture(), ctx = f.ctx;
+  f.execution.rows[1][3] = 'raw-key';
+  f.execution.rows[1][6] = '2026-10-01';
+  f.execution.rows[1][8] = 'Penyulang';
+  Object.assign(ctx.COL_ROW, { tanggal: 6, penyulang: 8, inputOleh: 28 });
+  ctx.COL_ROW_N = 30;
+  ctx._normTanggal = x => String(x);
+  ctx._ensureRealisasiInduk = () => {
+    assert.ok(f.locked);
+    return { kodeHeader: 'R02-ABC', kodePekerjaan: 'R02-ABC-PNY.007', dibuat: false };
+  };
+  ctx._generateKodeEksekusiRow = () => {
+    assert.ok(f.locked);
+    return 'R02-ABC-PNY.007-EKS.010';
+  };
+  ctx.markRecalcRowDirty_ = () => true;
+  ctx.enqueueFotoRow_ = key => f.events.push(['photo-queued', key]);
+  // Legacy process releases its lock before queuing WA.
+  ctx.markWaDirty_ = key => f.events.push(['dirty', key]);
+  const source = read('ROW/Tek-ROW-Code.js');
+  const start = source.indexOf('function prosesEksekusiROW(');
+  const end = source.indexOf('\n}', start);
+  vm.runInContext(source.slice(start, end + 2), ctx);
+  assert.equal(ctx._t11TickPusatSiSi_().gagal.length, 0);
+  assert.equal(f.execution.rows[1][3], 'R02-ABC-PNY.007-EKS.010');
+  assert.deepEqual(f.execution.rows[1].slice(17, 19), ['keep-photo', 'keep-url']);
+  assert.ok(f.events.some(x => x[0] === 'photo-queued'));
+  assert.equal(f.locked, false);
+});
 function fixture(options = {}) {
   const props = new Map(), writes = [], calls = [], logs = [];
   let locked = false;

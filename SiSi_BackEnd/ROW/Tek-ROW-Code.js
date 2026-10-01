@@ -1163,7 +1163,7 @@ function _ensureRealisasiInduk(ss, opts){
       // baru terus mewarisi Kode Header lama yg salah ("header tidak mau berubah") & Kode
       // Pekerjaan (ayah) bisa kosong/tak berantai -> rantai berhenti. Maka di sini: (A) pastikan
       // KAKEK ada & tag benar, (B) pastikan AYAH ada & berantai dari kakek, (C) tulis-balik.
-      // Selaras dgn perbaikanMassalKodeROW.
+      // Selaras dgn worker privat _t11PerbaikanKodeROW_.
 
       // Helper: nomor urut Kode Pekerjaan (PNY) berikutnya utk sebuah Kode Header. Hanya
       // menghitung baris yg SUDAH punya Kode Pekerjaan <kh>-PNY.nnn, sehingga baris induk yg
@@ -2040,199 +2040,11 @@ function debugRealisasiWaRow(tim, tanggal) {
 }
 
 
-/* ═══ PERBAIKAN MASSAL KODE ROW (R01→R02 + cascade PNY/EKS) ═══
-   Tujuan: memperbaiki baris yang SUDAH terlanjur terbuat dgn tag Kode Header salah
-   (mis. "R01-..." hasil INITIAL VALUE AppSheet USERSETTINGS("Sub-Tim") yg basi), padahal
-   Sub-Tim baris itu "ROW 02" (seharusnya "R02-..."). Berbeda dgn prosesEksekusiROW yg hanya
-   memproses SATU Kode Eksekusi & TIDAK mengoreksi induk yg sudah ada, fungsi ini AMAN dijalankan
-   bare dari editor (tanpa argumen) dan memperbaiki SEMUA baris terdampak sekaligus.
+/* Bulk code repair now lives in the private T11 scheduler worker.
+   Before installing this source, separately remove any legacy ROW timer.
+   This file does not install/delete triggers or execute a migration on load.
 
-   ALUR (top-down, anti-pecah rantai):
-     1) Pindai db_Global_Header (Tim='ROW'): hitung tag yg benar = 'R' + 2 digit terakhir
-        Sub-Tim. Bila tag Kode Header TIDAK cocok -> TUKAR hanya bagian tag, sisa kode
-        (<KodeULP><YYMMDD><NNN>) DIPERTAHANKAN -> mis. R01-1613260619001 -> R02-1613260619001.
-        (Sisa kode dipertahankan agar nomor urut & relasi anak tetap konsisten.) Bila target
-        sudah dipakai baris header LAIN -> DILEWATI & dicatat sbg konflik (tdk menimpa).
-     2) Cascade db_ROW_Realisasi: ganti prefiks header lama -> baru pada Kode Header (sama persis)
-        & Kode Pekerjaan (<KodeHeader>-PNY.nnn).
-     3) Cascade db_ROW_Eksekusi: ganti prefiks header lama -> baru pada Kode Header, Kode
-        Pekerjaan, & Kode Eksekusi (<KodePekerjaan>-EKS.nnn). Suffix -PNY.nnn/-EKS.nnn TIDAK
-        diubah -> rantai tetap utuh.
-     4) (Opsional, default ON) Proses Kode Eksekusi MENTAH (masih UNIQUEID, belum ber-'-EKS.')
-        utk Tim ROW via prosesEksekusiROW -> baris yg belum pernah diproses ikut dibangun
-        rantainya (Header/Pekerjaan/Eksekusi) dgn tag yg sudah benar.
-     5) Rebuild WA Text header (recalcWaByHeader) utk tiap Kode Header baru + refresh Laporan.
-
-   opts (opsional):
-     - dryRun: true  -> simulasi, TIDAK menulis apa pun (lihat ringkasan di Logs dulu).
-     - prosesRawEks: false -> lewati langkah 4 (jangan proses Kode Eksekusi mentah).
-   Jalankan: perbaikanMassalKodeROW()  atau  perbaikanMassalKodeROW({dryRun:true}) utk pratinjau. */
-function perbaikanMassalKodeROW(opts){
-  opts = opts || {};
-  var dryRun       = !!opts.dryRun;
-  var prosesRawEks = opts.prosesRawEks !== false;   // default true
-  try{
-    var ss  = SpreadsheetApp.openById(SPREADSHEET_ID);
-    var H   = COL_INS.HEADER;
-    var shH = ss.getSheetByName(SHEET_INS.HEADER);
-    var shL = ss.getSheetByName('db_ROW_Realisasi');
-    var shE = ss.getSheetByName('db_ROW_Eksekusi');
-    if(!shH || !shL || !shE) return { ok:false, message:'Sheet tidak ditemukan (Header/Realisasi/Eksekusi)' };
-
-    var log = { headerDiperbaiki:0, headerKonflik:0, realisasiDiperbaiki:0,
-                eksekusiDiperbaiki:0, rawDiproses:0, detail:[] };
-    var headerMap = {};   // Kode Header lama -> baru
-
-    /* 1) Koreksi tag Kode Header di db_Global_Header (Tim='ROW'). */
-    if(shH.getLastRow() > 1){
-      var hData = shH.getRange(2, 1, shH.getLastRow() - 1, 16).getValues();
-      var existingHeaders = {};
-      for(var a=0;a<hData.length;a++){
-        var khA = String(hData[a][H.kodeHeader]||'').trim();
-        if(khA) existingHeaders[khA] = 1;
-      }
-      for(var i=0;i<hData.length;i++){
-        if(String(hData[i][H.tim]||'').trim() !== 'ROW') continue;
-        var subTim = String(hData[i][H.subTim]||'').trim();
-        var kh     = String(hData[i][H.kodeHeader]||'').trim();
-        if(!subTim || !kh) continue;
-        var expectedTag = 'R' + subTim.slice(-2);
-        var dashIdx = kh.indexOf('-');
-        var curTag  = dashIdx >= 0 ? kh.substring(0, dashIdx) : kh;
-        if(curTag === expectedTag) continue;                 // sudah benar
-        var sisa  = dashIdx >= 0 ? kh.substring(dashIdx) : '';  // termasuk '-'
-        var newKh = expectedTag + sisa;
-        if(newKh === kh) continue;
-        if(existingHeaders[newKh]){                           // target sudah dipakai baris lain
-          log.headerKonflik++;
-          log.detail.push('KONFLIK: ' + kh + ' -> ' + newKh + ' (target sudah ada, dilewati)');
-          continue;
-        }
-        headerMap[kh] = newKh;
-        existingHeaders[newKh] = 1;
-        if(!dryRun) shH.getRange(i + 2, H.kodeHeader + 1).setValue(newKh);
-        log.headerDiperbaiki++;
-        log.detail.push('Header: ' + kh + ' -> ' + newKh + ' (Sub-Tim ' + subTim + ')');
-      }
-      if(!dryRun) SpreadsheetApp.flush();
-    }
-
-    var adaMap = Object.keys(headerMap).length > 0;
-
-    /* 2) Cascade db_ROW_Realisasi (Kode Header + Kode Pekerjaan). */
-    if(adaMap && shL.getLastRow() > 1){
-      var RL = COL_ROW_RLZ;
-      var lData = shL.getRange(2, 1, shL.getLastRow() - 1, COL_ROW_RLZ_N).getValues();
-      for(var r=0;r<lData.length;r++){
-        var khR = String(lData[r][RL.kodeHeader]||'').trim();
-        var kpR = String(lData[r][RL.kodePekerjaan]||'').trim();
-        var setKh = khR, setKp = kpR, changed = false;
-        if(headerMap[khR]){ setKh = headerMap[khR]; changed = true; }
-        for(var oldKh in headerMap){
-          if(kpR.indexOf(oldKh + '-') === 0){ setKp = headerMap[oldKh] + kpR.substring(oldKh.length); changed = true; break; }
-        }
-        if(changed){
-          if(!dryRun){
-            if(setKh !== khR) shL.getRange(r + 2, RL.kodeHeader + 1).setValue(setKh);
-            if(setKp !== kpR) shL.getRange(r + 2, RL.kodePekerjaan + 1).setValue(setKp);
-          }
-          log.realisasiDiperbaiki++;
-        }
-      }
-      if(!dryRun) SpreadsheetApp.flush();
-    }
-
-    /* 3) Cascade db_ROW_Eksekusi (Kode Header + Kode Pekerjaan + Kode Eksekusi). */
-    if(adaMap && shE.getLastRow() > 1){
-      var eData = shE.getRange(2, 1, shE.getLastRow() - 1, COL_ROW_N).getValues();
-      for(var e=0;e<eData.length;e++){
-        var khE = String(eData[e][COL_ROW.kodeHeader]||'').trim();
-        var kpE = String(eData[e][COL_ROW.kodePekerjaan]||'').trim();
-        var keE = String(eData[e][COL_ROW.kodeEksekusi]||'').trim();
-        var setKhE = khE, setKpE = kpE, setKeE = keE, chg = false;
-        if(headerMap[khE]){ setKhE = headerMap[khE]; chg = true; }
-        for(var oldKh2 in headerMap){
-          var nw = headerMap[oldKh2];
-          if(kpE.indexOf(oldKh2 + '-') === 0){ setKpE = nw + kpE.substring(oldKh2.length); chg = true; }
-          if(keE.indexOf(oldKh2 + '-') === 0){ setKeE = nw + keE.substring(oldKh2.length); chg = true; }
-        }
-        if(chg){
-          if(!dryRun){
-            if(setKhE !== khE) shE.getRange(e + 2, COL_ROW.kodeHeader + 1).setValue(setKhE);
-            if(setKpE !== kpE) shE.getRange(e + 2, COL_ROW.kodePekerjaan + 1).setValue(setKpE);
-            if(setKeE !== keE) shE.getRange(e + 2, COL_ROW.kodeEksekusi + 1).setValue(setKeE);
-          }
-          log.eksekusiDiperbaiki++;
-        }
-      }
-      if(!dryRun) SpreadsheetApp.flush();
-    }
-
-    /* 4) Proses Kode Eksekusi MENTAH (UNIQUEID, belum ber-'-EKS.') utk Tim ROW. */
-    if(prosesRawEks && !dryRun && shE.getLastRow() > 1){
-      var eRaw = shE.getRange(2, 1, shE.getLastRow() - 1, COL_ROW_N).getValues();
-      var rawKeys = [];
-      for(var e2=0;e2<eRaw.length;e2++){
-        var tim2 = String(eRaw[e2][COL_ROW.tim]||'').trim();
-        var ke2  = String(eRaw[e2][COL_ROW.kodeEksekusi]||'').trim();
-        if(!ke2 || !_isTimROW_(tim2)) continue;
-        if(ke2.indexOf('-EKS.') >= 0) continue;   // sudah berantai
-        rawKeys.push(ke2);
-      }
-      for(var rk=0;rk<rawKeys.length;rk++){
-        try{ var res = prosesEksekusiROW(rawKeys[rk]); if(res && res.ok) log.rawDiproses++; }
-        catch(ePr){ Logger.log('[perbaikanMassalKodeROW] proses raw gagal (' + rawKeys[rk] + '): ' + ePr.message); }
-      }
-    }
-
-    /* 5) Rebuild WA Text header (tiap Kode Header baru) + refresh Laporan Harian. */
-    if(!dryRun && (log.eksekusiDiperbaiki > 0 || log.realisasiDiperbaiki > 0 || log.rawDiproses > 0)){
-      for(var oldKh3 in headerMap){
-        try{ if(typeof recalcWaByHeader === 'function') recalcWaByHeader(headerMap[oldKh3]); }
-        catch(eW){ Logger.log('[perbaikanMassalKodeROW] recalcWaByHeader gagal (' + headerMap[oldKh3] + '): ' + eW.message); }
-      }
-      try{ refreshLaporanHarianROW(); } catch(eR){ Logger.log('[perbaikanMassalKodeROW] refreshLaporanHarianROW gagal: ' + eR.message); }
-    }
-
-    Logger.log('[perbaikanMassalKodeROW] ' + JSON.stringify(log, null, 2));
-    return { ok:true, dryRun:dryRun, ringkasan:log };
-  }catch(e){
-    Logger.log('[perbaikanMassalKodeROW] ERROR: ' + e.message);
-    return { ok:false, message:'Error: ' + e.message };
-  }
-}
-
-
-/* ═══ WRAPPER TRIGGER TIAP MENIT (AMAN) UNTUK perbaikanMassalKodeROW ═══
-   PENTING: pasang trigger waktu ke fungsi INI, JANGAN ke perbaikanMassalKodeROW langsung.
-   Walau objek event trigger tidak merusak default perbaikanMassalKodeROW
-   (dryRun=false, prosesRawEks=true), wrapper ini menambah 2 pengaman utk cadence tiap menit:
-     (1) LockService (script lock): bila run sebelumnya BELUM selesai, run ini langsung dilewati
-         -> anti-overlap (mencegah dua run menulis sheet bersamaan & salah hitung nomor PNY/EKS).
-     (2) Guard EXIT CEPAT: bila TIDAK ada Kode Eksekusi mentah (UNIQUEID) utk Tim ROW & TIDAK ada
-         Kode Header ROW ber-tag salah, langsung keluar tanpa memindai berat -> hemat kuota.
-   Hanya bila ada pekerjaan nyata, baru memanggil perbaikanMassalKodeROW({ prosesRawEks:true }). */
-function jalankanPerbaikanMassalKodeROWMenit(){
-  var lock = LockService.getScriptLock();
-  if(!lock.tryLock(0)){
-    Logger.log('[perbaikanMassalKodeROWMenit] Dilewati: run sebelumnya masih berjalan (locked).');
-    return { skipped:true, alasan:'locked' };
-  }
-  try{
-    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    if(!_adaPekerjaanPerbaikanROW_(ss)){
-      Logger.log('[perbaikanMassalKodeROWMenit] Exit cepat: tidak ada Kode Eksekusi mentah / tag header salah.');
-      return { skipped:true, alasan:'nihil' };
-    }
-    var hasil = perbaikanMassalKodeROW({ prosesRawEks:true });
-    Logger.log('[perbaikanMassalKodeROWMenit] ' + JSON.stringify(hasil));
-    return hasil;
-  } finally {
-    try{ lock.releaseLock(); }catch(eRel){}
-  }
-}
-
-/* Guard ringan: ADA pekerjaan utk perbaikanMassalKodeROW?
+   Guard ringan: ADA pekerjaan utk _t11PerbaikanKodeROW_?
    true bila (a) ada baris db_ROW_Eksekusi Tim ROW dgn Kode Eksekusi MENTAH (belum ber-'-EKS.'),
    ATAU (b) ada baris db_Global_Header Tim='ROW' dgn tag Kode Header != 'R'+2 digit Sub-Tim.
    Hanya membaca kolom yg perlu (bukan getDataRange penuh) agar murah dipanggil tiap menit. */
@@ -2271,23 +2083,6 @@ function _adaPekerjaanPerbaikanROW_(ss){
   }
   return false;
 }
-
-/* ═══ PASANG TRIGGER perbaikan massal ROW tiap 1 menit (jalankan manual SEKALI) ═══
-   Memasang trigger waktu tiap 1 menit ke wrapper aman jalankanPerbaikanMassalKodeROWMenit.
-   Aman dijalankan ulang: trigger lama utk wrapper ini DAN trigger langsung ke
-   perbaikanMassalKodeROW (bila pernah dipasang) dihapus dulu -> anti-dobel. */
-function setupTriggerPerbaikanMassalMenit(){
-  ScriptApp.getProjectTriggers().forEach(function(t){
-    var fn = t.getHandlerFunction();
-    if(fn === 'jalankanPerbaikanMassalKodeROWMenit' || fn === 'perbaikanMassalKodeROW'){
-      ScriptApp.deleteTrigger(t);
-    }
-  });
-  ScriptApp.newTrigger('jalankanPerbaikanMassalKodeROWMenit').timeBased().everyMinutes(1).create();
-  Logger.log('Trigger perbaikan massal ROW dipasang (tiap 1 menit, via wrapper aman).');
-  return '✅ Trigger tiap 1 menit dipasang ke jalankanPerbaikanMassalKodeROWMenit (anti-overlap + exit cepat). Trigger langsung ke perbaikanMassalKodeROW (bila ada) sudah dihapus.';
-}
-
 
 /* ═══ URL WEB APP (untuk tombol "Unduh PDF" di frontend Tab 2) ═══
    Mengembalikan URL deployment /exec aktif. Frontend memanggil getExecUrlROW() lalu

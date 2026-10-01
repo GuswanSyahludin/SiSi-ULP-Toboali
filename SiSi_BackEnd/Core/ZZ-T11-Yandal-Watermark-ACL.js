@@ -10,11 +10,166 @@
   // below can establish this execution-local queue context.
   var queueContext = null;
   var queueCapability = {};
+  // A scheduled resolver is not sufficient authority on its own. This entry
+  // checks the unforgeable closure context even when called directly.
+  root._t11PerbaikanKodeROW_ = function () {
+    if (queueContext !== queueCapability) throw new Error('T11_WORKER_CONTEXT_REQUIRED');
+    return _repairKodeRow_();
+  };
+  function _repairKodeRow_() {
+    function stop(code) { throw new Error('T11_ROW_' + code); }
+    var lock = LockService.getScriptLock(), started = Date.now();
+    function acquire() {
+      lock.waitLock(15000);
+      if (!lock.hasLock()) stop('LOCK_REQUIRED');
+    }
+    function owned(value) { return need_('ulpSama_')(value, 'ULP Toboali'); }
+    function populated(row) {
+      return row.some(function (v) { return v !== '' && v != null; });
+    }
+    var H = root.COL_INS && root.COL_INS.HEADER, E = root.COL_ROW, R = root.COL_ROW_RLZ;
+    if (!H || !E || !R || !root.SHEET_INS) stop('SCHEMA_MISSING');
+    [H.kodeHeader, H.ulp, H.tim, H.subTim, E.kodeHeader, E.kodePekerjaan,
+      E.kodeEksekusi, E.ulp, E.tim, R.kodeHeader, R.kodePekerjaan].forEach(function (col) {
+      if (!Number.isInteger(col) || col < 0) stop('SCHEMA_MISSING');
+    });
+    var ss, shH, shR, shE;
+    function _read_(sh) {
+      if (!sh) stop('SHEET_MISSING');
+      return sh.getDataRange().getValues();
+    }
+    // Legacy parent lookup matches team/date without ULP. Refuse the WHOLE
+    // maintenance job if any populated header/execution has unresolved or
+    // foreign ownership, or any realisation cannot resolve a unique header.
+    function _snapshot_() {
+      var h = _read_(shH), r = _read_(shR), e = _read_(shE), headers = Object.create(null);
+      h.slice(1).forEach(function (row) {
+        if (!populated(row)) return;
+        if (!owned(row[H.ulp])) stop('ULP_UNRESOLVED_OR_FOREIGN');
+        var key = text_(row[H.kodeHeader]);
+        if (!key || headers[key]) stop('HEADER_AMBIGUOUS');
+        headers[key] = row;
+      });
+      r.slice(1).forEach(function (row) {
+        if (populated(row) && !headers[text_(row[R.kodeHeader])]) stop('PARENT_UNRESOLVED');
+      });
+      var keys = Object.create(null);
+      e.slice(1).forEach(function (row) {
+        if (!populated(row)) return;
+        if (!owned(row[E.ulp])) stop('ULP_UNRESOLVED_OR_FOREIGN');
+        var key = text_(row[E.kodeEksekusi]);
+        if (key && keys[key]) stop('EXECUTION_AMBIGUOUS');
+        if (key) keys[key] = true;
+      });
+      return { h: h, r: r, e: e, headers: headers };
+    }
+    function _writeRow_(sh, index, before, after, columns) {
+      if (!lock.hasLock()) stop('LOCK_REQUIRED');
+      var fresh = sh.getRange(index + 1, 1, 1, before.length).getValues()[0];
+      if (JSON.stringify(fresh) !== JSON.stringify(before)) stop('ROW_CHANGED');
+      columns.forEach(function (col) {
+        if (before[col] !== after[col]) sh.getRange(index + 1, col + 1).setValue(after[col]);
+      });
+    }
+    try {
+      acquire();
+      ss = SpreadsheetApp.openById(root.SPREADSHEET_ID);
+      shH = ss.getSheetByName(root.SHEET_INS.HEADER);
+      shR = ss.getSheetByName('db_ROW_Realisasi');
+      shE = ss.getSheetByName('db_ROW_Eksekusi');
+      var initial = _snapshot_();
+      if (!need_('_adaPekerjaanPerbaikanROW_')(ss)) return { ok: true, skipped: 'nihil' };
+      // Resolve dependencies before the first write. No global guard bypass.
+      var process = need_('prosesEksekusiROW'), mark = need_('markWaDirty_');
+      var refresh = need_('originalrefreshLaporanHarianROW');
+      var map = Object.create(null), occupied = Object.create(null), plans = [];
+      Object.keys(initial.headers).forEach(function (key) { occupied[key] = true; });
+      var result = { ok: true, headerDiperbaiki: 0, headerKonflik: 0,
+        realisasiDiperbaiki: 0, eksekusiDiperbaiki: 0, rawDiproses: 0 };
+      initial.h.forEach(function (row, i) {
+        if (!i || text_(row[H.tim]) !== 'ROW') return;
+        var sub = text_(row[H.subTim]), old = text_(row[H.kodeHeader]);
+        if (!sub || !old) return;
+        if (!/\d{2}$/.test(sub) || old.indexOf('-') < 1) stop('INVALID_HEADER');
+        var next = 'R' + sub.slice(-2) + old.slice(old.indexOf('-'));
+        if (old === next) return;
+        if (occupied[next]) { result.headerKonflik++; return; }
+        occupied[next] = true; map[old] = next;
+        var after = row.slice(); after[H.kodeHeader] = next;
+        plans.push({ sh: shH, i: i, before: row, after: after, cols: [H.kodeHeader] });
+        result.headerDiperbaiki++;
+      });
+      function cascade(rows, sh, cols, countKey) {
+        rows.forEach(function (row, i) {
+          if (!i) return;
+          var after = row.slice(), changed = false;
+          cols.forEach(function (col, slot) {
+            var value = text_(row[col]);
+            Object.keys(map).some(function (old) {
+              if ((slot === 0 && value === old) || (slot > 0 && value.indexOf(old + '-') === 0)) {
+                after[col] = map[old] + value.slice(old.length); changed = true; return true;
+              }
+              return false;
+            });
+          });
+          if (changed) {
+            plans.push({ sh: sh, i: i, before: row, after: after, cols: cols });
+            result[countKey]++;
+          }
+        });
+      }
+      cascade(initial.r, shR, [R.kodeHeader, R.kodePekerjaan], 'realisasiDiperbaiki');
+      cascade(initial.e, shE, [E.kodeHeader, E.kodePekerjaan, E.kodeEksekusi], 'eksekusiDiperbaiki');
+      // Recheck all ownership immediately before the cascade starts.
+      var prewrite = _snapshot_();
+      if (JSON.stringify([prewrite.h, prewrite.r, prewrite.e]) !==
+          JSON.stringify([initial.h, initial.r, initial.e])) stop('ROW_CHANGED');
+      plans.forEach(function (plan) { _writeRow_(plan.sh, plan.i, plan.before, plan.after, plan.cols); });
+      SpreadsheetApp.flush();
+      // Mark every changed header dirty before raw processing can fail. No
+      // authenticated public WA endpoint is invoked without a session.
+      Object.keys(map).forEach(function (old) { mark(map[old]); });
+      var current = _snapshot_(), raw = [];
+      current.e.slice(1).forEach(function (row) {
+        var key = text_(row[E.kodeEksekusi]);
+        if (key && key.indexOf('-EKS.') < 0 && need_('_isTimROW_')(row[E.tim])) raw.push(key);
+      });
+      for (var i = 0; i < raw.length; i++) {
+        if (Date.now() - started > 90000) { result.terpotong = true; break; }
+        acquire(); _snapshot_();
+        var answer = process(raw[i]);
+        // Legacy process releases the script lock; reacquire before any
+        // subsequent action and never interpret ok:false as completed.
+        acquire(); _snapshot_();
+        if (!answer || answer.ok !== true) stop('RAW_PROCESS_FAILED');
+        result.rawDiproses++;
+      }
+      if (plans.length || result.rawDiproses) {
+        acquire(); _snapshot_(); refresh();
+      }
+      return result;
+    } catch (error) {
+      // Only fixed codes are permitted in scheduler logs.
+      var message = error && typeof error.message === 'string' ? error.message : '';
+      if (!/^T11_ROW_(LOCK_REQUIRED|SCHEMA_MISSING|SHEET_MISSING|ULP_UNRESOLVED_OR_FOREIGN|HEADER_AMBIGUOUS|PARENT_UNRESOLVED|EXECUTION_AMBIGUOUS|ROW_CHANGED|INVALID_HEADER|RAW_PROCESS_FAILED)$/.test(message))
+        message = 'T11_ROW_MAINTENANCE_FAILED';
+      throw new Error(message);
+    } finally {
+      try { if (lock.hasLock()) lock.releaseLock(); } catch (releaseError) {}
+    }
+  }
   // Resolve the three legacy no-token jobs only inside trusted scheduler
   // execution. Keep their public endpoints (and all other guards) unchanged.
   var originalResolver = root._triggerSisiHandler_;
   if (typeof originalResolver === 'function') {
     root._triggerSisiHandler_ = function (name) {
+      if (['ensureLaporanHarianHariIni', 'drainLaporanDirty',
+          'drainLaporanDirtySafe'].indexOf(name) >= 0) {
+        return function () {
+          if (queueContext !== queueCapability) throw new Error('T11_WORKER_CONTEXT_REQUIRED');
+          return need_('_t11ReportMaintenance_')(name);
+        };
+      }
       if (['refreshLaporanHarianHariIni', 'sweepDurasiJarakYandalP0',
           'validasiUlangFotoTemuan'].indexOf(name) < 0)
         return originalResolver.apply(this, arguments);
@@ -376,6 +531,11 @@
   // handler names in staging to the private entry points before deployment.
   var originalDrain = root.drainAntreanP0;
   var originalTick = root.tickPusatSiSi;
+  var originalDaily = root.harianPusatSiSi;
+  root.harianPusatSiSi = function () {
+    _principal_(arguments, 'harianPusatSiSi', true);
+    return _runQueue_(originalDaily);
+  };
   root.drainAntreanP0 = function () {
     _principal_(arguments, 'drainAntreanP0', true);
     return _runQueue_(originalDrain);
@@ -396,6 +556,7 @@
   root._t11ScheduledQueueDispatch_ = function (kind) {
     if (kind === 'tick') return _runQueue_(originalTick);
     if (kind === 'drain') return _runQueue_(originalDrain);
+    if (kind === 'daily') return _runQueue_(originalDaily);
     fail_('UNKNOWN_SCHEDULED_HANDLER');
   };
   var originalRouter = root.apiRouter_;
@@ -434,4 +595,7 @@ function _t11TickPusatSiSi_() {
 }
 function _t11DrainAntreanP0_() {
   return _t11ScheduledQueueDispatch_('drain');
+}
+function _t11HarianPusatSiSi_() {
+  return _t11ScheduledQueueDispatch_('daily');
 }

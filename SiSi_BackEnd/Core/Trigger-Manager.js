@@ -4,7 +4,7 @@
    ---------------------------------------------------------------------------
    Installer mengelola 2 trigger permanen:
        1) _t11TickPusatSiSi_ : setiap 1 menit, private server scheduler.
-       2) harianPusatSiSi : setiap hari sekitar 00:30 WIB.
+       2) _t11HarianPusatSiSi_ : setiap hari sekitar 00:30 WIB.
    migrasiSemuaTick tetap boleh muncul SEMENTARA.
 
    T-11: trigger lama tickPusatSiSi/drainAntreanP0 TANPA sesi sekarang ditolak.
@@ -35,6 +35,8 @@ var TRIGGER_SISI_TUGAS = [
 
   // WM diproses 5 menit: cukup cepat, tapi tidak merebut slot tiap menit.
   { fn: "drainAntreanP0", tiapMenit: 5, berat: true },
+  // Same private T11 scheduler, after WM. No independent ROW timer.
+  { fn: "_t11PerbaikanKodeROW_", tiapMenit: 1, berat: true },
 
   // Backstop. Jalur utama tetap webhook/antrean sehingga tidak perlu tiap menit.
   { fn: "sweepWmBacklogY", tiapMenit: 15, berat: true },
@@ -57,11 +59,10 @@ var TRIGGER_SISI_HARIAN = [
   "mulaiMigrasiSemua",
 ];
 
-var TRIGGER_SISI_PERMANEN = ["_t11TickPusatSiSi_", "harianPusatSiSi"];
+var TRIGGER_SISI_PERMANEN = ["_t11TickPusatSiSi_", "_t11HarianPusatSiSi_"];
 var TRIGGER_SISI_SEMENTARA = [
   "migrasiSemuaTick",
   "jalankanRecalcPointBertahap",
-  "jalankanPerbaikanMassalKodeROWMenit",
 ];
 
 function _triggerSisiGlobal_() {
@@ -136,7 +137,9 @@ function tickPusatSiSi() {
         continue;
       }
       try {
-        fn.call(_triggerSisiGlobal_());
+        var jobResult = fn.call(_triggerSisiGlobal_());
+        if (jobResult && jobResult.ok === false)
+          throw new Error("SISI_SCHEDULED_JOB_FAILED");
         last[tugas.fn] = Date.now();
         hasil.jalan.push(tugas.fn);
       } catch (eRun) {
@@ -216,7 +219,7 @@ function _pasangSemuaTriggerSiSi_() {
   props.deleteProperty(TRIGGER_SISI_MUTEX_PROP);
 
   ScriptApp.newTrigger("_t11TickPusatSiSi_").timeBased().everyMinutes(1).create();
-  ScriptApp.newTrigger("harianPusatSiSi")
+  ScriptApp.newTrigger("_t11HarianPusatSiSi_")
     .timeBased()
     .everyDays(1)
     .atHour(0)
@@ -283,7 +286,7 @@ function lihatJadwalTriggerSiSi() {
   return {
     permanen: [
       { fn: "_t11TickPusatSiSi_", jadwal: "setiap 1 menit" },
-      { fn: "harianPusatSiSi", jadwal: "setiap hari sekitar 00:30 WIB" },
+      { fn: "_t11HarianPusatSiSi_", jadwal: "setiap hari sekitar 00:30 WIB" },
     ],
     tugasBerkala: TRIGGER_SISI_TUGAS,
     tugasHarian: TRIGGER_SISI_HARIAN,
