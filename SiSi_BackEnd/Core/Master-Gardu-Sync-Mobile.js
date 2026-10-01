@@ -26,7 +26,7 @@ function updateMasterGarduMobile(token, payload) {
     /* ULP yang diminta klien hanya dihormati untuk Super User. Semua peran
        lain, termasuk Admin, dipaksa ke ULP sesi. */
     var targetUlp = adalahSuper ? ulpPayload || ulpSesi : ulpSesi;
-    if (!adalahSuper && ulpPayload && ulpPayload.toLowerCase() !== ulpSesi.toLowerCase())
+    if (!adalahSuper && ulpPayload && !ulpSama_(ulpPayload, ulpSesi))
       return { success: false, message: "ULP payload tidak sesuai sesi." };
     if (!adalahSuper && !ulpSesi)
       return { success: false, message: "Akun belum terhubung ke ULP." };

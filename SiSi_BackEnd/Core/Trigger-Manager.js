@@ -181,7 +181,7 @@ function harianPusatSiSi() {
 // internal/trigger flag as permission to create an authorized scheduled job.
 function pasangSemuaTriggerSiSi(params) {
   var g = guard_(arguments, { ulp: true, role: ["SUPER"], aksi: "pasangSemuaTriggerSiSi" });
-  if (String(g.ulp || "").trim().toLowerCase().replace(/\s+/g, " ") !== "ulp toboali")
+  if (!ulpSama_(g.ulp, "ULP Toboali"))
     throw new Error("T11_CALLER_ULP_DENIED");
   return _pasangSemuaTriggerSiSi_();
 }

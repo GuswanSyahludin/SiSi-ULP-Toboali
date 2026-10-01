@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
+const { guardSource, aliases } = require('./t13-ulp-closed.test.cjs');
 const root = path.join(__dirname, '..');
 const routePath = path.join(root, 'SiSi_BackEnd/Core/ZZZZZZZZZZZZZZZZZZZZZZZZ-Mobile-Reports-Route.js');
 const COL_ROW_RLZ = { kodeHeader: 1, kodePekerjaan: 2, penyulang: 6 };
@@ -29,7 +30,8 @@ function harness({ headers = [], storedHeaders = headers, realizations = [], exe
     },
     Logger: { log() {} },
   };
-  vm.createContext(ctx); vm.runInContext(fs.readFileSync(routePath, 'utf8'), ctx); return { ctx, calls };
+  vm.createContext(ctx); vm.runInContext(guardSource, ctx);
+  vm.runInContext(fs.readFileSync(routePath, 'utf8'), ctx); return { ctx, calls };
 }
 const realization = values => row(13, values, COL_ROW_RLZ);
 const execution = values => row(30, values, COL_ROW);
@@ -62,4 +64,35 @@ test('ROW details fail closed when the backing header key is duplicated across U
 test('ROW enrichment preserves failed authorization result without reading sheet data', () => {
   const denied = { success: false, message: 'Sesi habis' }; const h = harness({ rowResponse: denied });
   h.ctx.SpreadsheetApp.openById = () => assert.fail('unauthorized response must not read Sheets'); assert.strictEqual(h.ctx.getMobileLaporanHarian('expired'), denied);
+});
+
+test('ROW enrichment matches mixed owner aliases without changing returned labels or IDs', () => {
+  for (const ulp of aliases) {
+    const headers=[{kodeHeader:'H1',ulp}];
+    const h=harness({headers,storedHeaders:[{kodeHeader:'H1',ulp:'ULP Toboali'}],
+      realizations:[realization({kodeHeader:'H1',kodePekerjaan:'P1'})],
+      executions:[execution({kodeHeader:'H1',kodePekerjaan:'P1',kodeEksekusi:'E1',ulp:'Toboali'})]});
+    const result=h.ctx.getMobileLaporanHarian('valid');
+    assert.equal(result.data[0].ulp,ulp);
+    assert.equal(result.data[0].realisasi[0].eksekusi[0].kodeEksekusi,'E1');
+    assert.equal(headers[0].ulp,ulp);
+  }
+});
+
+test('Yandal roster scope accepts alias while preserving names and stored labels', () => {
+  const c=vm.createContext({SPREADSHEET_ID:'fixture',
+    apiRouter_:()=>null,getMobileLaporanHarian:()=>({success:false}),
+    _deltaRows_:()=>assert.fail('unexpected legacy roster')});
+  vm.runInContext(guardSource,c);
+  vm.runInContext(fs.readFileSync(routePath,'utf8'),c);
+  const rows=[[' ULP   Toboali ','Tim A','Original Name'],['ULP Lain','Tim A','Secret'],['','Tim A','Unknown']];
+  c.SpreadsheetApp={openById:()=>({getSheets:()=>[{
+    getName:()=> 'db_List_Petugas_Yandal',getLastRow:()=>rows.length+1,getLastColumn:()=>3,
+    getRange:r=>({getValues:()=>r===1?[['ULP','Sub-Tim','Nama Petugas']]:rows}),
+  }]})};
+  const result=c._deltaRows_({ulp:'Toboali'},'session','db_List_Petugas_Yandal',{});
+  assert.equal(result.length,1);
+  assert.equal(result[0][1],'ULP   Toboali');
+  assert.equal(result[0][3],'Original Name');
+  assert.equal(rows[0][0],' ULP   Toboali ');
 });

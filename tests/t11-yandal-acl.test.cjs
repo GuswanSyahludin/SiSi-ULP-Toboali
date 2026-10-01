@@ -7,6 +7,7 @@ const crypto = require('node:crypto');
 const { test } = require('node:test');
 const backend = path.join(__dirname, '../SiSi_BackEnd');
 const boundary = fs.readFileSync(path.join(backend, 'Core/ZZ-T11-Yandal-Watermark-ACL.js'), 'utf8');
+const guardSource = fs.readFileSync(path.join(backend, 'Core/Guard.js'), 'utf8');
 const P = { kodeP0: 3, ulp: 4, folderPath: 49 };
 const S = { kodeSwitching: 4, ulp: 5, folderPath: 49 };
 const pslots = ['Sebelum', 'Pekerjaan', 'Sesudah'].map((s, i) => {
@@ -155,6 +156,9 @@ function fixture(switching = false, options = {}) {
     return ctx[body.action](code, slots[0].key);
   };
   ctx._wmFotoY_ = () => { throw Error('UNSAFE LEGACY HELPER WAS CALLED'); };
+  const fixtureGlobals = { ...ctx };
+  vm.runInContext(guardSource, ctx);
+  Object.assign(ctx, fixtureGlobals);
   function install() { vm.runInContext(boundary, ctx, { timeout: 1000 }); }
   install();
   const invoke = (target = options.all ? '' : slots[0].key) =>
@@ -173,6 +177,40 @@ function fixture(switching = false, options = {}) {
 }
 for (const switching of [false, true]) {
   const label = switching ? 'Switching' : 'P0';
+  test(label + ': mixed Toboali aliases preserve private watermark flow', () => {
+    for (const callerUlp of ['Toboali', ' ULP   TOBOALI ']) {
+      const f = fixture(switching, { callerUlp });
+      f.row[f.cols.ulp] = callerUlp === 'Toboali' ? ' ULP   Toboali ' : 'toboali';
+      const originalOwner = f.row[f.cols.ulp];
+      f.invoke();
+      assert.equal(f.engineCalls, 1);
+      assert.equal(f.row[f.cols.ulp], originalOwner);
+      assert.ok(f.row[f.slots[0].url]);
+      assert.equal(f.locked, false);
+    }
+  });
+  test(label + ': malformed and foreign owners cannot become Toboali', () => {
+    for (const ulp of ['', ' ', 16130, 'ULP Lain', 'ULP ULP Toboali', ['Toboali']]) {
+      const caller = fixture(switching, { callerUlp: ulp });
+      assert.throws(() => caller.invoke());
+      assert.equal(caller.engineCalls, 0);
+      const row = fixture(switching);
+      row.row[row.cols.ulp] = ulp;
+      assert.throws(() => row.invoke());
+      assert.equal(row.engineCalls, 0);
+      assert.deepEqual(row.events, []);
+    }
+  });
+  test(label + ': private scheduled capability accepts Toboali rows without user tokens', () => {
+    const f = fixture(switching);
+    f.row[f.cols.ulp] = 'Toboali';
+    f.ctx._t11DrainAntreanP0_();
+    assert.equal(f.engineCalls, 1);
+    const denied = fixture(switching);
+    denied.ctx.ulpSama_ = undefined;
+    assert.throws(() => denied.invoke());
+    assert.equal(denied.engineCalls, 0);
+  });
   test('boundary: ' + label + ' all slots stay private without invoking legacy sharing', () => {
     const f = fixture(switching, { all: true }); f.invoke();
     assert.equal(f.engineCalls, f.slots.length);

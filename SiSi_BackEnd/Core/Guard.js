@@ -56,9 +56,14 @@ function _guardKecil_(v) {
   return _guardTeks_(v).toLowerCase();
 }
 
-/** Samakan bentuk ULP agar "ULP Toboali", "ulp toboali", "ULP  Toboali" setara. */
+/** Comparison only: the exact Toboali aliases share one key.
+ * Never rewrite stored ULP, session, username, or revision identities here.
+ * Numeric ULP codes retain their legacy comparison behavior.
+ */
 function _normUlp_(v) {
-  return _guardKecil_(v).replace(/\s+/g, " ");
+  if (typeof v !== "string" && typeof v !== "number") return "";
+  var key = _guardKecil_(v).replace(/\s+/g, " ");
+  return key === "toboali" ? "ulp toboali" : key;
 }
 
 function ulpSama_(a, b) {

@@ -32,7 +32,7 @@ function getListTemuanTerpakaiIns(token, ulp) {
     );
     var seen = {}, list = [];
     for (var i = 0; i < vals.length; i++) {
-      if (u && String(vals[i][C.ulp] || "").trim().toLowerCase() !== u)
+      if (u && !ulpSama_(vals[i][C.ulp], u))
         continue;
       var nama = String(vals[i][C.temuan] || "").trim();
       var key = nama.toLowerCase();
@@ -93,7 +93,7 @@ function getTitikPetaTemuanIns(filter) {
       var temuan = String(row[C.temuan] || "").trim();
       var status = _statusTemuanIns(row[C.status]);
 
-      if (fUlp && rowUlp !== fUlp) continue;
+      if (fUlp && !ulpSama_(rowUlp, fUlp)) continue;
       if (!_insInRange(tanggal, fDari, fSampai)) continue;
       if (fPeny && penyulang.toLowerCase() !== fPeny) continue;
       if (fTemuan && temuan.toLowerCase() !== fTemuan) continue;
