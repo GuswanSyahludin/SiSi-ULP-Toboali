@@ -290,3 +290,126 @@ function lihatJadwalTriggerSiSi() {
     sementaraDiizinkan: TRIGGER_SISI_SEMENTARA,
   };
 }
+
+/* Private scheduled maintenance. The T11 resolver invokes ONLY these three
+ * fixed jobs from its closure-owned queue capability. No user token, request
+ * flag, caller-supplied options, trigger installation or queue reset.
+ *
+ * Legacy public endpoints and their guards remain untouched. Bulk legacy
+ * maintenance is allowed only after a full populated-row ownership preflight:
+ * a mixed/unknown-ULP sheet stops the whole job before invoking its writer.
+ * Script locks coordinate script writers, not external AppSheet edits.
+ */
+function _t11RunMaintenance_(name) {
+  var root = _triggerSisiGlobal_();
+  function need(key) {
+    if (typeof root[key] !== "function")
+      throw new Error("T11_WORKER_DEPENDENCY_MISSING");
+    return root[key];
+  }
+  function sameUlp(value) {
+    return need("ulpSama_")(value, "ULP Toboali");
+  }
+  function _ownedSheet_(sh, col) {
+    if (!sh || !Number.isInteger(col) || col < 0 || col >= sh.getLastColumn())
+      throw new Error("T11_WORKER_SCHEMA_MISSING");
+    var rows = sh.getDataRange().getValues();
+    for (var i = 1; i < rows.length; i++) {
+      var populated = rows[i].some(function (v) { return v !== "" && v != null; });
+      if (populated && !sameUlp(rows[i][col]))
+        throw new Error("T11_WORKER_ULP_UNRESOLVED_OR_FOREIGN");
+    }
+    return rows;
+  }
+  function completed(result) {
+    if (!result || result.ok !== true) throw new Error("T11_WORKER_JOB_FAILED");
+    return result;
+  }
+  if (["refreshLaporanHarianHariIni", "sweepDurasiJarakYandalP0",
+      "validasiUlangFotoTemuan"].indexOf(name) < 0)
+    throw new Error("T11_WORKER_UNKNOWN_JOB");
+  var lock = LockService.getScriptLock();
+  function acquire() {
+    lock.waitLock(30000);
+    if (!lock.hasLock()) throw new Error("T11_WORKER_LOCK_REQUIRED");
+  }
+  try {
+    acquire();
+    if (name === "refreshLaporanHarianHariIni") {
+      // The report table has no row ULP column: it is explicitly single-ULP.
+      // Preserve its configured label and cache namespace, never default an
+      // unresolved/foreign configuration to Toboali.
+      if (!root.LH || !sameUlp(root.LH.ULP))
+        throw new Error("T11_WORKER_ULP_UNRESOLVED_OR_FOREIGN");
+      var up3Builder = need("originalbuildLaporanUP3");
+      var uiwBuilder = need("originalbuildLaporanWilayah");
+      var today = need("_lhToday")();
+      if (typeof root._tglSudahDiarsip_ === "function" && root._tglSudahDiarsip_(today))
+        return { ok: true, skipped: "diarsip", tanggal: today };
+      var ss = SpreadsheetApp.openById(root.SPREADSHEET_ID);
+      var reportSheet = need("_lhSheet")(ss);
+      var reportRow = need("_lhEnsureRow")(reportSheet, today);
+      if (!reportRow) return { ok: true, skipped: "diarsip", tanggal: today };
+      var snapshot = reportSheet.getRange(reportRow, 1, 1, 8).getValues()[0];
+      if (need("_normTgl")(snapshot[root.LH.COL.tanggal]) !== today)
+        throw new Error("T11_WORKER_ROW_CHANGED");
+      var up3 = up3Builder(today, root.LH.ULP, { c4a: need("_lhC4aFromRow")(snapshot) });
+      var uiw = uiwBuilder(today, root.LH.ULP, {});
+      if (typeof up3 !== "string" || typeof uiw !== "string")
+        throw new Error("T11_WORKER_JOB_FAILED");
+      var fresh = reportSheet.getRange(reportRow, 1, 1, 8).getValues()[0];
+      if (JSON.stringify(fresh) !== JSON.stringify(snapshot))
+        throw new Error("T11_WORKER_ROW_CHANGED");
+      reportSheet.getRange(reportRow, root.LH.COL.lapUp3 + 1).setValue(up3);
+      reportSheet.getRange(reportRow, root.LH.COL.lapUiw + 1).setValue(uiw);
+      // Same cache key as the existing mobile reader; no namespace migration.
+      CacheService.getScriptCache().remove(need("_lapMobileCacheKey_")(root.LH.ULP, today));
+      return { ok: true, tanggal: today };
+    }
+    if (name === "sweepDurasiJarakYandalP0") {
+      var sweep = need("originalsweepDurasiJarakYandalP0");
+      if (!root.SHEET_YANDAL || !root.COL_P0)
+        throw new Error("T11_WORKER_SCHEMA_MISSING");
+      var p0 = need("_shY_")(root.SHEET_YANDAL.P0);
+      _ownedSheet_(p0, root.COL_P0.ulp);
+      // Keep the existing fill-empty calculation, previous-P0 lookup, and
+      // result counters. No force option can enter this scheduled route.
+      return completed(sweep());
+    }
+    var completeCodes = need("originallengkapiKodeTemuanKosong");
+    var repairCodes = need("originalperbaikiFormatKodeTemuan");
+    var filename = need("_namaFileFotoRef");
+    if (!root.SHEET_INS || !root.COL_INS || !root.COL_INS.TEMUAN)
+      throw new Error("T11_WORKER_SCHEMA_MISSING");
+    var sh = need("_ssIns")().getSheetByName(root.SHEET_INS.TEMUAN);
+    var T = root.COL_INS.TEMUAN;
+    _ownedSheet_(sh, T.ulp);
+    // Preserve both existing preparation steps, but do NOT swallow failure.
+    // These legacy helpers release their lock, so reacquire and recheck before
+    // the next phase rather than continuing with stale ownership.
+    completed(completeCodes());
+    acquire();
+    _ownedSheet_(sh, T.ulp);
+    completed(repairCodes());
+    acquire();
+    var data = _ownedSheet_(sh, T.ulp);
+    var cleaned = 0;
+    for (var r = 1; r < data.length; r++) {
+      var v = data[r];
+      var q = filename(v[T.fotoTemuan]), oldQ = filename(v[T.fotoTemuanUrl]);
+      var s = filename(v[T.fotoTiang]), oldS = filename(v[T.fotoTiangUrl]);
+      // Drive URLs have no comparable fileName and remain untouched.
+      if ((!oldQ || oldQ === q) && (!oldS || oldS === s)) continue;
+      var current = sh.getRange(r + 1, 1, 1, v.length).getValues()[0];
+      if (!sameUlp(current[T.ulp]) || JSON.stringify(current) !== JSON.stringify(v))
+        throw new Error("T11_WORKER_ROW_CHANGED");
+      if (v[T.fotoTemuanUrl]) sh.getRange(r + 1, T.fotoTemuanUrl + 1).setValue("");
+      if (v[T.fotoTiangUrl]) sh.getRange(r + 1, T.fotoTiangUrl + 1).setValue("");
+      cleaned++;
+    }
+    SpreadsheetApp.flush();
+    return { ok: true, dibersihkan: cleaned };
+  } finally {
+    try { if (lock.hasLock()) lock.releaseLock(); } catch (releaseError) {}
+  }
+}

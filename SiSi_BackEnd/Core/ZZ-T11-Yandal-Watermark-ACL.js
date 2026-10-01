@@ -10,6 +10,37 @@
   // below can establish this execution-local queue context.
   var queueContext = null;
   var queueCapability = {};
+  // Resolve the three legacy no-token jobs only inside trusted scheduler
+  // execution. Keep their public endpoints (and all other guards) unchanged.
+  var originalResolver = root._triggerSisiHandler_;
+  if (typeof originalResolver === 'function') {
+    root._triggerSisiHandler_ = function (name) {
+      if (['refreshLaporanHarianHariIni', 'sweepDurasiJarakYandalP0',
+          'validasiUlangFotoTemuan'].indexOf(name) < 0)
+        return originalResolver.apply(this, arguments);
+      return function () {
+        if (queueContext !== queueCapability) throw new Error('T11_WORKER_CONTEXT_REQUIRED');
+        return need_('_t11RunMaintenance_')(name);
+      };
+    };
+  }
+  function diagnostic_(error) {
+    var message = error && typeof error.message === 'string' ? error.message : '';
+    // Never copy arbitrary provider/Drive errors, URLs, IDs, photo bytes,
+    // request data, or stack traces into this diagnostic.
+    if (message === 'ACL foto tidak dapat dibuat privat.') return 'ACL_NOT_PRIVATE';
+    if (message === 'Balasan wm-engine bukan JSON yang valid.') return 'ENGINE_INVALID_JSON';
+    if (message === 'Upload watermark ke Drive gagal.') return 'ENGINE_REJECTED';
+    var http = message.match(/^Engine watermark gagal \(([1-5][0-9]{2})\)\.$/);
+    return http ? 'ENGINE_HTTP_' + http[1] : 'UNCLASSIFIED';
+  }
+  function remember_(error) {
+    if (frame && !frame.cause) {
+      frame.cause = diagnostic_(error);
+      frame.causeStage = frame.stage || 'entry';
+    }
+  }
+  function stage_(value) { if (frame) frame.stage = value; }
   function _principal_(args, action, superOnly) {
     if (queueContext === queueCapability) return { ulp: 'ULP Toboali', scheduled: true };
     var opts = { ulp: true, aksi: action };
@@ -21,7 +52,13 @@
   }
   function fail_(code) {
     var error = new Error('T11_YANDAL_' + code);
-    if (frame) frame.failed = true;
+    if (frame) {
+      frame.failed = true;
+      if (!frame.cause) {
+        frame.cause = code;
+        frame.causeStage = frame.stage || 'entry';
+      }
+    }
     throw error;
   }
   function need_(name) {
@@ -142,6 +179,7 @@
     if (!frame || frame.sheetId !== sh.getSheetId() || !frame.expected[key]) fail_('PROCESSOR_CONTEXT_REQUIRED');
     try {
       frame.attempted = true;
+      stage_('row_binding');
       _assertCurrentRow_();
       if (text_(folderRel) !== frame.folderRel) fail_('ROW_BINDING_CHANGED');
       var source = text_(sh.getRange(rowNum, kSrc + 1).getValue());
@@ -149,12 +187,14 @@
       var oldWm = text_(sh.getRange(rowNum, kWm + 1).getValue());
       var oldUrl = text_(sh.getRange(rowNum, kUrl + 1).getValue());
       if (!source && !oldWm && !oldUrl) { frame.done[key] = true; return; }
+      stage_('output_folder');
       var folder = outputFolder_(rowFolder, folderRel);
+      stage_('existing_acl');
       var repairFailed = false;
       [oldWm, oldUrl].forEach(function (ref) {
         if (!ref) return;
         try { boundPrivateFile_(resolve_(ref, folder, folderRel), folder); }
-        catch (error) { repairFailed = true; }
+        catch (error) { remember_(error); repairFailed = true; }
       });
       if (repairFailed) fail_('EXISTING_ACL_FAILED');
       if (!source) {
@@ -166,6 +206,7 @@
         frame.done[key] = true;
         return;
       }
+      stage_('source_file');
       var sourceFolder = rowFolder || (root.YANDAL_IMG_FOLDER_ID
         ? DriveApp.getFolderById(root.YANDAL_IMG_FOLDER_ID) : folder);
       var sourceId = resolve_(source, sourceFolder, folderRel);
@@ -190,9 +231,11 @@
         _assertCurrentRow_();
         // Authentication and same-ULP checks already ran before any reads.
         // The private transport avoids forging a user session for scheduled work.
+        stage_('engine');
         outputId = fileId_(need_('_h07WatermarkImpl_')(sourceId, folder.getId(), metadata, wmName));
         if (!outputId) fail_('INVALID_ENGINE_RESULT');
       }
+      stage_('output_verify');
       _assertCurrentRow_();
       var output = boundPrivateFile_(outputId, folder);
       if (output.getName() !== wmName) fail_('WRONG_OUTPUT_NAME');
@@ -201,11 +244,13 @@
       if (text_(sh.getRange(rowNum, kSrc + 1).getValue()) !== source) fail_('SOURCE_CHANGED');
       var url = 'https://drive.usercontent.google.com/download?id=' + outputId + '&export=download';
       // Stored identifiers only: ACL stays private. Completion marker is last.
+      stage_('sheet_commit');
       writeText_(sh, rowNum, kUrl, url);
       writeText_(sh, rowNum, kWm, expected || url);
       SpreadsheetApp.flush();
       frame.done[key] = true;
     } catch (error) {
+      remember_(error);
       frame.failed = true;
       throw new Error('T11_YANDAL_PHOTO_FAILED');
     }
@@ -250,7 +295,7 @@
     var failed = false;
     refs.forEach(function (ref) {
       try { boundPrivateFile_(resolve_(ref, folder, folderRel), folder); }
-      catch (error) { failed = true; }
+      catch (error) { remember_(error); failed = true; }
     });
     if (failed) fail_('ROW_ACL_FAILED');
   }
@@ -258,7 +303,7 @@
     var original = root[name];
     root[name] = function (kode, target) {
       var previous = frame;
-      var current = { failed: false, expected: {}, done: {} };
+      var current = { failed: false, expected: {}, done: {}, stage: 'auth' };
       var lock = null;
       frame = current;
       try {
@@ -267,9 +312,11 @@
         need_('_h07PrivateFile_');
         // Authenticate first, then acquire BEFORE resolving ownership or
         // allowing any legacy preprocessing. Never continue after timeout.
+        stage_('lock');
         lock = LockService.getScriptLock();
         lock.waitLock(30000);
         if (!lock.hasLock()) fail_('LOCK_REQUIRED');
+        stage_('ownership');
         var schema = spec_(switching), before = _row_(schema, kode);
         current.schema = schema;
         current.kode = text_(kode);
@@ -287,7 +334,9 @@
         _assertCurrentRow_();
         // waitLock is a no-op when this execution already owns the lock.
         // Legacy processors release it in finally, so reacquire before repair.
+        stage_('legacy_processor');
         var result = original.apply(this, arguments);
+        stage_('postprocess');
         lock.waitLock(30000);
         var after = _row_(schema, kode);
         if (after.rowNum !== current.rowNum || after.sh.getSheetId() !== current.sheetId)
@@ -307,6 +356,11 @@
         });
         return result;
       } catch (error) {
+        remember_(error);
+        try {
+          Logger.log(JSON.stringify({ event: 'T11_WM_FAILURE', processor: name,
+            stage: current.causeStage, code: current.cause }));
+        } catch (loggingError) {}
         throw new Error('T11_YANDAL_PROCESS_FAILED');
       } finally {
         try { if (lock && lock.hasLock()) lock.releaseLock(); } catch (releaseError) {}
