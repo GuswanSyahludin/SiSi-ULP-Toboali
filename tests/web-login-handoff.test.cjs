@@ -15,12 +15,14 @@ const loginFixture = '<html><body><form id="frmLogin">keep-design</form>' +
 const mainFixture = String.raw`<html><head><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"></head><body>
 <script>function _getToken(){var m = window.location.search.match(/[?&]token=([^&]+)/); return m ? m[1] : "";}</script>
 </body></html>`;
-function gas({ valid = true, ulp = 'ULP Toboali', html = loginFixture } = {}) {
+function gas({ valid = true, ulp = 'ULP Toboali', html = loginFixture,
+  serviceUrl = 'https://script.google.com/macros/s/fixture/exec' } = {}) {
   let content = html;
   const reads = [], calls = [];
   const output = { getContent: () => content, setContent(v) { content = v; },
     setXFrameOptionsMode() {} };
   const ctx = vm.createContext({
+    ScriptApp: { getService: () => ({ getUrl: () => serviceUrl }) },
     doGet: e => { calls.push(e); return output; },
     guard_(args, opts) {
       assert.equal(opts.ulp, true);
@@ -50,7 +52,7 @@ test('rendered login replaces rather than appends legacy redirect script and pre
   assert.equal(f.ctx.doGet(event), f.output);
   assert.equal(f.calls[0], event);
   assert.match(f.content(), /keep-design/);
-  assert.doesNotMatch(f.content(), /window\.top\.location/);
+  assert.doesNotMatch(f.content(), /window\.top\.location\.href="exec"/);
   assert.equal((f.content().match(/<script>/g) || []).length, 1);
   assert.match(f.content(), /getWebAppShell\(token\)/);
 });
@@ -85,6 +87,7 @@ test('shell returns server identity, sanitized HTML and startup controller witho
   assert.doesNotMatch(res.html, /window\.location\.search\.match|font-awesome\/6\.5\.0/);
   assert.match(res.html, /integrity="sha512-/);
   assert.match(res.html, /originalStart/);
+  assert.match(res.html, /id="sisiLogoutUrl" value="https:\/\/script\.google\.com\/macros\/s\/fixture\/exec"/);
   assert.deepEqual(f.reads, ['Core/Main', 'Core/Web-Login-Bootstrap']);
 });
 test('shell never returns unsanitized HTML when security boundary is unavailable', () => {
@@ -92,10 +95,10 @@ test('shell never returns unsanitized HTML when security boundary is unavailable
   vm.runInContext('_sanitizeWebHtmlSecurity_ = undefined', f.ctx);
   assert.throws(() => f.ctx.getWebAppShell('valid'));
 });
-function browser({ stored = null, blocked = false, corruptWrites = false } = {}) {
+function browser({ stored = null, blocked = false, corruptWrites = false, logout = '' } = {}) {
   const nodes = {};
   const data = new Map(stored == null ? [] : [['sisiSesi', stored]]);
-  const pending = [], writes = [];
+  const pending = [], writes = [], history = [];
   let opened = 0, closed = 0;
   function node(id) {
     return nodes[id] || (nodes[id] = { value: '', textContent: '', innerHTML: '',
@@ -106,6 +109,7 @@ function browser({ stored = null, blocked = false, corruptWrites = false } = {})
     });
   }
   node('hdnScriptUrl').value = 'https://script.google.com/macros/s/fixture/exec';
+  node('hdnLogout').value = logout;
   const storage = {
     getItem(k) { if (blocked) throw new Error('storage blocked'); return data.get(k) || null; },
     setItem(k,v) { if (blocked) throw new Error('storage blocked'); if (!corruptWrites) data.set(k,v); },
@@ -122,11 +126,11 @@ function browser({ stored = null, blocked = false, corruptWrites = false } = {})
   const ctx = vm.createContext({
     document: { getElementById: node, open(){opened++;}, write(h){writes.push(h);}, close(){closed++;} },
     sessionStorage: storage,
-    google: { script: { run: runner() } },
-    window: { top: { location: new Proxy({}, { set(){ assert.fail('must not navigate'); } }) }
+    google: { script: { run: runner(), history:{replace(...args){history.push(args);}} } },
+    window: { top: { location: new Proxy({}, { set(){ assert.fail('must not navigate'); } }) } }
   });
   vm.runInContext(script, ctx);
-  return { nodes, data, pending, writes, counts: () => [opened, closed],
+  return { nodes, data, pending, writes, history, counts: () => [opened, closed],
     submit() {
       node('inpUser').value = 'user'; node('inpPass').value = 'password';
       node('frmLogin').handlers.submit({preventDefault(){}});
@@ -151,6 +155,125 @@ test('successful login hands off inside the same document only after server sess
   assert.deepEqual(f.counts(), [1, 1]);
   f.pending[1].success(shell);
   assert.equal(f.writes.length, 1, 'duplicate shell callback cannot rewrite twice');
+});
+
+test('logout return is marked by doGet and skips stale session restoration', () => {
+  for (const logout of ['1', '2']) {
+    const g = gas();
+    g.ctx.doGet({parameter:{logout}});
+    assert.match(g.content(), new RegExp('id="hdnLogout" value="' + logout + '"'));
+    const b = browser({stored:JSON.stringify({token:'stale'}), logout});
+    assert.equal(b.pending.length, 0);
+    assert.equal(b.data.has('sisiSesi'), false);
+    b.submit();
+    assert.equal(b.pending[0].method, 'login');
+    b.pending[0].success({success:true,token:'valid'});
+    b.pending[1].success(shell);
+    assert.equal(b.history.length,1);
+    assert.equal(JSON.stringify(b.history[0]),'[{}, {}, ""]'.replace(/ /g,''));
+  }
+  const blocked = browser({stored:JSON.stringify({token:'stale'}), logout:'1', blocked:true});
+  assert.equal(blocked.pending.length, 0);
+});
+
+test('logout URL is server-derived and rejects foreign hosts; marker cannot inject HTML', () => {
+  const f=gas({serviceUrl:'https://script.google.com/macros/s/fixture/exec?token=do-not-leak#secret'});
+  const result=f.ctx.getWebAppShell('valid');
+  assert.doesNotMatch(result.html,/do-not-leak|#secret/);
+  for(const serviceUrl of ['', 'javascript:alert(1)', 'https://evil.example/exec']) {
+    assert.throws(()=>gas({serviceUrl}).ctx.getWebAppShell('valid'),/URL login deployment/);
+  }
+  const injected=gas();
+  injected.ctx.doGet({parameter:{logout:'1"><script>evil</script>'}});
+  assert.doesNotMatch(injected.content(),/id="hdnLogout" value=/);
+});
+
+function logoutBrowser({ blocked = false, storageBlocked = false, token = 'session-secret',
+  url = 'https://script.google.com/macros/s/fixture/exec' } = {}) {
+  const pending = [], navigated = [], timers = [], cleared = [], panel = [];
+  const data = new Map([['sisiSesi','old'],['sisiScriptUrl','wrong'],['baDraft','keep']]);
+  function node() {
+    return {style:{},children:[],appendChild(n){this.children.push(n);}};
+  }
+  const ctx = vm.createContext({
+    document: {
+      getElementById: id => id === 'sisiLogoutUrl' ? {value:url} : null,
+      createElement: node,
+      body:{replaceChildren(n){panel.push(n);}},
+    },
+    sessionStorage:{removeItem(k){if(storageBlocked) throw Error('blocked');data.delete(k);}},
+    _state:{token,sesi:{token}}, __SISI_SESI__:{token}, __SISI_PAGE__:'Private',
+    _getToken:()=>token, _notifTimer:7,
+    _munculkanMain(){throw Error('stale splash must not reopen app');},
+    setTimeout(fn,ms){timers.push({fn,ms});return timers.length;},
+    clearTimeout(id){cleared.push(id);}, clearInterval(id){cleared.push(id);},
+    google:{script:{run:runner()}},
+  });
+  function runner(success,failure) {
+    return {
+      withSuccessHandler(fn){return runner(fn,failure);},
+      withFailureHandler(fn){return runner(success,fn);},
+      doLogout(...args){pending.push({args,success,failure});},
+    };
+  }
+  ctx.window=ctx;
+  ctx.top={location:{set href(v){if(blocked) throw Error('sandbox');navigated.push(v);}}};
+  vm.runInContext(script,ctx);
+  return {ctx,pending,navigated,timers,cleared,panel,data};
+}
+test('logout sends the original token once, clears session only, and waits for server result', () => {
+  const f=logoutBrowser();
+  f.ctx.doLogout(); f.ctx.doLogout(); f.ctx._munculkanMain();
+  assert.equal(f.pending.length,1);
+  assert.deepEqual(f.pending[0].args,['session-secret']);
+  assert.equal(f.navigated.length,0);
+  assert.equal(f.ctx._state.token,'');
+  assert.equal(f.ctx.__SISI_SESI__,null);
+  assert.equal(f.ctx._getToken(),'');
+  assert.equal(f.data.has('sisiSesi'),false);
+  assert.equal(f.data.get('baDraft'),'keep');
+  assert.ok(f.cleared.includes(7));
+  f.pending[0].success({success:true});
+  assert.equal(f.navigated.length,1);
+  assert.match(f.navigated[0],/^https:\/\/script\.google\.com\/macros\/s\/fixture\/exec\?logout=1&reload=\d+$/);
+  assert.doesNotMatch(f.navigated[0],/session-secret|token|googleusercontent/);
+  f.pending[0].success({success:true});f.timers[0].fn();
+  assert.equal(f.navigated.length,1);
+});
+test('blocked top navigation leaves a real top-level login link, not iframe reload', () => {
+  const f=logoutBrowser({blocked:true,storageBlocked:true});
+  f.ctx.doLogout();f.pending[0].success({success:true});
+  const link=f.panel[0].children[1];
+  assert.equal(link.target,'_top');
+  assert.match(link.href,/\?logout=1&reload=/);
+  assert.equal(f.navigated.length,0);
+});
+test('logout failures and timeouts do not claim server revocation and ignore late callbacks', () => {
+  for(const mode of ['failure','false','timeout']) {
+    const f=logoutBrowser();f.ctx.doLogout();
+    if(mode==='failure')f.pending[0].failure(Error('secret detail'));
+    if(mode==='false')f.pending[0].success({success:false,message:'secret detail'});
+    if(mode==='timeout')f.timers[0].fn();
+    assert.match(f.navigated[0],/\?logout=2&reload=/);
+    assert.match(f.panel[0].children[0].textContent,/belum terkonfirmasi/);
+    assert.doesNotMatch(f.panel[0].children[0].textContent,/secret detail/);
+    f.pending[0].success({success:true});
+    assert.equal(f.navigated.length,1);
+  }
+});
+test('logout rejects unsafe destination and handles missing token without RPC', () => {
+  const bad=logoutBrowser({url:'https://evil.example/exec?token=x'});
+  bad.ctx.doLogout();bad.pending[0].success({success:true});
+  assert.equal(bad.navigated.length,0);
+  assert.equal(bad.panel[0].children.length,1);
+  const empty=logoutBrowser({token:''});empty.ctx.doLogout();
+  assert.equal(empty.pending.length,0);
+  assert.match(empty.navigated[0],/\?logout=1&reload=/);
+  const top=logoutBrowser();
+  top.ctx.top=top.ctx;
+  top.ctx.location={replace:url=>top.navigated.push(url)};
+  top.ctx.doLogout();top.pending[0].success({success:true});
+  assert.match(top.navigated[0],/\?logout=1&reload=/);
 });
 test('refresh validates stored token and replaces forged cached metadata', () => {
   const f = browser({stored: JSON.stringify({token:'valid', role:'Super User'})});
