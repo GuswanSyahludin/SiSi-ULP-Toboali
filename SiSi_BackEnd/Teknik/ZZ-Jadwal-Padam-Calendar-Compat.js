@@ -14,7 +14,7 @@ function getJadwalPadamCalendarMonth(params) {
       return { ok: false, rows: [], message: "Bulan kalender tidak valid." };
 
     var monthKey = year + "-" + ("0" + month).slice(-2),
-      cacheKey = "jpCal|" + _jpCalendarVersion_() + "|" + monthKey + "|" + _jpUlpKey_(ulp),
+      cacheKey = "jpCal|session2|" + _jpCalendarVersion_() + "|" + monthKey + "|" + _jpUlpKey_(ulp),
       cache = CacheService.getScriptCache(),
       hit = cache.get(cacheKey);
     if (hit) {
@@ -29,15 +29,17 @@ function getJadwalPadamCalendarMonth(params) {
       lastDayNumber = new Date(year, month, 0).getDate(),
       lastDay = year + "-" + ("0" + month).slice(-2) + "-" + ("0" + lastDayNumber).slice(-2),
       pageSize = 100,
-      first = getJadwalPadamList({ tglDari: firstDay, tglSampai: lastDay, ulp: ulp, page: 1, pageSize: pageSize });
+      first = getJadwalPadamList({ token: g.token, tglDari: firstDay, tglSampai: lastDay, ulp: ulp, page: 1, pageSize: pageSize });
 
     if (!first || first.ok !== true)
       return { ok: false, rows: [], month: monthKey, message: (first && first.message) || "Gagal memuat jadwal kalender." };
 
     var sourceRows = first.rows || [], totalPages = Number(first.totalPages) || 1;
     for (var page = 2; page <= totalPages; page++) {
-      var next = getJadwalPadamList({ tglDari: firstDay, tglSampai: lastDay, ulp: ulp, page: page, pageSize: pageSize });
-      if (!next || next.ok !== true) break;
+      var next = getJadwalPadamList({ token: g.token, tglDari: firstDay, tglSampai: lastDay, ulp: ulp, page: page, pageSize: pageSize });
+      // A failed page is not a complete calendar; never cache partial success.
+      if (!next || next.ok !== true)
+        return { ok: false, rows: [], month: monthKey, message: (next && next.message) || "Gagal memuat jadwal kalender." };
       sourceRows = sourceRows.concat(next.rows || []);
     }
 
