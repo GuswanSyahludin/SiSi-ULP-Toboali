@@ -12,6 +12,10 @@
   function norm_(value) {
     return String(value == null ? "" : value).trim().toLowerCase().replace(/\s+/g, " ");
   }
+  function ulp_(value) {
+    // Keep ULP aliases separate from IDs, headers and file identifiers.
+    return norm_(value).replace(/^toboali$/, INTERNAL_ULP);
+  }
   function key_(value) { return norm_(value).replace(/[^a-z0-9]/g, ""); }
   function id_(value) { return norm_(value); }
   function driveId_(value) {
@@ -33,7 +37,7 @@
   }
   function session_(args, action) {
     var g = guard_(args, { ulp: true, aksi: action });
-    if (norm_(g && g.ulp) !== INTERNAL_ULP) {
+    if (ulp_(g && g.ulp) !== INTERNAL_ULP) {
       audit_(g && g.sesi, action, "", "TOLAK", "BA hanya untuk ULP Toboali");
       throw new Error("Akses BA hanya tersedia untuk ULP Toboali.");
     }
@@ -65,7 +69,7 @@
     }
     if (matches.length !== 1) return { found: false, ambiguous: matches.length > 1, reason: matches.length > 1 ? "idBA tidak unik." : "Baris BA tidak ditemukan." };
     var values = data.values[matches[0]];
-    var ownerUlp = norm_(values[ulpCol]);
+    var ownerUlp = ulp_(values[ulpCol]);
     if (ownerUlp !== INTERNAL_ULP) return { found: false, foreign: true, reason: "Baris BA bukan milik ULP Toboali." };
     return { found: true, source: source, sheet: data.sheet, values: values, headers: data.values[headerRow], sheetRow: matches[0] + 1, headerRow: headerRow };
   }

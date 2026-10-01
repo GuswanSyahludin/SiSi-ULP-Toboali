@@ -7,13 +7,17 @@
 function _baWebNorm_(value) {
   return String(value == null ? "" : value).trim().toLowerCase().replace(/\s+/g, " ");
 }
+function _baWebUlp_(value) {
+  // Do not normalize usernames, request IDs or payload digests as ULP names.
+  return _baWebNorm_(value).replace(/^toboali$/, "ulp toboali");
+}
 function _baWebHash_(value) {
   return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, value)
     .map(function (b) { return ("0" + (b & 255).toString(16)).slice(-2); }).join("");
 }
 function _baWebSession_(args) {
   var g = guard_(args, { ulp: true, aksi: "BA_WEB_CREATE_FLOW" });
-  if (_baWebNorm_(g.ulp) !== "ulp toboali" || !String(g.username || "").trim()) {
+  if (_baWebUlp_(g.ulp) !== "ulp toboali" || !String(g.username || "").trim()) {
     throw new Error("Akses BA hanya untuk akun ULP Toboali yang teridentifikasi.");
   }
   return g;
@@ -86,7 +90,7 @@ function _baWebRow_(request, record) {
   // The legacy resolver picks the first ULP alias. Every replay/recheck must
   // also reject a second ownership header, even when both values agree.
   var ulpCol = _baWebColumn_(row.headers, ["ulp", "namaulp", "unitlayananpelanggan", "kodeulp"]);
-  if (_baWebNorm_(row.values[ulpCol]) !== "ulp toboali") throw new Error("Kepemilikan ULP BA tidak valid.");
+  if (_baWebUlp_(row.values[ulpCol]) !== "ulp toboali") throw new Error("Kepemilikan ULP BA tidak valid.");
   return { row: row, cell: row.sheet.getRange(row.sheetRow, idCol + 1) };
 }
 function _baWebOwned_(g, record, key) {
