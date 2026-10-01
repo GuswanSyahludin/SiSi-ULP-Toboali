@@ -6,7 +6,9 @@
     return String(value == null ? "" : value)
       .trim()
       .toLowerCase()
-      .replace(/\s+/g, " ");
+      .replace(/\s+/g, " ")
+      // Only the two explicit names for this same internal ULP are aliases.
+      .replace(/^toboali$/, BA_INTERNAL_ULP);
   }
 
   function requireSameUlp(args, action) {
