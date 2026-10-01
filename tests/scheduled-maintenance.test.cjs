@@ -99,7 +99,7 @@ function fixture(options = {}) {
   return { context, options, calls, writes, logs, p0, temuan, report, props,
     get locked() { return locked; } };
 }
-+test('regression: public legacy calls still require session; private tick completes all three', () => {
+test('regression: public legacy calls still require session; private tick completes all three', () => {
   const f = fixture();
   for (const name of jobs) assert.throws(() => f.context[name](), /Sesi/);
   assert.equal(f.calls.length, 0); assert.equal(f.writes.length, 0);
