@@ -19,6 +19,26 @@
   function _repairKodeRow_() {
     function stop(code) { throw new Error('T11_ROW_' + code); }
     var lock = LockService.getScriptLock(), started = Date.now();
+    // Capture once per invocation. Midnight must not change a running batch.
+    var targetDay = Utilities.formatDate(new Date(started), 'Asia/Jakarta', 'yyyy-MM-dd');
+    function day(value) {
+      var text, match;
+      if (Object.prototype.toString.call(value) === '[object Date]') {
+        if (isNaN(value.getTime())) stop('DATE_INVALID');
+        text = Utilities.formatDate(value, 'Asia/Jakarta', 'yyyy-MM-dd');
+      } else if (typeof value === 'string') {
+        text = value.trim();
+        match = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if (match) text = match[3] + '-' + ('0' + match[2]).slice(-2) +
+          '-' + ('0' + match[1]).slice(-2);
+      } else stop('DATE_INVALID');
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) stop('DATE_INVALID');
+      var parsed = new Date(text + 'T00:00:00Z');
+      if (isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== text)
+        stop('DATE_INVALID');
+      return text;
+    }
+    targetDay = day(targetDay);
     function acquire() {
       lock.waitLock(15000);
       if (!lock.hasLock()) stop('LOCK_REQUIRED');
@@ -27,10 +47,14 @@
     function populated(row) {
       return row.some(function (v) { return v !== '' && v != null; });
     }
-    var H = root.COL_INS && root.COL_INS.HEADER, E = root.COL_ROW, R = root.COL_ROW_RLZ;
-    if (!H || !E || !R || !root.SHEET_INS) stop('SCHEMA_MISSING');
+    // Core declares these as const: V8 lexical globals are not root properties.
+    var ins = typeof COL_INS !== 'undefined' ? COL_INS : root.COL_INS;
+    var sheets = typeof SHEET_INS !== 'undefined' ? SHEET_INS : root.SHEET_INS;
+    var H = ins && ins.HEADER, E = root.COL_ROW, R = root.COL_ROW_RLZ;
+    if (!H || !E || !R || !sheets) stop('SCHEMA_MISSING');
     [H.kodeHeader, H.ulp, H.tim, H.subTim, E.kodeHeader, E.kodePekerjaan,
-      E.kodeEksekusi, E.ulp, E.tim, R.kodeHeader, R.kodePekerjaan].forEach(function (col) {
+      E.kodeEksekusi, E.ulp, E.tim, R.kodeHeader, R.kodePekerjaan,
+      H.tanggal, R.tanggal, E.tanggal].forEach(function (col) {
       if (!Number.isInteger(col) || col < 0) stop('SCHEMA_MISSING');
     });
     var ss, shH, shR, shE;
@@ -43,15 +67,22 @@
     // foreign ownership, or any realisation cannot resolve a unique header.
     function _snapshot_() {
       var h = _read_(shH), r = _read_(shR), e = _read_(shE), headers = Object.create(null);
+      var parents = Object.create(null), headerDays = Object.create(null);
       h.slice(1).forEach(function (row) {
         if (!populated(row)) return;
         if (!owned(row[H.ulp])) stop('ULP_UNRESOLVED_OR_FOREIGN');
         var key = text_(row[H.kodeHeader]);
         if (!key || headers[key]) stop('HEADER_AMBIGUOUS');
         headers[key] = row;
+        headerDays[key] = day(row[H.tanggal]);
       });
       r.slice(1).forEach(function (row) {
-        if (populated(row) && !headers[text_(row[R.kodeHeader])]) stop('PARENT_UNRESOLVED');
+        if (!populated(row)) return;
+        var header = text_(row[R.kodeHeader]), key = text_(row[R.kodePekerjaan]);
+        if (!headers[header]) stop('PARENT_UNRESOLVED');
+        if (day(row[R.tanggal]) !== headerDays[header]) stop('DATE_RELATION_MISMATCH');
+        if (!key || parents[key]) stop('PARENT_AMBIGUOUS');
+        parents[key] = row;
       });
       var keys = Object.create(null);
       e.slice(1).forEach(function (row) {
@@ -60,6 +91,18 @@
         var key = text_(row[E.kodeEksekusi]);
         if (key && keys[key]) stop('EXECUTION_AMBIGUOUS');
         if (key) keys[key] = true;
+        var date = day(row[E.tanggal]), header = text_(row[E.kodeHeader]);
+        var parent = text_(row[E.kodePekerjaan]);
+        // Unlinked raw input may create a parent, but existing links must resolve
+        // to the same date. Never repair one date by changing another's chain.
+        if (header && (!headers[header] || headerDays[header] !== date))
+          stop('DATE_RELATION_MISMATCH');
+        if (parent && (!parents[parent] ||
+            text_(parents[parent][R.kodeHeader]) !== header ||
+            day(parents[parent][R.tanggal]) !== date))
+          stop('DATE_RELATION_MISMATCH');
+        if (key.indexOf('-EKS.') >= 0 && (!header || !parent))
+          stop('PARENT_UNRESOLVED');
       });
       return { h: h, r: r, e: e, headers: headers };
     }
@@ -74,20 +117,22 @@
     try {
       acquire();
       ss = SpreadsheetApp.openById(root.SPREADSHEET_ID);
-      shH = ss.getSheetByName(root.SHEET_INS.HEADER);
+      shH = ss.getSheetByName(sheets.HEADER);
       shR = ss.getSheetByName('db_ROW_Realisasi');
       shE = ss.getSheetByName('db_ROW_Eksekusi');
       var initial = _snapshot_();
-      if (!need_('_adaPekerjaanPerbaikanROW_')(ss)) return { ok: true, skipped: 'nihil' };
       // Resolve dependencies before the first write. No global guard bypass.
       var process = need_('prosesEksekusiROW'), mark = need_('markWaDirty_');
-      var refresh = need_('originalrefreshLaporanHarianROW');
+      var markReport = need_('markLaporanDirty_');
+      // Require the async path: legacy synchronous fallback rewrites other dates.
+      need_('markRecalcRowDirty_'); need_('enqueueFotoRow_');
       var map = Object.create(null), occupied = Object.create(null), plans = [];
       Object.keys(initial.headers).forEach(function (key) { occupied[key] = true; });
-      var result = { ok: true, headerDiperbaiki: 0, headerKonflik: 0,
+      var result = { ok: true, tanggal: targetDay, headerDiperbaiki: 0, headerKonflik: 0,
         realisasiDiperbaiki: 0, eksekusiDiperbaiki: 0, rawDiproses: 0 };
       initial.h.forEach(function (row, i) {
         if (!i || text_(row[H.tim]) !== 'ROW') return;
+        if (day(row[H.tanggal]) !== targetDay) return;
         var sub = text_(row[H.subTim]), old = text_(row[H.kodeHeader]);
         if (!sub || !old) return;
         if (!/\d{2}$/.test(sub) || old.indexOf('-') < 1) stop('INVALID_HEADER');
@@ -99,7 +144,7 @@
         plans.push({ sh: shH, i: i, before: row, after: after, cols: [H.kodeHeader] });
         result.headerDiperbaiki++;
       });
-      function cascade(rows, sh, cols, countKey) {
+      function cascade(rows, sh, cols, dateCol, countKey) {
         rows.forEach(function (row, i) {
           if (!i) return;
           var after = row.slice(), changed = false;
@@ -113,30 +158,57 @@
             });
           });
           if (changed) {
+            if (day(row[dateCol]) !== targetDay) stop('DATE_RELATION_MISMATCH');
             plans.push({ sh: sh, i: i, before: row, after: after, cols: cols });
             result[countKey]++;
           }
         });
       }
-      cascade(initial.r, shR, [R.kodeHeader, R.kodePekerjaan], 'realisasiDiperbaiki');
-      cascade(initial.e, shE, [E.kodeHeader, E.kodePekerjaan, E.kodeEksekusi], 'eksekusiDiperbaiki');
+      cascade(initial.r, shR, [R.kodeHeader, R.kodePekerjaan], R.tanggal, 'realisasiDiperbaiki');
+      cascade(initial.e, shE, [E.kodeHeader, E.kodePekerjaan, E.kodeEksekusi], E.tanggal, 'eksekusiDiperbaiki');
+      var pendingRaw = initial.e.slice(1).some(function (row) {
+        var key = text_(row[E.kodeEksekusi]);
+        return key && key.indexOf('-EKS.') < 0 && need_('_isTimROW_')(row[E.tim]) &&
+          day(row[E.tanggal]) === targetDay;
+      });
+      if (!plans.length && !pendingRaw) {
+        result.skipped = 'nihil-hari-ini';
+        return result;
+      }
       // Recheck all ownership immediately before the cascade starts.
       var prewrite = _snapshot_();
       if (JSON.stringify([prewrite.h, prewrite.r, prewrite.e]) !==
+          JSON.stringify([initial.h, initial.r, initial.e])) stop('ROW_CHANGED');
+      // Durable downstream notification before writes: a partial failure must
+      // not erase the need to refresh reports. No historical refresh here.
+      markReport(targetDay);
+      acquire();
+      var marked = _snapshot_();
+      if (JSON.stringify([marked.h, marked.r, marked.e]) !==
           JSON.stringify([initial.h, initial.r, initial.e])) stop('ROW_CHANGED');
       plans.forEach(function (plan) { _writeRow_(plan.sh, plan.i, plan.before, plan.after, plan.cols); });
       SpreadsheetApp.flush();
       // Mark every changed header dirty before raw processing can fail. No
       // authenticated public WA endpoint is invoked without a session.
-      Object.keys(map).forEach(function (old) { mark(map[old]); });
+      Object.keys(map).forEach(function (old) {
+        acquire();
+        if (mark(map[old]) === false) stop('QUEUE_FAILED');
+      });
+      acquire();
       var current = _snapshot_(), raw = [];
       current.e.slice(1).forEach(function (row) {
         var key = text_(row[E.kodeEksekusi]);
-        if (key && key.indexOf('-EKS.') < 0 && need_('_isTimROW_')(row[E.tim])) raw.push(key);
+        if (key && key.indexOf('-EKS.') < 0 && need_('_isTimROW_')(row[E.tim]) &&
+            day(row[E.tanggal]) === targetDay) raw.push(key);
       });
       for (var i = 0; i < raw.length; i++) {
         if (Date.now() - started > 90000) { result.terpotong = true; break; }
-        acquire(); _snapshot_();
+        acquire();
+        var check = _snapshot_(), matches = check.e.slice(1).filter(function (row) {
+          return text_(row[E.kodeEksekusi]) === raw[i];
+        });
+        if (matches.length !== 1 || day(matches[0][E.tanggal]) !== targetDay)
+          stop('ROW_CHANGED');
         var answer = process(raw[i]);
         // Legacy process releases the script lock; reacquire before any
         // subsequent action and never interpret ok:false as completed.
@@ -144,14 +216,11 @@
         if (!answer || answer.ok !== true) stop('RAW_PROCESS_FAILED');
         result.rawDiproses++;
       }
-      if (plans.length || result.rawDiproses) {
-        acquire(); _snapshot_(); refresh();
-      }
       return result;
     } catch (error) {
       // Only fixed codes are permitted in scheduler logs.
       var message = error && typeof error.message === 'string' ? error.message : '';
-      if (!/^T11_ROW_(LOCK_REQUIRED|SCHEMA_MISSING|SHEET_MISSING|ULP_UNRESOLVED_OR_FOREIGN|HEADER_AMBIGUOUS|PARENT_UNRESOLVED|EXECUTION_AMBIGUOUS|ROW_CHANGED|INVALID_HEADER|RAW_PROCESS_FAILED)$/.test(message))
+      if (!/^T11_ROW_(LOCK_REQUIRED|SCHEMA_MISSING|SHEET_MISSING|ULP_UNRESOLVED_OR_FOREIGN|HEADER_AMBIGUOUS|PARENT_UNRESOLVED|PARENT_AMBIGUOUS|EXECUTION_AMBIGUOUS|ROW_CHANGED|INVALID_HEADER|RAW_PROCESS_FAILED|DATE_INVALID|DATE_RELATION_MISMATCH|QUEUE_FAILED)$/.test(message))
         message = 'T11_ROW_MAINTENANCE_FAILED';
       throw new Error(message);
     } finally {

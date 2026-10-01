@@ -9,7 +9,19 @@ const read = file => fs.readFileSync(path.join(backend, file), 'utf8');
 const jobs = ['refreshLaporanHarianHariIni', 'sweepDurasiJarakYandalP0', 'validasiUlangFotoTemuan'];
 const rowJob = '_t11PerbaikanKodeROW_';
 function rowFixture(options = {}) {
-  const f = fixture(), events = [], ctx = f.context;
+  const f = fixture(), events = [], reportDirty = [], ctx = f.context;
+  let clock = Date.parse(options.now || '2026-10-01T12:00:00Z');
+  ctx.Date = class extends Date {
+    constructor(...args) { super(...(args.length ? args : [clock])); }
+    static now() { return clock; }
+  };
+  ctx.Utilities = {
+    formatDate(value, zone, pattern) {
+      assert.equal(zone, 'Asia/Jakarta');
+      assert.equal(pattern, 'yyyy-MM-dd');
+      return new Date(value.getTime() + 7*3600000).toISOString().slice(0, 10);
+    }
+  };
   let locked = false;
   ctx.LockService.getScriptLock = () => ({
     waitLock() { if (options.lockFails) throw Error('lock secret'); locked = true; },
@@ -37,10 +49,10 @@ function rowFixture(options = {}) {
     sheets[name] = sh;
     return sh;
   }
-  ctx.COL_INS.HEADER = { kodeHeader: 1, ulp: 2, tim: 5, subTim: 6 };
+  ctx.COL_INS.HEADER = { kodeHeader: 1, ulp: 2, tanggal: 4, tim: 5, subTim: 6 };
   ctx.SHEET_INS.HEADER = 'header';
-  ctx.COL_ROW = { kodeHeader: 1, kodePekerjaan: 2, kodeEksekusi: 3, ulp: 4, tim: 7 };
-  ctx.COL_ROW_RLZ = { kodeHeader: 1, kodePekerjaan: 2 };
+  ctx.COL_ROW = { kodeHeader: 1, kodePekerjaan: 2, kodeEksekusi: 3, ulp: 4, tanggal: 6, tim: 7 };
+  ctx.COL_ROW_RLZ = { kodeHeader: 1, kodePekerjaan: 2, tanggal: 4 };
   const header = sheet('header', [Array(16).fill('header'),
     ['', 'R01-ABC', ' Toboali ', '', '', 'ROW', 'ROW 02', '', '', '', '', '', '', '', '', '']]);
   const realisation = sheet('db_ROW_Realisasi', [Array(13).fill('header'),
@@ -48,9 +60,26 @@ function rowFixture(options = {}) {
   const execution = sheet('db_ROW_Eksekusi', [Array(30).fill('header'),
     ['', 'R01-ABC', 'R01-ABC-PNY.007', 'R01-ABC-PNY.007-EKS.009', 'ULP Toboali', '', '', 'ROW 02',
       '', '', '', '', '', '', '', '', '', 'keep-photo', 'keep-url', '', '', '', '', '', '', '', '', '', '', '']]);
+  const today = options.day || '2026-10-01';
+  header.rows[1][4] = today;
+  realisation.rows[1][4] = today;
+  execution.rows[1][6] = today;
   const ss = { getSheetByName: name => sheets[name] };
   ctx.SpreadsheetApp.openById = () => ss;
-  ctx.markWaDirty_ = key => { assert.ok(locked); events.push(['dirty', key]); };
+  ctx.markWaDirty_ = key => {
+    assert.ok(locked); events.push(['dirty', key]);
+    if (options.markReleasesLock) locked = false;
+    return !options.queueFails;
+  };
+  ctx.markLaporanDirty_ = day => {
+    if (options.reportQueueFails) throw Error('fixture queue failure');
+    reportDirty.push(day);
+    if (options.crossMidnight) clock = Date.parse('2026-10-01T17:00:01Z');
+    if (options.afterReportMark) options.afterReportMark({header,realisation,execution});
+    return day;
+  };
+  ctx.markRecalcRowDirty_ = () => true;
+  ctx.enqueueFotoRow_ = () => true;
   ctx.originalrefreshLaporanHarianROW = () => { assert.ok(locked); events.push(['refresh']); };
   ctx.prosesEksekusiROW = key => {
     assert.ok(locked); events.push(['raw', key]);
@@ -66,7 +95,8 @@ function rowFixture(options = {}) {
     vm.runInContext(source.slice(start, end + 2), ctx);
   }
   ctx.TRIGGER_SISI_TUGAS = [{ fn: rowJob, tiapMenit: 1, berat: true }];
-  return { ...f, ctx, header, realisation, execution, events, options,
+  return { ...f, ctx, header, realisation, execution, events, reportDirty, options,
+    setClock(value) { clock = Date.parse(value); },
     get locked() { return locked; } };
 }
 test('ROW source removes exactly the three legacy callable functions', () => {
@@ -95,7 +125,8 @@ test('ROW cascade preserves suffixes, photo identities, and is idempotent', () =
   assert.equal(f.execution.rows[1][3], 'R02-ABC-PNY.007-EKS.009');
   assert.deepEqual(f.execution.rows[1].slice(17, 19), ['keep-photo', 'keep-url']);
   assert.deepEqual(f.events.filter(x => x[0] === 'dirty'), [['dirty', 'R02-ABC']]);
-  assert.equal(f.events.filter(x => x[0] === 'refresh').length, 1);
+  assert.equal(f.events.filter(x => x[0] === 'refresh').length, 0);
+  assert.deepEqual(f.reportDirty, ['2026-10-01']);
   f.props.clear(); f.events.length = 0;
   assert.equal(f.ctx._t11TickPusatSiSi_().gagal.length, 0);
   assert.equal(f.events.length, 0);
@@ -200,6 +231,117 @@ test('ROW actual raw processor executes inside private tick and retains photo fi
   assert.deepEqual(f.execution.rows[1].slice(17, 19), ['keep-photo', 'keep-url']);
   assert.ok(f.events.some(x => x[0] === 'photo-queued'));
   assert.equal(f.locked, false);
+});
+function addDatedChain(f, date, suffix, raw = false) {
+  const h=f.header.rows[1].slice(),r=f.realisation.rows[1].slice(),e=f.execution.rows[1].slice();
+  h[1]='R01-'+suffix;h[4]=date;
+  r[1]=h[1];r[2]=h[1]+'-PNY.007';r[4]=date;
+  e[1]=h[1];e[2]=r[2];e[3]=raw?'raw-'+suffix:r[2]+'-EKS.009';e[6]=date;
+  f.header.rows.push(h);f.realisation.rows.push(r);f.execution.rows.push(e);
+  return {h,r,e};
+}
+test('ROW changes only invocation date; yesterday, archive and future chains remain byte-identical',()=>{
+  const f=rowFixture();
+  const others=[addDatedChain(f,'2026-09-30','YESTERDAY',true),
+    addDatedChain(f,'2026-09-20','ARCHIVE'),addDatedChain(f,'2026-10-02','FUTURE',true)];
+  const before=JSON.stringify(others);
+  assert.equal(f.ctx._t11TickPusatSiSi_().gagal.length,0);
+  assert.equal(JSON.stringify(others),before);
+  assert.equal(f.header.rows[1][1],'R02-ABC');
+  assert.equal(f.events.some(e=>e[0]==='raw'),false);
+  assert.equal(f.events.some(e=>e[0]==='refresh'),false);
+});
+test('ROW date is determined in Jakarta, not UTC, and recalculated on a later invocation',()=>{
+  const f=rowFixture({now:'2026-09-30T17:01:00Z'});
+  const tomorrow=addDatedChain(f,'2026-10-02','TOMORROW');
+  assert.equal(f.ctx._t11TickPusatSiSi_().gagal.length,0);
+  assert.equal(f.header.rows[1][1],'R02-ABC');
+  assert.equal(tomorrow.h[1],'R01-TOMORROW');
+  f.setClock('2026-10-01T17:01:00Z');f.props.clear();
+  assert.equal(f.ctx._t11TickPusatSiSi_().gagal.length,0);
+  assert.equal(tomorrow.h[1],'R02-TOMORROW');
+  assert.deepEqual(f.reportDirty,['2026-10-01','2026-10-02']);
+});
+test('ROW captures target date once even if execution crosses midnight',()=>{
+  const f=rowFixture({now:'2026-10-01T16:59:59Z',crossMidnight:true});
+  const tomorrow=addDatedChain(f,'2026-10-02','NEXT');
+  const before=JSON.stringify(tomorrow);
+  assert.equal(f.ctx._t11TickPusatSiSi_().gagal.length,0);
+  assert.equal(f.header.rows[1][1],'R02-ABC');
+  assert.equal(JSON.stringify(tomorrow),before);
+  assert.deepEqual(f.reportDirty,['2026-10-01']);
+});
+for(const value of ['',null,{},[],7,'bad','2026-02-31','31/02/2026']){
+  test('ROW unresolved header date fails closed: '+JSON.stringify(value),()=>{
+    const f=rowFixture();f.header.rows[1][4]=value;
+    const r=f.ctx._t11TickPusatSiSi_();
+    assert.equal(r.gagal.length,1);assert.match(r.gagal[0].error,/DATE_INVALID/);
+    assert.equal(f.events.length,0);assert.equal(f.reportDirty.length,0);
+  });
+}
+for(const kind of ['realisationDate','executionDate','missingDate','wrongParent','missingParent']){
+  test('ROW cross-date or unresolved relation fails before the entire cascade: '+kind,()=>{
+    const f=rowFixture();
+    if(kind==='realisationDate')f.realisation.rows[1][4]='2026-09-30';
+    if(kind==='executionDate')f.execution.rows[1][6]='2026-09-30';
+    if(kind==='missingDate')f.execution.rows[1][6]='';
+    if(kind==='wrongParent')f.execution.rows[1][2]='another-PNY.007';
+    if(kind==='missingParent')f.execution.rows[1][1]='';
+    const before=JSON.stringify([f.header.rows,f.realisation.rows,f.execution.rows]);
+    assert.equal(f.ctx._t11TickPusatSiSi_().gagal.length,1);
+    assert.equal(JSON.stringify([f.header.rows,f.realisation.rows,f.execution.rows]),before);
+    assert.equal(f.events.length,0);assert.equal(f.reportDirty.length,0);
+  });
+}
+test('ROW accepts valid date cells and dd/MM/yyyy without rewriting stored dates',()=>{
+  const f=rowFixture();
+  const value=new Date('2026-09-30T17:00:00Z');
+  f.header.rows[1][4]=value;f.realisation.rows[1][4]='01/10/2026';
+  assert.equal(f.ctx._t11TickPusatSiSi_().gagal.length,0);
+  assert.equal(f.header.rows[1][4],value);
+  assert.equal(f.realisation.rows[1][4],'01/10/2026');
+});
+test('ROW supports actual lexical const COL_INS and SHEET_INS, not just fixture globals',()=>{
+  const f=rowFixture();
+  const ins=JSON.stringify(f.ctx.COL_INS),sheets=JSON.stringify(f.ctx.SHEET_INS);
+  delete f.ctx.COL_INS;delete f.ctx.SHEET_INS;
+  vm.runInContext('const COL_INS='+ins+'; const SHEET_INS='+sheets+';',f.ctx);
+  assert.equal(f.ctx.COL_INS,undefined);
+  assert.equal(f.ctx._t11TickPusatSiSi_().gagal.length,0);
+  assert.equal(f.header.rows[1][1],'R02-ABC');
+});
+test('ROW reacquires lock after actual queue helper releases it',()=>{
+  const f=rowFixture({markReleasesLock:true});
+  assert.equal(f.ctx._t11TickPusatSiSi_().gagal.length,0);
+  assert.equal(f.locked,false);
+});
+test('ROW does not fall back to all-date synchronous recalculation when queue helper is missing',()=>{
+  const f=rowFixture();delete f.ctx.markRecalcRowDirty_;
+  assert.equal(f.ctx._t11TickPusatSiSi_().gagal.length,1);
+  assert.equal(f.events.length,0);assert.equal(f.reportDirty.length,0);
+});
+test('ROW report queue failure prevents code writes, and WA queue failure does not stamp success',()=>{
+  const f=rowFixture({reportQueueFails:true});
+  assert.equal(f.ctx._t11TickPusatSiSi_().gagal.length,1);
+  assert.equal(f.events.length,0);
+  const g=rowFixture({queueFails:true});
+  const r=g.ctx._t11TickPusatSiSi_();
+  assert.equal(r.gagal.length,1);assert.match(r.gagal[0].error,/QUEUE_FAILED/);
+  assert.equal(JSON.parse(g.props.get('TRIGGER_SISI_LAST_RUN_V2'))[rowJob],undefined);
+  assert.deepEqual(g.reportDirty,['2026-10-01']);
+});
+test('ROW rechecks date changes after durable report notification before code writes',()=>{
+  const f=rowFixture({afterReportMark({header,realisation,execution}){
+    header.rows[1][4]='2026-09-30';realisation.rows[1][4]='2026-09-30';execution.rows[1][6]='2026-09-30';
+  }});
+  const r=f.ctx._t11TickPusatSiSi_();
+  assert.equal(r.gagal.length,1);assert.match(r.gagal[0].error,/ROW_CHANGED/);
+  assert.equal(f.events.length,0);
+});
+test('ROW no current-day work never refreshes or enqueues historical data',()=>{
+  const f=rowFixture({day:'2026-09-30'});
+  assert.equal(f.ctx._t11TickPusatSiSi_().gagal.length,0);
+  assert.equal(f.events.length,0);assert.equal(f.reportDirty.length,0);
 });
 function fixture(options = {}) {
   const props = new Map(), writes = [], calls = [], logs = [];
