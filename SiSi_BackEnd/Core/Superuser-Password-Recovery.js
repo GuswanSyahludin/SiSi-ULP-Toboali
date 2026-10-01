@@ -1,31 +1,48 @@
 /* One-time emergency recovery for a locked, plaintext Super User account.
  *
- * This is NOT a web/API reset route. It requires the same nonempty Google
- * account to be the Apps Script active and effective user, and requires that
- * account to match the editor allowlist in Script Properties. Apps Script
- * deployments running as the owner do not expose an active-user email, so a
- * public google.script.run call fails this check.
+ * Disabled in committed/deployed source. Google identity is NOT proof of
+ * editor execution: Apps Script may expose the active email to the owner or
+ * same-domain users in a web app. The source-only switch below, plus identical
+ * allowlisted active/effective identities, gates this emergency operation.
+ * Never register it in a web/API dispatcher.
  *
  * Runbook:
- *   1. In Project Settings > Script Properties, set:
+ *   1. In the Apps Script editor, temporarily change the constant
+ *      SISI_RECOVERY_EDITOR_ONLY_ARMED below to true in HEAD only.
+ *      Do NOT create a version, deploy, push, commit, or use /dev/API execution
+ *      while armed. Keep existing versioned deployments on disabled source.
+ *   2. In Project Settings > Script Properties, set:
  *      SISI_SUPERUSER_RECOVERY_EDITOR_EMAIL = the authorized project editor's
  *          Google account email (must be both active and effective user).
  *      SISI_SUPERUSER_RECOVERY_USERNAME = exact Super User username.
  *      SISI_SUPERUSER_RECOVERY_PASSWORD = a new unique password (16+ chars).
- *   2. Run recoverLockedSuperUserOnce manually from the Apps Script editor.
- *   3. Confirm {ok:true}; immediately sign in with the new password.
- *   4. Confirm all three recovery properties were deleted. If not, delete them
- *      manually. Never open the plaintext migration cutoff or change the pepper.
+ *   3. Run recoverLockedSuperUserOnce manually from the Apps Script editor,
+ *      without arguments. A blank active/effective email must fail closed.
+ *   4. On success OR failure, set the constant back to false and delete all
+ *      three recovery properties if still present. Do this before leaving.
+ *   5. On {ok:true}, sign in with the new password. Before any later deploy,
+ *      verify the constant is false and all recovery properties are absent.
+ *      Never open the plaintext migration cutoff or change the pepper.
  *
  * The function only resets one uniquely matched Super User whose current
  * password is still plaintext. It refuses hashed accounts, admins, ambiguity,
- * missing pepper, and non-editor execution. It writes only a salted hash.
+ * missing pepper, and unauthorized Google identities. It writes only a salted
+ * hash. While manually armed, an allowed identity can also satisfy the guard
+ * outside the editor; Session alone cannot distinguish invocation origin.
  */
+const SISI_RECOVERY_EDITOR_ONLY_ARMED = false;
 var SISI_RECOVERY_EDITOR_EMAIL_PROP = "SISI_SUPERUSER_RECOVERY_EDITOR_EMAIL";
 var SISI_RECOVERY_USERNAME_PROP = "SISI_SUPERUSER_RECOVERY_USERNAME";
 var SISI_RECOVERY_PASSWORD_PROP = "SISI_SUPERUSER_RECOVERY_PASSWORD";
 
-function recoverLockedSuperUserOnce() {
+// Private RPC-inaccessible guard; no caller-supplied identity or bypass flags.
+function _assertRecoveryEditor_(args) {
+  if (SISI_RECOVERY_EDITOR_ONLY_ARMED !== true) {
+    throw new Error("Recovery nonaktif; aktivasi hanya sementara di source HEAD editor.");
+  }
+  if (!args || args.length !== 0) {
+    throw new Error("Recovery ditolak: argumen dari pemanggil tidak diizinkan.");
+  }
   var props = PropertiesService.getScriptProperties();
   var allowedEditor = String(props.getProperty(SISI_RECOVERY_EDITOR_EMAIL_PROP) || "")
     .trim().toLowerCase();
@@ -39,7 +56,11 @@ function recoverLockedSuperUserOnce() {
       activeEmail !== allowedEditor || effectiveEmail !== allowedEditor) {
     throw new Error("Recovery ditolak: jalankan manual dari akun editor yang diizinkan.");
   }
+  return props;
+}
 
+function recoverLockedSuperUserOnce() {
+  var props = _assertRecoveryEditor_(arguments);
   var username = String(props.getProperty(SISI_RECOVERY_USERNAME_PROP) || "").trim();
   var password = String(props.getProperty(SISI_RECOVERY_PASSWORD_PROP) || "");
   if (!username || !password.trim() || password.length < 16) {
