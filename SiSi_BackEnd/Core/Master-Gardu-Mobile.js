@@ -157,7 +157,7 @@ function getMasterGarduMobile(token, ulpDiminta) {
     for (var i = 0; i < n; i++) {
       var no = String(ident[i][1] || "").trim(),
         ulp = String(ident[i][0] || "").trim();
-      if (!no || (filter && ulp.toLowerCase() !== filter)) continue;
+      if (!no || (filter && !ulpSama_(ulp, filter))) continue;
       list.push({
         ulp: ulp,
         gardu: no,

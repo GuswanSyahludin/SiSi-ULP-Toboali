@@ -782,7 +782,7 @@ function getMonitoringTlTemuan(params) {
     for (var i = 1; i < d.length; i++) {
       var kode = String(d[i][T.kodePekerjaan] || "").trim();
       if (!kode) continue;
-      if (ulpScope && String(d[i][T.ulp] || "").trim().toLowerCase() !== ulpScope) continue;
+      if (ulpScope && !ulpSama_(d[i][T.ulp], ulpScope)) continue;
       var tgl = _normTgl(d[i][T.tanggal]);
       if (dari && tgl < dari) continue;
       if (sampai && tgl > sampai) continue;

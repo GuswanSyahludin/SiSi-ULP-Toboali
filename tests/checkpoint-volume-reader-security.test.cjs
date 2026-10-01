@@ -8,15 +8,19 @@ const source = fs.readFileSync(
   path.resolve(__dirname, '../SiSi_BackEnd/Teknik/ZZ-Data-Checkpoint-Section-Volume.js'),
   'utf8',
 );
+const guardSource = fs.readFileSync(
+  path.resolve(__dirname, '../SiSi_BackEnd/Core/Guard.js'),
+  'utf8',
+);
 
-function load({ reject = false, sessionUlp = 'ULP Toboali' } = {}) {
+function load({ reject = false, sessionUlp = 'ULP Toboali', rowUlp = 'ULP Toboali' } = {}) {
   const state = { guardCalls: 0, dataReads: 0 };
   const C = {
     kodePekerjaan: 0, status: 1, tanggal: 2, penyulang: 3,
     temuan: 4, section: 5, ulp: 6,
   };
   const rows = [
-    ['PKJ-1', '', '2026-01-02', 'Penyulang A', 'Pohon', 'Section A', 'ULP Toboali'],
+    ['PKJ-1', '', '2026-01-02', 'Penyulang A', 'Pohon', 'Section A', rowUlp],
     ['PKJ-2', '', '2026-01-03', 'Penyulang A', 'Pohon', 'Section B', 'ULP PALSU'],
     ['PKJ-3', '', '2026-01-04', 'Penyulang A', 'Pohon', 'Section C', ''],
   ];
@@ -45,9 +49,14 @@ function load({ reject = false, sessionUlp = 'ULP Toboali' } = {}) {
       }) };
     },
   };
+  // Load the real comparison helper, then restore controlled auth/data fixtures.
+  // Guard.js also declares guard_ and _guardErrorAkses_; do not replace the stubs.
+  const fixtureGlobals = { ...context };
   vm.createContext(context);
+  vm.runInContext(guardSource, context);
+  Object.assign(context, fixtureGlobals);
   vm.runInContext(source, context);
-  return { context, state };
+  return { context, state, rows };
 }
 
 test('anonymous Section Volume reader is rejected before data access', () => {
@@ -79,4 +88,30 @@ test('Section Volume fails closed when session has no canonical ULP', () => {
     /ULP/,
   );
   assert.equal(state.dataReads, 0);
+});
+
+test('Section Volume accepts mixed Toboali aliases without trusting client ULP or changing owners', () => {
+  const aliases = ['Toboali', 'ULP Toboali', '  tObOaLi  ', ' \tULP   TOBOALI\n'];
+  for (const sessionUlp of aliases) {
+    for (const rowUlp of aliases) {
+      const { context, state, rows } = load({ sessionUlp, rowUlp });
+      const result = context.getDpgRekapTemuanSectionVolume({ tahun: 2026, ulp: 'ULP PALSU' });
+      assert.equal(result.ok, true);
+      assert.equal(result.totalVolume, 1);
+      assert.deepEqual(Array.from(result.sections), ['Section A']);
+      assert.equal(state.guardCalls, 1);
+      assert.equal(state.guardArgs[0].ulp, 'ULP PALSU');
+      assert.equal(rows[0][6], rowUlp);
+    }
+  }
+});
+
+test('Section Volume does not return data when the ULP comparison helper is unavailable', () => {
+  const { context } = load();
+  context.ulpSama_ = undefined;
+  const result = context.getDpgRekapTemuanSectionVolume({ tahun: 2026, ulp: 'ULP PALSU' });
+  assert.equal(result.ok, false);
+  assert.equal(result.totalVolume, 0);
+  assert.deepEqual(Array.from(result.sections), []);
+  assert.deepEqual(Array.from(result.rows), []);
 });

@@ -95,7 +95,7 @@ function syncPaketInsGarduMobile_(token, paket) {
     if (
       !_insSuper_(sesi) &&
       h.ulp &&
-      String(h.ulp).trim().toLowerCase() !== targetUlp.toLowerCase()
+      !ulpSama_(h.ulp, targetUlp)
     )
       return { success: false, message: "ULP paket tidak sesuai sesi." };
 
@@ -150,9 +150,7 @@ function syncPaketInsGarduMobile_(token, paket) {
         };
       if (
         targetUlp &&
-        String(master.ulp || "")
-          .trim()
-          .toLowerCase() !== targetUlp.toLowerCase()
+        !ulpSama_(master.ulp, targetUlp)
       )
         return { success: false, message: "Gardu berada di ULP lain." };
 

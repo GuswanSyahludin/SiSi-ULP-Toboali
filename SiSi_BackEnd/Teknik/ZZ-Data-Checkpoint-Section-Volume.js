@@ -59,7 +59,7 @@ function getDpgRekapTemuanSectionVolume(opts) {
       var rowUlp = String(row[C.ulp] || '').trim();
       if (penyF && penyulang.toLowerCase() !== penyF) continue;
       if (temF && temuan.toLowerCase() !== temF) continue;
-      if (rowUlp.toLowerCase() !== sessionUlp.toLowerCase()) continue;
+      if (!ulpSama_(rowUlp, sessionUlp)) continue;
       if (secF && section.toLowerCase() !== secF) continue;
       if (!temuan || !section) continue;
       sections[section] = true;

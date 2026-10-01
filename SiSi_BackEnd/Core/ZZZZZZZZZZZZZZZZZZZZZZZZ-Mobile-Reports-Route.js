@@ -94,7 +94,7 @@
       var ulp = _sisiMobileText_(rows[r][ulpColumn]);
       var subTeam = _sisiMobileText_(rows[r][subTeamColumn]);
       if (!ulp || !subTeam) continue;
-      if (sessionUlp && ulp.toLowerCase() !== sessionUlp.toLowerCase()) continue;
+      if (sessionUlp && !ulpSama_(ulp, sessionUlp)) continue;
       for (var n = 0; n < nameColumns.length; n++) {
         var raw = _sisiMobileText_(rows[r][nameColumns[n]]);
         var names = raw.replace(/\r/g, '\n').split(/[,;\/&\n]+/);
@@ -173,7 +173,7 @@
         var returnedUlp = _sisiMobileText_(visibleHeaders[code].ulp);
         var storedUlp = _sisiMobileText_(storedHeaderUlps[code]);
         if (storedHeaderCounts[code] !== 1 || !storedUlp ||
-            returnedUlp.toLowerCase() !== storedUlp.toLowerCase()) {
+            !ulpSama_(returnedUlp, storedUlp)) {
           delete visibleHeaders[code];
         }
       });
@@ -218,7 +218,7 @@
         var targetHeader = exHeaderCode ? visibleHeaders[exHeaderCode] : null;
         if (!targetHeader) continue;
         var headerUlp = _sisiMobileText_(targetHeader.ulp);
-        if (!exUlp || !headerUlp || exUlp.toLowerCase() !== headerUlp.toLowerCase()) continue;
+        if (!exUlp || !headerUlp || !ulpSama_(exUlp, headerUlp)) continue;
         var parentKey = JSON.stringify([exHeaderCode,
           _sisiMobileText_(_sisiMobileCell_(ex, COL_ROW.kodePekerjaan))]);
         var targetRealisasi = realisasiByParent[parentKey];

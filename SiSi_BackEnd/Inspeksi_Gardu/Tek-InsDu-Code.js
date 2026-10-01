@@ -1015,7 +1015,7 @@ function updatePengukuranGardu(payload){
     var targetRow = -1;
     for(var i=0;i<n;i++){
       if(String(nomorCol[i][0]||'').trim().toLowerCase()!==nomor.toLowerCase()) continue;
-      if(ulpCol && String(ulpCol[i][0]||'').trim().toLowerCase()!==fUlp) continue;
+      if(ulpCol && !ulpSama_(ulpCol[i][0], fUlp)) continue;
       targetRow = startRow + i; break;
     }
     if(targetRow<0) return { ok:false, message:'Gardu '+nomor+' tidak ditemukan di master.' };

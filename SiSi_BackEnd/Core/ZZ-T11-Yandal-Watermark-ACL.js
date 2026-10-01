@@ -15,7 +15,7 @@
     var opts = { ulp: true, aksi: action };
     if (superOnly) opts.role = ['SUPER'];
     var g = need_('guard_')(args, opts);
-    if (!g || text_(g.ulp).toLowerCase().replace(/\s+/g, ' ') !== 'ulp toboali')
+    if (!g || !need_('ulpSama_')(g.ulp, 'ULP Toboali'))
       fail_('CALLER_ULP_DENIED');
     return g;
   }
@@ -129,7 +129,7 @@
     if (!row || text_(row[frame.schema.id]) !== frame.kode ||
         text_(row[frame.schema.cols.folderPath]) !== frame.folderRel)
       fail_('ROW_BINDING_CHANGED');
-    if (text_(row[frame.schema.cols.ulp]).toLowerCase().replace(/\s+/g, ' ') !== 'ulp toboali')
+    if (!need_('ulpSama_')(row[frame.schema.cols.ulp], 'ULP Toboali'))
       fail_('ULP_UNRESOLVED_OR_FOREIGN');
     Object.keys(frame.expected).forEach(function (key) {
       var slot = frame.expected[key];
@@ -234,7 +234,7 @@
       found = { sh: sh, row: rows[i], rowNum: i + 1 };
     }
     if (!found) fail_('ROW_MISSING');
-    if (text_(found.row[spec.cols.ulp]).toLowerCase().replace(/\s+/g, ' ') !== 'ulp toboali')
+    if (!need_('ulpSama_')(found.row[spec.cols.ulp], 'ULP Toboali'))
       fail_('ULP_UNRESOLVED_OR_FOREIGN');
     return found;
   }

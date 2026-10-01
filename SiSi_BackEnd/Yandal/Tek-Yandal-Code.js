@@ -1464,7 +1464,7 @@ function getApprovalP0List(params) {
       var kodeP0 = String(d[i][C.kodeP0] || "").trim();
       if (!kodeP0) continue;
       var ulp = String(d[i][C.ulp] || "").trim();
-      if (ulpFilter && ulp !== ulpFilter) continue;
+      if (ulpFilter && !ulpSama_(ulp, ulpFilter)) continue;
       var tgl = _normTgl(d[i][C.tanggal]);
       if (tglFilter && tgl !== tglFilter) continue;
 
