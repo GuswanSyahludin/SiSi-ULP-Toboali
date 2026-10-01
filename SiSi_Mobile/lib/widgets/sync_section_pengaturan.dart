@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../db/app_database.dart';
 import '../db/db_provider.dart';
@@ -7,6 +8,59 @@ import '../db/repositories/sync_repository.dart';
 import '../services/auto_sync_service.dart';
 import '../services/sync_progress_service.dart';
 import '../theme/app_colors.dart';
+
+Future<void> showSyncFailureLog(BuildContext context, SyncProgressState progress) {
+  final text = syncFailureLogFor(progress).text;
+  return showDialog<void>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Log gagal download'),
+      scrollable: true,
+      content: SelectableText(text, style: const TextStyle(fontSize: 12)),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('Tutup'),
+        ),
+        FilledButton.icon(
+          icon: const Icon(Icons.copy_rounded),
+          label: const Text('Salin log'),
+          onPressed: () async {
+            try {
+              await Clipboard.setData(ClipboardData(text: text));
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Log disalin.')));
+            } catch (_) {
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Gagal menyalin. Pilih teks log untuk menyalin manual.')));
+            }
+          },
+        ),
+      ],
+    ),
+  );
+}
+
+class SyncFailureInfoButton extends StatelessWidget {
+  final SyncProgressState progress;
+  const SyncFailureInfoButton({super.key, required this.progress});
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: 'Lihat log gagal download',
+    child: OutlinedButton(
+      key: const ValueKey('sync_failure_info'),
+      onPressed: () => showSyncFailureLog(context, progress),
+      style: OutlinedButton.styleFrom(
+        padding: EdgeInsets.zero,
+        side: const BorderSide(color: Color(0xFFFCA5A5)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+      child: const Icon(Icons.error_outline_rounded, size: 21, color: Color(0xFFDC2626)),
+    ),
+  );
+}
 
 class SyncSectionPengaturan extends StatefulWidget {
   final Map<String, dynamic> sesi;
@@ -204,7 +258,7 @@ class _State extends State<SyncSectionPengaturan> {
           ],
           SizedBox.square(
             dimension: 35,
-            child: OutlinedButton(
+            child: isFailed ? SyncFailureInfoButton(progress: progress) : OutlinedButton(
               onPressed: () => setState(() => _expanded = !_expanded),
               style: OutlinedButton.styleFrom(
                 padding: EdgeInsets.zero,

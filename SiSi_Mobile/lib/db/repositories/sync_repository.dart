@@ -70,12 +70,14 @@ class SyncRepository {
     'laporan': {'db_Global_Header', 'Teknik_Laporan_Harian'},
   };
   static final Set<String> _kunci = {};
+  DateTime? _masterLeaseExpiresAt;
 
   bool sedangProses(String modul) => _kunci.contains(modul);
   Future<String> perangkatId() =>
       DbProvider.instance.syncDao.ambilAtauBuatPerangkatId();
 
   Future<bool> _ambilLeaseMaster(String owner) async {
+    _masterLeaseExpiresAt = null;
     final db = DbProvider.instance, now = DateTime.now().millisecondsSinceEpoch;
     await db.transaction(() async {
       await db.customStatement(
@@ -87,8 +89,12 @@ class SyncRepository {
           [owner, now + const Duration(hours: 1).inMilliseconds]);
     });
     final rows = await db
-        .customSelect('SELECT owner FROM master_sync_lease_v1 WHERE id=1')
+        .customSelect('SELECT owner, expires FROM master_sync_lease_v1 WHERE id=1')
         .get();
+    final expires = rows.isEmpty ? null : rows.first.data['expires'];
+    if (expires is int) {
+      _masterLeaseExpiresAt = DateTime.fromMillisecondsSinceEpoch(expires, isUtc: true);
+    }
     return rows.isNotEmpty && rows.first.data['owner'] == owner;
   }
 
@@ -145,20 +151,28 @@ class SyncRepository {
     _kunci.add(key);
     final progress = SyncProgressService.instance,
         lease = DateTime.now().microsecondsSinceEpoch.toString();
+    final progressScope = progress.accountScope;
+    var phase = 'master_lease';
+    var diagnostic = SyncProgressState(module: module);
     await progress.begin(
         stage: 'Menyiapkan ${moduleLabels[module]}', module: module, total: 1);
     try {
       if (!await _ambilLeaseMaster(lease)) {
         const message = 'Sinkron data sedang berjalan di proses lain.';
-        await progress.failure(message);
+        await progress.failure(message, code: 'MASTER_LEASE_BUSY',
+            phase: phase, leaseExpiresAt: _masterLeaseExpiresAt,
+            context: diagnostic, expectedScope: progressScope);
         return {'ok': false, 'message': message};
       }
-      final active = await _tokenAktif(token),
-          delta = DeltaSyncRepository(),
-          initial = !await delta.sudahPernah();
+      phase = 'refresh_session';
+      final active = await _tokenAktif(token), delta = DeltaSyncRepository();
+      phase = 'read_local_state';
+      final initial = !await delta.sudahPernah();
+      phase = 'download_snapshot';
       final result = await delta.sync(active,
           datasetNames: datasets,
-          onProgress: (t) => progress.update(
+          onProgress: (t) {
+            progress.update(
               'Mengunduh ${moduleLabels[module]}',
               module: module,
               dataset: t.dataset,
@@ -167,8 +181,12 @@ class SyncRepository {
               transferredRows: t.overallTransferred,
               totalRows: t.overallTotal,
               datasetTransferredRows: t.datasetTransferred,
-              datasetTotalRows: t.datasetTotal));
+              datasetTotalRows: t.datasetTotal);
+            diagnostic = progress.state.value;
+          });
+      phase = 'materialize';
       await _materialize(result.changed.toSet(), initial, delta);
+      phase = 'save_sync_status';
       await DbProvider.instance.syncDao.tandaiTersinkron('master:$module',
           jumlah: result.changed.length, keterangan: result.message);
       // Check if in manual sync mode; if not, finalize based on parameter
@@ -180,9 +198,10 @@ class SyncRepository {
         'ok': true,
         'message': '${moduleLabels[module]} selesai diperbarui.'
       };
-    } catch (e) {
+    } catch (e, stack) {
       final message = friendlySyncMessage(e);
-      await progress.failure(message);
+      await progress.failure(message, error: e, stackTrace: stack,
+          phase: phase, context: diagnostic, expectedScope: progressScope);
       return {'ok': false, 'message': message};
     } finally {
       await _lepasLeaseMaster(lease);
@@ -198,25 +217,34 @@ class SyncRepository {
     _kunci.add(key);
     final progress = SyncProgressService.instance,
         lease = DateTime.now().microsecondsSinceEpoch.toString();
+    final progressScope = progress.accountScope;
+    var phase = 'master_lease';
+    var diagnostic = const SyncProgressState(module: 'semua');
     await progress.begin(
         stage: 'Menyiapkan semua Data Master', module: 'semua', total: 1);
     try {
       if (!await _ambilLeaseMaster(lease)) {
         const message = 'Sinkron data sedang berjalan di proses lain.';
-        await progress.failure(message);
+        await progress.failure(message, code: 'MASTER_LEASE_BUSY',
+            phase: phase, leaseExpiresAt: _masterLeaseExpiresAt,
+            context: diagnostic, expectedScope: progressScope);
         return {'ok': false, 'message': message};
       }
-      final active = await _tokenAktif(token),
-          delta = DeltaSyncRepository(),
-          initial = !await delta.sudahPernah();
+      phase = 'refresh_session';
+      final active = await _tokenAktif(token), delta = DeltaSyncRepository();
+      phase = 'read_local_state';
+      final initial = !await delta.sudahPernah();
+      phase = 'send_outbox';
       final p0 = await P0Repository().kirimAntrean(),
           gardu = await GarduSyncRepository().kirim(active),
           inspeksi = await InspeksiGarduRepository().syncSemua(active);
       try {
         await TeknikToRepository().flushOutbox(active);
       } catch (_) {}
+      phase = 'download_snapshot';
       final result = await delta.sync(active,
-          onProgress: (t) => progress.update('Mengunduh semua Data Master',
+          onProgress: (t) {
+            progress.update('Mengunduh semua Data Master',
               module: 'semua',
               dataset: t.dataset,
               completed: 0,
@@ -224,19 +252,24 @@ class SyncRepository {
               transferredRows: t.overallTransferred,
               totalRows: t.overallTotal,
               datasetTransferredRows: t.datasetTransferred,
-              datasetTotalRows: t.datasetTotal));
+              datasetTotalRows: t.datasetTotal);
+            diagnostic = progress.state.value;
+          });
+      phase = 'materialize';
       await _materialize(result.changed.toSet(), initial, delta);
       final ok =
           p0['ok'] == true && gardu['ok'] == true && inspeksi['ok'] == true;
       if (ok) {
         await progress.success(result.message);
       } else {
-        await progress.failure(result.message);
+        await progress.failure(result.message, code: 'OUTBOX_FAILED',
+            phase: 'send_outbox', context: diagnostic, expectedScope: progressScope);
       }
       return {'ok': ok, 'message': result.message};
-    } catch (e) {
+    } catch (e, stack) {
       final message = friendlySyncMessage(e);
-      await progress.failure(message);
+      await progress.failure(message, error: e, stackTrace: stack,
+          phase: phase, context: diagnostic, expectedScope: progressScope);
       return {'ok': false, 'message': message};
     } finally {
       await _lepasLeaseMaster(lease);
