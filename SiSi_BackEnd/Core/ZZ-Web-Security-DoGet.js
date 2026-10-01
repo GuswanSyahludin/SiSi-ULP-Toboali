@@ -24,6 +24,14 @@ doGet = function (e) {
         "Core/Web-Login-Bootstrap",
       ).getContent();
       html = html.replace(scripts[0], function () { return loginBootstrap; });
+      // A logout return must not auto-restore storage from another frame.
+      // This non-secret flag grants no access and never carries a token.
+      var logout = String(e && e.parameter && e.parameter.logout || "");
+      if (/^(1|2)$/.test(logout)) {
+        html = html.replace(/<body\b[^>]*>/i, function (tag) {
+          return tag + '<input type="hidden" id="hdnLogout" value="' + logout + '">';
+        });
+      }
     }
     out.setContent(_sanitizeWebHtmlSecurity_(html));
   }
@@ -45,8 +53,13 @@ function getWebAppShell(token) {
   var appBootstrap = HtmlService.createHtmlOutputFromFile(
     "Core/Web-Login-Bootstrap",
   ).getContent();
+  var loginUrl = String(ScriptApp.getService().getUrl() || "").split(/[?#]/)[0];
+  if (!/^https:\/\/script\.google\.com\/macros\/(?:a\/[a-z0-9.-]+\/)?s\/[A-Za-z0-9_-]+\/(?:exec|dev)$/.test(loginUrl)) {
+    throw new Error("URL login deployment tidak valid.");
+  }
   html = html.replace(/<\/body\s*>/i, function () {
-    return appBootstrap + "\n</body>";
+    return '<input type="hidden" id="sisiLogoutUrl" value="' + loginUrl + '">' +
+      appBootstrap + "\n</body>";
   });
   html = _sanitizeWebHtmlSecurity_(html);
   return {

@@ -8,6 +8,72 @@
   "use strict";
   var form = document.getElementById("frmLogin");
   if (!form) {
+    var loggingOut = false;
+    // The deployment URL is injected by the server, never taken from iframe
+    // location, a client redirect parameter, or cached session metadata.
+    var logoutUrlNode = document.getElementById("sisiLogoutUrl");
+    var logoutBase = logoutUrlNode ? logoutUrlNode.value : "";
+    window.doLogout = function () {
+      if (loggingOut) return;
+      loggingOut = true;
+      var token = _state.token || (typeof _getToken === "function" ? _getToken() : "");
+      try { sessionStorage.removeItem("sisiSesi"); } catch (_) {}
+      try { sessionStorage.removeItem("sisiScriptUrl"); } catch (_) {}
+      _state.token = "";
+      _state.sesi = {};
+      window.__SISI_SESI__ = null;
+      window.__SISI_PAGE__ = "";
+      window._getToken = function () { return ""; };
+      if (window._notifTimer) {
+        clearInterval(window._notifTimer);
+        window._notifTimer = null;
+      }
+      // Remove the private page, not unrelated storage/drafts. Late page
+      // callbacks can only target detached nodes while navigation completes.
+      var panel = document.createElement("main");
+      panel.style.cssText = "padding:48px 24px;text-align:center;font-family:system-ui";
+      var message = document.createElement("p");
+      message.textContent = "Mengakhiri sesi...";
+      panel.appendChild(message);
+      document.body.replaceChildren(panel);
+      var done = false;
+      var timer;
+      function finish(revoked) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        token = "";
+        if (!/^https:\/\/script\.google\.com\/macros\/(?:a\/[a-z0-9.-]+\/)?s\/[A-Za-z0-9_-]+\/(?:exec|dev)$/.test(logoutBase)) {
+          message.textContent = "Sesi lokal ditutup. Buka kembali URL login SiSi dari bookmark resmi.";
+          return;
+        }
+        var url = logoutBase + "?logout=" + (revoked ? "1" : "2") + "&reload=" + Date.now();
+        message.textContent = revoked
+          ? "Sesi ditutup. Membuka halaman login..."
+          : "Sesi lokal ditutup; pencabutan sesi server belum terkonfirmasi. Buka login untuk melanjutkan.";
+        var link = document.createElement("a");
+        link.href = url;
+        link.target = "_top";
+        link.rel = "noreferrer";
+        link.textContent = "Kembali ke login dan muat ulang";
+        panel.appendChild(link);
+        // Full navigation with a non-secret cache buster. HtmlService/browser
+        // sandbox may require a new user gesture: keep the real _top link.
+        try {
+          if (window.top === window) window.location.replace(url);
+          else window.top.location.href = url;
+        } catch (_) {}
+      }
+      timer = setTimeout(function () { finish(false); }, 10000);
+      if (!token) { finish(true); return; }
+      try {
+        // Pass exactly the captured token, not SisiRun's post-cleanup fallback.
+        google.script.run
+          .withSuccessHandler(function (res) { finish(!!res && res.success === true); })
+          .withFailureHandler(function () { finish(false); })
+          .doLogout(token);
+      } catch (_) { finish(false); }
+    };
     // Core/Main keeps its layout, login fallback and data authorization.
     // Select an allowed dashboard after its existing startup/splash completes.
     var originalStart = window._munculkanMain;
@@ -15,6 +81,7 @@
       throw new Error("Bootstrap halaman utama tidak tersedia.");
     }
     window._munculkanMain = function () {
+      if (loggingOut) return;
       originalStart();
       var bidang = String((_state.sesi && _state.sesi.bidang) || "").trim().toLowerCase();
       var preferred = { teknik: "Tek", pp: "PP", te: "TE", k3: "K3" }[bidang] || "Tek";
@@ -95,6 +162,11 @@
           showError("Penyimpanan sesi browser tidak tersedia. Izinkan penyimpanan situs lalu coba lagi.");
           return;
         }
+        // After an explicit fresh login, remove the one-use logout URL marker
+        // so an ordinary later refresh can validate the new session normally.
+        if (forceLogin) {
+          try { google.script.history.replace({}, {}, ""); } catch (_) {}
+        }
         // Only authenticated, sanitized Core/Main HTML is written.
         // Reuse this frame, its google.script bridge and sessionStorage.
         pendingToken = "";
@@ -162,8 +234,17 @@
   // Refresh starts at the same login document; validate stored token by RPC.
   // Missing/blocked/malformed storage stays on the usable login form.
   var restored = null;
-  try { restored = JSON.parse(sessionStorage.getItem("sisiSesi") || "null"); }
-  catch (_) { clearSession(); }
+  var logoutMarker = document.getElementById("hdnLogout");
+  var forceLogin = logoutMarker && /^(1|2)$/.test(logoutMarker.value);
+  if (forceLogin) {
+    clearSession();
+    if (logoutMarker.value === "2") {
+      showError("Sesi lokal telah ditutup, tetapi logout server belum terkonfirmasi. Silakan login ulang.");
+    }
+  } else {
+    try { restored = JSON.parse(sessionStorage.getItem("sisiSesi") || "null"); }
+    catch (_) { clearSession(); }
+  }
   if (restored && typeof restored.token === "string" && restored.token) {
     requestShell(restored.token);
   }
