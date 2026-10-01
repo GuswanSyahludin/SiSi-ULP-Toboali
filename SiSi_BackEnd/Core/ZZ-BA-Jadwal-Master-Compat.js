@@ -11,18 +11,15 @@
 // --- 1. getPenyulangDanSection ---
 function getPenyulangDanSection(token) {
   try {
-    var sesi = null;
-    var tokenText = String(token || "").trim();
-    if (tokenText && typeof getSesiByToken === "function") {
-      sesi = getSesiByToken(tokenText);
-      if (!sesi) {
-        return {
-          ok: false,
-          penyulangList: [],
-          sectionByPenyulang: {},
-          message: "Sesi habis atau tidak valid. Silakan login ulang.",
-        };
-      }
+    var g = guard_(arguments, { ulp: true, aksi: "getPenyulangDanSection" });
+    function ulpKey(value) {
+      return String(value == null ? "" : value)
+        .trim().toLowerCase().replace(/\s+/g, " ").replace(/^ulp /, "");
+    }
+    // BA is internal to Toboali, including Super User calls. Never infer
+    // ownership from browser metadata or fall back to an unscoped master.
+    if (ulpKey(g.ulp) !== "toboali") {
+      throw new Error("Akses BA hanya tersedia untuk ULP Toboali.");
     }
 
     if (typeof getJadwalPadamMaster !== "function") {
@@ -34,8 +31,8 @@ function getPenyulangDanSection(token) {
       };
     }
 
-    var ulp = sesi ? String(sesi.ulp || "").trim() : "";
-    var master = getJadwalPadamMaster({ ulp: ulp });
+    var ulp = g.ulp;
+    var master = getJadwalPadamMaster({ token: g.token, ulp: ulp });
     if (!master || !master.ok) {
       return {
         ok: false,
@@ -60,6 +57,8 @@ function getPenyulangDanSection(token) {
     }
 
     (master.rows || []).forEach(function (row) {
+      // Retain same-ULP isolation even if a legacy master returns extra rows.
+      if (!row || ulpKey(row.ulp) !== "toboali") return;
       var penyulang = String((row && row.penyulang) || "")
         .replace(/\u00a0/g, " ")
         .trim()
