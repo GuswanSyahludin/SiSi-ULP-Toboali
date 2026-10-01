@@ -1,5 +1,6 @@
 /* Adapter final OwnerId/External Reference untuk SisiRun.
-   Kontrak tunggal: getOwnerIdDanExternalReference(token, filter). */
+   Terima (token, filter) dan ({ token, penyulang, section }).
+   SisiRun menyisipkan token KE objek, bukan di depan argumen objek. */
 function _baOwnerKosongCompat_(message) {
   return {
     ok: true, found: false, ownerId: '', externalReference: '', referralId: '',
@@ -10,7 +11,11 @@ function _baOwnerKosongCompat_(message) {
 function getOwnerIdDanExternalReference(token, filter) {
   try {
     guard_(arguments, { aksi: 'getOwnerIdDanExternalReference' });
-    filter = filter && typeof filter === 'object' ? filter : {};
+    // Authenticate the original arguments before adapting either call shape.
+    if (arguments.length === 1 && token && typeof token === 'object' && !Array.isArray(token)) {
+      filter = token;
+    }
+    filter = filter && typeof filter === 'object' && !Array.isArray(filter) ? filter : {};
     var penyulang = String(filter.penyulang || '').trim();
     var section = String(filter.section || '').trim();
     if (!penyulang) return _baOwnerKosongCompat_('Penyulang harus terisi.');
