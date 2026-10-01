@@ -200,6 +200,17 @@ function _auditSatuFungsi_(nama, fn) {
       break;
     }
   }
+  /* Guard recovery hanya sah untuk entry ini dan sebagai pernyataan pertama.
+     Bukan pengecualian audit dan tidak menggantikan guard sesi endpoint lain. */
+  if (nama === "recoverLockedSuperUserOnce") {
+    out.terjaga =
+      typeof _assertRecoveryEditor_ === "function" &&
+      typeof SISI_RECOVERY_EDITOR_ONLY_ARMED !== "undefined" &&
+      SISI_RECOVERY_EDITOR_ONLY_ARMED === false &&
+      /^\s*var\s+props\s*=\s*_assertRecoveryEditor_\(\s*arguments\s*\)\s*;/.test(badan);
+    out.jenis = out.terjaga ? "recovery-editor" : "recovery-tidak-aman";
+    if (!out.terjaga) out.catatan = "Recovery harus nonaktif dan diawali guard identitas editor.";
+  }
   if (!out.terjaga) {
     if (new RegExp("\\b" + AUDIT_GUARD_INTERNAL + "\\s*\\(").test(badan)) {
       out.jenis = "internal";

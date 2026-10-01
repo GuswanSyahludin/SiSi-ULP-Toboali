@@ -10,6 +10,24 @@ GUARDS = ("guard_(", "requireSesi_(", "_assertSuperUser(", "_assertSuperUserKeta
 WRITE_MARKERS = (".setValue(", ".setValues(", ".appendRow(", ".deleteRow(", ".deleteRows(", ".clearContent(", ".clear(", ".insertRowsAfter(", ".setFormula(", ".setFormulas(", ".createFile(", ".setSharing(")
 READ_MARKERS = (".getValues(", ".getDataRange(", ".getDisplayValues(", ".getLastRow(", "openById(")
 
+# Recovery is not a general-purpose guard or an ignored/internal endpoint.
+# Only this entry/file may use the separate Google-identity authorization.
+RECOVERY_ENTRY = "recoverLockedSuperUserOnce"
+RECOVERY_FILE = Path("Core/Superuser-Password-Recovery.js")
+RECOVERY_FIRST = re.compile(r"^\s*var\s+props\s*=\s*_assertRecoveryEditor_\(\s*arguments\s*\)\s*;")
+
+
+def recovery_source_safe(source: str) -> bool:
+    clean = re.sub(r"/\*[\s\S]*?\*/|//[^\n]*", " ", source)
+    switches = re.findall(r"\b(?:const|let|var)\s+SISI_RECOVERY_EDITOR_ONLY_ARMED\s*=\s*([^;]+);", clean)
+    guards = [body for name, body in functions(clean) if name == "_assertRecoveryEditor_"]
+    return (
+        switches == ["false"]
+        and bool(re.search(r"\bconst\s+SISI_RECOVERY_EDITOR_ONLY_ARMED\s*=\s*false\s*;", clean))
+        and len(guards) == 1
+        and bool(re.match(r"\s*if\s*\(\s*SISI_RECOVERY_EDITOR_ONLY_ARMED\s*!==\s*true\s*\)\s*\{\s*throw\b", guards[0]))
+    )
+
 
 def functions(source: str):
     pattern = re.compile(r"(?:function\s+([A-Za-z_$][\w$]*)|([A-Za-z_$][\w$]*)\s*=\s*function)\s*\(")
@@ -73,7 +91,15 @@ def main() -> int:
     internal = explicit_internal_exceptions(sources)
     failures: list[str] = []
     for path, source in zip(paths, sources):
+        recovery_file = path.relative_to(root) == RECOVERY_FILE
+        recovery_safe = recovery_file and recovery_source_safe(source)
+        if recovery_file and not recovery_safe:
+            failures.append(f"{path}: recovery wajib nonaktif (const false) dan memakai guard fail-closed")
         for name, body in functions(source):
+            if name == RECOVERY_ENTRY:
+                if not recovery_safe or not RECOVERY_FIRST.match(body):
+                    failures.append(f"{path}:{name}: guard recovery wajib menjadi pernyataan pertama")
+                continue
             if name.startswith("_") or name in allow or name in wrapped or name in internal: continue
             if not any(marker in body for marker in WRITE_MARKERS + READ_MARKERS): continue
             if not any(marker in body[:2400] for marker in GUARDS):
