@@ -3374,7 +3374,7 @@ class $MasterGardusTable extends MasterGardus
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {gardu};
+  Set<GeneratedColumn> get $primaryKey => {ulp, gardu};
   @override
   MasterGardu map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -4785,7 +4785,7 @@ class $GarduOutboxesTable extends GarduOutboxes
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {gardu};
+  Set<GeneratedColumn> get $primaryKey => {ulp, gardu};
   @override
   GarduOutbox map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';

@@ -104,7 +104,13 @@ void main() {
     test('$slot: private capture survives draft reload and feeds verified render bytes', () async {
       final saved = await saveCapture(slot);
       final hash = sha256.convert(jpeg).toString();
-      expect(saved.path, startsWith('${privateBase.path}/${PetugasPhotoStore.key(owner)}/'));
+      expect(
+  saved.path.replaceAll('\\', '/'),
+  startsWith(
+    '${privateBase.path}/${PetugasPhotoStore.key(owner)}/'
+        .replaceAll('\\', '/'),
+  ),
+);
       expect(saved.metadata['originalSha256'], hash);
       expect(saved.metadata['team'], 'yandal');
       expect(saved.metadata['tahap'], slot);
