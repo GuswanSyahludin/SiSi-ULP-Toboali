@@ -12,7 +12,7 @@ const { pathToFileURL } = require('node:url');
 
 const suitePath = path.join(__dirname, 'suite.js');
 const generatedPath = path.join(__dirname, '.suite-h08.generated.mjs');
-let source = fs.readFileSync(suitePath, 'utf8');
+let source = fs.readFileSync(suitePath, 'utf8').replace(/\r\n?/g, '\n');
 
 const resetNeedle = [
   'function reset(ctx, spreadsheetId) {',

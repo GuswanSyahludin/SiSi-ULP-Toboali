@@ -20,7 +20,16 @@
     var switching=typeof getDataSwitching==='function'?getDataSwitching:null;
     if(switching){
       getDataSwitching=function(){
-        try{return switching.apply(this,arguments);}
+        // The legacy list constructs a new filter without its session token.
+        // Forward only the already-authenticated outer token, on a copy.
+        var args=Array.prototype.slice.call(arguments);
+        var nested=args[0], secured={};
+        if(nested&&typeof nested==='object'&&!Array.isArray(nested)){
+          Object.keys(nested).forEach(function(key){if(key!=='token')secured[key]=nested[key];});
+        }
+        secured.token=g.token;
+        args[0]=secured;
+        try{return switching.apply(this,args);}
         catch(error){if(accessError(error)){pending=error;return{ok:false,rows:[]};}throw error;}
       };
     }

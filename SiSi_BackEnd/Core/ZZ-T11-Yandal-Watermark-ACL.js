@@ -10,6 +10,268 @@
   // below can establish this execution-local queue context.
   var queueContext = null;
   var queueCapability = {};
+  // A scheduled resolver is not sufficient authority on its own. This entry
+  // checks the unforgeable closure context even when called directly.
+  root._t11PerbaikanKodeROW_ = function () {
+    if (queueContext !== queueCapability) throw new Error('T11_WORKER_CONTEXT_REQUIRED');
+    if (typeof root._t11RecalcToday_ === 'function') return root._t11RecalcToday_();
+    return _repairKodeRow_();
+  };
+  function _repairKodeRow_() {
+    function stop(code) { throw new Error('T11_ROW_' + code); }
+    var lock = LockService.getScriptLock(), started = Date.now();
+    // Capture once per invocation. Midnight must not change a running batch.
+    var targetDay = Utilities.formatDate(new Date(started), 'Asia/Jakarta', 'yyyy-MM-dd');
+    function day(value) {
+      var text, match;
+      if (Object.prototype.toString.call(value) === '[object Date]') {
+        if (isNaN(value.getTime())) stop('DATE_INVALID');
+        text = Utilities.formatDate(value, 'Asia/Jakarta', 'yyyy-MM-dd');
+      } else if (typeof value === 'string') {
+        text = value.trim();
+        match = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if (match) text = match[3] + '-' + ('0' + match[2]).slice(-2) +
+          '-' + ('0' + match[1]).slice(-2);
+      } else stop('DATE_INVALID');
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) stop('DATE_INVALID');
+      var parsed = new Date(text + 'T00:00:00Z');
+      if (isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== text)
+        stop('DATE_INVALID');
+      return text;
+    }
+    targetDay = day(targetDay);
+    function acquire() {
+      lock.waitLock(15000);
+      if (!lock.hasLock()) stop('LOCK_REQUIRED');
+    }
+    function owned(value) { return need_('ulpSama_')(value, 'ULP Toboali'); }
+    function populated(row) {
+      return row.some(function (v) { return v !== '' && v != null; });
+    }
+    // Core declares these as const: V8 lexical globals are not root properties.
+    var ins = typeof COL_INS !== 'undefined' ? COL_INS : root.COL_INS;
+    var sheets = typeof SHEET_INS !== 'undefined' ? SHEET_INS : root.SHEET_INS;
+    var H = ins && ins.HEADER, E = root.COL_ROW, R = root.COL_ROW_RLZ;
+    if (!H || !E || !R || !sheets) stop('SCHEMA_MISSING');
+    [H.kodeHeader, H.ulp, H.tim, H.subTim, E.kodeHeader, E.kodePekerjaan,
+      E.kodeEksekusi, E.ulp, E.tim, R.kodeHeader, R.kodePekerjaan,
+      H.tanggal, R.tanggal, E.tanggal].forEach(function (col) {
+      if (!Number.isInteger(col) || col < 0) stop('SCHEMA_MISSING');
+    });
+    var ss, shH, shR, shE;
+    function _read_(sh) {
+      if (!sh) stop('SHEET_MISSING');
+      return sh.getDataRange().getValues();
+    }
+    // Legacy parent lookup matches team/date without ULP. Refuse the WHOLE
+    // maintenance job if any populated header/execution has unresolved or
+    // foreign ownership, or any realisation cannot resolve a unique header.
+    function _snapshot_() {
+      var h = _read_(shH), r = _read_(shR), e = _read_(shE), headers = Object.create(null);
+      var parents = Object.create(null), headerDays = Object.create(null);
+      h.slice(1).forEach(function (row) {
+        if (!populated(row)) return;
+        if (!owned(row[H.ulp])) stop('ULP_UNRESOLVED_OR_FOREIGN');
+        var key = text_(row[H.kodeHeader]);
+        if (!key || headers[key]) stop('HEADER_AMBIGUOUS');
+        headers[key] = row;
+        headerDays[key] = day(row[H.tanggal]);
+      });
+      r.slice(1).forEach(function (row) {
+        if (!populated(row)) return;
+        var header = text_(row[R.kodeHeader]), key = text_(row[R.kodePekerjaan]);
+        if (!headers[header]) stop('PARENT_UNRESOLVED');
+        if (day(row[R.tanggal]) !== headerDays[header]) stop('DATE_RELATION_MISMATCH');
+        if (!key || parents[key]) stop('PARENT_AMBIGUOUS');
+        parents[key] = row;
+      });
+      var keys = Object.create(null);
+      e.slice(1).forEach(function (row) {
+        if (!populated(row)) return;
+        if (!owned(row[E.ulp])) stop('ULP_UNRESOLVED_OR_FOREIGN');
+        var key = text_(row[E.kodeEksekusi]);
+        if (key && keys[key]) stop('EXECUTION_AMBIGUOUS');
+        if (key) keys[key] = true;
+        var date = day(row[E.tanggal]), header = text_(row[E.kodeHeader]);
+        var parent = text_(row[E.kodePekerjaan]);
+        // Unlinked raw input may create a parent, but existing links must resolve
+        // to the same date. Never repair one date by changing another's chain.
+        if (header && (!headers[header] || headerDays[header] !== date))
+          stop('DATE_RELATION_MISMATCH');
+        if (parent && (!parents[parent] ||
+            text_(parents[parent][R.kodeHeader]) !== header ||
+            day(parents[parent][R.tanggal]) !== date))
+          stop('DATE_RELATION_MISMATCH');
+        if (key.indexOf('-EKS.') >= 0 && (!header || !parent))
+          stop('PARENT_UNRESOLVED');
+      });
+      return { h: h, r: r, e: e, headers: headers };
+    }
+    function _writeRow_(sh, index, before, after, columns) {
+      if (!lock.hasLock()) stop('LOCK_REQUIRED');
+      var fresh = sh.getRange(index + 1, 1, 1, before.length).getValues()[0];
+      if (JSON.stringify(fresh) !== JSON.stringify(before)) stop('ROW_CHANGED');
+      columns.forEach(function (col) {
+        if (before[col] !== after[col]) sh.getRange(index + 1, col + 1).setValue(after[col]);
+      });
+    }
+    try {
+      acquire();
+      ss = SpreadsheetApp.openById(root.SPREADSHEET_ID);
+      shH = ss.getSheetByName(sheets.HEADER);
+      shR = ss.getSheetByName('db_ROW_Realisasi');
+      shE = ss.getSheetByName('db_ROW_Eksekusi');
+      var initial = _snapshot_();
+      // Resolve dependencies before the first write. No global guard bypass.
+      var process = need_('prosesEksekusiROW'), mark = need_('markWaDirty_');
+      var markReport = need_('markLaporanDirty_');
+      // Require the async path: legacy synchronous fallback rewrites other dates.
+      need_('markRecalcRowDirty_'); need_('enqueueFotoRow_');
+      var map = Object.create(null), occupied = Object.create(null), plans = [];
+      Object.keys(initial.headers).forEach(function (key) { occupied[key] = true; });
+      var result = { ok: true, tanggal: targetDay, headerDiperbaiki: 0, headerKonflik: 0,
+        realisasiDiperbaiki: 0, eksekusiDiperbaiki: 0, rawDiproses: 0 };
+      initial.h.forEach(function (row, i) {
+        if (!i || text_(row[H.tim]) !== 'ROW') return;
+        if (day(row[H.tanggal]) !== targetDay) return;
+        var sub = text_(row[H.subTim]), old = text_(row[H.kodeHeader]);
+        if (!sub || !old) return;
+        if (!/\d{2}$/.test(sub) || old.indexOf('-') < 1) stop('INVALID_HEADER');
+        var next = 'R' + sub.slice(-2) + old.slice(old.indexOf('-'));
+        if (old === next) return;
+        if (occupied[next]) { result.headerKonflik++; return; }
+        occupied[next] = true; map[old] = next;
+        var after = row.slice(); after[H.kodeHeader] = next;
+        plans.push({ sh: shH, i: i, before: row, after: after, cols: [H.kodeHeader] });
+        result.headerDiperbaiki++;
+      });
+      function cascade(rows, sh, cols, dateCol, countKey) {
+        rows.forEach(function (row, i) {
+          if (!i) return;
+          var after = row.slice(), changed = false;
+          cols.forEach(function (col, slot) {
+            var value = text_(row[col]);
+            Object.keys(map).some(function (old) {
+              if ((slot === 0 && value === old) || (slot > 0 && value.indexOf(old + '-') === 0)) {
+                after[col] = map[old] + value.slice(old.length); changed = true; return true;
+              }
+              return false;
+            });
+          });
+          if (changed) {
+            if (day(row[dateCol]) !== targetDay) stop('DATE_RELATION_MISMATCH');
+            plans.push({ sh: sh, i: i, before: row, after: after, cols: cols });
+            result[countKey]++;
+          }
+        });
+      }
+      cascade(initial.r, shR, [R.kodeHeader, R.kodePekerjaan], R.tanggal, 'realisasiDiperbaiki');
+      cascade(initial.e, shE, [E.kodeHeader, E.kodePekerjaan, E.kodeEksekusi], E.tanggal, 'eksekusiDiperbaiki');
+      var pendingRaw = initial.e.slice(1).some(function (row) {
+        var key = text_(row[E.kodeEksekusi]);
+        return key && key.indexOf('-EKS.') < 0 && need_('_isTimROW_')(row[E.tim]) &&
+          day(row[E.tanggal]) === targetDay;
+      });
+      if (!plans.length && !pendingRaw) {
+        result.skipped = 'nihil-hari-ini';
+        return result;
+      }
+      // Recheck all ownership immediately before the cascade starts.
+      var prewrite = _snapshot_();
+      if (JSON.stringify([prewrite.h, prewrite.r, prewrite.e]) !==
+          JSON.stringify([initial.h, initial.r, initial.e])) stop('ROW_CHANGED');
+      // Durable downstream notification before writes: a partial failure must
+      // not erase the need to refresh reports. No historical refresh here.
+      markReport(targetDay);
+      acquire();
+      var marked = _snapshot_();
+      if (JSON.stringify([marked.h, marked.r, marked.e]) !==
+          JSON.stringify([initial.h, initial.r, initial.e])) stop('ROW_CHANGED');
+      plans.forEach(function (plan) { _writeRow_(plan.sh, plan.i, plan.before, plan.after, plan.cols); });
+      SpreadsheetApp.flush();
+      // Mark every changed header dirty before raw processing can fail. No
+      // authenticated public WA endpoint is invoked without a session.
+      Object.keys(map).forEach(function (old) {
+        acquire();
+        if (mark(map[old]) === false) stop('QUEUE_FAILED');
+      });
+      acquire();
+      var current = _snapshot_(), raw = [];
+      current.e.slice(1).forEach(function (row) {
+        var key = text_(row[E.kodeEksekusi]);
+        if (key && key.indexOf('-EKS.') < 0 && need_('_isTimROW_')(row[E.tim]) &&
+            day(row[E.tanggal]) === targetDay) raw.push(key);
+      });
+      for (var i = 0; i < raw.length; i++) {
+        if (Date.now() - started > 90000) { result.terpotong = true; break; }
+        acquire();
+        var check = _snapshot_(), matches = check.e.slice(1).filter(function (row) {
+          return text_(row[E.kodeEksekusi]) === raw[i];
+        });
+        if (matches.length !== 1 || day(matches[0][E.tanggal]) !== targetDay)
+          stop('ROW_CHANGED');
+        var answer = process(raw[i]);
+        // Legacy process releases the script lock; reacquire before any
+        // subsequent action and never interpret ok:false as completed.
+        acquire(); _snapshot_();
+        if (!answer || answer.ok !== true) stop('RAW_PROCESS_FAILED');
+        result.rawDiproses++;
+      }
+      return result;
+    } catch (error) {
+      // Only fixed codes are permitted in scheduler logs.
+      var message = error && typeof error.message === 'string' ? error.message : '';
+      if (!/^T11_ROW_(LOCK_REQUIRED|SCHEMA_MISSING|SHEET_MISSING|ULP_UNRESOLVED_OR_FOREIGN|HEADER_AMBIGUOUS|PARENT_UNRESOLVED|PARENT_AMBIGUOUS|EXECUTION_AMBIGUOUS|ROW_CHANGED|INVALID_HEADER|RAW_PROCESS_FAILED|DATE_INVALID|DATE_RELATION_MISMATCH|QUEUE_FAILED)$/.test(message))
+        message = 'T11_ROW_MAINTENANCE_FAILED';
+      throw new Error(message);
+    } finally {
+      try { if (lock.hasLock()) lock.releaseLock(); } catch (releaseError) {}
+    }
+  }
+  // Resolve the three legacy no-token jobs only inside trusted scheduler
+  // execution. Keep their public endpoints (and all other guards) unchanged.
+  var originalResolver = root._triggerSisiHandler_;
+  if (typeof originalResolver === 'function') {
+    root._triggerSisiHandler_ = function (name) {
+      if (typeof root._t11RecalcOwnsJob_ === 'function' && root._t11RecalcOwnsJob_(name)) {
+        return function () {
+          if (queueContext !== queueCapability) throw new Error('T11_WORKER_CONTEXT_REQUIRED');
+          return { ok: true, deferred: 'ordered-recalc-pipeline' };
+        };
+      }
+      if (['ensureLaporanHarianHariIni', 'drainLaporanDirty',
+          'drainLaporanDirtySafe'].indexOf(name) >= 0) {
+        return function () {
+          if (queueContext !== queueCapability) throw new Error('T11_WORKER_CONTEXT_REQUIRED');
+          return need_('_t11ReportMaintenance_')(name);
+        };
+      }
+      if (['refreshLaporanHarianHariIni', 'sweepDurasiJarakYandalP0',
+          'validasiUlangFotoTemuan'].indexOf(name) < 0)
+        return originalResolver.apply(this, arguments);
+      return function () {
+        if (queueContext !== queueCapability) throw new Error('T11_WORKER_CONTEXT_REQUIRED');
+        return need_('_t11RunMaintenance_')(name);
+      };
+    };
+  }
+  function diagnostic_(error) {
+    var message = error && typeof error.message === 'string' ? error.message : '';
+    // Never copy arbitrary provider/Drive errors, URLs, IDs, photo bytes,
+    // request data, or stack traces into this diagnostic.
+    if (message === 'ACL foto tidak dapat dibuat privat.') return 'ACL_NOT_PRIVATE';
+    if (message === 'Balasan wm-engine bukan JSON yang valid.') return 'ENGINE_INVALID_JSON';
+    if (message === 'Upload watermark ke Drive gagal.') return 'ENGINE_REJECTED';
+    var http = message.match(/^Engine watermark gagal \(([1-5][0-9]{2})\)\.$/);
+    return http ? 'ENGINE_HTTP_' + http[1] : 'UNCLASSIFIED';
+  }
+  function remember_(error) {
+    if (frame && !frame.cause) {
+      frame.cause = diagnostic_(error);
+      frame.causeStage = frame.stage || 'entry';
+    }
+  }
+  function stage_(value) { if (frame) frame.stage = value; }
   function _principal_(args, action, superOnly) {
     if (queueContext === queueCapability) return { ulp: 'ULP Toboali', scheduled: true };
     var opts = { ulp: true, aksi: action };
@@ -21,7 +283,13 @@
   }
   function fail_(code) {
     var error = new Error('T11_YANDAL_' + code);
-    if (frame) frame.failed = true;
+    if (frame) {
+      frame.failed = true;
+      if (!frame.cause) {
+        frame.cause = code;
+        frame.causeStage = frame.stage || 'entry';
+      }
+    }
     throw error;
   }
   function need_(name) {
@@ -142,6 +410,7 @@
     if (!frame || frame.sheetId !== sh.getSheetId() || !frame.expected[key]) fail_('PROCESSOR_CONTEXT_REQUIRED');
     try {
       frame.attempted = true;
+      stage_('row_binding');
       _assertCurrentRow_();
       if (text_(folderRel) !== frame.folderRel) fail_('ROW_BINDING_CHANGED');
       var source = text_(sh.getRange(rowNum, kSrc + 1).getValue());
@@ -149,12 +418,14 @@
       var oldWm = text_(sh.getRange(rowNum, kWm + 1).getValue());
       var oldUrl = text_(sh.getRange(rowNum, kUrl + 1).getValue());
       if (!source && !oldWm && !oldUrl) { frame.done[key] = true; return; }
+      stage_('output_folder');
       var folder = outputFolder_(rowFolder, folderRel);
+      stage_('existing_acl');
       var repairFailed = false;
       [oldWm, oldUrl].forEach(function (ref) {
         if (!ref) return;
         try { boundPrivateFile_(resolve_(ref, folder, folderRel), folder); }
-        catch (error) { repairFailed = true; }
+        catch (error) { remember_(error); repairFailed = true; }
       });
       if (repairFailed) fail_('EXISTING_ACL_FAILED');
       if (!source) {
@@ -166,6 +437,7 @@
         frame.done[key] = true;
         return;
       }
+      stage_('source_file');
       var sourceFolder = rowFolder || (root.YANDAL_IMG_FOLDER_ID
         ? DriveApp.getFolderById(root.YANDAL_IMG_FOLDER_ID) : folder);
       var sourceId = resolve_(source, sourceFolder, folderRel);
@@ -190,9 +462,11 @@
         _assertCurrentRow_();
         // Authentication and same-ULP checks already ran before any reads.
         // The private transport avoids forging a user session for scheduled work.
+        stage_('engine');
         outputId = fileId_(need_('_h07WatermarkImpl_')(sourceId, folder.getId(), metadata, wmName));
         if (!outputId) fail_('INVALID_ENGINE_RESULT');
       }
+      stage_('output_verify');
       _assertCurrentRow_();
       var output = boundPrivateFile_(outputId, folder);
       if (output.getName() !== wmName) fail_('WRONG_OUTPUT_NAME');
@@ -201,11 +475,13 @@
       if (text_(sh.getRange(rowNum, kSrc + 1).getValue()) !== source) fail_('SOURCE_CHANGED');
       var url = 'https://drive.usercontent.google.com/download?id=' + outputId + '&export=download';
       // Stored identifiers only: ACL stays private. Completion marker is last.
+      stage_('sheet_commit');
       writeText_(sh, rowNum, kUrl, url);
       writeText_(sh, rowNum, kWm, expected || url);
       SpreadsheetApp.flush();
       frame.done[key] = true;
     } catch (error) {
+      remember_(error);
       frame.failed = true;
       throw new Error('T11_YANDAL_PHOTO_FAILED');
     }
@@ -250,7 +526,7 @@
     var failed = false;
     refs.forEach(function (ref) {
       try { boundPrivateFile_(resolve_(ref, folder, folderRel), folder); }
-      catch (error) { failed = true; }
+      catch (error) { remember_(error); failed = true; }
     });
     if (failed) fail_('ROW_ACL_FAILED');
   }
@@ -258,7 +534,7 @@
     var original = root[name];
     root[name] = function (kode, target) {
       var previous = frame;
-      var current = { failed: false, expected: {}, done: {} };
+      var current = { failed: false, expected: {}, done: {}, stage: 'auth' };
       var lock = null;
       frame = current;
       try {
@@ -267,9 +543,11 @@
         need_('_h07PrivateFile_');
         // Authenticate first, then acquire BEFORE resolving ownership or
         // allowing any legacy preprocessing. Never continue after timeout.
+        stage_('lock');
         lock = LockService.getScriptLock();
         lock.waitLock(30000);
         if (!lock.hasLock()) fail_('LOCK_REQUIRED');
+        stage_('ownership');
         var schema = spec_(switching), before = _row_(schema, kode);
         current.schema = schema;
         current.kode = text_(kode);
@@ -287,7 +565,9 @@
         _assertCurrentRow_();
         // waitLock is a no-op when this execution already owns the lock.
         // Legacy processors release it in finally, so reacquire before repair.
+        stage_('legacy_processor');
         var result = original.apply(this, arguments);
+        stage_('postprocess');
         lock.waitLock(30000);
         var after = _row_(schema, kode);
         if (after.rowNum !== current.rowNum || after.sh.getSheetId() !== current.sheetId)
@@ -307,6 +587,11 @@
         });
         return result;
       } catch (error) {
+        remember_(error);
+        try {
+          Logger.log(JSON.stringify({ event: 'T11_WM_FAILURE', processor: name,
+            stage: current.causeStage, code: current.cause }));
+        } catch (loggingError) {}
         throw new Error('T11_YANDAL_PROCESS_FAILED');
       } finally {
         try { if (lock && lock.hasLock()) lock.releaseLock(); } catch (releaseError) {}
@@ -322,6 +607,11 @@
   // handler names in staging to the private entry points before deployment.
   var originalDrain = root.drainAntreanP0;
   var originalTick = root.tickPusatSiSi;
+  var originalDaily = root.harianPusatSiSi;
+  root.harianPusatSiSi = function () {
+    _principal_(arguments, 'harianPusatSiSi', true);
+    return _runQueue_(originalDaily);
+  };
   root.drainAntreanP0 = function () {
     _principal_(arguments, 'drainAntreanP0', true);
     return _runQueue_(originalDrain);
@@ -342,6 +632,7 @@
   root._t11ScheduledQueueDispatch_ = function (kind) {
     if (kind === 'tick') return _runQueue_(originalTick);
     if (kind === 'drain') return _runQueue_(originalDrain);
+    if (kind === 'daily') return _runQueue_(originalDaily);
     fail_('UNKNOWN_SCHEDULED_HANDLER');
   };
   var originalRouter = root.apiRouter_;
@@ -380,4 +671,7 @@ function _t11TickPusatSiSi_() {
 }
 function _t11DrainAntreanP0_() {
   return _t11ScheduledQueueDispatch_('drain');
+}
+function _t11HarianPusatSiSi_() {
+  return _t11ScheduledQueueDispatch_('daily');
 }

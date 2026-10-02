@@ -27,7 +27,7 @@
     "getDropdownROW", "getDataROW", "getFotoROW", "getLaporanHarian", "resetLaporanHarian",
     "refreshViewLaporan", "refreshLaporanHarianROW", "getLaporanHarianList", "forceRefreshLaporan",
     "getHeaderList", "getListTimUsersByUlp", "recalcEksekusiROW", "debugRealisasiWaRow",
-    "perbaikanMassalKodeROW", "jalankanPerbaikanMassalKodeROWMenit", "unduhPdfROW",
+    "unduhPdfROW",
     "pdfDataLampiranROW", "migrasiFolderEksekusiROW", "drainFotoRow", "sweepEksekusiRowBacklog",
     "diagnosaSweepROW", "diagnosaDobelROW", "getJadwalPadamCalendarMonth", "getJadwalPadamList",
     "simpanJadwalPadam", "updateJadwalPadam", "updateStatusJadwalPadam", "submitGaspolToInputTbl",
