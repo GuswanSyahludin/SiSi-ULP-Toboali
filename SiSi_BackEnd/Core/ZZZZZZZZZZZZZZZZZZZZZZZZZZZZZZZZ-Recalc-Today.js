@@ -14,6 +14,35 @@ function jalankanRecalcManual(params) {
   var STATE = 'T11_RECALC_TODAY_V1', JOURNAL = 'T11_RECALC_JOURNAL_V1_';
   var active = false, phases = ['codes', 'raw', 'row', 'p0', 'headers', 'reports'];
   function _stop_(code) { throw new Error('T11_RECALC_' + code); }
+  // Cooperative ScriptLock hand-off shared with Migration-Worker. The request is
+  // only a hint; ownership, lease, journal and auth checks are unchanged.
+  var YIELD = 'T11_SCRIPT_LOCK_YIELD_V1', YIELD_TTL = 180000, SELF = 'recalc';
+  var YIELD_PARTIES = ['migration', 'recalc'];
+  function _yieldRead_(p) {
+    var raw = p.getProperty(YIELD), r;
+    if (raw == null) return null;
+    try { r = JSON.parse(raw); } catch (e) { return null; }
+    if (!r || typeof r !== 'object' || YIELD_PARTIES.indexOf(r.by) < 0 ||
+        typeof r.at !== 'number' || !isFinite(r.at)) return null;
+    return r;
+  }
+  function _yieldFresh_(r) {
+    var age = r ? Date.now() - r.at : NaN;
+    return !!r && age >= -60000 && age <= YIELD_TTL;
+  }
+  function _yieldAsk_(p) {
+    var r = _yieldRead_(p);
+    if (_yieldFresh_(r) && r.by !== SELF) return;
+    p.setProperty(YIELD, JSON.stringify({ by: SELF, at: Date.now() }));
+  }
+  function _yieldClearOwn_(p) {
+    var r = _yieldRead_(p);
+    if (r && r.by === SELF) p.deleteProperty(YIELD);
+  }
+  function _yieldOther_(p) {
+    var r = _yieldRead_(p);
+    return _yieldFresh_(r) && r.by !== SELF ? r.by : '';
+  }
   function _text_(v) { return String(v == null ? '' : v).trim(); }
   function _owned_(v) {
     return typeof v === 'string' && /^(ulp )?toboali$/.test(v.trim().toLowerCase().replace(/\s+/g, ' '));
@@ -720,17 +749,30 @@ function jalankanRecalcManual(params) {
   root._t11RecalcToday_=function() {
     var started=Date.now(),day=_day_(new Date(started)),lock=LockService.getScriptLock();
     var p=PropertiesService.getScriptProperties(),lease='T11_RECALC_LEASE_V1',owner=Utilities.getUuid(),s;
-    function _lock_(){lock.waitLock(15000);if(!lock.hasLock())_stop_('LOCK_REQUIRED');}
+    var leased=false,yielded='';
+    // Re-acquire after downstream helpers. Contention is a distinct retry code.
+    function _lock_(){if(!lock.tryLock(15000))_stop_('LOCK_BUSY');if(!lock.hasLock())_stop_('LOCK_REQUIRED');}
+    function _acquire_(){
+      if(!lock.tryLock(1000)){
+        // Ask the current holder to stop at its next safe row boundary, then wait.
+        try{_yieldAsk_(p);}catch(ignore){}
+        if(!lock.tryLock(14000))_stop_('LOCK_BUSY');
+      }
+      if(!lock.hasLock())_stop_('LOCK_REQUIRED');
+      _yieldClearOwn_(p);
+    }
     try {
-      _lock_();var prior=p.getProperty(lease);
+      _acquire_();var prior=p.getProperty(lease);
       if(prior){var old;try{old=JSON.parse(prior);}catch(e){_stop_('LEASE_INVALID');}
         if(!old||typeof old.until!=='number'||!isFinite(old.until)||old.until<=0||typeof old.owner!=='string')_stop_('LEASE_INVALID');
         if(old.until>Date.now())return {ok:true,pending:true,skipped:'busy',tanggal:day};
       }
-      p.setProperty(lease,JSON.stringify({owner:owner,until:Date.now()+390000}));
+      p.setProperty(lease,JSON.stringify({owner:owner,until:Date.now()+390000}));leased=true;
       s=_state_(p,day);
       var count=0;
       while(count++<6 && Date.now()-started<90000) {
+        // Between completed work units only, never inside a journal chunk.
+        if(count>1&&(yielded=_yieldOther_(p)))break;
         if(s.journal){
           var j=_loadJournal_(p,s);
           if(!_replay_(p,s,j,started))break;
@@ -755,14 +797,17 @@ function jalankanRecalcManual(params) {
           _journal_(p,s,plan);
         }
       }
-      return {ok:true,tanggal:day,pending:!s.complete,stage:phases[s.phase],unsupportedOrManual:s.skip||0,
+      var out={ok:true,tanggal:day,pending:!s.complete,stage:phases[s.phase],unsupportedOrManual:s.skip||0,
         receiptsRetained:true,watermarkForced:false};
+      if(yielded&&!s.complete)out.yielded=yielded;
+      return out;
     } catch(e) {
       var msg=e&&e.message||'';
       if(!/^T11_RECALC_[A-Z0-9_]+$/.test(msg))msg='T11_RECALC_RETRY_REQUIRED';
       Logger.log(msg);throw new Error(msg);
     } finally {
-      try{_lock_();var mine=JSON.parse(p.getProperty(lease)||'{}');if(mine.owner===owner)p.deleteProperty(lease);}catch(ignore){}
+      // No second wait when this execution never created a lease.
+      if(leased){try{_lock_();var mine=JSON.parse(p.getProperty(lease)||'{}');if(mine.owner===owner)p.deleteProperty(lease);}catch(ignore){}}
       try{if(lock.hasLock())lock.releaseLock();}catch(ignore){}
     }
   };

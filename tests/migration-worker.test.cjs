@@ -40,7 +40,7 @@ function fixture(options={}){
   Date:FakeDate,
   Utilities:{formatDate(d,tz,fmt){assert.equal(tz,'Asia/Jakarta');const s=new Date(d.getTime()+7*3600000).toISOString();return fmt==='HH:mm'?s.slice(11,16):s.slice(0,10);}},
   PropertiesService:{getScriptProperties:()=>({getProperty:k=>f.properties[k]??null,setProperty(k,v){f.hook('property',null,{k,v});f.properties[k]=v;},deleteProperty(k){f.hook('delete-property',null,{k});delete f.properties[k];}})},
-  LockService:{getScriptLock:()=>({tryLock:()=>!f.failLock,releaseLock(){}})},
+  LockService:{getScriptLock:()=>({tryLock:ms=>{(f.lockCalls||(f.lockCalls=[])).push(ms);return !f.failLock;},releaseLock(){}})},
   Logger:{log:v=>f.logs.push(v)},SpreadsheetApp:{openById:id=>{if(id==='active')return book(f.active);if(id==='archive')return book(f.archive);throw Error('wrong workbook');},flush(){f.hook('flush');}},
   ScriptApp:{getProjectTriggers:()=>f.triggers.slice(),newTrigger:name=>({timeBased(){return this;},everyMinutes(n){assert.equal(n,1);return this;},create(){f.hook('create-trigger');const t={getHandlerFunction:()=>name};f.triggers.push(t);return t;}}),deleteTrigger(t){f.hook('delete-trigger');f.triggers.splice(f.triggers.indexOf(t),1);}},
   guard_(args,opts){assert.equal(opts.ulp,true);assert.equal(opts.role[0],'SUPER');const p=args[0];if(!p||p.token!=='real-test-session'||p.role==='staff')throw Error('AUTH_REQUIRED');return{ulp:p.ulp||'Toboali'};},
@@ -93,7 +93,7 @@ test('changed source formula blocks deletion even with same value',()=>{const f=
 test('append preserves orphan archive content',()=>{const f=fixture();f.active.header.rows.push(f.row('header'));const r=Array(17).fill('');r[11]='KEEP';f.archive.header.rows.push(r);f.pending(['header']);f.c._t11MigrasiSemuaTick_();assert.equal(f.archive.header.rows[1][11],'KEEP');assert.equal(f.archive.header.rows[2][1],'H');});
 test('capacity failure leaves source',()=>{const f=fixture();f.active.header.rows.push(f.row('header'));f.archive.header.capacity=1;f.pending(['header']);assert.throws(()=>f.c._t11MigrasiSemuaTick_());assert.equal(f.writes.length,0);});
 test('dry-run preserves state/cursors',()=>{const f=fixture();f.populate();f.pending();f.c.MIGRASI_DRY_RUN=true;const before=clone(f.properties);assert.equal(f.c._t11MigrasiSemuaTick_().skipped,'dry-run');assert.equal(f.writes.length,0);assert.deepEqual(f.properties,before);});
-test('lock contention preserves work',()=>{const f=fixture();f.populate();f.pending();f.failLock=true;const before=clone(f.properties);assert.equal(f.c._t11MigrasiSemuaTick_().skipped,'lock');assert.equal(f.writes.length,0);assert.deepEqual(f.properties,before);});
+test('lock contention preserves work',()=>{const f=fixture();f.populate();f.pending();f.failLock=true;const before=clone(f.properties);assert.equal(f.c._t11MigrasiSemuaTick_().skipped,'lock');assert.equal(f.writes.length,0);const hint=JSON.parse(f.properties.T11_SCRIPT_LOCK_YIELD_V1);delete f.properties.T11_SCRIPT_LOCK_YIELD_V1;assert.deepEqual(hint,{by:'migration',at:f.now});assert.deepEqual(f.properties,before,'only the yield hint is added; state/cursors untouched');});
 for(const date of['2026-10-01','2026-10-02','2026-10-03'])test('ineligible date '+date,()=>{const f=fixture();f.active.header.rows.push(f.row('header',{tanggal:date}));f.pending(['header']);f.c._t11MigrasiSemuaTick_();assert.equal(f.writes.length,0);});
 for(const date of['2026-02-30','garbage','','2026-09-30T24:00:00Z','2026-09-30T12:60:00Z','2026-09-30T12:00:60Z','2026-09-30T12:00:00+14:01','2026-09-30anything'])
 test('invalid date remains pending, not successfully skipped: '+date,()=>{
@@ -173,4 +173,48 @@ test('failing one batch does not erase another batch success',()=>{
 test('start with absent combined state preserves existing per-sheet cursors',()=>{
  const f=fixture();f.properties.MIGRASI_HEADER_CURSOR='7';f.c._t11MulaiMigrasiSemua_();
  assert.equal(f.properties.MIGRASI_HEADER_CURSOR,'7');assert.equal(Object.keys(JSON.parse(f.properties.MIGRASI_SEMUA_STATE)).length,13);
+});
+
+// Lock coordination with Recalc-Today (shared ScriptLock).
+const YIELD='T11_SCRIPT_LOCK_YIELD_V1';
+const two=f=>{f.active.header.rows.push(f.row('header'),f.row('header',{kodeHeader:'H2'}));f.pending(['header']);};
+test('lock busy: skip without writes and ask holder to yield',()=>{
+ const f=fixture();two(f);f.failLock=true;const r=f.c._t11MigrasiSemuaTick_();
+ assert.deepEqual(JSON.parse(JSON.stringify(r)),{ok:true,pending:true,skipped:'lock'});assert.equal(f.writes.length,0);
+ assert.deepEqual(JSON.parse(f.properties[YIELD]),{by:'migration',at:f.now});
+});
+test('lock busy never overwrites a fresh recalc request',()=>{
+ const f=fixture();two(f);f.properties[YIELD]=JSON.stringify({by:'recalc',at:f.now-5000});f.failLock=true;
+ f.c._t11MigrasiSemuaTick_();assert.equal(JSON.parse(f.properties[YIELD]).by,'recalc');
+});
+test('fresh recalc request: one complete row, then yield at safe boundary without error',()=>{
+ const f=fixture();two(f);f.properties[YIELD]=JSON.stringify({by:'recalc',at:f.now});f.triggers.push({getHandlerFunction:()=>'_t11MigrasiSemuaTick_'});
+ const r=f.c._t11MigrasiSemuaTick_();
+ assert.equal(r.ok,true);assert.equal(r.pending,true);assert.equal(r.yielded,'recalc');
+ assert.equal(r.batches.header.diperiksa,1);assert.equal(r.batches.header.dijeda,'recalc');
+ assert.equal(f.active.header.rows.length,2);assert.equal(f.archive.header.rows.length,2);
+ assert.deepEqual(f.writes.map(w=>w.kind),['copy','delete']);
+ assert.equal(JSON.parse(f.properties.MIGRASI_SEMUA_STATE).header,true);assert.equal(f.properties.MIGRASI_HEADER_CURSOR,'2');
+ assert.equal(f.triggers.length,1,'temporary trigger kept while pending');assert.ok(f.properties[YIELD],'other party request untouched');
+ delete f.properties[YIELD];const done=f.c._t11MigrasiSemuaTick_();assert.equal(done.pending,false);
+ assert.equal(f.active.header.rows.length,1);assert.equal(f.archive.header.rows.length,3);assert.equal(f.triggers.length,0);
+});
+test('yield request does not mask batch failures',()=>{
+ const f=fixture();f.active.header.rows.push(f.row('header',{ulp:'Lain'}));f.active.rlz.rows.push(f.row('rlz'));f.archive.header.rows.push(f.row('header',{kodeHeader:'H'}));
+ f.pending(['header','rlz']);f.properties[YIELD]=JSON.stringify({by:'recalc',at:f.now});
+ assert.throws(()=>f.c._t11MigrasiSemuaTick_(),/RETRY_REQUIRED/);
+});
+test('own stale request cleared after acquiring lock',()=>{
+ const f=fixture();two(f);f.properties[YIELD]=JSON.stringify({by:'migration',at:f.now-1000});
+ assert.equal(f.c._t11MigrasiSemuaTick_().pending,false);assert.equal(f.properties[YIELD],undefined);
+});
+for(const [label,value] of [['stale',()=>({by:'recalc',at:Date.parse('2026-10-02T01:00:00Z')-181000})],['unknown party',()=>({by:'appsheet',at:Date.parse('2026-10-02T01:00:00Z')})],['future',()=>({by:'recalc',at:Date.parse('2026-10-02T01:00:00Z')+3600000})],['malformed',()=>'{x']])
+ test('ignore '+label+' yield request',()=>{
+  const f=fixture();two(f);const v=value();f.properties[YIELD]=typeof v==='string'?v:JSON.stringify(v);
+  const r=f.c._t11MigrasiSemuaTick_();assert.equal(r.yielded,undefined);assert.equal(r.pending,false);assert.equal(f.active.header.rows.length,1);
+ });
+test('bounded 40 second lock budget stops at the next safe row boundary',()=>{
+ const f=fixture();two(f);let copies=0;f.hook=(kind)=>{if(kind==='after-delete'&&!copies++)f.now+=40001;};
+ const r=f.c._t11MigrasiSemuaTick_();assert.equal(r.pending,true);assert.equal(r.batches.header.diperiksa,1);
+ assert.equal(f.active.header.rows.length,2);assert.equal(f.archive.header.rows.length,2);
 });

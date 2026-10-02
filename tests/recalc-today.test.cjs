@@ -40,7 +40,8 @@ async function fixture(options={}){
    insertSheet(n){assert.equal(n,'db_Recalc_Queue');assert.ok(f.locked);return f.sheet(id,n,9,Array.from(c.RECALC_QUEUE_HEADER));}};},
   flush(){f.hook('flush');}
  };
- const lock={waitLock(){if(options.lockFail)throw Error('lock unavailable');f.locked=true;},hasLock:()=>f.locked,releaseLock(){f.locked=false;},tryLock(){f.locked=true;return true;}};
+ f.lockCalls=[];f.lockBusy=false;
+ const lock={waitLock(ms){f.lockCalls.push(['wait',ms]);if(options.lockFail||f.lockBusy)throw Error('lock unavailable');f.locked=true;},hasLock:()=>f.locked,releaseLock(){f.locked=false;},tryLock(ms){f.lockCalls.push(['try',ms]);if(options.lockFail||f.lockBusy)return false;f.locked=true;return true;}};
  c.LockService={getScriptLock:()=>lock,getUserLock:()=>({waitLock(){},hasLock:()=>true,releaseLock(){}})};
  c.PropertiesService={getScriptProperties:()=>({
   getProperty:k=>f.props[k]??null,getProperties:()=>({...f.props}),
@@ -493,3 +494,39 @@ test('receipt cap fails before code renames, never strands unclaimed identities'
  assert.throws(f.tick,/RECEIPT_LIMIT/);assert.equal(f.writes.length,0);
  assert.equal(f.h[f.I.HEADER.kodeHeader],'R01-X');
 });
+
+// Lock coordination with the migration worker (shared ScriptLock).
+const YIELD='T11_SCRIPT_LOCK_YIELD_V1';
+const recalcProps=f=>Object.keys(f.props).filter(k=>/^T11_RECALC_/.test(k));
+test('busy ScriptLock fails as distinct LOCK_BUSY, no second cleanup wait, no state/lease/writes',async()=>{
+ const f=await fixture();f.lockBusy=true;
+ assert.throws(f.tick,/^Error: T11_RECALC_LOCK_BUSY$/);
+ assert.deepEqual(f.lockCalls,[['try',1000],['try',14000]]);
+ assert.deepEqual(recalcProps(f),[]);assert.equal(f.writes.length,0);assert.equal(f.locked,false);
+ assert.deepEqual(JSON.parse(f.props[YIELD]),{by:'recalc',at:f.now});
+ assert.ok(f.logs.includes('T11_RECALC_LOCK_BUSY'));
+});
+test('busy recalc never overwrites a fresh migration request',async()=>{
+ const f=await fixture();f.props[YIELD]=JSON.stringify({by:'migration',at:f.now-1000});f.lockBusy=true;
+ assert.throws(f.tick,/T11_RECALC_LOCK_BUSY/);assert.equal(JSON.parse(f.props[YIELD]).by,'migration');
+});
+test('after contention the next run acquires, clears its own request and completes',async()=>{
+ const f=await fixture();f.lockBusy=true;assert.throws(f.tick,/LOCK_BUSY/);f.lockBusy=false;f.now+=60000;
+ const r=f.complete();assert.equal(r.pending,false);assert.equal(f.props[YIELD],undefined);
+ assert.equal(f.props.T11_RECALC_LEASE_V1,undefined);assert.equal(f.locked,false);
+});
+test('fresh migration request: recalc finishes one unit then yields, lease released, later completes identically',async()=>{
+ const ref=await fixture();ref.complete();
+ const f=await fixture();f.props[YIELD]=JSON.stringify({by:'migration',at:f.now});
+ const r=f.tick();assert.equal(r.pending,true);assert.equal(r.yielded,'migration');
+ assert.equal(f.props.T11_RECALC_LEASE_V1,undefined);assert.equal(f.locked,false);
+ assert.ok(f.props.T11_RECALC_TODAY_V1,'progress state retained');assert.equal(f.props[YIELD]!==undefined,true,'other party request untouched');
+ delete f.props[YIELD];const done=f.complete();assert.equal(done.pending,false);
+ assert.deepEqual(f.books.active[f.c.LH.SHEET].rows,ref.books.active[ref.c.LH.SHEET].rows);
+ assert.deepEqual(f.h,ref.h);assert.deepEqual(f.r,ref.r);assert.deepEqual(f.p,ref.p);
+});
+for(const [label,value] of [['stale',{by:'migration',at:Date.parse('2026-10-02T01:00:00Z')-181000}],['unknown party',{by:'other',at:Date.parse('2026-10-02T01:00:00Z')}],['malformed','{nope']])
+ test('ignore '+label+' yield request',async()=>{
+  const f=await fixture();f.props[YIELD]=typeof value==='string'?value:JSON.stringify(value);
+  const r=f.tick();assert.equal(r.yielded,undefined);
+ });
