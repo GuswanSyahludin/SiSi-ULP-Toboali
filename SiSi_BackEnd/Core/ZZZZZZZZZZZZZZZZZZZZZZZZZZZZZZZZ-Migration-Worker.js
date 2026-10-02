@@ -17,6 +17,40 @@
     "MIGRASI_HARTEK_PKJ_CURSOR", "MIGRASI_HARTEK_MAT_CURSOR",
     "MIGRASI_YANDAL_SHIFT_CURSOR", "MIGRASI_YANDAL_SWC_CURSOR"];
   function _fail_(code) { throw new Error("T11_MIGRATION_" + code); }
+  // Cooperative ScriptLock hand-off shared with Recalc-Today. A request is only
+  // a hint written by this script; it never grants lock, auth or write authority.
+  // The holder yields at a completed row boundary, never inside copy/verify/delete.
+  var YIELD = "T11_SCRIPT_LOCK_YIELD_V1", YIELD_TTL = 180000, SELF = "migration";
+  var YIELD_PARTIES = ["migration", "recalc"];
+  function _yieldRead_(props) {
+    var raw = props.getProperty(YIELD), r;
+    if (raw == null) return null;
+    try { r = JSON.parse(raw); } catch (e) { return null; }
+    if (!r || typeof r !== "object" || YIELD_PARTIES.indexOf(r.by) < 0 ||
+        typeof r.at !== "number" || !isFinite(r.at)) return null;
+    return r;
+  }
+  function _yieldFresh_(r) {
+    var age = r ? Date.now() - r.at : NaN;
+    return !!r && age >= -60000 && age <= YIELD_TTL;
+  }
+  function _yieldAsk_(props) {
+    // Never overwrite another party's fresh request.
+    var r = _yieldRead_(props);
+    if (_yieldFresh_(r) && r.by !== SELF) return;
+    props.setProperty(YIELD, JSON.stringify({ by: SELF, at: Date.now() }));
+  }
+  function _yieldClearOwn_(props) {
+    var r = _yieldRead_(props);
+    if (r && r.by === SELF) props.deleteProperty(YIELD);
+  }
+  function _mustYield_(ctx, props) {
+    if (ctx.yielded) return true;
+    if (!ctx.units) return false; // always complete at least one safe unit
+    var r = _yieldRead_(props);
+    if (_yieldFresh_(r) && r.by !== SELF) { ctx.yielded = r.by; return true; }
+    return false;
+  }
   function _ulp_(v) {
     if (typeof v !== "string") return false;
     v = v.trim().toLowerCase().replace(/\s+/g, " ");
@@ -216,7 +250,8 @@
     var raw = props.getProperty(s.cursor), cursor = raw == null ? 2 : Number(raw);
     if (!Number.isInteger(cursor) || cursor < 2) _fail_("CURSOR_INVALID");
     var scanned = 0, copied = 0, deleted = 0;
-    while (cursor <= sh.getLastRow() && scanned < ctx.limit && Date.now() < ctx.deadline) {
+    while (cursor <= sh.getLastRow() && scanned < ctx.limit && Date.now() < ctx.deadline &&
+        !_mustYield_(ctx, props)) {
       var v = _plain_(sh, cursor, s, true), key = _key_(v, s);
       var sourceFormulas = sh.getRange(cursor, s.offset + 1, 1, s.width - s.offset).getFormulas()[0];
       if (!key) {
@@ -260,11 +295,14 @@
         deleted++;
       }
       scanned++;
+      ctx.units++;
       props.setProperty(s.cursor, String(cursor));
     }
     var done = cursor > sh.getLastRow();
     if (done) props.deleteProperty(s.cursor);
-    return { done: done, disalin: copied, dihapus: deleted, diperiksa: scanned };
+    var out = { done: done, disalin: copied, dihapus: deleted, diperiksa: scanned };
+    if (!done && ctx.yielded) out.dijeda = ctx.yielded;
+    return out;
   }
   function _context_() {
     var now = new Date(), day = _day_(now);
@@ -280,21 +318,28 @@
     var minutes = Number(hm.slice(0, 2)) * 60 + Number(hm.slice(3));
     return { schemas: _schemas_(), active: SpreadsheetApp.openById(SPREADSHEET_ID),
       archive: SpreadsheetApp.openById(SPREADSHEET_ID_ARSIP), day: day,
-      cutoff: cutoff.toISOString().slice(0, 10), deadline: Date.now() + 90000,
+      // Bounded lock hold: leaves most of each minute for other ScriptLock users.
+      cutoff: cutoff.toISOString().slice(0, 10), deadline: Date.now() + 40000,
+      units: 0, yielded: "",
       limit: Math.min(MIGRASI_BATCH, 25),
       window: minutes >= 1435 || minutes <= 10 || (minutes >= 470 && minutes <= 490) ||
         (minutes >= 950 && minutes <= 970) };
   }
   function _tick_() {
     var lock = LockService.getScriptLock();
-    if (!lock.tryLock(1000)) return { ok: true, pending: true, skipped: "lock" };
+    if (!lock.tryLock(1000)) {
+      try { _yieldAsk_(PropertiesService.getScriptProperties()); } catch (ignore) {}
+      return { ok: true, pending: true, skipped: "lock" };
+    }
     try {
-      var props = PropertiesService.getScriptProperties(), state = _state_(props);
+      var props = PropertiesService.getScriptProperties();
+      _yieldClearOwn_(props);
+      var state = _state_(props);
       if (!state) return { ok: true, skipped: "no-pending-state" };
       if (MIGRASI_DRY_RUN !== false) return { ok: true, pending: true, skipped: "dry-run" };
       var ctx = _context_(), failed = [], results = {};
       KEYS.forEach(function (key) {
-        if (!state[key] || Date.now() >= ctx.deadline) return;
+        if (!state[key] || Date.now() >= ctx.deadline || _mustYield_(ctx, props)) return;
         try {
           results[key] = _batch_(ctx, ctx.schemas[key], props);
           if (results[key].done) {
@@ -309,8 +354,10 @@
       });
       props.setProperty(STATE, JSON.stringify(state));
       var pending = KEYS.some(function (k) { return state[k] === true; });
-      Logger.log(JSON.stringify({ worker: "migration", tanggal: ctx.day, pending: pending,
-        batches: results, failed: failed }));
+      var log = { worker: "migration", tanggal: ctx.day, pending: pending,
+        batches: results, failed: failed };
+      if (ctx.yielded) log.lockDiserahkan = ctx.yielded;
+      Logger.log(JSON.stringify(log));
       if (failed.length) _fail_("RETRY_REQUIRED");
       if (!pending) {
         // Keep completed state until trigger cleanup succeeds.
@@ -319,7 +366,9 @@
         });
         props.deleteProperty(STATE);
       }
-      return { ok: true, pending: pending, batches: results };
+      var res = { ok: true, pending: pending, batches: results };
+      if (ctx.yielded) res.yielded = ctx.yielded;
+      return res;
     } finally { lock.releaseLock(); }
   }
   function _start_() {
