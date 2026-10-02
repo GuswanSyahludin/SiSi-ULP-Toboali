@@ -903,6 +903,7 @@ function _aggregateForTim(ulp, tim, tglStr, exeRows, exeAll, hdrRow, penySecList
       detail.sort(function(a, b){ return a.penyulang.localeCompare(b.penyulang); });
     }
   } catch (eRlz) {
+    if (typeof _t11RecalcActive_ === 'function' && _t11RecalcActive_()) throw eRlz;
     Logger.log('[_aggregateForTim] baca db_ROW_Realisasi gagal: ' + eRlz.message);
   }
 
@@ -1701,7 +1702,7 @@ function recalcEksekusiROW(filterTim, filterPenyulang, filterTanggal) {
     // DUAL-READ (migrasi): db_INS_Temuan dibaca AKTIF + ARSIP (dedup by Kode Pekerjaan) — migrasi
     // Temuan TANPA kriteria tanggal bisa memindahkan temuan Selesai H/H-1 ke arsip lebih dulu.
     var tData = _readSheetDual_(SHEET_INS.TEMUAN, COL_INS.TEMUAN.kodePekerjaan, COL_INS.TEMUAN.folderPath + 1);
-    if (!tData.length) return { success:true, ditambah:0, dilewatiDobel:0, tanpaRealisasi:0, message:'Tidak ada temuan' };
+    if (!tData.length && !(typeof _t11RecalcActive_ === 'function' && _t11RecalcActive_())) return { success:true, ditambah:0, dilewatiDobel:0, tanpaRealisasi:0, message:'Tidak ada temuan' };
 
     var ditambah = 0, dilewatiDobel = 0, tanpaRealisasi = 0, indukDibuat = 0, barisBaru = [], rlzTerdampak = {}, hdrTerdampakSet = {};
     var now = new Date();
@@ -1847,6 +1848,9 @@ function recalcEksekusiROW(filterTim, filterPenyulang, filterTanggal) {
       // lengkap belakangan), supaya Section/angka di db_Global_Header tidak tertinggal.
       for (var rr = 0; rr < rlzData.length; rr++) {
         var rl2 = rlzData[rr];
+        if (typeof _t11RecalcActive_ === 'function' && _t11RecalcActive_() &&
+            (_normTanggal(rl2[RL.tanggal]) !== tglTarget ||
+             (fTim && String(rl2[RL.tim] || '').trim().toLowerCase() !== fTim))) continue;
         var kp2 = String(rl2[RL.kodePekerjaan] || '').trim();
         if (!kp2) continue;
         // SINKRON PENUH "sesuai data yang ada": realisasi selalu mengikuti agregasi eksekusi
@@ -1963,7 +1967,9 @@ function recalcWaRow_(ss, kodeHeader){
     var celTsUpd = shH.getRange(hdrRowIdx + 1, H.timestampUpdate + 1);
     celTsUpd.setValue(new Date());
     celTsUpd.setNumberFormat('dd/MM/yyyy HH:mm:ss');
+    return { ok: true, waText: waText };
   }catch(e){
+    if (typeof _t11RecalcActive_ === 'function' && _t11RecalcActive_()) throw e;
     Logger.log('[recalcWaRow_] ERROR (' + kodeHeader + '): ' + e.message);
   }
 }

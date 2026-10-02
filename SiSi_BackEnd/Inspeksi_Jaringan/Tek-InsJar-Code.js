@@ -995,7 +995,9 @@ function _recalcRealisasiHeaderInsJar(ss, kodeHeader){
   for(var i=0;i<data.length;i++){
     if(String(data[i][R.kodeHeader]||'').trim() !== key) continue;
     var kodePeny = String(data[i][R.kodePekerjaanPeny]||'').trim();
-    if(kodePeny){ try { _recalcRealisasiByKodePeny(ss, kodePeny); } catch(e){} }
+    if(kodePeny){ try { _recalcRealisasiByKodePeny(ss, kodePeny); } catch(e){
+      if (typeof _t11RecalcActive_ === 'function' && _t11RecalcActive_()) throw e;
+    } }
   }
 }
 

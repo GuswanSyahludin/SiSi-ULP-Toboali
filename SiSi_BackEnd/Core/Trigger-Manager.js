@@ -56,12 +56,13 @@ var TRIGGER_SISI_TUGAS = [
 var TRIGGER_SISI_HARIAN = [
   "ensureLaporanHarianHariIni",
   "sinkronRankYandal",
-  "mulaiMigrasiSemua",
+  "_t11MulaiMigrasiSemua_",
 ];
 
 var TRIGGER_SISI_PERMANEN = ["_t11TickPusatSiSi_", "_t11HarianPusatSiSi_"];
 var TRIGGER_SISI_SEMENTARA = [
-  "migrasiSemuaTick",
+  "migrasiSemuaTick", // legacy: replace separately after staging approval
+  "_t11MigrasiSemuaTick_",
   "jalankanRecalcPointBertahap",
 ];
 
@@ -159,7 +160,7 @@ function tickPusatSiSi() {
 }
 
 // Worker harian sekitar 00:30 WIB. Migrasi dijalankan terakhir karena ia membuat
-// migrasiSemuaTick sementara yang akan melepas dirinya setelah semua sheet selesai.
+// _t11MigrasiSemuaTick_ sementara; start mempertahankan cursor pekerjaan tertunda.
 function harianPusatSiSi() {
   var hasil = { ok: true, jalan: [], gagal: [] };
   for (var i = 0; i < TRIGGER_SISI_HARIAN.length; i++) {

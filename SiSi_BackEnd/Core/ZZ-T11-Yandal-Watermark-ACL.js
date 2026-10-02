@@ -14,6 +14,7 @@
   // checks the unforgeable closure context even when called directly.
   root._t11PerbaikanKodeROW_ = function () {
     if (queueContext !== queueCapability) throw new Error('T11_WORKER_CONTEXT_REQUIRED');
+    if (typeof root._t11RecalcToday_ === 'function') return root._t11RecalcToday_();
     return _repairKodeRow_();
   };
   function _repairKodeRow_() {
@@ -232,6 +233,12 @@
   var originalResolver = root._triggerSisiHandler_;
   if (typeof originalResolver === 'function') {
     root._triggerSisiHandler_ = function (name) {
+      if (typeof root._t11RecalcOwnsJob_ === 'function' && root._t11RecalcOwnsJob_(name)) {
+        return function () {
+          if (queueContext !== queueCapability) throw new Error('T11_WORKER_CONTEXT_REQUIRED');
+          return { ok: true, deferred: 'ordered-recalc-pipeline' };
+        };
+      }
       if (['ensureLaporanHarianHariIni', 'drainLaporanDirty',
           'drainLaporanDirtySafe'].indexOf(name) >= 0) {
         return function () {
