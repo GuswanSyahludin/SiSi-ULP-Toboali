@@ -54,7 +54,9 @@ function getWebAppShell(token) {
     "Core/Web-Login-Bootstrap",
   ).getContent();
   var loginUrl = String(ScriptApp.getService().getUrl() || "").split(/[?#]/)[0];
-  if (!/^https:\/\/script\.google\.com\/macros\/(?:a\/[a-z0-9.-]+\/)?s\/[A-Za-z0-9_-]+\/(?:exec|dev)$/.test(loginUrl)) {
+  // Accept standard and both Workspace URL layouts, only on the exact GAS host.
+  // Absolute end assertion also rejects trailing line breaks.
+  if (!/^https:\/\/script\.google\.com\/(?:macros|a\/(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+\/macros|macros\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+))\/s\/[A-Za-z0-9_-]+\/(?:exec|dev)(?![\s\S])/.test(loginUrl)) {
     throw new Error("URL login deployment tidak valid.");
   }
   html = html.replace(/<\/body\s*>/i, function () {

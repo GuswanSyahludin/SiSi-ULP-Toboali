@@ -43,7 +43,8 @@
         done = true;
         clearTimeout(timer);
         token = "";
-        if (!/^https:\/\/script\.google\.com\/macros\/(?:a\/[a-z0-9.-]+\/)?s\/[A-Za-z0-9_-]+\/(?:exec|dev)$/.test(logoutBase)) {
+        // Keep the exact same GAS URL allowlist as getWebAppShell.
+        if (!/^https:\/\/script\.google\.com\/(?:macros|a\/(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+\/macros|macros\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+))\/s\/[A-Za-z0-9_-]+\/(?:exec|dev)(?![\s\S])/.test(logoutBase)) {
           message.textContent = "Sesi lokal ditutup. Buka kembali URL login SiSi dari bookmark resmi.";
           return;
         }
