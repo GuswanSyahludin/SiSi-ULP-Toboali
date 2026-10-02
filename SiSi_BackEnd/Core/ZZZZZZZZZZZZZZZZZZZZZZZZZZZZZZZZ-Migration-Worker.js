@@ -31,15 +31,28 @@
       return Utilities.formatDate(v, "Asia/Jakarta", "yyyy-MM-dd");
     }
     if (typeof v !== "string") return "";
-    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v.trim());
-    if (!m) {
-      var s = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(v.trim());
-      if (s) m = [s[0], s[3], ("0" + s[2]).slice(-2), ("0" + s[1]).slice(-2)];
+    // Tanggal is a business-calendar field, not a timestamp instant.
+    // Match _normTgl's written date prefix for strings, including ISO offsets.
+    // Date objects above are real instants and use Asia/Jakarta. Never rewrite cells.
+    var s = v.trim(), m = /^(\d{4}-\d{2}-\d{2})(.*)$/.exec(s), tail = "", day;
+    if (m) { day = m[1]; tail = m[2]; }
+    else {
+      m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})(.*)$/.exec(s);
+      if (!m) return "";
+      day = m[3] + "-" + ("0" + m[2]).slice(-2) + "-" + ("0" + m[1]).slice(-2);
+      tail = m[4];
     }
-    if (!m) return "";
-    var d = new Date(m[1] + "-" + m[2] + "-" + m[3] + "T00:00:00Z");
-    return isFinite(d.getTime()) && d.toISOString().slice(0, 10) ===
-      m[1] + "-" + m[2] + "-" + m[3] ? d.toISOString().slice(0, 10) : "";
+    var d = new Date(day + "T00:00:00Z");
+    if (!isFinite(d.getTime()) || d.toISOString().slice(0,10) !== day) return "";
+    if (tail) {
+      var t = /^[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?(Z|[+-]\d{2}:\d{2})?$/.exec(tail);
+      if (!t || +t[1] > 23 || +t[2] > 59 || +(t[3] || 0) > 59) return "";
+      if (t[5] && t[5] !== "Z") {
+        var h = +t[5].slice(1,3), n = +t[5].slice(4);
+        if (h > 14 || n > 59 || (h === 14 && n !== 0)) return "";
+      }
+    }
+    return day;
   }
   function _equal_(a, b) {
     if (a.length !== b.length) return false;
@@ -162,7 +175,8 @@
           .every(function (i) { return !!_text_(r[i]); });
     }
     var day = _day_(r[s.date]);
-    if (!day || day > ctx.cutoff) return false;
+    if (!day) _fail_("DATE_INVALID");
+    if (day > ctx.cutoff) return false;
     if (s.key === "p0") {
       var c = s.c;
       return !!_text_(r[c.statusApproval]) ||

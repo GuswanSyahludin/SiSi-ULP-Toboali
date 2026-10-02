@@ -15,6 +15,7 @@ async function fixture(options={}){
   constructor(id,name,width,head){this.id=id;this.name=name;this.width=width;this.rows=[head||Array.from({length:width},(_,i)=>'c'+i)];this.formulas={};}
   getName(){return this.name;}getSheetId(){return Object.keys(f.books[this.id]).indexOf(this.name)+1;}
   getLastRow(){return this.rows.length;}getLastColumn(){return this.width;}getMaxRows(){return 10000;}
+  setFrozenRows(){return this;}
   getDataRange(){return this.getRange(1,1,this.rows.length,this.width);}
   getRange(r,c,n=1,m=1){const sh=this;return{
    getValues(){f.hook('read',sh,{r,c,n,m});return Array.from({length:n},(_,i)=>Array.from({length:m},(_,j)=>clone(sh.rows[r+i-1]?.[c+j-1]??'')));},
@@ -35,7 +36,8 @@ async function fixture(options={}){
  c.SPREADSHEET_ID_HTK_GROUNDING='master';c.SPREADSHEET_ID_HTK_PEMERATAAN='master';c.GARDU_MASTER.spreadsheetId='master';
  c.GANGGUAN_SS_ID='gangguan';
  c.SpreadsheetApp={
-  openById(id){if(!f.books[id])throw Error('unknown fixture book '+id);return {getId:()=>id,getSheetByName:n=>f.books[id][n]||null,getSheets:()=>Object.values(f.books[id])};},
+  openById(id){if(!f.books[id])throw Error('unknown fixture book '+id);return {getId:()=>id,getSheetByName:n=>f.books[id][n]||null,getSheets:()=>Object.values(f.books[id]),
+   insertSheet(n){assert.equal(n,'db_Recalc_Queue');assert.ok(f.locked);return f.sheet(id,n,9,Array.from(c.RECALC_QUEUE_HEADER));}};},
   flush(){f.hook('flush');}
  };
  const lock={waitLock(){if(options.lockFail)throw Error('lock unavailable');f.locked=true;},hasLock:()=>f.locked,releaseLock(){f.locked=false;},tryLock(){f.locked=true;return true;}};
@@ -290,4 +292,145 @@ test('completed Temuan copies into ROW once, preserving photo URLs and identity'
  f.complete();const rows=f.books.active.db_ROW_Eksekusi.rows;
  assert.equal(rows.length,3);assert.equal(rows[2][f.c.COL_ROW.fotoSebelumUrl],'before-private');
  f.complete();assert.equal(rows.length,3);assert.equal(f.books.active[f.S.TEMUAN].rows[1][T.kodePekerjaan],'TMN-1');
+});
+function receipt(f,kind,key,tim='',day='',header=''){
+ const r=[kind,key,tim,day,header,f.now,'pending','',0];f.books.active.db_Recalc_Queue.rows.push(r);return r;
+}
+for(const date of['2026-10-02T00:00:00Z','2026-10-02T23:59:59.999-05:00','2026-10-02T00:00+14:00','2/10/2026 08:15:00','2026-10-02 08:15:00'])
+test('ISO/slash business-date strings recalc and remain unchanged: '+date,async()=>{
+ const f=await fixture();f.h[f.I.HEADER.tanggal]=date;
+ f.complete();assert.equal(f.h[f.I.HEADER.tanggal],date);assert.match(f.h[f.I.HEADER.waText],/Realisasi/);
+});
+for(const date of['2026-02-30T00:00:00Z','2026-10-02T24:00:00Z','2026-10-02T12:60:00Z','2026-10-02T12:00:60Z','2026-10-02T00:00:00+14:01','2026-10-02garbage'])
+test('invalid timestamp cannot be normalized into writable today: '+date,async()=>{
+ const f=await fixture();f.h[f.I.HEADER.tanggal]=date;
+ assert.throws(f.tick,/DATE_INVALID/);assert.equal(f.writes.length,0);
+});
+test('supported receipts marked done only after whole pipeline, retained and reopenable',async()=>{
+ const f=await fixture(),r=receipt(f,'row','row|ROW 02|'+today,'ROW 02',today);
+ const wa=receipt(f,'wa','wa|R01-X','','','R01-X');
+ f.tick();assert.equal(r[6],'pending');assert.equal(wa[6],'pending');
+ f.complete();assert.equal(r[6],'done');assert.equal(wa[6],'done');
+ const first=r[5];f.c.markRecalcRowDirty_('ROW 02',today);
+ assert.equal(r[6],'pending');assert.ok(r[5]>first);
+ const rev=r[5];f.c.markRecalcRowDirty_('ROW 02',today);assert.ok(r[5]>rev);
+ f.complete();assert.equal(r[6],'done');
+});
+test('canonical execution receipt survives mass code rename and completes',async()=>{
+ const f=await fixture(),r=receipt(f,'eksekusiRow','eksekusiRow|R01-X-PNY.001-EKS.001','ROW 02',today);
+ f.complete();assert.equal(r[6],'done');assert.equal(r[1],'eksekusiRow|R01-X-PNY.001-EKS.001');
+ assert.equal(f.e[f.c.COL_ROW.kodeEksekusi],'R02-X-PNY.001-EKS.001');
+});
+test('raw execution receipt follows new identity without duplicate data',async()=>{
+ const f=await fixture();
+ f.add('db_ROW_Eksekusi',{kodeEksekusi:'raw-receipt',ulp:'Toboali',tanggal:today,tim:'ROW 02',penyulang:'P'});
+ const r=receipt(f,'eksekusiRow','eksekusiRow|raw-receipt','ROW 02',today);
+ f.complete();assert.equal(r[6],'done');assert.equal(f.books.active.db_ROW_Eksekusi.rows.length,3);
+ f.complete();assert.equal(f.books.active.db_ROW_Eksekusi.rows.length,3);
+});
+test('pipeline failure retains all pending receipts including renamed WA',async()=>{
+ const f=await fixture(),r=receipt(f,'wa','wa|R01-X','','','R01-X');
+ const orig=f.c.originalbuildLaporanWilayah;f.c.originalbuildLaporanWilayah=()=>{throw Error('report failed');};
+ assert.throws(f.complete);assert.equal(r[6],'pending');
+ f.c.originalbuildLaporanWilayah=orig;f.complete();assert.equal(r[6],'done');
+});
+test('new revision after successful header cannot be acknowledged by old result',async()=>{
+ const f=await fixture(),r=receipt(f,'wa','wa|R01-X','','','R01-X');let changed=false,passes=0;
+ const builder=f.c.recalcWaRow_;f.c.recalcWaRow_=function(){passes++;return builder.apply(this,arguments);};
+ f.hook=(op,sh,a)=>{
+  if(op==='property'&&a.k==='T11_RECALC_TODAY_V1'){
+   const s=JSON.parse(a.v);
+   if(!changed&&s.phase===5&&!s.journal){changed=true;r[5]+=1;assert.equal(r[6],'pending');}
+  }
+ };
+ f.complete();assert.equal(changed,true);assert.ok(passes>=2);assert.equal(r[6],'done');
+});
+test('today report revision acknowledged, historical/future dirty dates retained',async()=>{
+ const f=await fixture();f.props.LAPORAN_DIRTY_DATES=JSON.stringify({[today]:5,'2026-10-01':4,'2026-10-03':6});
+ f.complete();assert.deepEqual(JSON.parse(f.props.LAPORAN_DIRTY_DATES),{'2026-10-01':4,'2026-10-03':6});
+});
+test('new report revision during replay is retained for next cycle',async()=>{
+ const f=await fixture();f.props.LAPORAN_DIRTY_DATES=JSON.stringify({[today]:5});let changed=false;
+ f.hook=(op,sh)=>{if(op==='after-write'&&sh.name===f.c.LH.SHEET&&!changed){
+  changed=true;f.props.LAPORAN_DIRTY_DATES=JSON.stringify({[today]:6});
+ }};
+ f.complete();assert.equal(JSON.parse(f.props.LAPORAN_DIRTY_DATES)[today],6);
+ f.hook=()=>{};f.complete();assert.equal(JSON.parse(f.props.LAPORAN_DIRTY_DATES)[today],undefined);
+});
+test('historical future failed unsupported and unknown receipts remain untouched',async()=>{
+ const f=await fixture(),kept=[
+  receipt(f,'row','row|ROW 02|2026-10-01','ROW 02','2026-10-01'),
+  receipt(f,'row','row|ROW 02|2026-10-03','ROW 02','2026-10-03'),
+  receipt(f,'wa','wa|Y-X','','','Y-X'),
+  receipt(f,'eksekusiRow','eksekusiRow|missing','ROW 02',today),
+  receipt(f,'other','other|test')
+ ];
+ const fail=receipt(f,'row','row|ROW 02|'+today,'ROW 02',today);fail[6]='failed';fail[8]=5;kept.push(fail);
+ const before=clone(kept);f.complete();assert.deepEqual(kept,before);
+});
+test('queue acknowledgement crash is idempotent and preserves completed receipt',async()=>{
+ const f=await fixture(),r=receipt(f,'wa','wa|R01-X','','','R01-X');let crash=true;
+ f.hook=(op,sh,a)=>{if(op==='after-write'&&sh.name==='db_Recalc_Queue'&&a.c===7&&crash){crash=false;throw Error('crash');}};
+ assert.throws(f.complete);assert.equal(r[6],'done');f.hook=()=>{};f.complete();
+ assert.equal(r[6],'done');assert.equal(f.books.active.db_Recalc_Queue.rows.filter(x=>x[1]===r[1]).length,1);
+});
+test('duplicate or formula queue cannot clear or acknowledge receipts',async()=>{
+ for(const mode of['duplicate','formula']){
+  const f=await fixture(),r=receipt(f,'wa','wa|R01-X','','','R01-X');
+  if(mode==='duplicate')f.books.active.db_Recalc_Queue.rows.push(clone(r));
+  else f.books.active.db_Recalc_Queue.formulas['2:7']='="pending"';
+  const before=clone(f.books.active.db_Recalc_Queue.rows);assert.throws(f.tick,/QUEUE_/);
+  assert.deepEqual(f.books.active.db_Recalc_Queue.rows,before);
+ }
+});
+test('more than eight renamed receipts retain provenance and all complete',async()=>{
+ const f=await fixture(),receipts=[];
+ for(let i=0;i<12;i++){
+  const key='R01-X'+i;f.header(key,'ROW','ROW 02');
+  receipts.push(receipt(f,'wa','wa|'+key,'','',key));
+ }
+ f.complete();assert.ok(receipts.every(r=>r[6]==='done'));
+ assert.ok(receipts.every(r=>f.books.active.db_Recalc_Queue.rows.includes(r)));
+});
+test('missing captured receipt fails closed, never recreates or silently acknowledges',async()=>{
+ const f=await fixture(),r=receipt(f,'wa','wa|R01-X','','','R01-X');let removed=false;
+ f.hook=(op,sh,a)=>{if(op==='property'&&a.k==='T11_RECALC_TODAY_V1'){
+  const s=JSON.parse(a.v);if(!removed&&s.phase===5){removed=true;
+   f.books.active.db_Recalc_Queue.rows.splice(f.books.active.db_Recalc_Queue.rows.indexOf(r),1);
+  }
+ }};
+ assert.throws(f.complete,/QUEUE_CHANGED/);assert.equal(removed,true);assert.notEqual(f.state().complete,true);
+ assert.equal(f.books.active.db_Recalc_Queue.rows.includes(r),false);
+});
+test('unresolved ROW team receipt does not starve supported work',async()=>{
+ const f=await fixture(),unknown=receipt(f,'row','row|ROW 99|'+today,'ROW 99',today);
+ const good=receipt(f,'wa','wa|R01-X','','','R01-X');f.complete();
+ assert.equal(unknown[6],'pending');assert.equal(good[6],'done');
+});
+for(const fault of['chunk','state'])test('receipt bank '+fault+' failure retains previous durable provenance',async()=>{
+ const f=await fixture(),r=receipt(f,'wa','wa|R01-X','','','R01-X');let failed=false;
+ f.hook=(op,sh,a)=>{
+  const hit=op==='property'&&(fault==='chunk'?a.k.startsWith('T11_RECALC_RECEIPTS_V1_'):
+   a.k==='T11_RECALC_TODAY_V1'&&JSON.parse(a.v).receiptStore);
+  if(hit&&!failed){failed=true;throw Error('receipt storage failed');}
+ };
+ assert.throws(f.complete);assert.equal(r[6],'pending');f.hook=()=>{};f.complete();assert.equal(r[6],'done');
+});
+test('corrupt receipt bank cannot be ignored and reset',async()=>{
+ const f=await fixture();receipt(f,'wa','wa|R01-X','','','R01-X');f.tick();
+ const a=f.state().receiptStore,key='T11_RECALC_RECEIPTS_V1_'+a.bank+'_0';
+ f.props[key]='bad';const before=clone(f.writes);assert.throws(f.tick,/STATE_INVALID/);assert.deepEqual(f.writes,before);
+});
+test('missing queue is empty for capture and safely bootstrapped on real enqueue',async()=>{
+ const f=await fixture();delete f.books.active.db_Recalc_Queue;
+ f.complete();assert.ok(f.books.active.db_Recalc_Queue);
+ assert.ok(f.books.active.db_Recalc_Queue.rows.slice(1).every(r=>r[6]==='done'));
+});
+test('receipt cap fails before code renames, never strands unclaimed identities',async()=>{
+ const f=await fixture();
+ for(let i=0;i<257;i++){
+  const key='R01-CAP'+i;f.header(key,'ROW','ROW 02');receipt(f,'wa','wa|'+key,'','',key);
+ }
+ assert.throws(f.tick,/RECEIPT_LIMIT/);assert.equal(f.writes.length,0);
+ assert.equal(f.h[f.I.HEADER.kodeHeader],'R01-X');
 });

@@ -94,7 +94,27 @@ test('append preserves orphan archive content',()=>{const f=fixture();f.active.h
 test('capacity failure leaves source',()=>{const f=fixture();f.active.header.rows.push(f.row('header'));f.archive.header.capacity=1;f.pending(['header']);assert.throws(()=>f.c._t11MigrasiSemuaTick_());assert.equal(f.writes.length,0);});
 test('dry-run preserves state/cursors',()=>{const f=fixture();f.populate();f.pending();f.c.MIGRASI_DRY_RUN=true;const before=clone(f.properties);assert.equal(f.c._t11MigrasiSemuaTick_().skipped,'dry-run');assert.equal(f.writes.length,0);assert.deepEqual(f.properties,before);});
 test('lock contention preserves work',()=>{const f=fixture();f.populate();f.pending();f.failLock=true;const before=clone(f.properties);assert.equal(f.c._t11MigrasiSemuaTick_().skipped,'lock');assert.equal(f.writes.length,0);assert.deepEqual(f.properties,before);});
-for(const date of['2026-10-01','2026-10-02','2026-10-03','2026-02-30','garbage',''])test('ineligible date '+date,()=>{const f=fixture();f.active.header.rows.push(f.row('header',{tanggal:date}));f.pending(['header']);f.c._t11MigrasiSemuaTick_();assert.equal(f.writes.length,0);});
+for(const date of['2026-10-01','2026-10-02','2026-10-03'])test('ineligible date '+date,()=>{const f=fixture();f.active.header.rows.push(f.row('header',{tanggal:date}));f.pending(['header']);f.c._t11MigrasiSemuaTick_();assert.equal(f.writes.length,0);});
+for(const date of['2026-02-30','garbage','','2026-09-30T24:00:00Z','2026-09-30T12:60:00Z','2026-09-30T12:00:60Z','2026-09-30T12:00:00+14:01','2026-09-30anything'])
+test('invalid date remains pending, not successfully skipped: '+date,()=>{
+ const f=fixture();f.active.header.rows.push(f.row('header',{tanggal:date}));f.pending(['header']);
+ assert.throws(()=>f.c._t11MigrasiSemuaTick_(),/RETRY_REQUIRED/);assert.equal(f.writes.length,0);
+ assert.equal(JSON.parse(f.properties.MIGRASI_SEMUA_STATE).header,true);
+ assert.ok(f.logs.join('').includes('DATE_INVALID'));
+});
+for(const date of['2026-09-30T00:00:00Z','2026-09-30T23:59:59.999-05:00','2026-09-30T00:00+14:00','30/09/2026 23:59:59','2026-09-30 08:15:00','30/9/2026'])
+test('business date timestamp H-2 migrates without rewriting value: '+date,()=>{
+ const f=fixture();f.active.header.rows.push(f.row('header',{tanggal:date}));f.pending(['header']);
+ assert.equal(f.c._t11MigrasiSemuaTick_().pending,false);
+ assert.equal(f.active.header.rows.length,1);assert.equal(f.archive.header.rows[1][4],date);
+});
+test('real Date uses Jakarta while timestamp string keeps declared business date',()=>{
+ const f=fixture();
+ f.active.header.rows.push(f.row('header',{kodeHeader:'INSTANT',tanggal:new Date('2026-09-30T18:00:00Z')}),
+   f.row('header',{kodeHeader:'CALENDAR',tanggal:'2026-09-30T18:00:00Z'}));
+ f.pending(['header']);f.c._t11MigrasiSemuaTick_();
+ assert.equal(f.active.header.rows[1][1],'INSTANT');assert.equal(f.archive.header.rows[1][1],'CALENDAR');
+});
 test('Date payload preserved exactly',()=>{const f=fixture(),d=new Date('2026-09-29T17:00:00Z');f.active.header.rows.push(f.row('header',{tanggal:d}));f.pending(['header']);f.c._t11MigrasiSemuaTick_();assert.equal(f.archive.header.rows[1][4].getTime(),d.getTime());});
 test('P0 Shift Switching preserve time window',()=>{const f=fixture({now:'2026-10-02T00:18:00Z'});f.populate();f.pending(['p0','ysh','ysw']);for(const k of['p0','ysh','ysw'])f.properties[cursors[keys.indexOf(k)]]='2';const before=clone(f.properties);assert.equal(f.c._t11MigrasiSemuaTick_().pending,true);assert.equal(f.writes.length,0);assert.deepEqual(f.properties,before);});
 test('P0 with photo and no approval remains active',()=>{const f=fixture();f.populate();f.active.p0.rows[1][23]='photo.jpg';f.pending(['p0']);f.c._t11MigrasiSemuaTick_();assert.equal(f.writes.length,0);});

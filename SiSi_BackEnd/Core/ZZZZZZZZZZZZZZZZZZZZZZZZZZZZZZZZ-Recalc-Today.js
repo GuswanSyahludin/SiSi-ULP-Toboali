@@ -19,19 +19,31 @@ function jalankanRecalcManual(params) {
     return typeof v === 'string' && /^(ulp )?toboali$/.test(v.trim().toLowerCase().replace(/\s+/g, ' '));
   }
   function _day_(v) {
-    var s;
     if (Object.prototype.toString.call(v) === '[object Date]') {
       if (isNaN(v.getTime())) _stop_('DATE_INVALID');
-      s = Utilities.formatDate(v, 'Asia/Jakarta', 'yyyy-MM-dd');
-    } else if (typeof v === 'string') {
-      s = v.trim();
-      var m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s);
-      if (m) s = m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2);
-    } else _stop_('DATE_INVALID');
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(s) ||
-        isNaN(new Date(s + 'T00:00:00Z').getTime()) ||
-        new Date(s + 'T00:00:00Z').toISOString().slice(0,10) !== s) _stop_('DATE_INVALID');
-    return s;
+      return Utilities.formatDate(v, 'Asia/Jakarta', 'yyyy-MM-dd');
+    }
+    if (typeof v !== 'string') _stop_('DATE_INVALID');
+    // Same business-date contract as migration and legacy _normTgl:
+    // strings keep their written calendar date; Date instants use Jakarta.
+    var s=v.trim(),m=/^(\d{4}-\d{2}-\d{2})(.*)$/.exec(s),tail='',day;
+    if(m){day=m[1];tail=m[2];}
+    else {
+      m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})(.*)$/.exec(s);
+      if(!m)_stop_('DATE_INVALID');
+      day=m[3]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[1]).slice(-2);tail=m[4];
+    }
+    var d=new Date(day+'T00:00:00Z');
+    if(!isFinite(d.getTime())||d.toISOString().slice(0,10)!==day)_stop_('DATE_INVALID');
+    if(tail){
+      var t=/^[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?(Z|[+-]\d{2}:\d{2})?$/.exec(tail);
+      if(!t||+t[1]>23||+t[2]>59||+(t[3]||0)>59)_stop_('DATE_INVALID');
+      if(t[5]&&t[5]!=='Z'){
+        var h=+t[5].slice(1,3),n=+t[5].slice(4);
+        if(h>14||n>59||(h===14&&n!==0))_stop_('DATE_INVALID');
+      }
+    }
+    return day;
   }
   function _encode_(v) {
     if (Object.prototype.toString.call(v) === '[object Date]') return {date:v.toISOString()};
@@ -63,6 +75,153 @@ function jalankanRecalcManual(params) {
       .map(function(b){return ('0'+(b&255).toString(16)).slice(-2);}).join('');
   }
   function _need_(name) { if(typeof root[name]!=='function') _stop_('DEPENDENCY_MISSING');return root[name]; }
+  var QHEAD=['jenis','key','tim','tanggal','kodeHeader','dirtyAt','status','lastTriedAt','attempts'];
+  function _queue_(app,create) {
+    var sh=app.openById(root.SPREADSHEET_ID).getSheetByName('db_Recalc_Queue');
+    if(!sh&&create){
+      sh=app.openById(root.SPREADSHEET_ID).insertSheet('db_Recalc_Queue');
+      sh.getRange(1,1,1,9).setValues([QHEAD]);sh.setFrozenRows(1);
+    }
+    if(!sh)return {sh:null,keys:Object.create(null)};
+    if(!sh||sh.getLastColumn()!==9||sh.getLastRow()*9>250000)_stop_('QUEUE_SCHEMA');
+    var rows=sh.getDataRange().getValues(),forms=sh.getDataRange().getFormulas(),keys=Object.create(null);
+    if(_json_(rows[0])!==_json_(QHEAD))_stop_('QUEUE_SCHEMA');
+    rows.slice(1).forEach(function(r,i){
+      if(!r.some(function(v){return v!==''&&v!=null;}))return;
+      var k=_text_(r[1]);if(!k||keys[k])_stop_('QUEUE_IDENTITY');
+      if(forms[i+1].some(function(v){return !!v;}))_stop_('QUEUE_FORMULA');
+      keys[k]={row:i+2,v:r};
+    });
+    return {sh:sh,keys:keys};
+  }
+  // Retain receipts as done, not delete them. A new enqueue reopens the same
+  // receipt with a monotonic revision, even twice in the same millisecond.
+  root._enqueueRecalc_=function(rec) {
+    var lock=LockService.getScriptLock();
+    try {
+      lock.waitLock(10000);if(!lock.hasLock())return false;
+      if(!rec||['row','wa','eksekusiRow'].indexOf(rec.jenis)<0||!_text_(rec.key))_stop_('QUEUE_INVALID');
+      var q=_queue_(root.SpreadsheetApp,true),hit=q.keys[rec.key],now=Date.now();
+      var identity=[rec.jenis,rec.key,rec.tim||'',rec.tanggal||'',rec.kodeHeader||''];
+      if(hit){
+        if(_json_(hit.v.slice(0,5))!==_json_(identity))_stop_('QUEUE_IDENTITY');
+        var rev=Number(hit.v[5]);if(!Number.isSafeInteger(rev)||rev<1)_stop_('QUEUE_INVALID');
+        now=Math.max(now,rev+1);
+        if(_json_(q.sh.getRange(hit.row,1,1,9).getValues()[0])!==_json_(hit.v))_stop_('QUEUE_CHANGED');
+        q.sh.getRange(hit.row,6,1,4).setValues([[now,'pending',hit.v[7],hit.v[8]]]);
+      } else q.sh.appendRow(identity.concat([now,'pending','',0]));
+      return true;
+    } finally {try{if(lock.hasLock())lock.releaseLock();}catch(ignore){}}
+  };
+  function _claimable_(r) {
+    return Number.isSafeInteger(r[5])&&r[5]>0&&
+      (r[6]==='pending'||(r[6]==='processing'&&Number.isFinite(Number(r[7]))&&Date.now()-Number(r[7])>600000));
+  }
+  function _binding_(q,old,day,app) {
+    var env=_schema_(),H=env.I.HEADER,E=root.COL_ROW;
+    var kind=_text_(q[0]),key=_text_(q[1]),ref=old?old.ref:'',tim='';
+    var ss=app.openById(root.SPREADSHEET_ID);
+    function _data_(name){
+      var sh=ss.getSheetByName(name);
+      if(!sh||sh.getLastRow()*sh.getLastColumn()>250000)_stop_('SNAPSHOT_LIMIT');
+      return sh.getDataRange().getValues().slice(1);
+    }
+    function _one_(name,col,k){
+      var a=_data_(name).filter(function(r){return _text_(r[col])===k;});
+      if(a.length!==1)return null;return a[0];
+    }
+    if(kind==='wa'){
+      if(!q[4]||key!=='wa|'+q[4])return null;
+      ref=ref||q[4];var h=_one_(env.S.HEADER,H.kodeHeader,ref);
+      if(!h||!_owned_(h[H.ulp])||_day_(h[H.tanggal])!==day||!_need_('_findWaBuilder')(h[H.tim],h[H.subTim]))return null;
+    } else if(kind==='row'){
+      tim=_text_(q[2]);
+      if(_day_(q[3])!==day||key!=='row|'+tim+'|'+day||!_need_('_isTimROW_')(tim))return null;
+      var R=root.COL_ROW_RLZ,T=env.I.TEMUAN;
+      var hasRows=[['db_ROW_Realisasi',R],['db_ROW_Eksekusi',E]].some(function(item){
+        return _data_(item[0]).some(function(r){return _text_(r[item[1].tim])===tim&&_day_(r[item[1].tanggal])===day;});
+      });
+      if(!hasRows)hasRows=_data_(env.S.TEMUAN).some(function(r){
+        return _text_(r[T.timEksekusi])===tim&&_text_(r[T.status])==='Selesai'&&
+          _text_(r[T.tglSelesai])&&_day_(r[T.tglSelesai])===day&&r[T.diameter]!=='';
+      });
+      if(!hasRows)return null; // unresolved work is retained, not a claim that starves the batch
+      ref=tim;
+    } else if(kind==='eksekusiRow'){
+      if(key.indexOf('eksekusiRow|')!==0)return null;
+      ref=ref||key.slice(12);var e=_one_('db_ROW_Eksekusi',E.kodeEksekusi,ref);
+      if(!e||!_owned_(e[E.ulp])||_day_(e[E.tanggal])!==day)return null;
+      tim=_text_(e[E.tim]);
+      if(!_need_('_isTimROW_')(tim)||(_text_(q[2])&&_text_(q[2])!==tim)||_day_(q[3])!==day)return null;
+    } else return null;
+    return {key:key,kind:kind,ref:ref,tim:tim,identity:_hash_(q.slice(0,5)),
+      hash:_hash_(q),done:!!(old&&old.hash===_hash_(q)&&old.done)};
+  }
+  function _captureReceipts_(s,app) {
+    var q=_queue_(app),out=[],old=Object.create(null);
+    (s.receipts||[]).forEach(function(c){old[c.key]=c;});
+    // Capture all supported pending identities before any key rename. A limit
+    // fails BEFORE planning, never strands an unclaimed old-key receipt.
+    // Existing mappings come only from successfully replayed journals.
+    var keys=Object.keys(old).concat(Object.keys(q.keys).filter(function(k){return !old[k];}));
+    keys.forEach(function(k){
+      var hit=q.keys[k];
+      if(!hit&&old[k])_stop_('QUEUE_CHANGED');
+      if(!hit||!_claimable_(hit.v))return;
+      var prior=old[k];
+      if(prior&&prior.identity!==_hash_(hit.v.slice(0,5)))_stop_('QUEUE_CHANGED');
+      var c=_binding_(hit.v,prior,s.day,app);if(c)out.push(c);
+    });
+    if(out.length>256||_json_(out).length>120000)_stop_('RECEIPT_LIMIT');
+    return out;
+  }
+  function _dirtyRevision_(day,ack) {
+    var lock=LockService.getUserLock();
+    try {
+      lock.waitLock(10000);if(!lock.hasLock())_stop_('QUEUE_LOCK_REQUIRED');
+      var p=PropertiesService.getScriptProperties(),raw=p.getProperty('LAPORAN_DIRTY_DATES'),map;
+      try{map=raw?JSON.parse(raw):{};}catch(e){_stop_('QUEUE_INVALID');}
+      if(!map||typeof map!=='object'||Array.isArray(map))_stop_('QUEUE_INVALID');
+      Object.keys(map).forEach(function(k){
+        if(_day_(k)!==k||!Number.isSafeInteger(map[k])||map[k]<1)_stop_('QUEUE_INVALID');
+      });
+      var rev=map[day]||0;
+      if(ack&&rev===ack){delete map[day];p.setProperty('LAPORAN_DIRTY_DATES',JSON.stringify(map));}
+      return rev;
+    } finally {try{if(lock.hasLock())lock.releaseLock();}catch(ignore){}}
+  }
+  function _watchChanged_(s) {
+    return (s.watch||[]).some(function(a){
+      var sh=SpreadsheetApp.openById(a.id).getSheetByName(a.name);
+      return !sh||_hash_([sh.getDataRange().getValues(),sh.getDataRange().getFormulas()])!==a.hash;
+    });
+  }
+  function _reset_(s,day) {
+    var receipts=s.day===day?(s.receipts||[]):[];
+    receipts.forEach(function(c){c.done=false;});
+    return {day:day,phase:0,last:'',complete:false,skip:0,receipts:receipts};
+  }
+  function _finishReceipts_(s,started) {
+    if(_watchChanged_(s))return false;
+    var q=_queue_(root.SpreadsheetApp),retry=false;
+    (s.receipts||[]).forEach(function(c){
+      var hit=q.keys[c.key];
+      if(!hit)_stop_('QUEUE_CHANGED');
+      if(c.identity!==_hash_(hit.v.slice(0,5)))_stop_('QUEUE_CHANGED');
+      if(hit.v[6]==='done')return; // retry after acknowledgement but before state save
+      if(!_claimable_(hit.v))return; // failed/owned processing is never acknowledged
+      if(!c.done||c.hash!==_hash_(hit.v)||Date.now()-started>=90000){retry=true;return;}
+      var bound=_binding_(hit.v,c,s.day,root.SpreadsheetApp);
+      if(!bound||bound.ref!==c.ref||bound.tim!==c.tim){retry=true;return;}
+      if(_watchChanged_(s))_stop_('SOURCE_CHANGED');
+      var range=q.sh.getRange(hit.row,1,1,9),v=range.getValues()[0];
+      if(_hash_(v)!==c.hash||range.getFormulas()[0].some(function(x){return !!x;}))_stop_('QUEUE_CHANGED');
+      var done=v.slice();done[6]='done';done[7]=Date.now();
+      q.sh.getRange(hit.row,7,1,2).setValues([[done[6],done[7]]]);SpreadsheetApp.flush();
+      if(_json_(range.getValues()[0])!==_json_(done))_stop_('QUEUE_VERIFY_FAILED');
+    });
+    return !retry;
+  }
   function _schema_() {
     var I = typeof COL_INS !== 'undefined' ? COL_INS : root.COL_INS;
     var S = typeof SHEET_INS !== 'undefined' ? SHEET_INS : root.SHEET_INS;
@@ -94,6 +253,7 @@ function jalankanRecalcManual(params) {
     var env=_schema_(), H=env.I.HEADER, E=root.COL_ROW, R=root.COL_ROW_RLZ, P=root.COL_P0;
     var realApp=root.SpreadsheetApp, bookId=root.SPREADSHEET_ID, seen={}, failed=false, totalCells=0;
     var phase=phases[state.phase], queue=[], touched={}, restore={}, result={skip:0}, key='';
+    var receipts=_captureReceipts_(state,realApp),dirtyRevision=phase==='reports'?_dirtyRevision_(state.day):0;
     function _fail_(code) { failed=true;_stop_(code); }
     function _read_(id,name) {
       var k=id+'|'+name;if(seen[k])return seen[k];
@@ -397,7 +557,17 @@ function jalankanRecalcManual(params) {
         snapshots.push({id:s.id,name:s.name,nr:nr,nc:s.nc,oldRows:s.nr,hash:_hash_([copy,forms]),masks:masks});
       });
       if(writes.length>2000)_fail_('PLAN_LIMIT');
-      return {day:state.day,phase:state.phase,key:key,writes:writes,snapshots:snapshots,queue:queue,skip:result.skip};
+      receipts.forEach(function(c){
+        if(key&&((c.kind==='row'&&phase==='row'&&c.tim===key)||
+          (c.kind==='wa'&&phase==='headers'&&c.ref===key&&!result.skip)||
+          (c.kind==='eksekusiRow'&&((phase==='raw'&&c.ref===key)||(phase==='row'&&c.tim===key)))))c.done=true;
+        writes.forEach(function(w){
+          if(w.id===bookId&&((c.kind==='wa'&&w.name===env.S.HEADER&&w.c===H.kodeHeader)||
+            (c.kind==='eksekusiRow'&&w.name==='db_ROW_Eksekusi'&&w.c===E.kodeEksekusi))&&c.ref===w.b)c.ref=w.a;
+        });
+      });
+      return {day:state.day,phase:state.phase,key:key,writes:writes,snapshots:snapshots,queue:queue,skip:result.skip,
+        receipts:receipts,dirtyRevision:dirtyRevision};
     } finally {
       Object.keys(restore).forEach(function(n){root[n]=restore[n];});active=false;
     }
@@ -414,14 +584,56 @@ function jalankanRecalcManual(params) {
     })))_stop_('STATE_INVALID');
     if(s.journal && (s.journal!==true || !Number.isInteger(s.parts)||s.parts<1||s.parts>24 ||
         !Number.isInteger(s.pos)||s.pos<0 || !/^[a-f0-9]{64}$/.test(s.hash||'')))_stop_('STATE_INVALID');
+    if(s.receiptStore){
+      var a=s.receiptStore,rawReceipts='';
+      if(!a||(a.bank!==0&&a.bank!==1)||!Number.isInteger(a.parts)||a.parts<1||a.parts>20||
+        !/^[a-f0-9]{64}$/.test(a.hash||''))_stop_('STATE_INVALID');
+      for(var ri=0;ri<a.parts;ri++){
+        var part=p.getProperty('T11_RECALC_RECEIPTS_V1_'+a.bank+'_'+ri);
+        if(part==null)_stop_('STATE_INVALID');rawReceipts+=part;
+      }
+      try{s.receipts=JSON.parse(rawReceipts);}catch(e){_stop_('STATE_INVALID');}
+      if(_hash_(s.receipts)!==a.hash)_stop_('STATE_INVALID');
+    }
+    if(s.receipts&&(!Array.isArray(s.receipts)||s.receipts.length>256||s.receipts.some(function(c){
+      return !c||typeof c.key!=='string'||typeof c.ref!=='string'||typeof c.tim!=='string'||
+        ['row','wa','eksekusiRow'].indexOf(c.kind)<0||typeof c.done!=='boolean'||
+        !/^[a-f0-9]{64}$/.test(c.hash||'')||!/^[a-f0-9]{64}$/.test(c.identity||'');
+    })))_stop_('STATE_INVALID');
     if(s.day!==day){
       if(s.journal)_stop_('PREVIOUS_DAY_JOURNAL_PENDING');
       return {day:day,phase:0,last:'',complete:false,skip:0};
     }
-    if(s.complete)return {day:day,phase:0,last:'',complete:false,skip:0};
+    if(s.complete)return _reset_(s,day);
     return s;
   }
-  function _save_(p,s){var v=_json_(s);if(v.length>8000)_stop_('STATE_LIMIT');p.setProperty(STATE,v);}
+  function _save_(p,s){
+    // Alternating receipt banks: never overwrite the bank referenced by the
+    // durable state until the replacement bank and its checksum are published.
+    var copy=_clone_(s),receipts=s.receipts||[],v=_json_(receipts),hash=_hash_(receipts);
+    if(v.length>120000)_stop_('RECEIPT_LIMIT');
+    var previous=p.getProperty(STATE),old;
+    try{old=previous?JSON.parse(previous).receiptStore:null;}catch(e){_stop_('STATE_INVALID');}
+    var store=old&&old.hash===hash?old:{bank:old&&old.bank===0?1:0,parts:Math.ceil(v.length/6000),hash:hash};
+    delete copy.receipts;copy.receiptStore=store;
+    var text=_json_(copy);if(text.length>8000)_stop_('STATE_LIMIT');
+    if(!old||old.hash!==hash){
+      var prefix='T11_RECALC_RECEIPTS_V1_'+store.bank+'_',props=p.getProperties(),size=text.length+STATE.length;
+      Object.keys(props).forEach(function(k){if(k!==STATE&&k.indexOf(prefix)!==0)size+=_json_(props[k]).length+k.length;});
+      size+=_json_(v).length+store.parts*(prefix.length+2);
+      if(size>450000)_stop_('PROPERTY_CAPACITY');
+      for(var i=0;i<store.parts;i++)p.setProperty(prefix+i,v.slice(i*6000,(i+1)*6000));
+    }
+    p.setProperty(STATE,text);
+    // Cleanup is opportunistic, never a reason to lose the published receipt bank.
+    try{
+      var live='T11_RECALC_RECEIPTS_V1_'+store.bank+'_';
+      Object.keys(p.getProperties()).forEach(function(k){
+        if(k.indexOf('T11_RECALC_RECEIPTS_V1_')===0&&
+          (k.indexOf(live)!==0||Number(k.slice(live.length))>=store.parts))p.deleteProperty(k);
+      });
+    }catch(ignore){}
+  }
   function _journal_(p,s,plan) {
     var v=_json_(plan);if(v.length>144000)_stop_('JOURNAL_LIMIT');
     var props=p.getProperties(),size=0;Object.keys(props).forEach(function(k){size+=_json_(props[k]).length+k.length;});
@@ -473,7 +685,7 @@ function jalankanRecalcManual(params) {
         var photo=name==='enqueueFotoRow_',queueName=photo?'db_FotoRow_Queue':'db_Recalc_Queue';
         var expectedHeader=photo?['id','status','kodeEksekusi','enqueuedAt','lastTriedAt','attempts']:
           ['jenis','key','tim','tanggal','kodeHeader','dirtyAt','status','lastTriedAt','attempts'];
-        var qs=_sheet_(root.SPREADSHEET_ID,queueName);
+        var qs=photo?_sheet_(root.SPREADSHEET_ID,queueName):_queue_(root.SpreadsheetApp,true).sh;
         if(!qs||_json_(qs.getRange(1,1,1,expectedHeader.length).getValues()[0])!==_json_(expectedHeader))_stop_('QUEUE_SCHEMA');
       }
       var answer=_need_(name).apply(root,q.slice(1));
@@ -490,6 +702,8 @@ function jalankanRecalcManual(params) {
       if(_hash_([m.sh.getRange(1,1,a.nr,a.nc).getValues(),m.sh.getRange(1,1,a.nr,a.nc).getFormulas()])!==_hash_([m.v,m.f]))_stop_('SOURCE_CHANGED');
       return {id:a.id,name:a.name,hash:_hash_([m.v,m.f])};
     });
+    if(phases[s.phase]==='reports'&&j.dirtyRevision)_dirtyRevision_(s.day,j.dirtyRevision);
+    s.receipts=j.receipts||s.receipts||[];
     var parts=s.parts;s.last=j.key;s.skip=(s.skip||0)+(j.skip||0);
     delete s.journal;delete s.parts;delete s.hash;delete s.pos;_save_(p,s);
     for(var x=0;x<parts;x++)p.deleteProperty(JOURNAL+x);
@@ -500,8 +714,8 @@ function jalankanRecalcManual(params) {
     return ['drainLaporanDirty','drainLaporanDirtySafe','refreshLaporanHarianHariIni','ensureLaporanHarianHariIni',
       'sweepPointP0Yandal','refreshWaHarian','sweepDurasiJarakYandalP0','sweepEksekusiRowBacklog','refreshLaporanHarianROW'].indexOf(name)>=0;
   };
-  // Old recalculation receipts are intentionally retained, not destructively
-  // acknowledged by recalcTick's legacy "no exception = success" logic.
+  // The existing T11 ROW slot consumes receipts after the complete ordered
+  // cycle. fastTick must not run a competing all-dates/no-exception consumer.
   root.recalcTick=function(){return {ok:true,deferred:'managed-by-private-t11',receiptsRetained:true};};
   root._t11RecalcToday_=function() {
     var started=Date.now(),day=_day_(new Date(started)),lock=LockService.getScriptLock();
@@ -523,17 +737,19 @@ function jalankanRecalcManual(params) {
         } else {
           // Restart the ordered cycle if input changed BETWEEN work units.
           // An already published partial journal is never silently discarded.
-          var changed=(s.watch||[]).some(function(a){
-            var sh=SpreadsheetApp.openById(a.id).getSheetByName(a.name);
-            if(!sh)return true;
-            return _hash_([sh.getDataRange().getValues(),sh.getDataRange().getFormulas()])!==a.hash;
-          });
-          if(changed){s={day:day,phase:0,last:'',complete:false,skip:0};_save_(p,s);}
+          var changed=_watchChanged_(s);
+          if(changed){s=_reset_(s,day);_save_(p,s);}
           var plan=_plan_(s);_lock_();
           if(JSON.parse(p.getProperty(lease)||'{}').owner!==owner)_stop_('LEASE_LOST');
           if(!plan.key){
+            s.receipts=plan.receipts;
             s.phase++;s.last='';
-            if(s.phase>=phases.length){s.phase=5;s.complete=true;_save_(p,s);break;}
+            if(s.phase>=phases.length){
+              s.phase=5;
+              if(_finishReceipts_(s,started)){s.complete=true;s.receipts=[];}
+              else s=_reset_(s,day);
+              _save_(p,s);break;
+            }
             _save_(p,s);continue;
           }
           _journal_(p,s,plan);
