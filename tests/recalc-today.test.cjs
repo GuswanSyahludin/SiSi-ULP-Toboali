@@ -173,6 +173,65 @@ test('state corruption is not reset',async()=>{
  const f=await fixture();f.props.T11_RECALC_TODAY_V1='bad';assert.throws(f.tick,/STATE_INVALID/);assert.equal(f.props.T11_RECALC_TODAY_V1,'bad');
 });
 module.exports={fixture};
+// Real Code.js lexical constants + real scheduler, T11 capability, Guard and
+// Temuan helpers. Only GAS services/session storage are fixture implementations.
+async function maintenanceFixture(ulp='Toboali'){
+ const f=await fixture(),T=f.I.TEMUAN;
+ assert.equal(typeof f.c.COL_INS,'undefined');
+ assert.equal(typeof f.c.SHEET_INS,'undefined');
+ assert.equal(f.loaded.evalInVm('typeof COL_INS'),'object');
+ assert.equal(f.loaded.evalInVm('typeof SHEET_INS'),'object');
+ f.temuan=f.add(f.S.TEMUAN,{kodeHeader:'I-X',kodePekerjaanPeny:'I-X-PNY.001',
+  kodePekerjaan:'I-X-PNY.001-TJR.001',ulp,tanggal:today,temuan:'fixture',
+  fotoTemuan:'photos/new.jpg',fotoTemuanUrl:'https://example.invalid/?fileName=photos%2Fold.jpg',
+  fotoTiang:'photos/pole.jpg',fotoTiangUrl:'https://example.invalid/?fileName=photos%2Fpole.jpg'});
+ f.c.TRIGGER_SISI_TUGAS=[{fn:'validasiUlangFotoTemuan',tiapMenit:60,berat:true}];
+ f.maintenance=()=>f.c._t11TickPusatSiSi_();
+ return f;
+}
+for(const ulp of ['Toboali',' ULP  TOBOALI '])
+test('real maintenance resolves lexical schema, rechecks lock and preserves identity: '+ulp,async()=>{
+ const f=await maintenanceFixture(ulp),before=clone(f.temuan),T=f.I.TEMUAN;
+ assert.equal(f.maintenance().gagal.length,0);
+ const expected=before.slice();expected[T.fotoTemuanUrl]='';expected[T.fotoTiangUrl]='';
+ assert.deepEqual(f.temuan,expected);
+ assert.deepEqual(f.writes.map(w=>w.c),[T.fotoTemuanUrl+1,T.fotoTiangUrl+1]);
+ assert.ok(f.props.TRIGGER_SISI_LAST_RUN_V2.includes('validasiUlangFotoTemuan'));
+ assert.equal(f.locked,false);assert.equal(typeof f.c.COL_INS,'undefined');assert.equal(typeof f.c.SHEET_INS,'undefined');
+ f.now+=3600001;const count=f.writes.length;
+ assert.equal(f.maintenance().gagal.length,0);assert.equal(f.writes.length,count);
+});
+test('real maintenance prefers lexical schema over misleading global properties',async()=>{
+ const f=await maintenanceFixture();
+ f.c.COL_INS={TEMUAN:{ulp:999}};f.c.SHEET_INS={TEMUAN:'wrong-sheet'};
+ assert.equal(f.maintenance().gagal.length,0);assert.equal(f.writes.length,2);
+});
+for(const ulp of ['', 'ULP Lain','ULP ULP Toboali',{},['Toboali']])
+test('real maintenance rejects unresolved or foreign owner before mutation: '+JSON.stringify(ulp),async()=>{
+ const f=await maintenanceFixture(ulp),before=clone(f.temuan);
+ const r=f.maintenance();assert.equal(r.gagal.length,1);assert.match(r.gagal[0].error,/ULP_UNRESOLVED_OR_FOREIGN/);
+ assert.deepEqual(f.temuan,before);assert.equal(f.writes.length,0);assert.equal(f.locked,false);
+ assert.equal(JSON.parse(f.props.TRIGGER_SISI_LAST_RUN_V2).validasiUlangFotoTemuan,undefined);
+});
+test('real maintenance lexical fix leaves public authentication and private HTTP denial intact',async()=>{
+ const f=await maintenanceFixture();
+ assert.throws(()=>f.c.validasiUlangFotoTemuan({internal:true,scheduled:true}),/Sesi/);
+ assert.throws(()=>f.c._triggerSisiHandler_('validasiUlangFotoTemuan')(),/CONTEXT_REQUIRED/);
+ assert.throws(()=>f.c.apiRouter_({parameter:{action:'_t11RunMaintenance_'}},{}),/PRIVATE_ACTION_DENIED/);
+ assert.equal(f.writes.length,0);
+});
+test('real maintenance missing sheet fails closed without successful stamp',async()=>{
+ const f=await maintenanceFixture();delete f.books.active[f.S.TEMUAN];
+ const r=f.maintenance();assert.equal(r.gagal.length,1);assert.match(r.gagal[0].error,/SCHEMA_MISSING/);
+ assert.equal(f.writes.length,0);assert.equal(f.locked,false);
+ assert.equal(JSON.parse(f.props.TRIGGER_SISI_LAST_RUN_V2).validasiUlangFotoTemuan,undefined);
+});
+test('real maintenance preserves Drive photo references without comparable filenames',async()=>{
+ const f=await maintenanceFixture(),T=f.I.TEMUAN;
+ f.temuan[T.fotoTemuanUrl]='https://drive.google.com/file/d/fixture/view';
+ const before=clone(f.temuan);assert.equal(f.maintenance().gagal.length,0);
+ assert.deepEqual(f.temuan,before);assert.equal(f.writes.length,0);
+});
 test('real raw ROW parent linking and photo queue, without touching photo content',async()=>{
  const f=await fixture();const e=f.add('db_ROW_Eksekusi',{kodeEksekusi:'raw-key',ulp:'Toboali',tanggal:today,tim:'ROW 02',penyulang:'P',fotoSebelum:'keep.jpg'});
  f.complete();assert.match(e[f.c.COL_ROW.kodeEksekusi],/^R02-X-PNY\.001-EKS\./);

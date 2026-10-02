@@ -383,10 +383,14 @@ function _t11RunMaintenance_(name) {
     var completeCodes = need("originallengkapiKodeTemuanKosong");
     var repairCodes = need("originalperbaikiFormatKodeTemuan");
     var filename = need("_namaFileFotoRef");
-    if (!root.SHEET_INS || !root.COL_INS || !root.COL_INS.TEMUAN)
+    // Core/Code.js declares lexical const globals, not globalThis properties.
+    // Resolve at invocation without exporting aliases or changing the schema.
+    var sheets = typeof SHEET_INS !== "undefined" ? SHEET_INS : root.SHEET_INS;
+    var columns = typeof COL_INS !== "undefined" ? COL_INS : root.COL_INS;
+    if (!sheets || !columns || !columns.TEMUAN)
       throw new Error("T11_WORKER_SCHEMA_MISSING");
-    var sh = need("_ssIns")().getSheetByName(root.SHEET_INS.TEMUAN);
-    var T = root.COL_INS.TEMUAN;
+    var sh = need("_ssIns")().getSheetByName(sheets.TEMUAN);
+    var T = columns.TEMUAN;
     _ownedSheet_(sh, T.ulp);
     // Preserve both existing preparation steps, but do NOT swallow failure.
     // These legacy helpers release their lock, so reacquire and recheck before
