@@ -275,6 +275,57 @@ test('logout rejects unsafe destination and handles missing token without RPC', 
   top.ctx.doLogout();top.pending[0].success({success:true});
   assert.match(top.navigated[0],/\?logout=1&reload=/);
 });
+for (const prefix of ['macros', 'a/ulptoboali.com/macros', 'a/macros/ulptoboali.com',
+  'a/sub-domain.example.co.id/macros', 'a/macros/sub-domain.example.co.id']) {
+  for (const mode of ['exec', 'dev']) {
+    test('Workspace URL survives authenticated shell and logout: ' + prefix + '/' + mode, () => {
+      const url = 'https://script.google.com/' + prefix + '/s/fixture_ABC-123/' + mode;
+      const f = gas({serviceUrl:url + '?token=never-expose#secret'});
+      const result = f.ctx.getWebAppShell('valid');
+      assert.equal(result.success, true);
+      const injected = result.html.match(/id="sisiLogoutUrl" value="([^"]+)"/)[1];
+      assert.equal(injected, url);
+      assert.doesNotMatch(result.html, /never-expose|#secret/);
+      const b = logoutBrowser({url:injected});
+      b.ctx.doLogout(); b.pending[0].success({success:true});
+      assert.equal(b.navigated.length, 1);
+      assert.ok(b.navigated[0].startsWith(url + '?logout=1&reload='));
+      assert.doesNotMatch(b.navigated[0], /session-secret/);
+      const denied = gas({serviceUrl:url, valid:false});
+      assert.throws(() => denied.ctx.getWebAppShell('valid'), /access denied/);
+      assert.equal(denied.reads.length, 0);
+    });
+  }
+}
+test('server and logout reject malformed Workspace paths and hostile destinations', () => {
+  const host = 'https://script.google.com';
+  const bad = [
+    'http://script.google.com/macros/s/id/exec',
+    'https://script.google.com.evil.example/macros/s/id/exec',
+    'https://script.google.com@evil.example/macros/s/id/exec',
+    'https://evil.example@script.google.com/macros/s/id/exec',
+    '//script.google.com/macros/s/id/exec',
+    host + ':443/macros/s/id/exec',
+    host + '/macros/a/example.com/s/id/exec',
+    host + '/a//macros/s/id/exec',
+    host + '/a/../macros/s/id/exec',
+    host + '/a/-bad.example/macros/s/id/exec',
+    host + '/a/bad..example/macros/s/id/exec',
+    host + '/a/macros/example.com/../s/id/exec',
+    host + '/a/macros/example.com/s/id%2fother/exec',
+    host + '/a/macros/example.com/s/id/exec/extra',
+    host + '/macros/s/id/exec\n',
+    host + '/macros/s/id/exec"><script>bad</script>',
+  ];
+  for (const url of bad) {
+    assert.throws(() => gas({serviceUrl:url}).ctx.getWebAppShell('valid'),
+      /URL login deployment/, url);
+    const b = logoutBrowser({url});
+    b.ctx.doLogout(); b.pending[0].success({success:true});
+    assert.equal(b.navigated.length, 0, url);
+    assert.equal(b.panel[0].children.length, 1, url);
+  }
+});
 test('refresh validates stored token and replaces forged cached metadata', () => {
   const f = browser({stored: JSON.stringify({token:'valid', role:'Super User'})});
   assert.equal(f.pending[0].method, 'shell');
